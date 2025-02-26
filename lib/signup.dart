@@ -8,25 +8,25 @@ class Signup extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: Container(
-          child: Column( 
+          child: Column(
             children: <Widget>[
-              Container(
-                height:220,
+              SizedBox(
+                height: 220,
                 width: double.infinity,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: <Widget>[
-                    Text("Register",style: TextStyle( 
-                      fontSize: 50,
-                      fontWeight: FontWeight.bold,
-                    ),),
+                    Text(
+                      "Register",
+                      style: TextStyle(
+                        fontSize: 50,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              SizedBox(
-                height: 20,
-
-              ),
+              SizedBox(height: 20),
               Container(
                 height: 400,
                 margin: EdgeInsets.symmetric(horizontal: 10),
@@ -37,18 +37,35 @@ class Signup extends StatelessWidget {
                     TextFormField(
                       decoration: InputDecoration(
                         hintText: "Username",
-                        hintStyle: TextStyle(
-                          
+                        suffixIcon: GestureDetector(
+                          onTap: () {
+                            FocusScope.of(context).unfocus();
+                          },
+                          child: Icon(Icons.visibility, color:Colors.black),
                         ),
-                        border: OutlineInputBorder(
-                          
-                        ),
+                        hintStyle: TextStyle(color: Colors.black),
+                        border: OutlineInputBorder(),
                       ),
                     ),
+
+                    TextFormField(
+                      decoration: InputDecoration(
+                        hintText: "Password",
+                        suffixIcon: GestureDetector(
+                          onTap: () {
+                            FocusScope.of(context).unfocus();
+                          },
+                          child: Icon(Icons.visibility, color:Colors.black),
+                        ),
+                        hintStyle: TextStyle(color: Colors.black),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+
                   ],
                 ),
               ),
-            ]
+            ],
           ),
         ),
       ),
