@@ -11,9 +11,43 @@ class Signup extends StatelessWidget {
           child: Column( 
             children: <Widget>[
               Container(
-                height:200,
+                height:220,
+                width: double.infinity,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: <Widget>[
+                    Text("Register",style: TextStyle( 
+                      fontSize: 50,
+                      fontWeight: FontWeight.bold,
+                    ),),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 20,
+
+              ),
+              Container(
+                height: 400,
+                margin: EdgeInsets.symmetric(horizontal: 10),
+                width: double.infinity,
                 color: Colors.blue,
-              )
+                child: Column(
+                  children: <Widget>[
+                    TextFormField(
+                      decoration: InputDecoration(
+                        hintText: "Username",
+                        hintStyle: TextStyle(
+                          
+                        ),
+                        border: OutlineInputBorder(
+                          
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ]
           ),
         ),
