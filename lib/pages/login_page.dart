@@ -1,3 +1,4 @@
+import 'package:engineering_project/assets/components/auth_service.dart';
 import 'package:engineering_project/assets/components/buttons.dart';
 import 'package:engineering_project/assets/components/square_tile.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,11 @@ class _LoginPageState extends State<LoginPage> {
   //Text Editing Controllers
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  //final _formKey = GlobalKey<FormState>();
+  bool passToggle = true;
+  /*bool emailVaild = RegExp(
+    r"^[a-zA-Z0-9.a-zA-ZO-9.!#$%&'*+-/=?^_{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
+  ).hasMatch(emailController.text);*/
 
   void SignUserin() async {
     //show loading circle
@@ -21,6 +27,7 @@ class _LoginPageState extends State<LoginPage> {
       context: context,
       builder: (context) {
         return const Center(child: CircularProgressIndicator());
+        
       },
     );
 
@@ -31,19 +38,10 @@ class _LoginPageState extends State<LoginPage> {
       );
       Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
+      //UserCredential credential = await _auth.signInWithEmailAndPassword();
       Navigator.pop(context);
-      //geçici işaretler
-
-      //WRONG MAIL
-      if (e.code == 'user-not-found') {
-        //show error to user—
-        
-      }
-      //WRONG PASSWORD
-      else if (e.code == 'wrong-password') {
-        //show error to user
-        
-      }
+      
+      
     }
   }
 
@@ -79,18 +77,33 @@ class _LoginPageState extends State<LoginPage> {
                 controller: emailController,
                 obscureText: false,
                 hintText: 'Email',
+                prefixIcon: Icon(Icons.email),
+                suffix: null,
+                validator: null, // need to FIX
               ),
               const SizedBox(height: 15),
               // password field
               signup(
                 controller: passwordController,
-                obscureText: true,
+                obscureText: passToggle,
                 hintText: 'Password',
+                prefixIcon: Icon(Icons.lock),
+                suffix: InkWell(
+                  onTap: () {
+                    setState(() {
+                      passToggle = !passToggle;
+                    });
+                  },
+                  child: Icon(
+                    passToggle ? Icons.visibility : Icons.visibility_off,
+                  ),
+                ),
+                validator: null, //need to FIX
               ),
 
               const SizedBox(height: 9),
 
-              // forget password field
+              // not a member ? register
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -102,7 +115,7 @@ class _LoginPageState extends State<LoginPage> {
                   Text('Register!', style: TextStyle(color: Colors.blue)),
                 ],
               ),
-
+              //forgot your password?
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -115,12 +128,13 @@ class _LoginPageState extends State<LoginPage> {
 
               const SizedBox(height: 25),
 
-              // sign in button
+              //sign in button
               FloatingActionButton(
                 backgroundColor: Colors.red.shade700,
                 foregroundColor: Colors.grey[200],
                 onPressed: () {
                   SignUserin();
+                  //_formKey.currentState!.validate();
                 },
                 child: Icon(Icons.arrow_forward, size: 25),
               ),
@@ -133,17 +147,11 @@ class _LoginPageState extends State<LoginPage> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Divider(
-                        thickness: 1,
-                        color: Colors.grey[400],
-                      ),
+                      child: Divider(thickness: 1, color: Colors.grey[400]),
                     ),
                     Text('Or Log in With'),
                     Expanded(
-                      child: Divider(
-                        thickness: 1,
-                        color: Colors.grey[400],
-                      ),
+                      child: Divider(thickness: 1, color: Colors.grey[400]),
                     ),
                   ],
                 ),
@@ -157,22 +165,21 @@ class _LoginPageState extends State<LoginPage> {
                   //google button
                   SquareTile(
                     imagePath: 'lib/assets/Images/google-logo.png',
+                    onPressed: () => AuthService().signInWithGoogle(),
                   ),
-
                   const SizedBox(width: 20),
 
+                  //apple button
                   SquareTile(
                     imagePath: 'lib/assets/Images/apple-logo.png',
+                    onPressed: null, // FINISH APPLE SIGN IN
                   ),
                 ],
               ),
-
-              // not a member ? register
             ],
           ),
         ),
       ),
     );
   }
-
 }

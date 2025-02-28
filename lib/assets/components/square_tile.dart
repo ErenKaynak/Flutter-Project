@@ -1,24 +1,31 @@
 import 'package:flutter/material.dart';
 
-class SquareTile extends StatelessWidget {
+class SquareTile extends StatefulWidget {
   final String imagePath;
+  final onPressed;
   const SquareTile({
-    super.key,
+    super.key, 
     required this.imagePath,
+    required this.onPressed,
     });
 
   @override
+  State<SquareTile> createState() => _SquareTileState();
+}
+
+class _SquareTileState extends State<SquareTile> {
+  @override
   Widget build(BuildContext context) {
-   return Container(
-    padding: EdgeInsets.all(5),
-    decoration: BoxDecoration(
-      border: Border.all(color: Colors.white,),
+    return Container(
+      padding: EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.white),
         borderRadius: BorderRadius.circular(12),
-        color: Colors.white
-        ),
-      child: Image.asset(
-        imagePath,
-        height: 40.0, // Added '.0' to make the value a double
+        color: Colors.white,
+      ),
+      child: IconButton(
+        onPressed: widget.onPressed,
+        icon: Image.asset(widget.imagePath, height: 40),
       ),
     );
   }
