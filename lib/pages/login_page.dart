@@ -24,7 +24,6 @@ class _LoginPageState extends State<LoginPage> {
       },
     );
 
-    //try sign in
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text,
@@ -33,51 +32,21 @@ class _LoginPageState extends State<LoginPage> {
       Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
       Navigator.pop(context);
-//geçici işaretler    
-}
-}
+      //geçici işaretler
 
-  /* 
       //WRONG MAIL
       if (e.code == 'user-not-found') {
         //show error to user—
-        wrongMailMessage();
+        
       }
       //WRONG PASSWORD
       else if (e.code == 'wrong-password') {
         //show error to user
-        wrongPasswordMessage();
+        
       }
     }
   }
-  
-  //ÇALIŞMIYOR!!
-  
-  
-  //sign up button
-  Widget signUpButton() {
-    return RaisedButton(
-      onPressed: () {
-  //wrong email message popup
-  void wrongMailMessage() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(title: Text('Email Hatali'));
-      },
-    );
-  }
 
-  //wrong password message popup
-  void wrongPasswordMessage() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(title: Text('Parola Hatali'));
-      },
-    );
-  }
-  */
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,7 +64,7 @@ class _LoginPageState extends State<LoginPage> {
 
               // welcome text
               Text(
-                'Hoşgeldin Buradan Giriş Yapabilirsin!',
+                'Welcome Back! You can Log in Here',
                 style: TextStyle(
                   color: Colors.grey[700],
                   fontSize: 16,
@@ -109,14 +78,14 @@ class _LoginPageState extends State<LoginPage> {
               signup(
                 controller: emailController,
                 obscureText: false,
-                hintText: 'Kullanici Adi',
+                hintText: 'Email',
               ),
               const SizedBox(height: 15),
               // password field
               signup(
                 controller: passwordController,
                 obscureText: true,
-                hintText: 'Şifre',
+                hintText: 'Password',
               ),
 
               const SizedBox(height: 9),
@@ -126,11 +95,11 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Üye değil misin?',
+                    'You Are Not a Member?',
                     style: TextStyle(color: Colors.grey[800]),
                   ),
                   const SizedBox(width: 4),
-                  Text('Kayıt Ol!', style: TextStyle(color: Colors.blue)),
+                  Text('Register!', style: TextStyle(color: Colors.blue)),
                 ],
               ),
 
@@ -138,7 +107,7 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Şifremi Unuttum?',
+                    'Forgot your password?',
                     style: TextStyle(color: Colors.grey[800]),
                   ),
                 ],
@@ -164,11 +133,17 @@ class _LoginPageState extends State<LoginPage> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Divider(thickness: 1, color: Colors.grey[400]),
+                      child: Divider(
+                        thickness: 1,
+                        color: Colors.grey[400],
+                      ),
                     ),
-                    Text('Yada bunlar ile giriş yap'),
+                    Text('Or Log in With'),
                     Expanded(
-                      child: Divider(thickness: 1, color: Colors.grey[400]),
+                      child: Divider(
+                        thickness: 1,
+                        color: Colors.grey[400],
+                      ),
                     ),
                   ],
                 ),
@@ -180,11 +155,15 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   //google button
-                  SquareTile(imagePath: 'lib/assets/Images/google-logo.png'),
+                  SquareTile(
+                    imagePath: 'lib/assets/Images/google-logo.png',
+                  ),
 
                   const SizedBox(width: 20),
 
-                  SquareTile(imagePath: 'lib/assets/Images/apple-logo.png'),
+                  SquareTile(
+                    imagePath: 'lib/assets/Images/apple-logo.png',
+                  ),
                 ],
               ),
 
@@ -195,4 +174,5 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+
 }
