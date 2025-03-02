@@ -1,6 +1,7 @@
 import 'package:engineering_project/assets/components/auth_service.dart';
 import 'package:engineering_project/assets/components/buttons.dart';
 import 'package:engineering_project/assets/components/square_tile.dart';
+import 'package:engineering_project/pages/Home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -26,8 +27,7 @@ class _LoginPageState extends State<LoginPage> {
     showDialog(
       context: context,
       builder: (context) {
-        return const Center(child: CircularProgressIndicator());
-        
+        return HomePage(); //Center(child: CircularProgressIndicator());
       },
     );
 
@@ -40,8 +40,6 @@ class _LoginPageState extends State<LoginPage> {
     } on FirebaseAuthException catch (e) {
       //UserCredential credential = await _auth.signInWithEmailAndPassword();
       Navigator.pop(context);
-      
-      
     }
   }
 
@@ -112,7 +110,10 @@ class _LoginPageState extends State<LoginPage> {
                     style: TextStyle(color: Colors.grey[800]),
                   ),
                   const SizedBox(width: 4),
-                  Text('Register!', style: TextStyle(color: Colors.blue)),
+                  Text(
+                    'Register!',
+                    style: TextStyle(color: Colors.red.shade500),
+                  ),
                 ],
               ),
               //forgot your password?
