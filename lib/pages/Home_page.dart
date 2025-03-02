@@ -4,20 +4,25 @@ import 'package:flutter/material.dart';
 
 class HomePage extends StatelessWidget {
   HomePage({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        actions: [IconButton(onPressed: AuthService().signOut, icon: Icon(Icons.logout))],
+        actions: [
+          IconButton(
+            onPressed: AuthService().signOut,
+            icon: Icon(Icons.logout),
+          ),
+        ],
         backgroundColor: Colors.blue[300],
       ),
       body: Center(
         child: Text(
-        AuthService().getCurrentUser()!.email.toString(),
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 40),
-        
-        )),
+          AuthService().getCurrentUser()!.email.toString(),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 40),
+        ),
+      ),
     );
   }
 }
