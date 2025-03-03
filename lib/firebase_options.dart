@@ -25,15 +25,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -66,10 +60,34 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCbwpXCtr8y0u9mdT8NpFYZL_BYeS_6r9Q',
+    appId: '1:52042306180:ios:a4e80cc66309724c28e8d1',
+    messagingSenderId: '52042306180',
+    projectId: 'engineering-project-23d2e',
+    storageBucket: 'engineering-project-23d2e.firebasestorage.app',
+    androidClientId: '52042306180-2etoqf1oj33tsq7dtsgdfcaf8gcdp6f3.apps.googleusercontent.com',
+    iosClientId: '52042306180-gt9t57c79ahd8bm3qink991fs6lpr96b.apps.googleusercontent.com',
+    iosBundleId: 'com.example.engineeringProject.RunnerTests',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyCbwpXCtr8y0u9mdT8NpFYZL_BYeS_6r9Q',
     appId: '1:52042306180:ios:39d543be52f0861a28e8d1',
     messagingSenderId: '52042306180',
     projectId: 'engineering-project-23d2e',
     storageBucket: 'engineering-project-23d2e.firebasestorage.app',
+    androidClientId: '52042306180-2etoqf1oj33tsq7dtsgdfcaf8gcdp6f3.apps.googleusercontent.com',
+    iosClientId: '52042306180-tl2iuj692q1co1vsoit8ganh19ugluhl.apps.googleusercontent.com',
     iosBundleId: 'com.example.engineeringProject',
   );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyCvVxL75mFvOCEuPgMrNPiAqI2Rx61CE3Q',
+    appId: '1:52042306180:web:1333bdf9994687f928e8d1',
+    messagingSenderId: '52042306180',
+    projectId: 'engineering-project-23d2e',
+    authDomain: 'engineering-project-23d2e.firebaseapp.com',
+    storageBucket: 'engineering-project-23d2e.firebasestorage.app',
+    measurementId: 'G-GYKSKXJRHK',
+  );
+
 }

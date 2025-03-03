@@ -13,34 +13,48 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  //Text Editing Controllers
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  //final _formKey = GlobalKey<FormState>();
   bool passToggle = true;
-  /*bool emailVaild = RegExp(
-    r"^[a-zA-Z0-9.a-zA-ZO-9.!#$%&'*+-/=?^_{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
-  ).hasMatch(emailController.text);*/
 
-  void SignUserin() async {
-    //show loading circle
+  void signUserIn() async {
     showDialog(
       context: context,
-      builder: (context) {
-        return HomePage(); //Center(child: CircularProgressIndicator());
-      },
+      barrierDismissible: false,
+      builder: (context) => Center(child: CircularProgressIndicator()),
     );
 
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text,
-        password: passwordController.text,
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
       );
       Navigator.pop(context);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()),
+      );
     } on FirebaseAuthException catch (e) {
-      //UserCredential credential = await _auth.signInWithEmailAndPassword();
       Navigator.pop(context);
+      showErrorDialog(e.message ?? "An error occurred. Please try again.");
     }
+  }
+
+  void showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text("Login Failed"),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text("OK"),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
@@ -48,17 +62,12 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       backgroundColor: Colors.grey[200],
       body: SafeArea(
-        // safearea make avoid the devices notch part on the screen
         child: Center(
           child: Column(
             children: [
               const SizedBox(height: 110),
-              // logo
               Icon(Icons.lock, size: 100, color: Colors.red.shade700),
-
               const SizedBox(height: 20),
-
-              // welcome text
               Text(
                 'Welcome Back! You can Log in Here',
                 style: TextStyle(
@@ -67,20 +76,16 @@ class _LoginPageState extends State<LoginPage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
               const SizedBox(height: 25),
-
-              // email field
               signup(
                 controller: emailController,
                 obscureText: false,
                 hintText: 'Email',
                 prefixIcon: Icon(Icons.email),
                 suffix: null,
-                validator: null, // need to FIX
+                validator: null,
               ),
               const SizedBox(height: 15),
-              // password field
               signup(
                 controller: passwordController,
                 obscureText: passToggle,
@@ -96,12 +101,9 @@ class _LoginPageState extends State<LoginPage> {
                     passToggle ? Icons.visibility : Icons.visibility_off,
                   ),
                 ),
-                validator: null, //need to FIX
+                validator: null,
               ),
-
               const SizedBox(height: 9),
-
-              // not a member ? register
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -116,7 +118,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ],
               ),
-              //forgot your password?
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -126,23 +127,14 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 25),
-
-              //sign in button
               FloatingActionButton(
                 backgroundColor: Colors.red.shade700,
                 foregroundColor: Colors.grey[200],
-                onPressed: () {
-                  SignUserin();
-                  //_formKey.currentState!.validate();
-                },
+                onPressed: signUserIn,
                 child: Icon(Icons.arrow_forward, size: 25),
               ),
-
               const SizedBox(height: 25),
-
-              //or continue with
               Padding(
                 padding: const EdgeInsets.fromLTRB(90, 0, 90, 0),
                 child: Row(
@@ -157,23 +149,18 @@ class _LoginPageState extends State<LoginPage> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 25),
-              // google + apple buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  //google button
                   SquareTile(
                     imagePath: 'lib/assets/Images/google-logo.png',
                     onPressed: () => AuthService().signInWithGoogle(),
                   ),
                   const SizedBox(width: 20),
-
-                  //apple button
                   SquareTile(
                     imagePath: 'lib/assets/Images/apple-logo.png',
-                    onPressed: null, // FINISH APPLE SIGN IN
+                    onPressed: null,
                   ),
                 ],
               ),
