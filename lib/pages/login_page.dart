@@ -5,8 +5,9 @@ import 'package:engineering_project/assets/components/square_tile.dart';
 import 'package:engineering_project/pages/Home_page.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
-
+  final Function()? onTap;
+  const LoginPage({super.key, required this.onTap});
+  
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -49,19 +50,19 @@ class _LoginPageState extends State<LoginPage> {
       Navigator.pop(context); // Yükleme çemberini kapat
 
       setState(() {
-        if (e.code == 'user-not-found') {
+        if (e.code == 'ERROR_USER_NOT_FOUND') {
           emailError = "No user found with this email.";
           passwordError = null; // Şifreyi temizle
-        } else if (e.code == 'wrong-password') {
+        } else if (e.code == 'ERROR-WRONG-PASSWORD') {
           emailError = null; // E-posta hatasını temizle
           passwordError = "Incorrect password. Try again.";
-        } else if (e.code == 'invalid-email') {
+        } else if (e.code == 'ERROR_INVALID_EMAIL') {
           emailError = "The email address is badly formatted.";
           passwordError = null; // Şifreyi temizle
         } else {
           emailError = e.message;
           passwordError =
-              null; // Diğer hatalarda sadece e-posta hatasını göster
+              e.message; // Diğer hatalarda sadece e-posta hatasını göster
         }
       });
     }
@@ -168,7 +169,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(width: 4),
                       GestureDetector(
-                        onTap: () {},
+                        onTap: widget.onTap,
                         child: Text(
                           'Register!',
                           style: TextStyle(

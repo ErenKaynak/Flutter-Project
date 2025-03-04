@@ -1,19 +1,19 @@
+import 'package:engineering_project/pages/login_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:engineering_project/assets/components/auth_service.dart';
 import 'package:engineering_project/assets/components/square_tile.dart';
-import 'package:engineering_project/pages/Home_page.dart';
-
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
-
+  final Function()? onTap;
+  const RegisterPage({super.key, required this.onTap});
+  
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
-
 class _RegisterPageState extends State<RegisterPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool passToggle = true;
 
@@ -35,25 +35,78 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
+      
 
-      Navigator.pop(context); // Dismiss the loading dialog
+      //password controller
+      if(passwordController.text == confirmPasswordController.text){
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailController.text,
+        password: passwordController.text,
+      );
+      } else {
+        //show error message 
+        Navigator.pop(context);
+        showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => Center(
+          child: Container(
+            padding: EdgeInsets.all(5),
+            decoration: BoxDecoration(
+            border: Border.all(color: Colors.white),
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.red.shade500,
+          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start, 
+          children: [
+            Icon(
+              Icons.warning_amber_rounded, 
+              size: 20, 
+              color: Colors.white
+          ),
+            SizedBox(width: 5),
+            Text(
+              'Passwords do not match',
+              style: TextStyle(color: Colors.white),
+          ),
+          SizedBox(width: 5),
+           Icon(
+              Icons.warning_amber_rounded, 
+              size: 20, 
+              color: Colors.white
+          ),
+        ],
+      ),
+    ),
+  ),
+);
+        return;
+      }
+
+      
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomePage()),
+        MaterialPageRoute(builder: (context) => const LoginPage(onTap: null)),
       );
     } on FirebaseAuthException catch (e) {
-      Navigator.pop(context);
+      Navigator.pop(context); // Yükleme çemberini kapat
+
       setState(() {
-        if (e.code == 'user-not-found') {
+        if (e.code == 'ERROR_USER_NOT_FOUND') {
           emailError = "No user found with this email.";
-        } else if (e.code == 'wrong-password') {
+          passwordError = null; // Şifreyi temizle
+        } else if (e.code == 'ERROR-WRONG-PASSWORD') {
+          emailError = null; // E-posta hatasını temizle
           passwordError = "Incorrect password. Try again.";
+        } else if (e.code == 'ERROR_INVALID_EMAIL') {
+          emailError = "The email address is badly formatted.";
+          passwordError = null; // Şifreyi temizle
         } else {
-          emailError = e.message; // Show other Firebase errors
+          emailError = e.message;
+          passwordError =
+              e.message; // Diğer hatalarda sadece e-posta hatasını göster
         }
       });
     }
@@ -76,7 +129,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   Icon(Icons.lock, size: 100, color: Colors.red.shade700),
                   const SizedBox(height: 20),
                   Text(
-                    'Welcome Back! Log in Here',
+                    'Welcome Sign in Here...',
                     style: TextStyle(
                       color: Colors.grey[700],
                       fontSize: 16,
@@ -95,9 +148,6 @@ class _RegisterPageState extends State<RegisterPage> {
                       errorText: emailError,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(
-                          color: emailError != null ? Colors.red : Colors.grey,
-                        ),
                       ),
                     ),
                     validator: (value) {
@@ -134,10 +184,6 @@ class _RegisterPageState extends State<RegisterPage> {
                       errorText: passwordError,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(
-                          color:
-                              passwordError != null ? Colors.red : Colors.grey,
-                        ),
                       ),
                     ),
                     validator: (value) {
@@ -145,11 +191,11 @@ class _RegisterPageState extends State<RegisterPage> {
                         setState(() => passwordError = "Enter your password");
                         return "";
                       } else if (value.length < 6) {
-                        setState(() => passwordError = "Password must be at least 6 characters",
+                        setState(
+                          () =>
+                              passwordError =
+                                  "Password must be at least 6 characters",
                         );
-                        return "";
-                      } else if (value.isNotEmpty) {
-                        setState(() => passwordError = "password incorrect");
                         return "";
                       }
                       return null;
@@ -157,8 +203,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 10),
 
+
                   TextFormField(
-                    controller: passwordController,
+                    controller: confirmPasswordController,
                     obscureText: passToggle,
                     decoration: InputDecoration(
                       hintText: 'Confirm Password',
@@ -167,23 +214,31 @@ class _RegisterPageState extends State<RegisterPage> {
                         icon: Icon(
                           passToggle ? Icons.visibility : Icons.visibility_off,
                         ),
-                      )
-                    )
-                  )
+                        onPressed:
+                            () => setState(() => passToggle = !passToggle),
+                      ),
+                      errorText: passwordError,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    
+                  ),
+
+                  SizedBox(height: 20,),
+
 
                   // Register & Forgot Password Links
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Not a member?',
+                        'You Have An Account?',
                         style: TextStyle(color: Colors.grey[800]),
                       ),
                       const SizedBox(width: 4),
                       GestureDetector(
-                        onTap: () {
-                          // Navigate to Register Page
-                        },
+                        onTap: widget.onTap,
                         child: Text(
                           'Login!',
                           style: TextStyle(
@@ -194,23 +249,14 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 5),
-                  GestureDetector(
-                    onTap: () {
-                      // Navigate to Forgot Password Page
-                    },
-                    child: Text(
-                      'Already have an Account?',
-                      style: TextStyle(color: Colors.grey[800]),
-                    ),
-                  ),
-                  const SizedBox(height: 25),
+
+                  const SizedBox(height: 20),
 
                   // Login Button
                   FloatingActionButton(
                     backgroundColor: Colors.red.shade700,
                     foregroundColor: Colors.grey[200],
-                    onPressed: signUserIn,
+                    onPressed: signUserUp,
                     child: const Icon(Icons.arrow_forward, size: 25),
                   ),
                   const SizedBox(height: 25),
@@ -246,9 +292,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       const SizedBox(width: 20),
                       SquareTile(
                         imagePath: 'lib/assets/Images/apple-logo.png',
-                        onPressed: () {
-                          // Implement Apple Sign-In if needed
-                        },
+                        onPressed: () {},
                       ),
                     ],
                   ),
