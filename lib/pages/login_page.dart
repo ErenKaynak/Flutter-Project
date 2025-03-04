@@ -40,20 +40,28 @@ class _LoginPageState extends State<LoginPage> {
         password: passwordController.text.trim(),
       );
 
-      Navigator.pop(context);
+      Navigator.pop(context); // Yükleme çemberini kapat
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomePage()),
+        MaterialPageRoute(builder: (context) => const HomePage()),
       );
     } on FirebaseAuthException catch (e) {
-      Navigator.pop(context);
+      Navigator.pop(context); // Yükleme çemberini kapat
+
       setState(() {
         if (e.code == 'user-not-found') {
           emailError = "No user found with this email.";
+          passwordError = null; // Şifreyi temizle
         } else if (e.code == 'wrong-password') {
+          emailError = null; // E-posta hatasını temizle
           passwordError = "Incorrect password. Try again.";
+        } else if (e.code == 'invalid-email') {
+          emailError = "The email address is badly formatted.";
+          passwordError = null; // Şifreyi temizle
         } else {
-          emailError = e.message; // Show other Firebase errors
+          emailError = e.message;
+          passwordError =
+              null; // Diğer hatalarda sadece e-posta hatasını göster
         }
       });
     }
@@ -95,15 +103,18 @@ class _LoginPageState extends State<LoginPage> {
                       errorText: emailError,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: emailError != null ? Colors.red : Colors.grey),
                       ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         setState(() => emailError = "Enter your email");
                         return "";
-                      } else if (!RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").hasMatch(value)) {
-                        setState(() => emailError = "Enter a valid email address");
+                      } else if (!RegExp(
+                        r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
+                      ).hasMatch(value)) {
+                        setState(
+                          () => emailError = "Enter a valid email address",
+                        );
                         return "";
                       }
                       return null;
@@ -119,13 +130,15 @@ class _LoginPageState extends State<LoginPage> {
                       hintText: 'Password',
                       prefixIcon: const Icon(Icons.lock),
                       suffixIcon: IconButton(
-                        icon: Icon(passToggle ? Icons.visibility : Icons.visibility_off),
-                        onPressed: () => setState(() => passToggle = !passToggle),
+                        icon: Icon(
+                          passToggle ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed:
+                            () => setState(() => passToggle = !passToggle),
                       ),
                       errorText: passwordError,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: passwordError != null ? Colors.red : Colors.grey),
                       ),
                     ),
                     validator: (value) {
@@ -133,7 +146,11 @@ class _LoginPageState extends State<LoginPage> {
                         setState(() => passwordError = "Enter your password");
                         return "";
                       } else if (value.length < 6) {
-                        setState(() => passwordError = "Password must be at least 6 characters");
+                        setState(
+                          () =>
+                              passwordError =
+                                  "Password must be at least 6 characters",
+                        );
                         return "";
                       }
                       return null;
@@ -145,22 +162,30 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Not a member?', style: TextStyle(color: Colors.grey[800])),
+                      Text(
+                        'Not a member?',
+                        style: TextStyle(color: Colors.grey[800]),
+                      ),
                       const SizedBox(width: 4),
                       GestureDetector(
-                        onTap: () {
-                          // Navigate to Register Page
-                        },
-                        child: Text('Register!', style: TextStyle(color: Colors.red.shade500, fontWeight: FontWeight.bold)),
+                        onTap: () {},
+                        child: Text(
+                          'Register!',
+                          style: TextStyle(
+                            color: Colors.red.shade500,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 5),
                   GestureDetector(
-                    onTap: () {
-                      // Navigate to Forgot Password Page
-                    },
-                    child: Text('Forgot your password?', style: TextStyle(color: Colors.grey[800])),
+                    onTap: () {},
+                    child: Text(
+                      'Forgot your password?',
+                      style: TextStyle(color: Colors.grey[800]),
+                    ),
                   ),
                   const SizedBox(height: 25),
 
@@ -178,12 +203,16 @@ class _LoginPageState extends State<LoginPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
                       children: [
-                        Expanded(child: Divider(thickness: 1, color: Colors.grey[400])),
+                        Expanded(
+                          child: Divider(thickness: 1, color: Colors.grey[400]),
+                        ),
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
                           child: Text('Or Log in With'),
                         ),
-                        Expanded(child: Divider(thickness: 1, color: Colors.grey[400])),
+                        Expanded(
+                          child: Divider(thickness: 1, color: Colors.grey[400]),
+                        ),
                       ],
                     ),
                   ),
@@ -200,9 +229,7 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(width: 20),
                       SquareTile(
                         imagePath: 'lib/assets/Images/apple-logo.png',
-                        onPressed: () {
-                          // Implement Apple Sign-In if needed
-                        },
+                        onPressed: () {},
                       ),
                     ],
                   ),
