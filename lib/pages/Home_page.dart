@@ -17,34 +17,36 @@ class HomePage extends StatelessWidget {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+          children: 
+          [
             Text(
               AuthService().getCurrentUser()!.email.toString(),
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 40),
             ),
-
+            
             SwitchListTile(
               title: Text("Theme"),
-              value: false,
+              value: false, 
               onChanged: (value) {},
             ),
-
+            
             Padding(
-              padding: const EdgeInsets.fromLTRB(300, 500, 0, 0),
+              padding: const EdgeInsets.fromLTRB(300,500,0,0),
               child: Container(
                 padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.red.shade500),
-                  borderRadius: BorderRadius.circular(12),
-                  color: Colors.red.shade500,
+                border: Border.all(color: Colors.red.shade500),
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.red.shade500,
                 ),
-                child: IconButton(
-                  icon: Icon(Icons.logout),
-                  onPressed: AuthService().signOut,
-                  color: Colors.white,
-                ),
+                    child: IconButton(
+                    icon: Icon(Icons.logout),
+                    onPressed: AuthService().signOut,
+                    color: Colors.white,
+                  ),
               ),
             ),
+
           ],
         ),
       ),
