@@ -4,7 +4,6 @@ class signup extends StatelessWidget {
   final controller;
   final String hintText;
   final bool obscureText;
-  final suffix;
   final prefixIcon;
   final validator;
 
@@ -14,7 +13,6 @@ class signup extends StatelessWidget {
     required this.hintText,
     required this.obscureText,
     required this.prefixIcon,
-    required this.suffix,
     required this.validator,
   });
 
@@ -43,7 +41,6 @@ class signup extends StatelessWidget {
             hintText: hintText,
             hintStyle: TextStyle(color: Colors.grey[600]),
             prefixIcon: prefixIcon,
-            suffix: suffix,
           ),
           validator: validator,
         ),

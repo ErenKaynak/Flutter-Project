@@ -1,8 +1,10 @@
+import 'package:engineering_project/pages/register_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:engineering_project/assets/components/auth_service.dart';
 import 'package:engineering_project/assets/components/square_tile.dart';
 import 'package:engineering_project/pages/Home_page.dart';
+import 'package:engineering_project/pages/forget_pw_page.dart';
 
 class LoginPage extends StatefulWidget {
   final Function()? onTap;
@@ -61,8 +63,7 @@ class _LoginPageState extends State<LoginPage> {
           passwordError = null; // Şifreyi temizle
         } else {
           emailError = e.message;
-          passwordError =
-              e.message; // Diğer hatalarda sadece e-posta hatasını göster
+          passwordError = e.message; // Diğer hatalarda sadece e-posta hatasını göster
         }
       });
     }
@@ -99,6 +100,8 @@ class _LoginPageState extends State<LoginPage> {
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
+                      fillColor: Colors.grey.shade300,
+                      filled: true,
                       hintText: 'Email',
                       prefixIcon: const Icon(Icons.email),
                       errorText: emailError,
@@ -128,6 +131,8 @@ class _LoginPageState extends State<LoginPage> {
                     controller: passwordController,
                     obscureText: passToggle,
                     decoration: InputDecoration(
+                      fillColor: Colors.grey.shade300,
+                      filled: true,
                       hintText: 'Password',
                       prefixIcon: const Icon(Icons.lock),
                       suffixIcon: IconButton(
@@ -182,13 +187,21 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 5),
                   GestureDetector(
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ForgotPasswordPage()),
+                      );
+                    },
                     child: Text(
                       'Forgot your password?',
-                      style: TextStyle(color: Colors.grey[800]),
+                      style: TextStyle(
+                        color: Colors.red.shade500,
+                        fontWeight: FontWeight.bold,
+                        ),
                     ),
                   ),
-                  const SizedBox(height: 25),
+                  SizedBox(height: 10,),
 
                   // Login Button
                   FloatingActionButton(
