@@ -1,14 +1,15 @@
+import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:engineering_project/assets/components/auth_service.dart';
 import 'package:engineering_project/assets/components/square_tile.dart';
-import 'package:engineering_project/pages/Home_page.dart';
+import 'package:engineering_project/pages/home_page.dart';
 import 'package:engineering_project/pages/forget_pw_page.dart';
 
 class LoginPage extends StatefulWidget {
   final Function()? onTap;
   const LoginPage({super.key, required this.onTap});
-  
+
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -32,7 +33,7 @@ class _LoginPageState extends State<LoginPage> {
 
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
@@ -42,11 +43,16 @@ class _LoginPageState extends State<LoginPage> {
         password: passwordController.text.trim(),
       );
 
-      Navigator.pop(context); // Yükleme çemberini kapat
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-      );
+      // Dismiss the loading indicator
+      if (context.mounted) Navigator.pop(context);
+      
+      // Navigate to HomePage and remove all previous routes
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const RootScreen()),
+          (Route<dynamic> route) => false, // Change to false to remove all previous routes
+        );
+      }
     } on FirebaseAuthException catch (e) {
       Navigator.pop(context); // Yükleme çemberini kapat
 
@@ -189,7 +195,9 @@ class _LoginPageState extends State<LoginPage> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => ForgotPasswordPage()),
+                        MaterialPageRoute(
+                          builder: (context) => ForgotPasswordPage(),
+                        ),
                       );
                     },
                     child: Text(
@@ -197,10 +205,10 @@ class _LoginPageState extends State<LoginPage> {
                       style: TextStyle(
                         color: Colors.red.shade500,
                         fontWeight: FontWeight.bold,
-                        ),
+                      ),
                     ),
                   ),
-                  SizedBox(height: 10,),
+                  SizedBox(height: 10),
 
                   // Login Button
                   FloatingActionButton(

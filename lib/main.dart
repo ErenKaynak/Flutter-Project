@@ -1,5 +1,7 @@
+import 'package:engineering_project/pages/home_page.dart';
 import 'package:engineering_project/pages/auth_page.dart';
 import 'package:engineering_project/pages/login_page.dart';
+import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -18,7 +20,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: true,
-      home: AuthPage(), // Add this line
+      home: RootScreen()//LoginPage(onTap:null), // Add this line
     );
   } 
 }

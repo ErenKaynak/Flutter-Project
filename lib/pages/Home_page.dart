@@ -13,29 +13,39 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Center(child: Text("Welcome to HomePage!")),
-          foregroundColor: Colors.white,
-          backgroundColor: Colors.red.shade500,
+    return Scaffold(
+      backgroundColor: Colors.grey.shade200,
+      appBar: AppBar(
+        title: const Text("Welcome to HomePage!"),
+        foregroundColor: Colors.white,
+        backgroundColor: Colors.red.shade500,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new),
+          onPressed: () {
+            // Handle back button press here
+          },
         ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                FirebaseAuth.instance.currentUser?.email ?? "No User",
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 40),
-              ),
-              SwitchListTile(
-                title: const Text("Theme"),
-                value: false,
-                onChanged: (value) {},
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(300, 500, 0, 0),
-                child: Container(
+      ),
+      body: Center(
+        child: Container(
+          height: 400, // Set a specific height value here
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  FirebaseAuth.instance.currentUser?.email ?? "No User",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 40,
+                  ),
+                ),
+                SwitchListTile(
+                  title: const Text("Theme"),
+                  value: false,
+                  onChanged: (value) {},
+                ),
+                Container(
                   padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.red.shade500),
@@ -50,8 +60,8 @@ class _HomePageState extends State<HomePage> {
                     color: Colors.white,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -63,7 +73,7 @@ class _HomePageState extends State<HomePage> {
     if (mounted) {
       // Widget hala aktif mi kontrol ediyoruz.
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const LoginPage(onTap: null,)),
+        MaterialPageRoute(builder: (context) => const LoginPage(onTap: null)),
         (route) => false,
       );
     }
