@@ -1,8 +1,8 @@
-import 'package:engineering_project/pages/Home_page.dart';
-import 'package:engineering_project/pages/cart_page.dart';
-import 'package:engineering_project/pages/profile_page.dart';
-import 'package:engineering_project/pages/search_page.dart';
 import 'package:flutter/material.dart';
+import 'cart_page.dart';
+import 'profile_page.dart';
+import 'search_page.dart';
+import 'home_page.dart';
 
 class RootScreen extends StatefulWidget {
   const RootScreen({super.key});
@@ -30,25 +30,48 @@ class _RootScreenState extends State<RootScreen> {
         physics: NeverScrollableScrollPhysics(),
         children: screens,
       ),
-      bottomNavigationBar: NavigationBar(
-        indicatorColor: Colors.red.shade400,
-        height: kBottomNavigationBarHeight,
-        selectedIndex: currentScreen,
-        backgroundColor: Colors.grey.shade200,
-        surfaceTintColor: Colors.red.shade300,
-        elevation: 0,
-        onDestinationSelected: (value) {
-          setState(() {
-            currentScreen = value;
-          });
-          controller.jumpToPage(currentScreen);
-        },
-        destinations: [
-          NavigationDestination(icon: Icon(Icons.home, color: Colors.grey[400]), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.search, color: Colors.grey[400]), label: 'Search'),
-          NavigationDestination(icon: Icon(Icons.shopping_bag_rounded, color: Colors.grey[400]),label: 'Cart',),
-          NavigationDestination(icon: Icon(Icons.person, color: Colors.grey[400]), label: 'Profile'),
-        ],
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Container(
+          decoration: BoxDecoration(
+            //color: Colors.red.shade400,
+            borderRadius: BorderRadius.circular(16.0),
+          ),
+          child: NavigationBar(
+            indicatorColor: Colors.white,
+            height: kBottomNavigationBarHeight,
+            selectedIndex: currentScreen,
+            backgroundColor:
+                Colors.transparent, // Set transparent background color
+            //surfaceTintColor: Colors.red.shade300,
+            elevation: 0,
+            labelPadding: EdgeInsets.zero, // Remove default label padding
+            onDestinationSelected: (value) {
+              setState(() {
+                currentScreen = value;
+              });
+              controller.jumpToPage(currentScreen);
+            },
+            destinations: [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined, color: currentScreen == 0 ? Colors.red.shade400 : Colors.black),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.search_sharp, color: currentScreen == 1 ? Colors.red.shade400 : Colors.black,),
+                label: 'Search',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.shopping_bag_outlined, color: currentScreen == 2 ? Colors.red.shade400 : Colors.black),
+                label: 'Cart',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline_rounded, color: currentScreen == 3 ? Colors.red.shade400 : Colors.black),
+                label: 'Profile',
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
