@@ -143,6 +143,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
+                      fillColor: Colors.grey.shade300,
+                      filled: true,
                       hintText: 'Email',
                       prefixIcon: const Icon(Icons.email),
                       errorText: emailError,
@@ -172,6 +174,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     controller: passwordController,
                     obscureText: passToggle,
                     decoration: InputDecoration(
+                      fillColor: Colors.grey.shade300,
+                      filled: true,
                       hintText: 'Password',
                       prefixIcon: const Icon(Icons.lock),
                       suffixIcon: IconButton(
@@ -208,6 +212,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     controller: confirmPasswordController,
                     obscureText: passToggle,
                     decoration: InputDecoration(
+                      fillColor: Colors.grey.shade300,
+                      filled: true,
                       hintText: 'Confirm Password',
                       prefixIcon: const Icon(Icons.lock),
                       suffixIcon: IconButton(
@@ -288,11 +294,6 @@ class _RegisterPageState extends State<RegisterPage> {
                       SquareTile(
                         imagePath: 'lib/assets/Images/google-logo.png',
                         onPressed: () => AuthService().signInWithGoogle(),
-                      ),
-                      const SizedBox(width: 20),
-                      SquareTile(
-                        imagePath: 'lib/assets/Images/apple-logo.png',
-                        onPressed: () {},
                       ),
                     ],
                   ),

@@ -1,4 +1,3 @@
-import 'package:engineering_project/pages/register_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:engineering_project/assets/components/auth_service.dart';
@@ -239,11 +238,6 @@ class _LoginPageState extends State<LoginPage> {
                       SquareTile(
                         imagePath: 'lib/assets/Images/google-logo.png',
                         onPressed: () => AuthService().signInWithGoogle(),
-                      ),
-                      const SizedBox(width: 20),
-                      SquareTile(
-                        imagePath: 'lib/assets/Images/apple-logo.png',
-                        onPressed: () {},
                       ),
                     ],
                   ),
