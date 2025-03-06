@@ -54,19 +54,19 @@ class _RootScreenState extends State<RootScreen> {
             },
             destinations: [
               NavigationDestination(
-                icon: Icon(Icons.home_outlined, color: currentScreen == 0 ? Colors.red.shade400 : Colors.black),
+                icon: Icon(Icons.home_outlined, color: currentScreen == 0 ? Colors.red.shade400 : Colors.black,size: 30,),
                 label: 'Home',
               ),
               NavigationDestination(
-                icon: Icon(Icons.search_sharp, color: currentScreen == 1 ? Colors.red.shade400 : Colors.black,),
+                icon: Icon(Icons.search_sharp, color: currentScreen == 1 ? Colors.red.shade400 : Colors.black,size: 30,),
                 label: 'Search',
               ),
               NavigationDestination(
-                icon: Icon(Icons.shopping_bag_outlined, color: currentScreen == 2 ? Colors.red.shade400 : Colors.black),
+                icon: Icon(Icons.shopping_bag_outlined, color: currentScreen == 2 ? Colors.red.shade400 : Colors.black,size: 30,),
                 label: 'Cart',
               ),
               NavigationDestination(
-                icon: Icon(Icons.person_outline_rounded, color: currentScreen == 3 ? Colors.red.shade400 : Colors.black),
+                icon: Icon(Icons.person_outline_rounded, color: currentScreen == 3 ? Colors.red.shade400 : Colors.black,size: 30,),
                 label: 'Profile',
               ),
             ],
