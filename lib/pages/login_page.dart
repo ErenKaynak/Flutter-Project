@@ -1,14 +1,13 @@
+import 'package:engineering_project/pages/register_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:engineering_project/assets/components/auth_service.dart';
 import 'package:engineering_project/assets/components/square_tile.dart';
-import 'package:engineering_project/pages/home_page.dart';
 import 'package:engineering_project/pages/forget_pw_page.dart';
 
 class LoginPage extends StatefulWidget {
-  final Function()? onTap;
-  const LoginPage({super.key, required this.onTap});
+  LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -179,7 +178,16 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(width: 4),
                       GestureDetector(
-                        onTap: widget.onTap,
+                        onTap: () {
+
+                        Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RegisterPage(),
+                        ),
+                      );
+
+                        },
                         child: Text(
                           'Register!',
                           style: TextStyle(

@@ -4,8 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:engineering_project/assets/components/auth_service.dart';
 import 'package:engineering_project/assets/components/square_tile.dart';
 class RegisterPage extends StatefulWidget {
-  final Function()? onTap;
-  const RegisterPage({super.key, required this.onTap});
+  RegisterPage({super.key});
   
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -88,7 +87,7 @@ class _RegisterPageState extends State<RegisterPage> {
       
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const LoginPage(onTap: null)),
+        MaterialPageRoute(builder: (context) => LoginPage()),
       );
     } on FirebaseAuthException catch (e) {
       Navigator.pop(context); // Yükleme çemberini kapat
@@ -244,7 +243,15 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(width: 4),
                       GestureDetector(
-                        onTap: widget.onTap,
+                        onTap: (){
+                        Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => LoginPage(),
+                        ),
+                      );
+
+                        },
                         child: Text(
                           'Login!',
                           style: TextStyle(

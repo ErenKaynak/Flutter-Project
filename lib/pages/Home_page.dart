@@ -73,7 +73,7 @@ class _HomePageState extends State<HomePage> {
     if (mounted) {
       // Widget hala aktif mi kontrol ediyoruz.
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const LoginPage(onTap: null)),
+        MaterialPageRoute(builder: (context) => LoginPage()),
         (route) => false,
       );
     }

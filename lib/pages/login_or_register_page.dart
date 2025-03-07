@@ -1,3 +1,4 @@
+/*
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/register_page.dart';
 import 'package:flutter/material.dart';
@@ -36,3 +37,4 @@ class _LoginOrRegisterPageState extends State<LoginOrRegisterPage> {
     }
   }
 }
+*/
