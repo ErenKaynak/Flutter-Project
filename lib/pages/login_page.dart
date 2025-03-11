@@ -53,25 +53,38 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } on FirebaseAuthException catch (e) {
-      Navigator.pop(context); // Yükleme çemberini kapat
+    Navigator.pop(context); // Close loading indicator
 
-      setState(() {
-        if (e.code == 'ERROR_USER_NOT_FOUND') {
-          emailError = "No user found with this email.";
-          passwordError = null; // Şifreyi temizle
-        } else if (e.code == 'ERROR-WRONG-PASSWORD') {
-          emailError = null; // E-posta hatasını temizle
-          passwordError = "Incorrect password. Try again.";
-        } else if (e.code == 'ERROR_INVALID_EMAIL') {
+    setState(() {
+      switch (e.code) {
+        case 'invalid-credential':
+          emailError = "Email or Password is wrong please try again";
+          break;
+        case 'wrong-password':
+          passwordError = "Incorrect password. Please try again.";
+          break;
+        case 'invalid-email':
           emailError = "The email address is badly formatted.";
-          passwordError = null; // Şifreyi temizle
-        } else {
-          emailError = e.message;
-          passwordError = e.message; // Diğer hatalarda sadece e-posta hatasını göster
-        }
-      });
-    }
+          break;
+        case 'user-disabled':
+          emailError = "This user account has been disabled.";
+          break;
+        case 'too-many-requests':
+          emailError = "Too many unsuccessful login attempts. Please try again later.";
+          break;
+        default:
+          emailError = "An error occurred. Please try again.";
+          print("Firebase Auth Error: ${e.code}"); // For debugging
+      }
+    });
+  } catch (e) {
+    Navigator.pop(context); // Close loading indicator
+    setState(() {
+      emailError = "An unexpected error occurred. Please try again.";
+      print("Unexpected Error: $e"); // For debugging
+    });
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -108,25 +121,10 @@ class _LoginPageState extends State<LoginPage> {
                       filled: true,
                       hintText: 'Email',
                       prefixIcon: const Icon(Icons.email),
-                      errorText: emailError,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        setState(() => emailError = "Enter your email");
-                        return "";
-                      } else if (!RegExp(
-                        r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
-                      ).hasMatch(value)) {
-                        setState(
-                          () => emailError = "Enter a valid email address",
-                        );
-                        return "";
-                      }
-                      return null;
-                    },
                   ),
                   const SizedBox(height: 10),
 
@@ -146,27 +144,24 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed:
                             () => setState(() => passToggle = !passToggle),
                       ),
-                      errorText: passwordError,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        setState(() => passwordError = "Enter your password");
-                        return "";
-                      } else if (value.length < 6) {
-                        setState(
-                          () =>
-                              passwordError =
-                                  "Password must be at least 6 characters",
-                        );
-                        return "";
-                      }
-                      return null;
-                    },
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 5),
+                        TextFormField(
+                            enabled: false,
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              errorText: emailError ?? passwordError,
+                              errorStyle: TextStyle(
+                                color: Colors.red,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                    const SizedBox(height: 5),
 
                   // Register & Forgot Password Links
                   Row(
