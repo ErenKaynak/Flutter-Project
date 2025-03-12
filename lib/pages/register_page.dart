@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:engineering_project/assets/components/auth_service.dart';
 import 'package:engineering_project/assets/components/square_tile.dart';
+
 class RegisterPage extends StatefulWidget {
   RegisterPage({super.key});
-  
+
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
+
 class _RegisterPageState extends State<RegisterPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -18,6 +20,16 @@ class _RegisterPageState extends State<RegisterPage> {
 
   String? emailError;
   String? passwordError;
+
+  void showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
 
   void signUserUp() async {
     setState(() {
@@ -34,80 +46,25 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     try {
-      
-
-      //password controller
-      if(passwordController.text == confirmPasswordController.text){
+      // Şifreler eşleşiyorsa
+      if (passwordController.text == confirmPasswordController.text) {
         await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: emailController.text,
-        password: passwordController.text,
-      );
+          email: emailController.text,
+          password: passwordController.text,
+        );
       } else {
-        //show error message 
-        Navigator.pop(context);
-        showDialog(
-        context: context,
-        barrierDismissible: true,
-        builder: (context) => Center(
-          child: Container(
-            padding: EdgeInsets.all(5),
-            decoration: BoxDecoration(
-            border: Border.all(color: Colors.white),
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.red.shade500,
-          ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start, 
-          children: [
-            Icon(
-              Icons.warning_amber_rounded, 
-              size: 20, 
-              color: Colors.white
-          ),
-            SizedBox(width: 5),
-            Text(
-              'Passwords do not match',
-              style: TextStyle(color: Colors.white),
-          ),
-          SizedBox(width: 5),
-           Icon(
-              Icons.warning_amber_rounded, 
-              size: 20, 
-              color: Colors.white
-          ),
-        ],
-      ),
-    ),
-  ),
-);
+        Navigator.pop(context); // Yükleme ekranını kapat
+        showErrorSnackBar("Passwords do not match");
         return;
       }
 
-      
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => LoginPage()),
       );
     } on FirebaseAuthException catch (e) {
-      Navigator.pop(context); // Yükleme çemberini kapat
-
-      setState(() {
-        if (e.code == 'ERROR_USER_NOT_FOUND') {
-          emailError = "No user found with this email.";
-          passwordError = null; // Şifreyi temizle
-        } else if (e.code == 'ERROR-WRONG-PASSWORD') {
-          emailError = null; // E-posta hatasını temizle
-          passwordError = "Incorrect password. Try again.";
-        } else if (e.code == 'ERROR_INVALID_EMAIL') {
-          emailError = "The email address is badly formatted.";
-          passwordError = null; // Şifreyi temizle
-        } else {
-          emailError = e.message;
-          passwordError =
-              e.message; // Diğer hatalarda sadece e-posta hatasını göster
-        }
-      });
+      Navigator.pop(context); // Yükleme ekranını kapat
+      showErrorSnackBar(e.message ?? "An unexpected error occurred");
     }
   }
 
@@ -206,7 +163,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 10),
 
-
+                  // Confirm Password Input
                   TextFormField(
                     controller: confirmPasswordController,
                     obscureText: passToggle,
@@ -227,11 +184,15 @@ class _RegisterPageState extends State<RegisterPage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    
+                    validator: (value) {
+                      if (value != passwordController.text) {
+                        return "Passwords do not match";
+                      }
+                      return null;
+                    },
                   ),
 
-                  SizedBox(height: 20,),
-
+                  SizedBox(height: 20),
 
                   // Register & Forgot Password Links
                   Row(
@@ -243,14 +204,13 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(width: 4),
                       GestureDetector(
-                        onTap: (){
-                        Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => LoginPage(),
-                        ),
-                      );
-
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => LoginPage(),
+                            ),
+                          );
                         },
                         child: Text(
                           'Login!',
@@ -265,7 +225,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                   const SizedBox(height: 20),
 
-                  // Login Button
+                  // Register Button
                   FloatingActionButton(
                     backgroundColor: Colors.red.shade700,
                     foregroundColor: Colors.grey[200],
@@ -300,7 +260,18 @@ class _RegisterPageState extends State<RegisterPage> {
                     children: [
                       SquareTile(
                         imagePath: 'lib/assets/Images/google-logo.png',
-                        onPressed: () => AuthService().signInWithGoogle(),
+                        onPressed: () async {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder:
+                                (context) =>
+                                    Center(child: CircularProgressIndicator()),
+                          );
+
+                          await AuthService().signInWithGoogle();
+                          Navigator.pop(context); // Yükleme ekranını kapat
+                        },
                       ),
                     ],
                   ),

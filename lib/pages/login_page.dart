@@ -44,47 +44,52 @@ class _LoginPageState extends State<LoginPage> {
 
       // Dismiss the loading indicator
       if (context.mounted) Navigator.pop(context);
-      
+
       // Navigate to HomePage and remove all previous routes
       if (context.mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const RootScreen()),
-          (Route<dynamic> route) => false, // Change to false to remove all previous routes
+          (Route<dynamic> route) =>
+              false, // Change to false to remove all previous routes
         );
       }
     } on FirebaseAuthException catch (e) {
-    Navigator.pop(context); // Close loading indicator
+      Navigator.pop(context); // Close loading indicator
 
-    setState(() {
-      switch (e.code) {
-        case 'invalid-credential':
-          emailError = "Email or Password is wrong please try again";
-          break;
-        case 'wrong-password':
-          passwordError = "Incorrect password. Please try again.";
-          break;
-        case 'invalid-email':
-          emailError = "The email address is badly formatted.";
-          break;
-        case 'user-disabled':
-          emailError = "This user account has been disabled.";
-          break;
-        case 'too-many-requests':
-          emailError = "Too many unsuccessful login attempts. Please try again later.";
-          break;
-        default:
-          emailError = "An error occurred. Please try again.";
-          print("Firebase Auth Error: ${e.code}"); // For debugging
-      }
-    });
-  } catch (e) {
-    Navigator.pop(context); // Close loading indicator
-    setState(() {
-      emailError = "An unexpected error occurred. Please try again.";
-      print("Unexpected Error: $e"); // For debugging
-    });
+      setState(() {
+        switch (e.code) {
+          case 'invalid-credential':
+            emailError = "Email or Password is wrong please try again";
+            break;
+          case 'wrong-password':
+            passwordError = "Incorrect password. Please try again.";
+            break;
+          case 'invalid-email':
+            emailError = "The email address is badly formatted.";
+            break;
+          case 'user-disabled':
+            emailError = "This user account has been disabled.";
+            break;
+          case 'too-many-requests':
+            emailError =
+                "Too many unsuccessful login attempts. Please try again later.";
+            break;
+          case 'missing-password':
+            emailError = "Please Enter A Password.";
+            break;
+          default:
+            emailError = "An error occurred. Please try again.";
+            print("Firebase Auth Error: ${e.code}"); // For debugging
+        }
+      });
+    } catch (e) {
+      Navigator.pop(context); // Close loading indicator
+      setState(() {
+        emailError = "An unexpected error occurred. Please try again.";
+        print("Unexpected Error: $e"); // For debugging
+      });
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -150,18 +155,27 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 5),
-                        TextFormField(
-                            enabled: false,
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              errorText: emailError ?? passwordError,
-                              errorStyle: TextStyle(
-                                color: Colors.red,
-                                fontSize: 14,
-                              ),
-                            ),
+                  const SizedBox(height: 5),
+
+                  // Hata mesajını ortalamak için
+                  if (emailError != null || passwordError != null)
+                    Align(
+                      alignment: Alignment.center,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Text(
+                          emailError ?? passwordError ?? '',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
                           ),
-                    const SizedBox(height: 5),
+                        ),
+                      ),
+                    ),
+
+                  const SizedBox(height: 5),
 
                   // Register & Forgot Password Links
                   Row(
@@ -174,14 +188,12 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(width: 4),
                       GestureDetector(
                         onTap: () {
-
-                        Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => RegisterPage(),
-                        ),
-                      );
-
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => RegisterPage(),
+                            ),
+                          );
                         },
                         child: Text(
                           'Register!',
