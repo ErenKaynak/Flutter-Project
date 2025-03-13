@@ -45,25 +45,27 @@ class AuthService {
   }
 
   //google sign in
-  signInWithGoogle() async {
-    //begin interactive sign in process
-    final GoogleSignInAccount? gUser = await GoogleSignIn().signIn();
+  Future<UserCredential> signInWithGoogle() async {
+  // Begin interactive sign in process
+  final GoogleSignInAccount? gUser = await GoogleSignIn().signIn();
 
-    //user cancels sign in process
-    if (gUser == null) return;
-
-    //obtain auth details from request
-    final GoogleSignInAuthentication gAuth = await gUser!.authentication;
-
-    //create a new credential for user
-    final credential = GoogleAuthProvider.credential(
-      accessToken: gAuth.accessToken,
-      idToken: gAuth.idToken,
-    );
-
-    //sign in user with the credential
-    return await _firebaseauth.signInWithCredential(credential);
+  // User cancels sign in process
+  if (gUser == null) {
+    throw Exception('google-sign-in-cancelled');
   }
+
+  // Obtain auth details from request
+  final GoogleSignInAuthentication gAuth = await gUser.authentication;
+
+  // Create a new credential for user
+  final credential = GoogleAuthProvider.credential(
+    accessToken: gAuth.accessToken,
+    idToken: gAuth.idToken,
+  );
+
+  // Sign in user with the credential and return the UserCredential
+  return await _firebaseauth.signInWithCredential(credential);
+}
 
   //possible error messages
   String getErrorMessage(String errorCode) {

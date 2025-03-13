@@ -1,4 +1,5 @@
 import 'package:engineering_project/pages/login_page.dart';
+import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:engineering_project/assets/components/auth_service.dart';
@@ -21,53 +22,48 @@ class _RegisterPageState extends State<RegisterPage> {
   String? emailError;
   String? passwordError;
 
-  void showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 3),
-      ),
-    );
+  
+  void signInWithGoogleAndNavigate() async {
+  // Show loading indicator
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => const Center(child: CircularProgressIndicator()),
+  );
+
+  try {
+    // Attempt to sign in with Google
+    await AuthService().signInWithGoogle();
+    
+    // Dismiss the loading indicator
+    if (context.mounted) Navigator.pop(context);
+    
+    // Navigate to RootScreen and remove all previous routes
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const RootScreen()),
+        (Route<dynamic> route) => false,
+      );
+    }
+  } catch (e) {
+    // Dismiss the loading indicator
+    if (context.mounted) Navigator.pop(context);
+    
+    // Show error message
+    setState(() {
+      emailError = "Google sign-in failed. Please try again.";
+      print("Google Sign-In Error: $e"); // For debugging
+    });
   }
+}
+  
 
   void signUserUp() async {
     setState(() {
       emailError = null;
       passwordError = null;
     });
-
-    if (!_formKey.currentState!.validate()) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      // Şifreler eşleşiyorsa
-      if (passwordController.text == confirmPasswordController.text) {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: emailController.text,
-          password: passwordController.text,
-        );
-      } else {
-        Navigator.pop(context); // Yükleme ekranını kapat
-        showErrorSnackBar("Passwords do not match");
-        return;
-      }
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginPage()),
-      );
-    } on FirebaseAuthException catch (e) {
-      Navigator.pop(context); // Yükleme ekranını kapat
-      showErrorSnackBar(e.message ?? "An unexpected error occurred");
-    }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -260,18 +256,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     children: [
                       SquareTile(
                         imagePath: 'lib/assets/Images/google-logo.png',
-                        onPressed: () async {
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder:
-                                (context) =>
-                                    Center(child: CircularProgressIndicator()),
-                          );
-
-                          await AuthService().signInWithGoogle();
-                          Navigator.pop(context); // Yükleme ekranını kapat
-                        },
+                        onPressed: () => signInWithGoogleAndNavigate(),
                       ),
                     ],
                   ),
