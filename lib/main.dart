@@ -1,6 +1,7 @@
 import 'package:engineering_project/pages/home_page.dart';
 import 'package:engineering_project/pages/auth_page.dart';
 import 'package:engineering_project/pages/login_page.dart';
+import 'package:engineering_project/pages/register_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
 import 'firebase_options.dart';

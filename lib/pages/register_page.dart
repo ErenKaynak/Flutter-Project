@@ -21,49 +21,118 @@ class _RegisterPageState extends State<RegisterPage> {
 
   String? emailError;
   String? passwordError;
-
   
   void signInWithGoogleAndNavigate() async {
-  // Show loading indicator
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => const Center(child: CircularProgressIndicator()),
-  );
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
 
-  try {
-    // Attempt to sign in with Google
-    await AuthService().signInWithGoogle();
-    
-    // Dismiss the loading indicator
-    if (context.mounted) Navigator.pop(context);
-    
-    // Navigate to RootScreen and remove all previous routes
-    if (context.mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const RootScreen()),
-        (Route<dynamic> route) => false,
-      );
+    try {
+      // Attempt to sign in with Google
+      await AuthService().signInWithGoogle();
+      
+      // Dismiss the loading indicator
+      if (context.mounted) Navigator.pop(context);
+      
+      // Navigate to RootScreen and remove all previous routes
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const RootScreen()),
+          (Route<dynamic> route) => false,
+        );
+      }
+    } catch (e) {
+      // Dismiss the loading indicator
+      if (context.mounted) Navigator.pop(context);
+      
+      // Show error message
+      setState(() {
+        emailError = "Google sign-in failed. Please try again.";
+        print("Google Sign-In Error: $e"); // For debugging
+      });
     }
-  } catch (e) {
-    // Dismiss the loading indicator
-    if (context.mounted) Navigator.pop(context);
-    
-    // Show error message
-    setState(() {
-      emailError = "Google sign-in failed. Please try again.";
-      print("Google Sign-In Error: $e"); // For debugging
-    });
   }
-}
-  
 
   void signUserUp() async {
     setState(() {
       emailError = null;
       passwordError = null;
     });
+
+    // Validate form fields
+    if (!_formKey.currentState!.validate()) return;
+
+    // Check if passwords match
+    if (passwordController.text != confirmPasswordController.text) {
+      setState(() {
+        passwordError = "Passwords do not match";
+      });
+      return;
+    }
+
+    // Check password length
+    if (passwordController.text.length < 6) {
+      setState(() {
+        passwordError = "Passwords must be 6 characters long";
+      });
+      return;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // Attempt to create user
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      // Dismiss the loading indicator
+      if (context.mounted) Navigator.pop(context);
+
+      // Navigate to HomePage and remove all previous routes
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const RootScreen()),
+          (Route<dynamic> route) => false,
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      Navigator.pop(context); // Close loading indicator
+
+      setState(() {
+        switch (e.code) {
+          case 'email-already-in-use':
+            emailError = "Account already exists";
+            break;
+          case 'invalid-email':
+            emailError = "Bad formatted email";
+            break;
+          case 'weak-password':
+            passwordError = "Passwords must be 6 characters long";
+            break;
+          default:
+            emailError = "An error occurred. Please try again.";
+            print("Firebase Auth Error: ${e.code}"); // For debugging
+        }
+      });
+    } catch (e) {
+      Navigator.pop(context); // Close loading indicator
+      setState(() {
+        emailError = "An unexpected error occurred. Please try again.";
+        print("Unexpected Error: $e"); // For debugging
+      });
+    }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -99,22 +168,13 @@ class _RegisterPageState extends State<RegisterPage> {
                       filled: true,
                       hintText: 'Email',
                       prefixIcon: const Icon(Icons.email),
-                      errorText: emailError,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        setState(() => emailError = "Enter your email");
-                        return "";
-                      } else if (!RegExp(
-                        r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
-                      ).hasMatch(value)) {
-                        setState(
-                          () => emailError = "Enter a valid email address",
-                        );
-                        return "";
+                        return 'Enter a email';
                       }
                       return null;
                     },
@@ -137,22 +197,13 @@ class _RegisterPageState extends State<RegisterPage> {
                         onPressed:
                             () => setState(() => passToggle = !passToggle),
                       ),
-                      errorText: passwordError,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        setState(() => passwordError = "Enter your password");
-                        return "";
-                      } else if (value.length < 6) {
-                        setState(
-                          () =>
-                              passwordError =
-                                  "Password must be at least 6 characters",
-                        );
-                        return "";
+                        return 'Enter a Password';
                       }
                       return null;
                     },
@@ -175,22 +226,41 @@ class _RegisterPageState extends State<RegisterPage> {
                         onPressed:
                             () => setState(() => passToggle = !passToggle),
                       ),
-                      errorText: passwordError,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     validator: (value) {
                       if (value != passwordController.text) {
-                        return "Passwords do not match";
+                        return 'Enter a password';
                       }
                       return null;
                     },
                   ),
+                  const SizedBox(height: 5),
+                  const SizedBox(height: 5),
 
-                  SizedBox(height: 20),
+                  // Error message display - similar to login page
+                  if (emailError != null || passwordError != null)
+                    Align(
+                      alignment: Alignment.center,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Text(
+                          emailError ?? passwordError ?? '',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
 
-                  // Register & Forgot Password Links
+                  const SizedBox(height: 5),
+
+                  // Register & Login Links
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
