@@ -40,11 +40,7 @@ class _HomePageState extends State<HomePage> {
                     fontSize: 40,
                   ),
                 ),
-                SwitchListTile(
-                  title: const Text("Theme"),
-                  value: false,
-                  onChanged: (value) {},
-                ),
+                SizedBox(height: 50),
                 Container(
                   padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(

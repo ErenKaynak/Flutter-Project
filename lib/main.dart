@@ -1,3 +1,4 @@
+import 'package:engineering_project/admin-panel/admin_main.dart';
 import 'package:engineering_project/pages/home_page.dart';
 import 'package:engineering_project/pages/auth_page.dart';
 import 'package:engineering_project/pages/login_page.dart';
@@ -22,7 +23,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: true,
-      home: LoginPage(), // Remove the const keyword
+      home: RootScreen(), // Remove the const keyword
     );
   }
 }
