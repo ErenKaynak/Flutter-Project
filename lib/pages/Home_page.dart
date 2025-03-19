@@ -18,6 +18,29 @@ class MyApp extends StatelessWidget {
 class HomePage extends StatelessWidget {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  final List<Map<String, String>> products = [
+    {
+      "image": "lib/assets/Images/rtx-4090.png",
+      "name": "RTX 4090",
+      "price": "\$1599.99",
+    },
+    {
+      "image": "lib/assets/Images/rtx-4080.png",
+      "name": "RTX 4080",
+      "price": "\$1199.99",
+    },
+    {
+      "image": "lib/assets/Images/rtx-4070.png",
+      "name": "RTX 4070",
+      "price": "\$699.99",
+    },
+    {
+      "image": "lib/assets/Images/rtx-4060.png",
+      "name": "RTX 4060",
+      "price": "\$499.99",
+    },
+  ];
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -28,9 +51,13 @@ class HomePage extends StatelessWidget {
             child: TextField(
               decoration: InputDecoration(
                 hintText: "Search",
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 prefixIcon: Icon(Icons.search, size: 25),
-                contentPadding: EdgeInsets.symmetric(vertical: 10), // Adjust vertical alignment
+                contentPadding: EdgeInsets.symmetric(
+                  vertical: 10,
+                ), // Adjust vertical alignment
                 alignLabelWithHint: true,
               ),
             ),
@@ -60,14 +87,7 @@ class HomePage extends StatelessWidget {
                   color: Colors.grey[300], // Placeholder for the banner
                 ),
                 child: Center(
-                  child: Text(
-                    "Banner Title",
-                    style: TextStyle(
-                      fontSize: 24,
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: Image.asset('lib/assets/images/bannertest.png'),
                 ),
               ),
               SizedBox(height: 10),
@@ -79,20 +99,20 @@ class HomePage extends StatelessWidget {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
-              Center(
+              /*Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    CategoryCircle(label: "Laptops"),
+                    CategoryCircle(label: "Laptops",imagePath: '//TODO:Burayı Doldur',),
                     SizedBox(width: 10),
-                    CategoryCircle(label: "Monitors"),
+                    CategoryCircle(label: "Monitors",imagePath: '//TODO:Burayı Doldur'),
                     SizedBox(width: 10),
-                    CategoryCircle(label: "Keyboards"),
+                    CategoryCircle(label: "Keyboards",imagePath: '//TODO:Burayı Doldur'),
                     SizedBox(width: 10),
-                    CategoryCircle(label: "Accessories"),
+                    CategoryCircle(label: "Accessories",imagePath: '//TODO:Burayı Doldur'),
                   ],
                 ),
-              ),
+              ),*/
               Padding(
                 padding: EdgeInsets.all(10),
                 child: Text(
@@ -100,6 +120,7 @@ class HomePage extends StatelessWidget {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
+
               GridView.builder(
                 shrinkWrap: true,
                 physics: NeverScrollableScrollPhysics(),
@@ -109,9 +130,13 @@ class HomePage extends StatelessWidget {
                   mainAxisSpacing: 10,
                   childAspectRatio: 0.75,
                 ),
-                itemCount: 6,
+                itemCount: products.length, // Now it dynamically adjusts
                 itemBuilder: (context, index) {
-                  return ProductCard();
+                  return ProductCard(
+                    imagePath: products[index]["image"]!,
+                    name: products[index]["name"]!,
+                    price: products[index]["price"]!,
+                  );
                 },
               ),
             ],
@@ -142,11 +167,7 @@ class CategoryButton extends StatelessWidget {
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 24),
-            SizedBox(width: 8),
-            Text(label),
-          ],
+          children: [Icon(icon, size: 24), SizedBox(width: 8), Text(label)],
         ),
       ),
     );
@@ -155,8 +176,9 @@ class CategoryButton extends StatelessWidget {
 
 class CategoryCircle extends StatelessWidget {
   final String label;
+  final String imagePath;
 
-  CategoryCircle({required this.label});
+  CategoryCircle({required this.label, required this.imagePath});
 
   @override
   Widget build(BuildContext context) {
@@ -165,6 +187,7 @@ class CategoryCircle extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         CircleAvatar(
+          foregroundImage: AssetImage(imagePath),
           radius: 35,
           backgroundColor: Colors.grey[300], // Placeholder for image
         ),
@@ -175,6 +198,16 @@ class CategoryCircle extends StatelessWidget {
 }
 
 class ProductCard extends StatelessWidget {
+  final String imagePath;
+  final String name;
+  final String price;
+
+  ProductCard({
+    required this.imagePath,
+    required this.name,
+    required this.price,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -185,7 +218,7 @@ class ProductCard extends StatelessWidget {
           Expanded(
             child: Container(
               color: Colors.grey[300],
-              child: Center(child: Text("Product Image")),
+              child: Center(child: Image.asset(imagePath)),
             ),
           ),
           Padding(
@@ -193,13 +226,13 @@ class ProductCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("RTX4090", style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(name, style: TextStyle(fontWeight: FontWeight.bold)),
                 SizedBox(height: 4),
-                Text("\$1599.99", style: TextStyle(color: Colors.green)),
+                Text(price, style: TextStyle(color: Colors.green)),
               ],
             ),
           ),
-          ButtonBar(
+          OverflowBar(
             alignment: MainAxisAlignment.center,
             children: [
               TextButton(onPressed: () {}, child: Text("Add to Cart")),
