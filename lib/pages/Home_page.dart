@@ -23,12 +23,16 @@ class HomePage extends StatelessWidget {
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          title: TextField(
-            decoration: InputDecoration(
-              hintText: "Search",
-              border: InputBorder.none,
-              prefixIcon: Icon(Icons.search, size: 25),
-              alignLabelWithHint: true,
+          title: Container(
+            height: 40, // Set a fixed height for proper alignment
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: "Search",
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                prefixIcon: Icon(Icons.search, size: 25),
+                contentPadding: EdgeInsets.symmetric(vertical: 10), // Adjust vertical alignment
+                alignLabelWithHint: true,
+              ),
             ),
           ),
         ),
@@ -60,7 +64,7 @@ class HomePage extends StatelessWidget {
                     "Banner Title",
                     style: TextStyle(
                       fontSize: 24,
-                      color: Colors.white,
+                      color: Colors.black,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -75,14 +79,16 @@ class HomePage extends StatelessWidget {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
-              SizedBox(
-                height: 100,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     CategoryCircle(label: "Laptops"),
+                    SizedBox(width: 10),
                     CategoryCircle(label: "Monitors"),
+                    SizedBox(width: 10),
                     CategoryCircle(label: "Keyboards"),
+                    SizedBox(width: 10),
                     CategoryCircle(label: "Accessories"),
                   ],
                 ),
@@ -124,14 +130,24 @@ class CategoryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[200], // Placeholder for button color
-        border: Border.all(color: Colors.black),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [IconButton(icon: Icon(icon), onPressed: () {}), Text(label)],
+    return InkWell(
+      onTap: () {}, // Ensures the entire button is clickable
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+        decoration: BoxDecoration(
+          color: Colors.white, // Button background color
+          border: Border.all(color: Colors.black, width: 0.8), // Outline
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 24),
+            SizedBox(width: 8),
+            Text(label),
+          ],
+        ),
       ),
     );
   }
@@ -145,6 +161,8 @@ class CategoryCircle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         CircleAvatar(
           radius: 35,

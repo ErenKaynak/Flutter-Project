@@ -103,7 +103,7 @@ class _RootScreenState extends State<RootScreen> {
   late PageController controller;
   int currentScreen = 0;
   List<Widget> screens = [
-    const HomePage(), 
+          HomePage(), 
     const SearchPage(), 
     const CartPage(), 
     const ProfilePage()
@@ -131,7 +131,7 @@ class _RootScreenState extends State<RootScreen> {
         setState(() {
           isAdmin = true;
           screens = [
-            const HomePage(), 
+                  HomePage(), 
             const SearchPage(), 
             const CartPage(), 
             const ProfilePage(),
