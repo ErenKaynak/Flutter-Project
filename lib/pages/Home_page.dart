@@ -104,13 +104,13 @@ class HomePage extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    CategoryCircle(label: "Graphic\nCards",imagePath: 'lib/assets/Images/icons/gpu-icon.png',),
+                    CategoryCircle(label: "Graphic\nCards",imagePath: 'lib/assets/Images/gpu-icon.png',),
                     SizedBox(width: 10),
-                    CategoryCircle(label: "Motherboards",imagePath: 'lib/assets/Images/icons/motherboard-icon.png'),
+                    CategoryCircle(label: "Motherboards",imagePath: 'lib/assets/Images/motherboard-icon.png'),
                     SizedBox(width: 10),
-                    CategoryCircle(label: "CPU's",imagePath: 'lib/assets/Images/icons/cpu-icon.png'),
+                    CategoryCircle(label: "CPU's",imagePath: 'lib/assets/Images/cpu-icon.png'),
                     SizedBox(width: 10),
-                    CategoryCircle(label: "RAM's",imagePath: 'lib/assets/Images/icons/ram-icon.png'),
+                    CategoryCircle(label: "RAM's",imagePath: 'lib/assets/Images/ram-icon.png'),
                   ],
                 ),
               ),
@@ -188,9 +188,14 @@ class CategoryCircle extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         CircleAvatar(
-          foregroundImage: AssetImage(imagePath),
-          radius: 35,
+          radius: 35, // Keep the circle radius the same
           backgroundColor: Colors.grey[300], // Placeholder for image
+          child:Image.asset(
+              imagePath,
+              fit: BoxFit.fill,
+              width: 50, // Adjust the width to shrink the image
+              height: 50, // Adjust the height to shrink the image
+            ),
         ),
         Text(label),
       ],
@@ -244,3 +249,5 @@ class ProductCard extends StatelessWidget {
     );
   }
 }
+
+
