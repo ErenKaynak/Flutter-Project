@@ -39,6 +39,16 @@ class HomePage extends StatelessWidget {
       "name": "RTX 4060",
       "price": "\$499.99",
     },
+    {
+      "image": "lib/assets/Images/asus-tuf-radeon-rx-7900-xtx.png",
+      "name": "RADEON RX 7900 XTX",
+      "price": "\$1099.99",
+    },
+    {
+      "image": "lib/assets/Images/radeon-rx-9070-xt.png",
+      "name": "RADEON RX 9070 XT",
+      "price": "\$1399.99",
+    },
   ];
 
   @override
@@ -99,18 +109,29 @@ class HomePage extends StatelessWidget {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
-              Center( 
-                
+              Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    CategoryCircle(label: "Graphic\nCards",imagePath: 'lib/assets/Images/gpu-icon.png',),
+                    CategoryCircle(
+                      label: "Graphic\nCards",
+                      imagePath: 'lib/assets/Images/gpu-icon.png',
+                    ),
                     SizedBox(width: 10),
-                    CategoryCircle(label: "Motherboards",imagePath: 'lib/assets/Images/motherboard-icon.png'),
+                    CategoryCircle(
+                      label: "Motherboards",
+                      imagePath: 'lib/assets/Images/motherboard-icon.png',
+                    ),
                     SizedBox(width: 10),
-                    CategoryCircle(label: "CPU's",imagePath: 'lib/assets/Images/cpu-icon.png'),
+                    CategoryCircle(
+                      label: "CPU's",
+                      imagePath: 'lib/assets/Images/cpu-icon.png',
+                    ),
                     SizedBox(width: 10),
-                    CategoryCircle(label: "RAM's",imagePath: 'lib/assets/Images/ram-icon.png'),
+                    CategoryCircle(
+                      label: "RAM's",
+                      imagePath: 'lib/assets/Images/ram-icon.png',
+                    ),
                   ],
                 ),
               ),
@@ -190,12 +211,12 @@ class CategoryCircle extends StatelessWidget {
         CircleAvatar(
           radius: 35, // Keep the circle radius the same
           backgroundColor: Colors.grey[300], // Placeholder for image
-          child:Image.asset(
-              imagePath,
-              fit: BoxFit.fill,
-              width: 50, // Adjust the width to shrink the image
-              height: 50, // Adjust the height to shrink the image
-            ),
+          child: Image.asset(
+            imagePath,
+            fit: BoxFit.fill,
+            width: 50, // Adjust the width to shrink the image
+            height: 50, // Adjust the height to shrink the image
+          ),
         ),
         Text(label),
       ],
@@ -249,5 +270,3 @@ class ProductCard extends StatelessWidget {
     );
   }
 }
-
-
