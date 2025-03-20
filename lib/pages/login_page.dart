@@ -23,40 +23,39 @@ class _LoginPageState extends State<LoginPage> {
   String? passwordError;
 
   void signInWithGoogleAndNavigate() async {
-  // Show loading indicator
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => const Center(child: CircularProgressIndicator()),
-  );
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
 
-  try {
-    // Attempt to sign in with Google
-    await AuthService().signInWithGoogle();
-    
-    // Dismiss the loading indicator
-    if (context.mounted) Navigator.pop(context);
-    
-    // Navigate to RootScreen and remove all previous routes
-    if (context.mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const RootScreen()),
-        (Route<dynamic> route) => false,
-      );
+    try {
+      // Attempt to sign in with Google
+      await AuthService().signInWithGoogle();
+
+      // Dismiss the loading indicator
+      if (context.mounted) Navigator.pop(context);
+
+      // Navigate to RootScreen and remove all previous routes
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const RootScreen()),
+          (Route<dynamic> route) => false,
+        );
+      }
+    } catch (e) {
+      // Dismiss the loading indicator
+      if (context.mounted) Navigator.pop(context);
+
+      // Show error message
+      setState(() {
+        emailError = "Google sign-in failed. Please try again.";
+        print("Google Sign-In Error: $e"); // For debugging
+      });
     }
-  } catch (e) {
-    // Dismiss the loading indicator
-    if (context.mounted) Navigator.pop(context);
-    
-    // Show error message
-    setState(() {
-      emailError = "Google sign-in failed. Please try again.";
-      print("Google Sign-In Error: $e"); // For debugging
-    });
   }
-}
-  
-  
+
   void signUserIn() async {
     setState(() {
       emailError = null;
@@ -220,9 +219,9 @@ class _LoginPageState extends State<LoginPage> {
                         'Not a member?',
                         style: TextStyle(color: Colors.grey[800]),
                       ),
-                      
+
                       const SizedBox(width: 4),
-                      
+
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -242,9 +241,9 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 5),
-                  
+
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
@@ -298,8 +297,8 @@ class _LoginPageState extends State<LoginPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       SquareTile(
-                      imagePath: 'lib/assets/Images/google-logo.png',
-                      onPressed: () => signInWithGoogleAndNavigate(),
+                        imagePath: 'lib/assets/Images/google-logo.png',
+                        onPressed: () => signInWithGoogleAndNavigate(),
                       ),
                     ],
                   ),
