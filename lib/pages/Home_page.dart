@@ -99,20 +99,21 @@ class HomePage extends StatelessWidget {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
-              /*Center(
+              Center( 
+                
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    CategoryCircle(label: "Laptops",imagePath: '//TODO:Burayı Doldur',),
+                    CategoryCircle(label: "Graphic\nCards",imagePath: 'lib/assets/Images/icons/gpu-icon.png',),
                     SizedBox(width: 10),
-                    CategoryCircle(label: "Monitors",imagePath: '//TODO:Burayı Doldur'),
+                    CategoryCircle(label: "Motherboards",imagePath: 'lib/assets/Images/icons/motherboard-icon.png'),
                     SizedBox(width: 10),
-                    CategoryCircle(label: "Keyboards",imagePath: '//TODO:Burayı Doldur'),
+                    CategoryCircle(label: "CPU's",imagePath: 'lib/assets/Images/icons/cpu-icon.png'),
                     SizedBox(width: 10),
-                    CategoryCircle(label: "Accessories",imagePath: '//TODO:Burayı Doldur'),
+                    CategoryCircle(label: "RAM's",imagePath: 'lib/assets/Images/icons/ram-icon.png'),
                   ],
                 ),
-              ),*/
+              ),
               Padding(
                 padding: EdgeInsets.all(10),
                 child: Text(
