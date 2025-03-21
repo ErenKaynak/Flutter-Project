@@ -13,14 +13,23 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: FloatingActionButton(
-          backgroundColor: Colors.red.shade700,
-          foregroundColor: Colors.grey[200],
-          onPressed: () async {
-            await _signOutAndNavigate(context); // Pass context properly
-          },
-          child: const Icon(Icons.arrow_forward, size: 25),
+      body: Container(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Log Out!', style: TextStyle(fontSize: 35,fontWeight: FontWeight.bold),), 
+              SizedBox(height: 15),
+          FloatingActionButton(
+            backgroundColor: Colors.red.shade700,
+            foregroundColor: Colors.grey[200],
+            onPressed: () async {
+              await _signOutAndNavigate(context); // Pass context properly
+            },
+            child: const Icon(Icons.arrow_forward, size: 25),
+          ),
+          ],
+          ),
         ),
       ),
     );
