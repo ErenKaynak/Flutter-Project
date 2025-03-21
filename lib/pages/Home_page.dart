@@ -1,3 +1,4 @@
+import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart'; // Import Firebase
 import 'package:firebase_auth/firebase_auth.dart';
@@ -264,7 +265,7 @@ class _HomePageState extends State<HomePage> {
                       },
                       child: Text(
                         "Show All",
-                        style: TextStyle(color: Colors.blue),
+                        style: TextStyle(color: Colors.red),
                       ),
                     ),
                   ],
@@ -330,25 +331,24 @@ class _HomePageState extends State<HomePage> {
 
               // Use filteredProducts instead of products
               GridView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.75,
-                ),
-                itemCount:
-                    filteredProducts
-                        .length, // Now it shows only filtered products
-                itemBuilder: (context, index) {
-                  return ProductCard(
-                    imagePath: filteredProducts[index]["image"]!,
-                    name: filteredProducts[index]["name"]!,
-                    price: filteredProducts[index]["price"]!,
-                  );
-                },
-              ),
+  shrinkWrap: true,
+  physics: NeverScrollableScrollPhysics(),
+  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+    crossAxisCount: 2,
+    crossAxisSpacing: 10,
+    mainAxisSpacing: 10,
+    childAspectRatio: 0.75,
+  ),
+  itemCount: filteredProducts.length,
+  itemBuilder: (context, index) {
+    return ProductCard(
+      imagePath: filteredProducts[index]["image"]!,
+      name: filteredProducts[index]["name"]!,
+      price: filteredProducts[index]["price"]!,
+      category: filteredProducts[index]["category"]!, // Pass category
+    );
+  },
+),
             ],
           ),
         ),
@@ -408,14 +408,14 @@ class CategoryCircle extends StatelessWidget {
           CircleAvatar(
             radius: 35,
             backgroundColor:
-                isSelected ? Colors.blue.withOpacity(0.2) : Colors.grey[300],
+                isSelected ? Colors.red.shade500.withOpacity(0.2) : Colors.grey[300],
             child: Container(
               padding: EdgeInsets.all(5),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border:
                     isSelected
-                        ? Border.all(color: Colors.blue, width: 2)
+                        ? Border.all(color: Colors.red.shade400, width: 2)
                         : null,
               ),
               child: Image.asset(
@@ -430,7 +430,7 @@ class CategoryCircle extends StatelessWidget {
             label,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? Colors.blue : Colors.black,
+              color: isSelected ? Colors.red : Colors.black,
             ),
           ),
         ],
@@ -443,11 +443,13 @@ class ProductCard extends StatelessWidget {
   final String imagePath;
   final String name;
   final String price;
+  final String category; // Add category
 
   ProductCard({
     required this.imagePath,
     required this.name,
     required this.price,
+    required this.category,
   });
 
   @override
@@ -458,9 +460,26 @@ class ProductCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Container(
-              color: Colors.grey[300],
-              child: Center(child: Image.asset(imagePath)),
+            child: GestureDetector(
+              onTap: () {
+                // Navigate to product detail page when image is clicked
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProductDetailPage(
+                      name: name,
+                      price: price,
+                      imagePath: imagePath,
+                      category: category,
+                      description: "This ${name} is a high-performance component perfect for gaming and professional workloads. It features the latest technology and delivers exceptional performance and value.",
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                color: Colors.grey[300],
+                child: Center(child: Image.asset(imagePath)),
+              ),
             ),
           ),
           Padding(
@@ -477,7 +496,24 @@ class ProductCard extends StatelessWidget {
           OverflowBar(
             alignment: MainAxisAlignment.center,
             children: [
-              TextButton(onPressed: () {}, child: Text("Add to Cart")),
+              TextButton(
+                onPressed: () {
+                  // Navigate to product detail page when button is clicked
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProductDetailPage(
+                        name: name,
+                        price: price,
+                        imagePath: imagePath,
+                        category: category,
+                        description: "This ${name} is a high-performance component perfect for gaming and professional workloads. It features the latest technology and delivers exceptional performance and value.",
+                      ),
+                    ),
+                  );
+                }, 
+                child: Text("Add to Cart", style: TextStyle(color: Colors.red)),
+              ),
             ],
           ),
         ],
