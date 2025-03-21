@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:engineering_project/pages/root_page.dart';
+import 'package:engineering_project/pages/home_page.dart';
 // Diğer import'lar şu anda kullanılmıyor, bu yüzden kaldırıldı
 // import 'package:engineering_project/admin-panel/admin_main.dart';
 // import 'package:engineering_project/pages/home_page.dart';
@@ -22,6 +23,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, home: RootScreen());
+    return MaterialApp(debugShowCheckedModeBanner: false, home: HomePage());
   }
 }

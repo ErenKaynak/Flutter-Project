@@ -90,7 +90,7 @@ class _HomePageState extends State<HomePage> {
       "category": "Motherboards",
     },
     {
-      "image": "lib/assets/Images/Msi-MPG-B850",
+      "image": "lib/assets/Images/Msi-MPG-B850.png",
       "name": "MSI MPG B850",
       "price": "\$329.99",
       "category": "Motherboards",
@@ -102,7 +102,7 @@ class _HomePageState extends State<HomePage> {
       "category": "Motherboards",
     },
     {
-      "image": "lib/assets/Images/Intel-i9-14900K.png",
+      "image": "lib/assets/Images/intel-i9.png",
       "name": "Intel i9-14900K",
       "price": "\$599.99",
       "category": "CPU's",
@@ -156,7 +156,7 @@ class _HomePageState extends State<HomePage> {
       "category": "RAM's",
     },
     {
-      "image": "lib/assets/Images/corsair.png",
+      "image": "lib/assets/Images/Corsair.png",
       "name": "CORSAIR 32GB (2x16GB)",
       "price": "\$299.99",
       "category": "RAM's",
