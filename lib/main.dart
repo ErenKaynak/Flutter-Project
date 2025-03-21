@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:engineering_project/pages/root_page.dart';
-
 // Diğer import'lar şu anda kullanılmıyor, bu yüzden kaldırıldı
 // import 'package:engineering_project/admin-panel/admin_main.dart';
 // import 'package:engineering_project/pages/home_page.dart';
