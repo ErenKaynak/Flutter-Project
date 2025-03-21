@@ -64,13 +64,14 @@ class _HomePageState extends State<HomePage> {
     },
     // Add some sample products for other categories
     {
-      "image": "lib/assets/Images/motherboard-example.png", // You'll need to add these images
+      "image":
+          "lib/assets/Images/ROG-Strix-Z790.png", // You'll need to add these images
       "name": "ASUS ROG Z790",
       "price": "\$499.99",
       "category": "Motherboards",
     },
     {
-      "image": "lib/assets/Images/motherboard-example2.png",
+      "image": "lib/assets/Images/msi-b650-gaming-plus.png",
       "name": "MSI MPG B650",
       "price": "\$329.99",
       "category": "Motherboards",
@@ -106,7 +107,9 @@ class _HomePageState extends State<HomePage> {
     if (_selectedCategory == "All") {
       return products;
     } else {
-      return products.where((product) => product["category"] == _selectedCategory).toList();
+      return products
+          .where((product) => product["category"] == _selectedCategory)
+          .toList();
     }
   }
 
@@ -163,7 +166,7 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.grey[300], // Placeholder for the banner
                 ),
                 child: Center(
-                  child: Text('Banner Title') //Image.asset(''),
+                  child: Text('Banner Title'), //Image.asset(''),
                 ),
               ),
               SizedBox(height: 10),
@@ -175,7 +178,10 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Text(
                       "Categories",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     // Clear filter button
                     TextButton(
@@ -233,8 +239,13 @@ class _HomePageState extends State<HomePage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _selectedCategory == "All" ? "Best Deals" : _selectedCategory,
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      _selectedCategory == "All"
+                          ? "Best Deals"
+                          : _selectedCategory,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     // Show product count
                     Text(
@@ -255,7 +266,9 @@ class _HomePageState extends State<HomePage> {
                   mainAxisSpacing: 10,
                   childAspectRatio: 0.75,
                 ),
-                itemCount: filteredProducts.length, // Now it shows only filtered products
+                itemCount:
+                    filteredProducts
+                        .length, // Now it shows only filtered products
                 itemBuilder: (context, index) {
                   return ProductCard(
                     imagePath: filteredProducts[index]["image"]!,
@@ -306,7 +319,7 @@ class CategoryCircle extends StatelessWidget {
   final VoidCallback onTap;
 
   CategoryCircle({
-    required this.label, 
+    required this.label,
     required this.imagePath,
     this.isSelected = false,
     required this.onTap,
@@ -322,14 +335,16 @@ class CategoryCircle extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 35,
-            backgroundColor: isSelected ? Colors.blue.withOpacity(0.2) : Colors.grey[300],
+            backgroundColor:
+                isSelected ? Colors.blue.withOpacity(0.2) : Colors.grey[300],
             child: Container(
               padding: EdgeInsets.all(5),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: isSelected 
-                    ? Border.all(color: Colors.blue, width: 2)
-                    : null,
+                border:
+                    isSelected
+                        ? Border.all(color: Colors.blue, width: 2)
+                        : null,
               ),
               child: Image.asset(
                 imagePath,
