@@ -1,38 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProductDetailPage extends StatefulWidget {
-  final String name;
-  final String price;
-  final String imagePath;
-  final String category;
-  final String description;
+  final String productId;
 
-  const ProductDetailPage({
-    Key? key,
-    required this.name,
-    required this.price,
-    required this.imagePath,
-    required this.category,
-    this.description = "No description available for this product.",
-  }) : super(key: key);
+  const ProductDetailPage({Key? key, required this.productId}) : super(key: key);
 
   @override
   _ProductDetailPageState createState() => _ProductDetailPageState();
 }
 
 class _ProductDetailPageState extends State<ProductDetailPage> {
+  Map<String, dynamic>? productData;
+  bool isLoading = true;
   int quantity = 1;
   int selectedImageIndex = 0;
 
-  // In a real app, you'd fetch these from a database
-  List<String> getProductImages() {
-    // This is a mock function. In a real app, you'd fetch multiple images.
-    // For now, we'll just duplicate the main image to simulate multiple views
-    return [
-      widget.imagePath,
-      widget.imagePath, // Simulating another angle
-      widget.imagePath, // Simulating another angle
-    ];
+  @override
+  void initState() {
+    super.initState();
+    fetchProductDetails();
+  }
+
+  Future<void> fetchProductDetails() async {
+    try {
+      DocumentSnapshot document = await FirebaseFirestore.instance
+          .collection('products')
+          .doc(widget.productId)
+          .get();
+
+      if (document.exists) {
+        setState(() {
+          productData = document.data() as Map<String, dynamic>?;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Error fetching product details: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   void incrementQuantity() {
@@ -51,7 +59,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     // Here you'd implement your cart logic
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${widget.name} x$quantity added to cart'),
+        content: Text('${productData!['name']} x$quantity added to cart'),
         duration: Duration(seconds: 2),
       ),
     );
@@ -59,11 +67,35 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    List<String> images = getProductImages();
-    
+    if (isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: Text("Loading...")),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (productData == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text("Error")),
+        body: Center(child: Text("Product not found")),
+      );
+    }
+
+    String name = productData!['name'] ?? 'Unknown';
+    double price = productData!['price'] ?? 0.0;
+    String imagePath = productData!['imagePath'] ?? '';
+    String category = productData!['category'] ?? 'Uncategorized';
+    String description = productData!['description'] ?? 'No description available.';
+    int stock = productData!['stock'] ?? 0;
+    List<String> images = [
+      imagePath,
+      imagePath, // Simulating another angle
+      imagePath, // Simulating another angle
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.name),
+        title: Text(name),
         actions: [
           IconButton(
             icon: Icon(Icons.shopping_cart),
@@ -82,12 +114,15 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               height: 300,
               width: double.infinity,
               color: Colors.grey[200],
-              child: Image.asset(
+              child: Image.network(
                 images[selectedImageIndex],
                 fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(Icons.image_not_supported, size: 100, color: Colors.grey);
+                },
               ),
             ),
-            
+
             // Image selector row
             Container(
               height: 100,
@@ -113,16 +148,19 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                         color: Colors.grey[200],
                       ),
-                      child: Image.asset(
+                      child: Image.network(
                         images[index],
                         fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(Icons.image_not_supported, size: 50, color: Colors.grey);
+                        },
                       ),
                     ),
                   );
                 },
               ),
             ),
-            
+
             // Product details
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -137,7 +175,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              widget.name,
+                              name,
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -145,7 +183,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             ),
                             SizedBox(height: 4),
                             Text(
-                              "Category: ${widget.category}",
+                              "Category: $category",
                               style: TextStyle(
                                 color: Colors.grey[600],
                               ),
@@ -154,7 +192,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                       ),
                       Text(
-                        widget.price,
+                        "${price.toStringAsFixed(2)}",
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -163,9 +201,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ),
                     ],
                   ),
-                  
+
                   SizedBox(height: 24),
-                  
+
                   // Quantity selector
                   Row(
                     children: [
@@ -204,9 +242,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ),
                     ],
                   ),
-                  
+
                   SizedBox(height: 24),
-                  
+
                   // Add to cart button
                   SizedBox(
                     width: double.infinity,
@@ -226,9 +264,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ),
                     ),
                   ),
-                  
+
                   SizedBox(height: 32),
-                  
+
                   // Product description
                   Text(
                     "Product Description",
@@ -239,13 +277,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    widget.description,
+                    description,
                     style: TextStyle(
                       fontSize: 16,
                       height: 1.5,
                     ),
                   ),
-                  
+
                   // Additional specifications could go here
                   SizedBox(height: 50),
                 ],

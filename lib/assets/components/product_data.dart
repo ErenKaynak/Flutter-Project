@@ -1,17 +1,6 @@
  class ProductData {
    static final List<Map<String, String>> products = [
-    {
-      "image": "lib/assets/Images/rtx-4090.png",
-      "name": "RTX 4090",
-      "price": "\$1599.99",
-      "category": "GPU's", // Added category
-    },
-    {
-      "image": "lib/assets/Images/rtx-4080.png",
-      "name": "RTX 4080",
-      "price": "\$1199.99",
-      "category": "GPU's",
-    },
+    
     {
       "image": "lib/assets/Images/rtx-4070.png",
       "name": "RTX 4070",
@@ -146,5 +135,13 @@
       "price": "\$299.99",
       "category": "RAM's",
     },
+  {
+      "image": "lib/assets/Images/CORSAIR-32GB.png",
+      "name": "CORSAIRxs 32GB (2x16GB)",
+      "price": "\$699.99",
+      "category": "RAM's",
+    },
+  
+  
   ];
  }
