@@ -142,6 +142,7 @@ class _HomePageState extends State<HomePage> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
+                hoverColor: Colors.red,
                 hintText: "Search products",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -251,7 +252,7 @@ class _HomePageState extends State<HomePage> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.blue.shade200, Colors.purple.shade100],
+                  colors: [Colors.red.shade300, Colors.red.shade100],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -286,7 +287,7 @@ class _HomePageState extends State<HomePage> {
                     child: Text('Shop Now'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
-                      foregroundColor: Colors.blue.shade700,
+                      foregroundColor: Colors.red.shade700,
                     ),
                   ),
                 ],
@@ -638,6 +639,7 @@ class _HomePageState extends State<HomePage> {
                           );
                         },
                         style: TextButton.styleFrom(
+                          foregroundColor:Colors.red ,
                           padding: EdgeInsets.symmetric(vertical: 6),
                           minimumSize: Size(0, 30),
                           disabledForegroundColor: Colors.grey.withOpacity(0.5),

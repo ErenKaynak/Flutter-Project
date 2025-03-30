@@ -23,25 +23,25 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   }
 
   Future<void> fetchProductDetails() async {
-    try {
-      DocumentSnapshot document = await FirebaseFirestore.instance
-          .collection('products')
-          .doc(widget.productId)
-          .get();
+  try {
+    DocumentSnapshot document = await FirebaseFirestore.instance
+        .collection('products')
+        .doc(widget.productId)
+        .get();
 
-      if (document.exists) {
-        setState(() {
-          productData = document.data() as Map<String, dynamic>?;
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      print("Error fetching product details: $e");
+    if (document.exists) {
       setState(() {
+        productData = document.data() as Map<String, dynamic>?;
         isLoading = false;
       });
     }
+  } catch (e) {
+    print("Error fetching product details: $e");
+    setState(() {
+      isLoading = false;
+    });
   }
+}
 
   void incrementQuantity() {
     setState(() {
@@ -87,11 +87,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     String category = productData!['category'] ?? 'Uncategorized';
     String description = productData!['description'] ?? 'No description available.';
     int stock = productData!['stock'] ?? 0;
-    List<String> images = [
-      imagePath,
-      imagePath, // Simulating another angle
-      imagePath, // Simulating another angle
-    ];
+    List<String> images = (productData!['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+    if (images.isEmpty) {
+      images.add(imagePath);
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -150,7 +149,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ),
                       child: Image.network(
                         images[index],
-                        fit: BoxFit.contain,
+                        fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return Icon(Icons.image_not_supported, size: 50, color: Colors.grey);
                         },
