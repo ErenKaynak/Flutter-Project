@@ -1,1 +1,41 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"engineering-project-23d2e","appId":"1:52042306180:android:9ab9790af18ff49428e8d1","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"engineering-project-23d2e","appId":"1:52042306180:ios:a4e80cc66309724c28e8d1","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"engineering-project-23d2e","configurations":{"android":"1:52042306180:android:9ab9790af18ff49428e8d1","ios":"1:52042306180:ios:a4e80cc66309724c28e8d1","macos":"1:52042306180:ios:39d543be52f0861a28e8d1","web":"1:52042306180:web:69dee152a188e90828e8d1","windows":"1:52042306180:web:1333bdf9994687f928e8d1"}}},"macos":{"default":{"projectId":"engineering-project-23d2e","appId":"1:52042306180:ios:39d543be52f0861a28e8d1","uploadDebugSymbols":false,"fileOutput":"macos/Runner/GoogleService-Info.plist"}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "engineering-project-23d2e",
+          "appId": "1:52042306180:android:9ab9790af18ff49428e8d1",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "engineering-project-23d2e",
+          "appId": "1:52042306180:ios:a4e80cc66309724c28e8d1",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "engineering-project-23d2e",
+          "configurations": {
+            "android": "1:52042306180:android:9ab9790af18ff49428e8d1",
+            "ios": "1:52042306180:ios:a4e80cc66309724c28e8d1",
+            "macos": "1:52042306180:ios:39d543be52f0861a28e8d1",
+            "web": "1:52042306180:web:69dee152a188e90828e8d1",
+            "windows": "1:52042306180:web:1333bdf9994687f928e8d1"
+          }
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "engineering-project-23d2e",
+          "appId": "1:52042306180:ios:39d543be52f0861a28e8d1",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      }
+    }
+  }
+}

@@ -1,7 +1,9 @@
+import 'package:engineering_project/pages/cart_page.dart';
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lottie/lottie.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,18 +23,24 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   String _selectedCategory = "All";
   List<Map<String, dynamic>> products = [];
   bool _isLoading = true;
   TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
+  // Use the CartManager from cart_page.dart
+  final CartManager _cartManager = CartManager();
+  // Map to store animation controllers for each product
+  final Map<String, AnimationController> _animationControllers = {};
 
   @override
   void initState() {
     super.initState();
     fetchProducts();
-
+    _cartManager.loadCart(); // Load existing cart items
+    _cartManager.addListener(_updateUI); // Add listener to update UI when cart changes
+    
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text;
@@ -40,10 +48,40 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _updateUI(List<CartItem> _) {
+    setState(() {
+      // This will update the UI when cart changes
+    });
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
+    _cartManager.removeListener(_updateUI); // Remove listener when disposing
+    
+    // Dispose all animation controllers
+    _animationControllers.forEach((_, controller) {
+      controller.dispose();
+    });
+    
     super.dispose();
+  }
+
+  // Initialize animation controllers for products
+  void _initializeAnimationControllers() {
+    // Clean up existing controllers first to prevent memory leaks
+    _animationControllers.forEach((_, controller) {
+      controller.dispose();
+    });
+    _animationControllers.clear();
+
+    // Create new controllers for each product
+    for (var product in products) {
+      _animationControllers[product['id']] = AnimationController(
+        vsync: this,
+        duration: Duration(seconds: 2),
+      );
+    }
   }
 
   Future<void> fetchProducts() async {
@@ -52,17 +90,17 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      final QuerySnapshot snapshot = 
+      final QuerySnapshot snapshot =
           await FirebaseFirestore.instance.collection('products').get();
-      
+
       final List<Map<String, dynamic>> loadedProducts = [];
-      
+
       snapshot.docs.forEach((doc) {
         final data = doc.data() as Map<String, dynamic>;
-        
+
         // Debug print to check image paths
         print('Product: ${data['name']}, Image path: ${data['imagePath']}');
-        
+
         // Convert price to string regardless of its original type
         String priceString;
         var priceValue = data['price'];
@@ -73,7 +111,7 @@ class _HomePageState extends State<HomePage> {
         } else {
           priceString = priceValue?.toString() ?? '0';
         }
-        
+
         loadedProducts.add({
           'id': doc.id,
           'name': data['name'] ?? 'Unknown Product',
@@ -81,7 +119,8 @@ class _HomePageState extends State<HomePage> {
           'category': data['category'] ?? 'Uncategorized',
           'image': data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
           'description': data['description'] ?? 'No description available',
-          'stock': data['stock'] ?? 0,  // Include stock data, default to 0 if missing
+          'stock':
+              data['stock'] ?? 0, // Include stock data, default to 0 if missing
         });
       });
 
@@ -89,6 +128,9 @@ class _HomePageState extends State<HomePage> {
         products = loadedProducts;
         _isLoading = false;
       });
+      
+      // Initialize animation controllers after loading products
+      _initializeAnimationControllers();
     } catch (error) {
       print('Error fetching products: $error');
       setState(() {
@@ -100,9 +142,15 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> get filteredProducts {
     if (_searchQuery.isNotEmpty) {
       return products
-          .where((product) => 
-              product["name"].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              product["description"].toString().toLowerCase().contains(_searchQuery.toLowerCase()))
+          .where(
+            (product) =>
+                product["name"].toString().toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ) ||
+                product["description"].toString().toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ),
+          )
           .toList();
     } else if (_selectedCategory == "All") {
       return products;
@@ -125,12 +173,50 @@ class _HomePageState extends State<HomePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ProductDetailPage(
-          productId: product["id"],
+        builder: (context) => ProductDetailPage(productId: product["id"]),
+      ),
+    );
+  }
+
+  void _addToCart(Map<String, dynamic> product) {
+  // Get the controller for this specific product
+  final controller = _animationControllers[product['id']];
+  if (controller != null) {
+    // Reset animation to start
+    controller.reset();
+    
+    // Play animation forward and then reverse back to initial state
+    controller.forward().then((_) {
+      // After animation completes, reverse it back to initial state
+      controller.reset();
+    });
+    
+    // Add item to cart
+    _cartManager.addToCart({
+      'id': product['id'],
+      'name': product['name'],
+      'price': product['price'],
+      'image': product['image'],
+    });
+
+    // Show a snackbar to confirm the item was added
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${product["name"]} added to cart'),
+        duration: Duration(seconds: 2),
+        action: SnackBarAction(
+          label: 'VIEW CART',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => CartPage()),
+            );
+          },
         ),
       ),
     );
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -150,62 +236,104 @@ class _HomePageState extends State<HomePage> {
                 prefixIcon: Icon(Icons.search, size: 25),
                 contentPadding: EdgeInsets.symmetric(vertical: 10),
                 alignLabelWithHint: true,
-                suffixIcon: _searchQuery.isNotEmpty 
-                    ? IconButton(
-                        icon: Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                        },
-                      )
-                    : null,
+                suffixIcon:
+                    _searchQuery.isNotEmpty
+                        ? IconButton(
+                          icon: Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                          },
+                        )
+                        : null,
               ),
             ),
           ),
           actions: [
-            IconButton(
-              icon: Icon(Icons.shopping_cart),
-              onPressed: () {
-                // Navigate to cart page
-              },
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.shopping_cart),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => CartPage()),
+                    );
+                  },
+                ),
+                if (_cartManager.itemCount > 0)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Text(
+                        '${_cartManager.itemCount}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ],
         ),
-        body: _isLoading
-            ? Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: fetchProducts,
-                child: CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.all(10.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _buildCategoryButton(Icons.favorite, "Favorites"),
-                                _buildCategoryButton(Icons.history, "History"),
-                                _buildCategoryButton(Icons.person, "Following"),
-                              ],
+        body:
+            _isLoading
+                ? Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                  onRefresh: fetchProducts,
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.all(10.0),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                children: [
+                                  _buildCategoryButton(
+                                    Icons.favorite,
+                                    "Favorites",
+                                  ),
+                                  _buildCategoryButton(
+                                    Icons.history,
+                                    "History",
+                                  ),
+                                  _buildCategoryButton(
+                                    Icons.person,
+                                    "Following",
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          // Banner Section
-                          _buildBannerSection(),
-                          SizedBox(height: 10),
-                          // Categories Section
-                          _buildCategoriesHeader(),
-                          _buildCategoriesRow(),
-                          _buildProductsHeader(),
-                        ],
+                            // Banner Section
+                            _buildBannerSection(),
+                            SizedBox(height: 10),
+                            // Categories Section
+                            _buildCategoriesHeader(),
+                            _buildCategoriesRow(),
+                            _buildProductsHeader(),
+                          ],
+                        ),
                       ),
-                    ),
-                    // Products Grid
-                    _buildProductsGrid(),
-                  ],
+                      // Products Grid
+                      _buildProductsGrid(),
+                    ],
+                  ),
                 ),
-              ),
       ),
     );
   }
@@ -237,11 +365,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(10),
         color: Colors.blue.shade100,
         boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
         ],
       ),
       child: ClipRRect(
@@ -276,10 +400,7 @@ class _HomePageState extends State<HomePage> {
                   SizedBox(height: 8),
                   Text(
                     'Get up to 20% off on selected products',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.white),
                   ),
                   SizedBox(height: 16),
                   ElevatedButton(
@@ -307,10 +428,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           Text(
             "Categories",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           TextButton(
             onPressed: () {
@@ -318,10 +436,7 @@ class _HomePageState extends State<HomePage> {
                 _selectedCategory = "All";
               });
             },
-            child: Text(
-              "Show All",
-              style: TextStyle(color: Colors.red),
-            ),
+            child: Text("Show All", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -367,7 +482,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildCategoryCircle(
-      String label, String imagePath, bool isSelected, VoidCallback onTap) {
+    String label,
+    String imagePath,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -378,24 +497,23 @@ class _HomePageState extends State<HomePage> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: isSelected ? Colors.red.shade50 : Colors.grey.shade200,
-              border: isSelected
-                  ? Border.all(color: Colors.red.shade400, width: 2)
-                  : null,
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: Colors.red.shade200.withOpacity(0.5),
-                        blurRadius: 8,
-                        spreadRadius: 1,
-                      )
-                    ]
-                  : null,
+              border:
+                  isSelected
+                      ? Border.all(color: Colors.red.shade400, width: 2)
+                      : null,
+              boxShadow:
+                  isSelected
+                      ? [
+                        BoxShadow(
+                          color: Colors.red.shade200.withOpacity(0.5),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                      : null,
             ),
             padding: EdgeInsets.all(10),
-            child: Image.asset(
-              imagePath,
-              fit: BoxFit.contain,
-            ),
+            child: Image.asset(imagePath, fit: BoxFit.contain),
           ),
           SizedBox(height: 8),
           Text(
@@ -419,11 +537,10 @@ class _HomePageState extends State<HomePage> {
           Text(
             _searchQuery.isNotEmpty
                 ? "Search Results"
-                : (_selectedCategory == "All" ? "Best Deals" : _selectedCategory),
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+                : (_selectedCategory == "All"
+                    ? "Best Deals"
+                    : _selectedCategory),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           Text(
             "${filteredProducts.length} products",
@@ -447,10 +564,7 @@ class _HomePageState extends State<HomePage> {
                 SizedBox(height: 16),
                 Text(
                   "No products found",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
                 Text(
@@ -475,87 +589,105 @@ class _HomePageState extends State<HomePage> {
           mainAxisSpacing: 15,
           childAspectRatio: 0.6,
         ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final product = filteredProducts[index];
-            final int stock = product["stock"] is int ? product["stock"] : 0;
-            final bool isOutOfStock = stock <= 0;
-            
-            return _buildProductCard(
-              product: product,
-              isOutOfStock: isOutOfStock,
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final product = filteredProducts[index];
+          final int stock = product["stock"] is int ? product["stock"] : 0;
+          final bool isOutOfStock = stock <= 0;
+
+          // Create animation controller for any new products that might have appeared in search/filter
+          if (!_animationControllers.containsKey(product['id'])) {
+            _animationControllers[product['id']] = AnimationController(
+              vsync: this,
+              duration: Duration(seconds: 2),
             );
-          },
-          childCount: filteredProducts.length,
-        ),
+          }
+
+          return _buildProductCard(
+            product: product,
+            isOutOfStock: isOutOfStock,
+            animationController: _animationControllers[product['id']]!,
+          );
+        }, childCount: filteredProducts.length),
       ),
     );
   }
 
   Widget _buildProductCard({
-    required Map<String, dynamic> product,
-    required bool isOutOfStock,
-  }) {
-    return GestureDetector(
-      onTap: () => _navigateToProductDetail(product),
-      child: Card(
-        elevation: 3,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Container(
-          height: double.infinity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Product image
-              Flexible(
-                flex: 3,
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+  required Map<String, dynamic> product,
+  required bool isOutOfStock,
+  required AnimationController animationController,
+}) {
+  return GestureDetector(
+    onTap: () => _navigateToProductDetail(product),
+    child: Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        height: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Product image section (unchanged)
+            Flexible(
+              flex: 3,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(12),
                   ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Product image with improved handling
-                      Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                          child: (product["image"].startsWith('http') || product["image"].startsWith('https'))
-                              ? Image.network(
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Product image with improved handling
+                    Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(12),
+                        ),
+                        child:
+                            (product["image"].startsWith('http') ||
+                                    product["image"].startsWith('https'))
+                                ? Image.network(
                                   product["image"],
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                   height: double.infinity,
                                   errorBuilder: (context, error, stackTrace) {
-                                    print('Error loading image: $error for ${product["image"]}');
                                     return Image.asset(
                                       'lib/assets/Images/placeholder.png',
                                       fit: BoxFit.cover,
                                     );
                                   },
-                                  loadingBuilder: (context, child, loadingProgress) {
+                                  loadingBuilder: (
+                                    context,
+                                    child,
+                                    loadingProgress,
+                                  ) {
                                     if (loadingProgress == null) return child;
                                     return Center(
                                       child: CircularProgressIndicator(
-                                        value: loadingProgress.expectedTotalBytes != null
-                                            ? loadingProgress.cumulativeBytesLoaded /
-                                                loadingProgress.expectedTotalBytes!
-                                            : null,
+                                        value:
+                                            loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                        .cumulativeBytesLoaded /
+                                                    loadingProgress
+                                                        .expectedTotalBytes!
+                                                : null,
                                       ),
                                     );
                                   },
                                 )
-                              : Image.asset(
+                                : Image.asset(
                                   product["image"],
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                   height: double.infinity,
                                   errorBuilder: (context, error, stackTrace) {
-                                    print('Error loading asset image: $error for ${product["image"]}');
                                     return Icon(
                                       Icons.image_not_supported,
                                       size: 40,
@@ -563,35 +695,36 @@ class _HomePageState extends State<HomePage> {
                                     );
                                   },
                                 ),
+                      ),
+                    ),
+                    // Favorite button
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.8),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.favorite_border,
+                          color: Colors.red,
+                          size: 20,
                         ),
                       ),
-                      // Favorite button
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.8),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.favorite_border,
-                            color: Colors.red,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              // Product info
-              Container(
+            ),
+            // Product info section
+            Flexible(
+              flex: 2,
+              child: Container(
                 padding: EdgeInsets.all(10.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Product name
                     Text(
@@ -606,54 +739,70 @@ class _HomePageState extends State<HomePage> {
                     SizedBox(height: 4),
                     // Product price
                     Text(
-                      "₹${product["price"]}",
+                      "₺${product["price"]}",
                       style: TextStyle(
                         color: Colors.green.shade700,
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
                     ),
-                    SizedBox(height: 4),
-                    // Out of Stock indicator
-                    if (isOutOfStock)
-                      Text(
-                        "Out of Stock",
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                    if (isOutOfStock) SizedBox(height: 4),
-                    // Add to cart button
+                    
+                   SizedBox(height: 10),
+                    
+                    // Show either "Out of Stock" or Add to Cart button with same height
                     SizedBox(
                       width: double.infinity,
-                      child: TextButton(
-                        onPressed: isOutOfStock ? null : () {
-                          // Add to cart functionality
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${product["name"]} added to cart'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor:Colors.red ,
-                          padding: EdgeInsets.symmetric(vertical: 6),
-                          minimumSize: Size(0, 30),
-                          disabledForegroundColor: Colors.grey.withOpacity(0.5),
+                      height: 40, // Same height as the ADD TO CART button
+                      child: isOutOfStock
+                        ? Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.red.shade200),
                         ),
-                        child: Text(isOutOfStock ? "Sold Out" : "Add to Cart"),
-                      ),
-                    ),
+                        child: Text(
+                          "Out of Stock",
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                        : GestureDetector(
+                            onTap: () => _addToCart(product),
+                            child: 
+                                  
+                                        SizedBox(
+                                          child: Lottie.asset(
+                                              'lib/assets/button-test/3.json',
+                                              controller: animationController,
+                                              fit: BoxFit.cover,
+                                              width: 100,
+                                              height: 20,
+                                              repeat: false,
+                                              
+                                            ),
+                                        ),
+                                        ),
+                                      
+                                    ),
+                                  
+                              
+                            
+                          
+                    
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+} 
 }
