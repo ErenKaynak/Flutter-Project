@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:engineering_project/assets/components/cart_manager.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final String productId;
@@ -23,25 +25,27 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   }
 
   Future<void> fetchProductDetails() async {
-  try {
-    DocumentSnapshot document = await FirebaseFirestore.instance
-        .collection('products')
-        .doc(widget.productId)
-        .get();
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('products')
+          .doc(widget.productId)
+          .get();
 
-    if (document.exists) {
+      if (doc.exists) {
+        setState(() {
+          productData = doc.data();
+          isLoading = false;
+        });
+      } else {
+        throw Exception('Product does not exist');
+      }
+    } catch (e) {
+      print("❌ Error fetching product: $e");
       setState(() {
-        productData = document.data() as Map<String, dynamic>?;
         isLoading = false;
       });
     }
-  } catch (e) {
-    print("Error fetching product details: $e");
-    setState(() {
-      isLoading = false;
-    });
   }
-}
 
   void incrementQuantity() {
     setState(() {
@@ -55,16 +59,58 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     });
   }
 
-  void addToCart() {
-    // Here you'd implement your cart logic
+Future<void> addToCart() async {
+  final user = FirebaseAuth.instance.currentUser;
+
+  if (user == null) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${productData!['name']} x$quantity added to cart'),
-        duration: Duration(seconds: 2),
-      ),
+      SnackBar(content: Text('You must be logged in to add to cart')),
     );
+    return;
   }
 
+  print('🧪 addToCart() started');
+  print('👤 User UID: ${user.uid}');
+  print('📦 Product Data: $productData');
+
+  final cartRef = FirebaseFirestore.instance
+      .collection('cart')
+      .doc(user.uid)
+      .collection('userCart')
+      .doc(widget.productId);
+
+  try {
+    final existingItem = await cartRef.get();
+
+    if (existingItem.exists) {
+      final prevQuantity = existingItem['quantity'] ?? 1;
+      await cartRef.update({'quantity': prevQuantity + quantity});
+      print('📝 Cart updated with new quantity: ${prevQuantity + quantity}');
+    } else {
+      await cartRef.set({
+        'productId': widget.productId,
+        'name': productData?['name'],
+        'price': productData?['price'],
+        'imagePath': productData?['imagePath'],
+        'quantity': quantity,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      print('🆕 Product added to cart');
+    }
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${productData?['name']} x$quantity added to cart')),
+    );
+  } catch (e) {
+    print('❌ Error adding to cart: $e');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to add to cart')),
+    );
+  }
+}
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -81,16 +127,17 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       );
     }
 
-    String name = productData!['name'] ?? 'Unknown';
-    double price = productData!['price'] ?? 0.0;
-    String imagePath = productData!['imagePath'] ?? '';
-    String category = productData!['category'] ?? 'Uncategorized';
-    String description = productData!['description'] ?? 'No description available.';
-    int stock = productData!['stock'] ?? 0;
-    List<String> images = (productData!['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
-    if (images.isEmpty) {
-      images.add(imagePath);
-    }
+    final name = productData!['name'] ?? 'Unknown';
+    final price = productData!['price']?.toDouble() ?? 0.0;
+    final imagePath = productData!['imagePath'] ?? '';
+    final category = productData!['category'] ?? 'Uncategorized';
+    final description = productData!['description'] ?? 'No description available.';
+    final List<String> images = (productData!['images'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        [];
+
+    if (images.isEmpty) images.add(imagePath);
 
     return Scaffold(
       appBar: AppBar(
@@ -108,7 +155,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Main product image
+            // Product image
             Container(
               height: 300,
               width: double.infinity,
@@ -116,13 +163,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               child: Image.network(
                 images[selectedImageIndex],
                 fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(Icons.image_not_supported, size: 100, color: Colors.grey);
-                },
+                errorBuilder: (_, __, ___) =>
+                    Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
               ),
             ),
 
-            // Image selector row
+            // Image thumbnails
             Container(
               height: 100,
               child: ListView.builder(
@@ -130,19 +176,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 itemCount: images.length,
                 itemBuilder: (context, index) {
                   return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        selectedImageIndex = index;
-                      });
-                    },
+                    onTap: () => setState(() => selectedImageIndex = index),
                     child: Container(
                       margin: EdgeInsets.all(8),
                       width: 80,
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: selectedImageIndex == index 
-                              ? Colors.red 
-                              : Colors.grey,
+                          color: selectedImageIndex == index ? Colors.red : Colors.grey,
                           width: 2,
                         ),
                         color: Colors.grey[200],
@@ -150,9 +190,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       child: Image.network(
                         images[index],
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(Icons.image_not_supported, size: 50, color: Colors.grey);
-                        },
+                        errorBuilder: (_, __, ___) =>
+                            Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
                       ),
                     ),
                   );
@@ -160,12 +199,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
             ),
 
-            // Product details
+            // Product info
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Title & category
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -175,23 +215,16 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           children: [
                             Text(
                               name,
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                             ),
                             SizedBox(height: 4),
-                            Text(
-                              "Category: $category",
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                              ),
-                            ),
+                            Text("Category: $category",
+                                style: TextStyle(color: Colors.grey[600])),
                           ],
                         ),
                       ),
                       Text(
-                        "${price.toStringAsFixed(2)}",
+                        '${price.toStringAsFixed(2)}',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -200,18 +233,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ),
                     ],
                   ),
-
                   SizedBox(height: 24),
 
-                  // Quantity selector
+                  // Quantity
                   Row(
                     children: [
                       Text(
                         "Quantity:",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       SizedBox(width: 16),
                       Container(
@@ -227,10 +256,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             ),
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 12),
-                              child: Text(
-                                quantity.toString(),
-                                style: TextStyle(fontSize: 18),
-                              ),
+                              child: Text('$quantity', style: TextStyle(fontSize: 18)),
                             ),
                             IconButton(
                               icon: Icon(Icons.add),
@@ -241,49 +267,35 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ),
                     ],
                   ),
-
                   SizedBox(height: 24),
 
-                  // Add to cart button
+                  // Add to cart
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
                       onPressed: addToCart,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                      ),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                       child: Text(
                         "ADD TO CART",
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
-
                   SizedBox(height: 32),
 
-                  // Product description
-                  Text(
-                    "Product Description",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  // Description
+                  Text("Product Description",
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   SizedBox(height: 8),
                   Text(
                     description,
-                    style: TextStyle(
-                      fontSize: 16,
-                      height: 1.5,
-                    ),
+                    style: TextStyle(fontSize: 16, height: 1.5),
                   ),
-
-                  // Additional specifications could go here
                   SizedBox(height: 50),
                 ],
               ),

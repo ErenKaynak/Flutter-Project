@@ -1,17 +1,15 @@
-import 'package:engineering_project/assets/components/stripe_service.dart';
+import 'package:engineering_project/pages/home_page.dart';
+import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
 
 // Utility function to convert INR to USD
 double convertToUSD(String priceInINR) {
   final price = double.tryParse(priceInINR) ?? 0;
-  print('Converting price from INR: $priceInINR to USD');
-  print('Parsed price: $price');
   const exchangeRate = 0.012; // 1 INR = 0.012 USD (as of March 31, 2025; adjust if needed)
-  final priceInUSD = price * exchangeRate;
-  print('Price in USD: $priceInUSD');
-  return priceInUSD;
+  return price * exchangeRate;
 }
 
 // CartItem class
@@ -30,28 +28,19 @@ class CartItem {
     this.quantity = 1,
   });
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'price': price,
-      'image': image,
-      'quantity': quantity,
-    };
-  }
-
-  factory CartItem.fromJson(Map<String, dynamic> json) {
+  factory CartItem.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
     return CartItem(
-      id: json['id'],
-      name: json['name'],
-      price: json['price'],
-      image: json['image'],
-      quantity: json['quantity'],
+      id: doc.id,
+      name: data['name'] ?? 'Unknown Product',
+      price: data['price']?.toString() ?? '0',
+      image: data['imagePath'] ?? '',
+      quantity: data['quantity'] ?? 1,
     );
   }
 }
 
-// CartManager class
+// Cart Manager class using Firestore
 class CartManager {
   static final CartManager _instance = CartManager._internal();
 
@@ -61,10 +50,14 @@ class CartManager {
 
   CartManager._internal();
 
-  List<CartItem> _cartItems = [];
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final _cartUpdateListeners = <Function(List<CartItem>)>[];
 
+  List<CartItem> _cartItems = [];
   List<CartItem> get items => List.unmodifiable(_cartItems);
+
+  StreamSubscription<QuerySnapshot>? _cartSubscription;
 
   void addListener(Function(List<CartItem>) listener) {
     _cartUpdateListeners.add(listener);
@@ -81,78 +74,111 @@ class CartManager {
   }
 
   Future<void> loadCart() async {
-    final prefs = await SharedPreferences.getInstance();
-    final cartData = prefs.getStringList('cart') ?? [];
-    print('Raw cart data: $cartData'); // Add logging
-    _cartItems = cartData
-        .map((item) => CartItem.fromJson(json.decode(item)))
-        .toList();
-    print('Loaded cart items: ${_cartItems.map((item) => item.toJson())}');
-    _notifyListeners();
-  }
-
-  Future<void> saveCart() async {
-    final prefs = await SharedPreferences.getInstance();
-    final cartData = _cartItems
-        .map((item) => json.encode(item.toJson()))
-        .toList();
-    await prefs.setStringList('cart', cartData);
-  }
-
-  void addToCart(Map<String, dynamic> product) {
-    final productId = product['id'];
-    final existingIndex = _cartItems.indexWhere((item) => item.id == productId);
-
-    if (existingIndex >= 0) {
-      _cartItems[existingIndex].quantity += 1;
-    } else {
-      _cartItems.add(
-        CartItem(
-          id: productId,
-          name: product['name'],
-          price: product['price'],
-          image: product['image'],
-          quantity: 1,
-        ),
-      );
-    }
-
-    saveCart();
-    _notifyListeners();
-  }
-
-  void updateQuantity(String id, int change) {
-    final index = _cartItems.indexWhere((item) => item.id == id);
-    if (index >= 0) {
-      _cartItems[index].quantity = (_cartItems[index].quantity + change).clamp(1, 10);
-      saveCart();
+    final user = _auth.currentUser;
+    if (user == null) {
+      _cartItems = [];
       _notifyListeners();
+      return;
+    }
+
+    // Cancel any existing subscription first
+    await _cartSubscription?.cancel();
+
+    // Set up a stream subscription to listen for cart changes
+    _cartSubscription = _firestore
+        .collection('cart')
+        .doc(user.uid)
+        .collection('userCart')
+        .snapshots()
+        .listen((snapshot) {
+      _cartItems = snapshot.docs.map((doc) => CartItem.fromFirestore(doc)).toList();
+      print('Cart loaded: ${_cartItems.length} items');
+      _notifyListeners();
+    }, onError: (error) {
+      print('Error loading cart: $error');
+      _cartItems = [];
+      _notifyListeners();
+    });
+  }
+
+  Future<void> updateQuantity(String id, int change) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final docRef = _firestore
+          .collection('cart')
+          .doc(user.uid)
+          .collection('userCart')
+          .doc(id);
+
+      final doc = await docRef.get();
+      if (doc.exists) {
+        final currentQuantity = doc.data()?['quantity'] ?? 1;
+        final newQuantity = (currentQuantity + change).clamp(1, 10);
+        
+        await docRef.update({'quantity': newQuantity});
+        print('Updated quantity for $id to $newQuantity');
+      }
+    } catch (e) {
+      print('Error updating quantity: $e');
     }
   }
 
-  void removeItem(String id) {
-    _cartItems.removeWhere((item) => item.id == id);
-    saveCart();
-    _notifyListeners();
+  Future<void> removeItem(String id) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      await _firestore
+          .collection('cart')
+          .doc(user.uid)
+          .collection('userCart')
+          .doc(id)
+          .delete();
+      print('Removed item $id from cart');
+    } catch (e) {
+      print('Error removing item: $e');
+    }
   }
 
-  void clearCart() {
-    _cartItems.clear();
-    saveCart();
-    _notifyListeners();
+  Future<void> clearCart() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final cartRef = _firestore
+          .collection('cart')
+          .doc(user.uid)
+          .collection('userCart');
+      
+      final batch = _firestore.batch();
+      final docs = await cartRef.get();
+      
+      for (var doc in docs.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      await batch.commit();
+      print('Cart cleared');
+    } catch (e) {
+      print('Error clearing cart: $e');
+    }
   }
 
   double get totalPrice {
-    final total = _cartItems.fold(0.0, (sum, item) {
+    return _cartItems.fold(0.0, (sum, item) {
       double itemPrice = convertToUSD(item.price);
       return sum + (itemPrice * item.quantity);
     });
-    print('Total price in USD: $total');
-    return total;
   }
 
   int get itemCount {
     return _cartItems.fold(0, (sum, item) => sum + item.quantity);
+  }
+
+  void dispose() {
+    _cartSubscription?.cancel();
   }
 }
 
@@ -222,7 +248,10 @@ class OrderSuccessPage extends StatelessWidget {
                 ),
               ),
               onPressed: () {
-                Navigator.of(context).popUntil((route) => route.isFirst);
+                Navigator.of(context).pushAndRemoveUntil(
+                   MaterialPageRoute(builder: (context) => RootScreen()),
+                  (Route<dynamic> route) => false,
+                );
               },
               child: const Text(
                 'CONTINUE SHOPPING',
@@ -248,22 +277,56 @@ class CartPage extends StatefulWidget {
 class _CartPageState extends State<CartPage> {
   final CartManager _cartManager = CartManager();
   bool _isProcessingPayment = false;
+  bool _isLoading = true;
+  String? _loginError;
 
   @override
   void initState() {
     super.initState();
-    _cartManager.addListener(_updateCartState);
-    _cartManager.loadCart();
+    _checkLoginAndLoadCart();
+  }
+
+  Future<void> _checkLoginAndLoadCart() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() {
+          _loginError = 'Please log in to view your cart';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      _cartManager.addListener(_updateCartState);
+      await _cartManager.loadCart();
+      
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error in cart initialization: $e');
+      setState(() {
+        _loginError = 'Error loading cart: $e';
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   void dispose() {
     _cartManager.removeListener(_updateCartState);
+    _cartManager.dispose();
     super.dispose();
   }
 
   void _updateCartState(List<CartItem> _) {
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _processPayment() async {
@@ -276,40 +339,119 @@ class _CartPageState extends State<CartPage> {
     try {
       final totalAmount = _cartManager.totalPrice;
       final orderDescription = 'Purchase from Your Store: ${_cartManager.itemCount} items';
+      print('Processing order: $orderDescription, Total: \$${totalAmount.toStringAsFixed(2)}');
 
-      final paymentSuccess = await StripeService.processPayment(
-        context,
-        totalAmount.toString(),
-        'USD',
-        orderDescription,
-      );
+      // Simulate a successful payment and navigate to success page
+      await Future.delayed(const Duration(seconds: 2)); // Simulate delay
+      await _cartManager.clearCart(); // Clear cart after successful payment
 
-      if (paymentSuccess) {
-        _cartManager.clearCart();
-        Navigator.push(
-          context,
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => OrderSuccessPage(totalAmount: totalAmount),
+            builder: (_) => OrderSuccessPage(totalAmount: totalAmount),
           ),
         );
       }
     } catch (e) {
       print('Payment error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Payment failed: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Payment failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        _isProcessingPayment = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isProcessingPayment = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Show loading indicator while checking login and loading cart
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: const Text(
+            'Your Cart',
+            style: TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // Show login error if user is not logged in
+    if (_loginError != null) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: const Text(
+            'Your Cart',
+            style: TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.account_circle,
+                size: 80,
+                color: Colors.grey,
+              ),
+              const SizedBox(height: 20),
+              Text(
+                _loginError!,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  // Navigate to login page
+                  // Replace with your login navigation
+                  Navigator.of(context).pop();
+                },
+                child: const Text('GO TO LOGIN'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final cartItems = _cartManager.items;
 
     return Scaffold(
@@ -405,6 +547,7 @@ class _CartPageState extends State<CartPage> {
                           ),
                         ),
                         onDismissed: (direction) {
+                          final removedItem = item;
                           _cartManager.removeItem(item.id);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -412,12 +555,8 @@ class _CartPageState extends State<CartPage> {
                               action: SnackBarAction(
                                 label: 'UNDO',
                                 onPressed: () {
-                                  _cartManager.addToCart({
-                                    'id': item.id,
-                                    'name': item.name,
-                                    'price': item.price,
-                                    'image': item.image,
-                                  });
+                                  // Undo logic would go here - you'd need to add a method to re-add items
+                                  // This would require additional implementation to fully support
                                 },
                               ),
                             ),
@@ -573,7 +712,7 @@ class _CartPageState extends State<CartPage> {
                             ),
                           ),
                           Text(
-                            '\$${ _cartManager.totalPrice.toStringAsFixed(2)}',
+                            '\$${_cartManager.totalPrice.toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,

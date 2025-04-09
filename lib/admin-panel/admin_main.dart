@@ -1,3 +1,5 @@
+import 'package:engineering_project/admin-panel/admin_products.dart';
+import 'package:engineering_project/admin-panel/admin_user.dart';
 import 'package:flutter/material.dart';
 
 class AdminPage extends StatefulWidget {
@@ -15,10 +17,9 @@ class _AdminPageState extends State<AdminPage> {
       appBar: AppBar(
         title: Center(child: const Text("Admin Dashboard")),
         foregroundColor: Colors.white,
-        backgroundColor: Colors.red.shade500,
+        backgroundColor: Colors.red.shade700,
       ),
-      body: Center(
-        child: SingleChildScrollView(
+      body: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -36,13 +37,16 @@ class _AdminPageState extends State<AdminPage> {
               Card(
                 elevation: 2,
                 child: ListTile(
-                  leading: Icon(Icons.people, color: Colors.red.shade500),
+                  leading: Icon(Icons.people, color: Colors.red.shade700),
                   title: const Text("User Management"),
                   subtitle: const Text("View and manage users"),
                   trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
+                  onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AdminUsersPage()),
+              ),
                     // Navigate to user management screen
-                  },
+                  
                 ),
               ),
               
@@ -52,13 +56,14 @@ class _AdminPageState extends State<AdminPage> {
               Card(
                 elevation: 2,
                 child: ListTile(
-                  leading: Icon(Icons.inventory_2, color: Colors.red.shade500),
+                  leading: Icon(Icons.inventory_2, color: Colors.red.shade700),
                   title: const Text("Product Management"),
                   subtitle: const Text("Add, edit or remove products"),
                   trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // Navigate to product management screen
-                  },
+                  onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AdminProducts()),
+              ),
                 ),
               ),
               
@@ -68,7 +73,7 @@ class _AdminPageState extends State<AdminPage> {
               Card(
                 elevation: 2,
                 child: ListTile(
-                  leading: Icon(Icons.shopping_cart, color: Colors.red.shade500),
+                  leading: Icon(Icons.shopping_cart, color: Colors.red.shade700),
                   title: const Text("Order Management"),
                   subtitle: const Text("View and process orders"),
                   trailing: const Icon(Icons.arrow_forward_ios),
@@ -84,7 +89,7 @@ class _AdminPageState extends State<AdminPage> {
               Card(
                 elevation: 2,
                 child: ListTile(
-                  leading: Icon(Icons.bar_chart, color: Colors.red.shade500),
+                  leading: Icon(Icons.bar_chart, color: Colors.red.shade700),
                   title: const Text("Statistics"),
                   subtitle: const Text("View sales and user analytics"),
                   trailing: const Icon(Icons.arrow_forward_ios),
@@ -111,7 +116,7 @@ class _AdminPageState extends State<AdminPage> {
               Card(
                 elevation: 2,
                 child: ListTile(
-                  leading: Icon(Icons.settings, color: Colors.red.shade500),
+                  leading: Icon(Icons.settings, color: Colors.red.shade700),
                   title: const Text("App Settings"),
                   subtitle: const Text("Configure application settings"),
                   trailing: const Icon(Icons.arrow_forward_ios),
@@ -123,7 +128,6 @@ class _AdminPageState extends State<AdminPage> {
             ],
           ),
         ),
-      ),
     );
   }
 }

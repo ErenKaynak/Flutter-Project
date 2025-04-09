@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:engineering_project/assets/components/auth_service.dart';
 import 'package:engineering_project/assets/components/square_tile.dart';
 import 'package:engineering_project/pages/forget_pw_page.dart';
+import 'package:engineering_project/admin-panel/admin_root.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginPage extends StatefulWidget {
   LoginPage({super.key});
@@ -23,7 +25,6 @@ class _LoginPageState extends State<LoginPage> {
   String? passwordError;
 
   void signInWithGoogleAndNavigate() async {
-    // Show loading indicator
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -31,13 +32,10 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     try {
-      // Attempt to sign in with Google
       await AuthService().signInWithGoogle();
 
-      // Dismiss the loading indicator
       if (context.mounted) Navigator.pop(context);
 
-      // Navigate to RootScreen and remove all previous routes
       if (context.mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const RootScreen()),
@@ -45,13 +43,11 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } catch (e) {
-      // Dismiss the loading indicator
       if (context.mounted) Navigator.pop(context);
 
-      // Show error message
       setState(() {
         emailError = "Google sign-in failed. Please try again.";
-        print("Google Sign-In Error: $e"); // For debugging
+        print("Google Sign-In Error: $e");
       });
     }
   }
@@ -71,24 +67,36 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      UserCredential credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      // Dismiss the loading indicator
-      if (context.mounted) Navigator.pop(context);
+      User? user = credential.user;
+      if (user != null) {
+        await _saveUserToFirestore(user);
 
-      // Navigate to HomePage and remove all previous routes
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const RootScreen()),
-          (Route<dynamic> route) =>
-              false, // Change to false to remove all previous routes
-        );
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        String role = userDoc['role'] ?? 'user';
+
+        if (context.mounted) Navigator.pop(context);
+
+        if (context.mounted) {
+          if (role == 'admin') {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const RootScreen()),
+              (Route<dynamic> route) => false,
+            );
+          } else {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const RootScreen()),
+              (Route<dynamic> route) => false,
+            );
+          }
+        }
       }
     } on FirebaseAuthException catch (e) {
-      Navigator.pop(context); // Close loading indicator
+      if (context.mounted) Navigator.pop(context);
 
       setState(() {
         switch (e.code) {
@@ -105,22 +113,35 @@ class _LoginPageState extends State<LoginPage> {
             emailError = "This user account has been disabled.";
             break;
           case 'too-many-requests':
-            emailError =
-                "Too many unsuccessful login attempts. Please try again later.";
+            emailError = "Too many unsuccessful login attempts. Please try again later.";
             break;
           case 'missing-password':
             emailError = "Please Enter A Password.";
             break;
           default:
             emailError = "An error occurred. Please try again.";
-            print("Firebase Auth Error: ${e.code}"); // For debugging
+            print("Firebase Auth Error: ${e.code}");
         }
       });
     } catch (e) {
-      Navigator.pop(context); // Close loading indicator
+      if (context.mounted) Navigator.pop(context);
       setState(() {
         emailError = "An unexpected error occurred. Please try again.";
-        print("Unexpected Error: $e"); // For debugging
+        print("Unexpected Error: $e");
+      });
+    }
+  }
+
+  Future<void> _saveUserToFirestore(User user) async {
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final docSnapshot = await userDoc.get();
+
+    if (!docSnapshot.exists) {
+      await userDoc.set({
+        'uid': user.uid,
+        'email': user.email,
+        'role': 'user',
+        'createdAt': FieldValue.serverTimestamp(),
       });
     }
   }
@@ -150,8 +171,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 25),
-
-                  // Email Input
                   TextFormField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -166,8 +185,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-
-                  // Password Input
                   TextFormField(
                     controller: passwordController,
                     obscureText: passToggle,
@@ -180,8 +197,7 @@ class _LoginPageState extends State<LoginPage> {
                         icon: Icon(
                           passToggle ? Icons.visibility : Icons.visibility_off,
                         ),
-                        onPressed:
-                            () => setState(() => passToggle = !passToggle),
+                        onPressed: () => setState(() => passToggle = !passToggle),
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -190,8 +206,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 5),
                   const SizedBox(height: 5),
-
-                  // Hata mesajını ortalamak için
                   if (emailError != null || passwordError != null)
                     Align(
                       alignment: Alignment.center,
@@ -208,62 +222,40 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
-
                   const SizedBox(height: 5),
-
-                  // Register & Forgot Password Links
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        'Not a member?',
-                        style: TextStyle(color: Colors.grey[800]),
-                      ),
-
+                      Text('Not a member?', style: TextStyle(color: Colors.grey[800])),
                       const SizedBox(width: 4),
-
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) => RegisterPage(),
-                            ),
+                            MaterialPageRoute(builder: (context) => RegisterPage()),
                           );
                         },
                         child: Text(
                           'Register!',
-                          style: TextStyle(
-                            color: Colors.red.shade500,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(color: Colors.red.shade500, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 5),
-
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => ForgotPasswordPage(),
-                        ),
+                        MaterialPageRoute(builder: (context) => ForgotPasswordPage()),
                       );
                     },
                     child: Text(
                       'Forgot your password?',
-                      style: TextStyle(
-                        color: Colors.red.shade500,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(color: Colors.red.shade500, fontWeight: FontWeight.bold),
                     ),
                   ),
                   SizedBox(height: 10),
-
-                  // Login Button
                   FloatingActionButton(
                     backgroundColor: Colors.red.shade700,
                     foregroundColor: Colors.grey[200],
@@ -271,28 +263,20 @@ class _LoginPageState extends State<LoginPage> {
                     child: const Icon(Icons.arrow_forward, size: 25),
                   ),
                   const SizedBox(height: 25),
-
-                  // Divider
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
                       children: [
-                        Expanded(
-                          child: Divider(thickness: 1, color: Colors.grey[400]),
-                        ),
+                        Expanded(child: Divider(thickness: 1, color: Colors.grey[400])),
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
                           child: Text('Or Log in With'),
                         ),
-                        Expanded(
-                          child: Divider(thickness: 1, color: Colors.grey[400]),
-                        ),
+                        Expanded(child: Divider(thickness: 1, color: Colors.grey[400])),
                       ],
                     ),
                   ),
                   const SizedBox(height: 25),
-
-                  // Social Logins
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

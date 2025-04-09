@@ -1,9 +1,10 @@
-import 'package:engineering_project/pages/login_page.dart';
-import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:engineering_project/assets/components/auth_service.dart';
 import 'package:engineering_project/assets/components/square_tile.dart';
+import 'package:engineering_project/pages/login_page.dart';
+import 'package:engineering_project/pages/root_page.dart';
 
 class RegisterPage extends StatefulWidget {
   RegisterPage({super.key});
@@ -17,13 +18,17 @@ class _RegisterPageState extends State<RegisterPage> {
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  final nameController = TextEditingController();
+  final surnameController = TextEditingController();
+  final profileImageController = TextEditingController(); // optional
+
   bool passToggle = true;
 
   String? emailError;
   String? passwordError;
-  
+
   void signInWithGoogleAndNavigate() async {
-    // Show loading indicator
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -31,13 +36,9 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     try {
-      // Attempt to sign in with Google
       await AuthService().signInWithGoogle();
-      
-      // Dismiss the loading indicator
+
       if (context.mounted) Navigator.pop(context);
-      
-      // Navigate to RootScreen and remove all previous routes
       if (context.mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const RootScreen()),
@@ -45,13 +46,10 @@ class _RegisterPageState extends State<RegisterPage> {
         );
       }
     } catch (e) {
-      // Dismiss the loading indicator
       if (context.mounted) Navigator.pop(context);
-      
-      // Show error message
       setState(() {
         emailError = "Google sign-in failed. Please try again.";
-        print("Google Sign-In Error: $e"); // For debugging
+        print("Google Sign-In Error: $e");
       });
     }
   }
@@ -62,10 +60,8 @@ class _RegisterPageState extends State<RegisterPage> {
       passwordError = null;
     });
 
-    // Validate form fields
     if (!_formKey.currentState!.validate()) return;
 
-    // Check if passwords match
     if (passwordController.text != confirmPasswordController.text) {
       setState(() {
         passwordError = "Passwords do not match";
@@ -73,7 +69,6 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Check password length
     if (passwordController.text.length < 6) {
       setState(() {
         passwordError = "Passwords must be 6 characters long";
@@ -81,7 +76,6 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Show loading indicator
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -89,16 +83,25 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     try {
-      // Attempt to create user
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: emailController.text.trim(),
+            password: passwordController.text.trim(),
+          );
 
-      // Dismiss the loading indicator
+      final uid = userCredential.user?.uid;
+      if (uid != null) {
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'email': emailController.text.trim(),
+          'name': nameController.text.trim(),
+          'surname': surnameController.text.trim(),
+          'profileImage': profileImageController.text.trim(),
+          'role': 'user',
+          'created_at': FieldValue.serverTimestamp(),
+        });
+      }
+
       if (context.mounted) Navigator.pop(context);
-
-      // Navigate to HomePage and remove all previous routes
       if (context.mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const RootScreen()),
@@ -106,7 +109,7 @@ class _RegisterPageState extends State<RegisterPage> {
         );
       }
     } on FirebaseAuthException catch (e) {
-      Navigator.pop(context); // Close loading indicator
+      if (context.mounted) Navigator.pop(context);
 
       setState(() {
         switch (e.code) {
@@ -121,16 +124,24 @@ class _RegisterPageState extends State<RegisterPage> {
             break;
           default:
             emailError = "An error occurred. Please try again.";
-            print("Firebase Auth Error: ${e.code}"); // For debugging
+            print("Firebase Auth Error: ${e.code}");
         }
       });
     } catch (e) {
-      Navigator.pop(context); // Close loading indicator
+      if (context.mounted) Navigator.pop(context);
       setState(() {
         emailError = "An unexpected error occurred. Please try again.";
-        print("Unexpected Error: $e"); // For debugging
+        print("Unexpected Error: $e");
       });
     }
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -158,6 +169,51 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
                   const SizedBox(height: 25),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: nameController,
+                          decoration: InputDecoration(
+                            fillColor: Colors.grey.shade300,
+                            filled: true,
+                            hintText: 'First Name',
+                            prefixIcon: const Icon(Icons.person),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty)
+                              return 'Enter first name';
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextFormField(
+                          controller: surnameController,
+                          decoration: InputDecoration(
+                            fillColor: Colors.grey.shade300,
+                            filled: true,
+                            hintText: 'Last Name',
+                            prefixIcon: const Icon(Icons.person),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty)
+                              return 'Enter last name';
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
 
                   // Email Input
                   TextFormField(
@@ -238,9 +294,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                   ),
                   const SizedBox(height: 5),
-                  const SizedBox(height: 5),
 
-                  // Error message display - similar to login page
                   if (emailError != null || passwordError != null)
                     Align(
                       alignment: Alignment.center,
@@ -260,7 +314,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
                   const SizedBox(height: 5),
 
-                  // Register & Login Links
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -288,7 +341,6 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 20),
 
                   // Register Button
@@ -320,13 +372,13 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 25),
 
-                  // Social Logins
+                  // Social Login
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       SquareTile(
                         imagePath: 'lib/assets/Images/google-logo.png',
-                        onPressed: () => signInWithGoogleAndNavigate(),
+                        onPressed: signInWithGoogleAndNavigate,
                       ),
                     ],
                   ),

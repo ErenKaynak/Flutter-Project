@@ -3,6 +3,7 @@ import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lottie/lottie.dart';
 
 void main() async {
@@ -49,9 +50,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _updateUI(List<CartItem> _) {
-    setState(() {
-      // This will update the UI when cart changes
-    });
+    if (mounted) {
+      setState(() {
+        // This will update the UI when cart changes
+      });
+    }
   }
 
   @override
@@ -178,45 +181,88 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  void _addToCart(Map<String, dynamic> product) {
-  // Get the controller for this specific product
-  final controller = _animationControllers[product['id']];
-  if (controller != null) {
-    // Reset animation to start
-    controller.reset();
-    
-    // Play animation forward and then reverse back to initial state
-    controller.forward().then((_) {
-      // After animation completes, reverse it back to initial state
+  // Updated method to add item to cart using Firebase
+  Future<void> _addToCart(Map<String, dynamic> product) async {
+    // Get the controller for this specific product
+    final controller = _animationControllers[product['id']];
+    if (controller != null) {
+      // Reset animation to start
       controller.reset();
-    });
-    
-    // Add item to cart
-    _cartManager.addToCart({
-      'id': product['id'],
-      'name': product['name'],
-      'price': product['price'],
-      'image': product['image'],
-    });
+      
+      // Play animation forward and then reset
+      controller.forward().then((_) {
+        // After animation completes, reset it back to initial state
+        controller.reset();
+      });
+      
+      try {
+        // Check if user is logged in
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Please log in to add items to cart'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+        
+        // Reference to the user's cart in Firestore
+        final cartRef = FirebaseFirestore.instance
+            .collection('cart')
+            .doc(user.uid)
+            .collection('userCart')
+            .doc(product['id']);
+        
+        // Check if item already exists in cart
+        final docSnapshot = await cartRef.get();
+        
+        if (docSnapshot.exists) {
+          // Item already exists, increment quantity
+          final currentQuantity = docSnapshot.data()?['quantity'] ?? 1;
+          final newQuantity = (currentQuantity + 1).clamp(1, 10);
+          
+          await cartRef.update({
+            'quantity': newQuantity,
+          });
+        } else {
+          // Item doesn't exist, add it with quantity 1
+          await cartRef.set({
+            'name': product['name'],
+            'price': product['price'],
+            'imagePath': product['image'],
+            'quantity': 1,
+          });
+        }
 
-    // Show a snackbar to confirm the item was added
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${product["name"]} added to cart'),
-        duration: Duration(seconds: 2),
-        action: SnackBarAction(
-          label: 'VIEW CART',
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => CartPage()),
-            );
-          },
-        ),
-      ),
-    );
+        // Show a snackbar to confirm the item was added
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${product["name"]} added to cart'),
+            duration: Duration(seconds: 2),
+            action: SnackBarAction(
+              label: 'VIEW CART',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => CartPage()),
+                );
+              },
+            ),
+          ),
+        );
+      } catch (e) {
+        print('Error adding item to cart: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to add item to cart: $e'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -774,27 +820,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       )
                         : GestureDetector(
                             onTap: () => _addToCart(product),
-                            child: 
-                                  
-                                        SizedBox(
-                                          child: Lottie.asset(
-                                              'lib/assets/button-test/3.json',
-                                              controller: animationController,
-                                              fit: BoxFit.cover,
-                                              width: 100,
-                                              height: 20,
-                                              repeat: false,
-                                              
-                                            ),
-                                        ),
-                                        ),
-                                      
-                                    ),
-                                  
-                              
-                            
-                          
-                    
+                            child: SizedBox(
+                              child: Lottie.asset(
+                                'lib/assets/button-test/3.json',
+                                controller: animationController,
+                                fit: BoxFit.cover,
+                                width: 100,
+                                height: 20,
+                                repeat: false,
+                              ),
+                            ),
+                      ),
+                    ),
                   ],
                 ),
               ),
