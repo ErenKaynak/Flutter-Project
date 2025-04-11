@@ -72,20 +72,28 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   // Initialize animation controllers for products
   void _initializeAnimationControllers() {
-    // Clean up existing controllers first to prevent memory leaks
-    _animationControllers.forEach((_, controller) {
-      controller.dispose();
-    });
-    _animationControllers.clear();
+  // Clean up existing controllers first to prevent memory leaks
+  _animationControllers.forEach((_, controller) {
+    controller.dispose();
+  });
+  _animationControllers.clear();
 
-    // Create new controllers for each product
-    for (var product in products) {
-      _animationControllers[product['id']] = AnimationController(
-        vsync: this,
-        duration: Duration(seconds: 2),
-      );
-    }
+  // Create new controllers for each product with delayed start
+  int delayMilliseconds = 50;
+  for (int i = 0; i < products.length; i++) {
+    final product = products[i];
+    final controller = AnimationController(
+      vsync: this,
+      duration: Duration(seconds: 2),
+    );
+    _animationControllers[product['id']] = controller;
+
+    // Start animation with staggered delay
+    Future.delayed(Duration(milliseconds: i * delayMilliseconds), () {
+      if (mounted) controller.forward();
+    });
   }
+}
 
   Future<void> fetchProducts() async {
     setState(() {
@@ -129,6 +137,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
       setState(() {
         products = loadedProducts;
+        _initializeAnimationControllers();
         _isLoading = false;
       });
       
