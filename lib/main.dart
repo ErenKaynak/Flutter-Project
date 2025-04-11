@@ -9,9 +9,7 @@ import 'package:flutter/material.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -22,10 +20,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Engineering Project',
-      theme: ThemeData(
-        primarySwatch: Colors.red,
-      ),
-      home: LoginPage(), // Replace with your home page
+      theme: ThemeData(primarySwatch: Colors.red),
+      home: RootScreen(), // Replace with your home page
     );
   }
 }

@@ -1,6 +1,5 @@
- class ProductData {
-   static final List<Map<String, String>> products = [
-    
+class ProductData {
+  static final List<Map<String, String>> products = [
     {
       "image": "lib/assets/Images/rtx-4070.png",
       "name": "RTX 4070",
@@ -135,13 +134,11 @@
       "price": "\$299.99",
       "category": "RAM's",
     },
-  {
+    {
       "image": "lib/assets/Images/CORSAIR-32GB.png",
       "name": "CORSAIRxs 32GB (2x16GB)",
       "price": "\$699.99",
       "category": "RAM's",
     },
-  
-  
   ];
- }
+}
