@@ -1,22 +1,15 @@
 import 'package:engineering_project/pages/home_page.dart';
+import 'package:engineering_project/pages/past_orders_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 
-// Utility function to convert INR to USD
-double convertToUSD(String priceInINR) {
-  final price = double.tryParse(priceInINR) ?? 0;
-  const exchangeRate = 0.012; // 1 INR = 0.012 USD (as of March 31, 2025; adjust if needed)
-  return price * exchangeRate;
-}
-
-// CartItem class
 class CartItem {
   final String id;
   final String name;
-  final String price; // Price in INR
+  final String price; // Price in TRY
   final String image;
   int quantity;
 
@@ -38,9 +31,18 @@ class CartItem {
       quantity: data['quantity'] ?? 1,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'price': price,
+      'imagePath': image,
+      'quantity': quantity,
+    };
+  }
 }
 
-// Cart Manager class using Firestore
 class CartManager {
   static final CartManager _instance = CartManager._internal();
 
@@ -81,24 +83,26 @@ class CartManager {
       return;
     }
 
-    // Cancel any existing subscription first
     await _cartSubscription?.cancel();
 
-    // Set up a stream subscription to listen for cart changes
     _cartSubscription = _firestore
         .collection('cart')
         .doc(user.uid)
         .collection('userCart')
         .snapshots()
-        .listen((snapshot) {
-      _cartItems = snapshot.docs.map((doc) => CartItem.fromFirestore(doc)).toList();
-      print('Cart loaded: ${_cartItems.length} items');
-      _notifyListeners();
-    }, onError: (error) {
-      print('Error loading cart: $error');
-      _cartItems = [];
-      _notifyListeners();
-    });
+        .listen(
+          (snapshot) {
+            _cartItems =
+                snapshot.docs.map((doc) => CartItem.fromFirestore(doc)).toList();
+            print('Cart loaded: ${_cartItems.length} items');
+            _notifyListeners();
+          },
+          onError: (error) {
+            print('Error loading cart: $error');
+            _cartItems = [];
+            _notifyListeners();
+          },
+        );
   }
 
   Future<void> updateQuantity(String id, int change) async {
@@ -116,7 +120,7 @@ class CartManager {
       if (doc.exists) {
         final currentQuantity = doc.data()?['quantity'] ?? 1;
         final newQuantity = (currentQuantity + change).clamp(1, 10);
-        
+
         await docRef.update({'quantity': newQuantity});
         print('Updated quantity for $id to $newQuantity');
       }
@@ -151,14 +155,14 @@ class CartManager {
           .collection('cart')
           .doc(user.uid)
           .collection('userCart');
-      
+
       final batch = _firestore.batch();
       final docs = await cartRef.get();
-      
+
       for (var doc in docs.docs) {
         batch.delete(doc.reference);
       }
-      
+
       await batch.commit();
       print('Cart cleared');
     } catch (e) {
@@ -168,7 +172,7 @@ class CartManager {
 
   double get totalPrice {
     return _cartItems.fold(0.0, (sum, item) {
-      double itemPrice = convertToUSD(item.price);
+      double itemPrice = double.tryParse(item.price) ?? 0.0;
       return sum + (itemPrice * item.quantity);
     });
   }
@@ -182,11 +186,15 @@ class CartManager {
   }
 }
 
-// OrderSuccessPage
 class OrderSuccessPage extends StatelessWidget {
   final double totalAmount;
+  final String orderId;
 
-  const OrderSuccessPage({Key? key, required this.totalAmount}) : super(key: key);
+  const OrderSuccessPage({
+    Key? key,
+    required this.totalAmount,
+    required this.orderId,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -216,49 +224,76 @@ class OrderSuccessPage extends StatelessWidget {
             const SizedBox(height: 32),
             const Text(
               'Payment Successful!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Text(
-              'Amount Paid: \$${totalAmount.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
+              'Amount Paid: ₺${totalAmount.toStringAsFixed(2)}',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 8),
             const Text(
               'Your order has been placed successfully.',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Order ID: ${orderId.substring(0, 8)}',
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 40),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey.shade200,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => OrderHistoryPage(),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'VIEW ORDERS',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
-              onPressed: () {
-                Navigator.of(context).pushAndRemoveUntil(
-                   MaterialPageRoute(builder: (context) => RootScreen()),
-                  (Route<dynamic> route) => false,
-                );
-              },
-              child: const Text(
-                'CONTINUE SHOPPING',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (context) => RootScreen()),
+                      (Route<dynamic> route) => false,
+                    );
+                  },
+                  child: const Text(
+                    'CONTINUE SHOPPING',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -303,7 +338,7 @@ class _CartPageState extends State<CartPage> {
 
       _cartManager.addListener(_updateCartState);
       await _cartManager.loadCart();
-      
+
       setState(() {
         _isLoading = false;
       });
@@ -319,7 +354,6 @@ class _CartPageState extends State<CartPage> {
   @override
   void dispose() {
     _cartManager.removeListener(_updateCartState);
-    _cartManager.dispose();
     super.dispose();
   }
 
@@ -337,18 +371,66 @@ class _CartPageState extends State<CartPage> {
     });
 
     try {
-      final totalAmount = _cartManager.totalPrice;
-      final orderDescription = 'Purchase from Your Store: ${_cartManager.itemCount} items';
-      print('Processing order: $orderDescription, Total: \$${totalAmount.toStringAsFixed(2)}');
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
 
-      // Simulate a successful payment and navigate to success page
-      await Future.delayed(const Duration(seconds: 2)); // Simulate delay
-      await _cartManager.clearCart(); // Clear cart after successful payment
+      final totalAmount = _cartManager.totalPrice;
+      
+      // Create a list of order items for saving to Firestore
+      final orderItems = _cartManager.items.map((item) => item.toMap()).toList();
+
+      // Get user info (optional)
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+          
+      Map<String, dynamic>? userData = userDoc.exists 
+          ? userDoc.data() as Map<String, dynamic>? 
+          : null;
+
+      String shippingAddress = userData?['address'] ?? 'Default Shipping Address';
+
+      // Save order to both locations with consistent structure
+      // 1. Save in userOrders collection (for user's order history)
+      final userOrderDoc = await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(user.uid)
+          .collection('userOrders')
+          .add({
+            'items': orderItems,
+            'totalAmount': totalAmount,
+            'orderDate': FieldValue.serverTimestamp(),
+            'status': 'Processing',
+            'paymentMethod': 'card',
+            'shippingAddress': shippingAddress,
+          });
+
+      // 2. Save in orders collection (for admin panel)
+      await FirebaseFirestore.instance.collection('orders').doc(userOrderDoc.id).set({
+        'userId': user.uid,
+        'userEmail': user.email,
+        'userName': userData?['name'] ?? user.displayName ?? 'Anonymous User',
+        'items': orderItems,
+        'totalAmount': totalAmount,
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'Processing',
+        'trackingNumber': '',
+        'shippingAddress': shippingAddress,
+      });
+
+      // Clear the cart after successful order
+      await _cartManager.clearCart();
 
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => OrderSuccessPage(totalAmount: totalAmount),
+            builder: (_) => OrderSuccessPage(
+              totalAmount: totalAmount,
+              orderId: userOrderDoc.id,
+            ),
           ),
         );
       }
@@ -373,7 +455,6 @@ class _CartPageState extends State<CartPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Show loading indicator while checking login and loading cart
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
@@ -381,23 +462,17 @@ class _CartPageState extends State<CartPage> {
           elevation: 0,
           title: const Text(
             'Your Cart',
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
           ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.black),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
-    // Show login error if user is not logged in
     if (_loginError != null) {
       return Scaffold(
         appBar: AppBar(
@@ -405,10 +480,7 @@ class _CartPageState extends State<CartPage> {
           elevation: 0,
           title: const Text(
             'Your Cart',
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
           ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.black),
@@ -419,11 +491,7 @@ class _CartPageState extends State<CartPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.account_circle,
-                size: 80,
-                color: Colors.grey,
-              ),
+              const Icon(Icons.account_circle, size: 80, color: Colors.grey),
               const SizedBox(height: 20),
               Text(
                 _loginError!,
@@ -440,8 +508,6 @@ class _CartPageState extends State<CartPage> {
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () {
-                  // Navigate to login page
-                  // Replace with your login navigation
                   Navigator.of(context).pop();
                 },
                 child: const Text('GO TO LOGIN'),
@@ -461,10 +527,7 @@ class _CartPageState extends State<CartPage> {
         elevation: 0,
         title: const Text(
           'Your Cart',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
@@ -479,7 +542,9 @@ class _CartPageState extends State<CartPage> {
                   context: context,
                   builder: (context) => AlertDialog(
                     title: const Text('Clear Cart'),
-                    content: const Text('Are you sure you want to remove all items?'),
+                    content: const Text(
+                      'Are you sure you want to remove all items?',
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
@@ -490,7 +555,10 @@ class _CartPageState extends State<CartPage> {
                           _cartManager.clearCart();
                           Navigator.pop(context);
                         },
-                        child: const Text('CLEAR', style: TextStyle(color: Colors.red)),
+                        child: const Text(
+                          'CLEAR',
+                          style: TextStyle(color: Colors.red),
+                        ),
                       ),
                     ],
                   ),
@@ -520,9 +588,7 @@ class _CartPageState extends State<CartPage> {
                   SizedBox(height: 10),
                   Text(
                     'Add items to your cart to checkout',
-                    style: TextStyle(
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(color: Colors.grey),
                   ),
                 ],
               ),
@@ -547,7 +613,6 @@ class _CartPageState extends State<CartPage> {
                           ),
                         ),
                         onDismissed: (direction) {
-                          final removedItem = item;
                           _cartManager.removeItem(item.id);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -555,15 +620,17 @@ class _CartPageState extends State<CartPage> {
                               action: SnackBarAction(
                                 label: 'UNDO',
                                 onPressed: () {
-                                  // Undo logic would go here - you'd need to add a method to re-add items
-                                  // This would require additional implementation to fully support
+                                  // Undo logic would require re-adding the item
                                 },
                               ),
                             ),
                           );
                         },
                         child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
@@ -589,11 +656,16 @@ class _CartPageState extends State<CartPage> {
                                   ),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(8),
-                                    child: (item.image.startsWith('http') || item.image.startsWith('https'))
+                                    child: (item.image.startsWith('http') ||
+                                            item.image.startsWith('https'))
                                         ? Image.network(
                                             item.image,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) {
+                                            errorBuilder: (
+                                              context,
+                                              error,
+                                              stackTrace,
+                                            ) {
                                               return const Icon(
                                                 Icons.image,
                                                 color: Colors.grey,
@@ -603,7 +675,11 @@ class _CartPageState extends State<CartPage> {
                                         : Image.asset(
                                             item.image,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) {
+                                            errorBuilder: (
+                                              context,
+                                              error,
+                                              stackTrace,
+                                            ) {
                                               return const Icon(
                                                 Icons.image,
                                                 color: Colors.grey,
@@ -628,7 +704,7 @@ class _CartPageState extends State<CartPage> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        '\$${convertToUSD(item.price).toStringAsFixed(2)}',
+                                        '₺${item.price}',
                                         style: const TextStyle(
                                           color: Colors.red,
                                           fontWeight: FontWeight.bold,
@@ -653,7 +729,10 @@ class _CartPageState extends State<CartPage> {
                                           color: Colors.red,
                                         ),
                                       ),
-                                      onPressed: () => _cartManager.updateQuantity(item.id, -1),
+                                      onPressed: () => _cartManager.updateQuantity(
+                                        item.id,
+                                        -1,
+                                      ),
                                     ),
                                     Text(
                                       '${item.quantity}',
@@ -674,7 +753,10 @@ class _CartPageState extends State<CartPage> {
                                           color: Colors.red,
                                         ),
                                       ),
-                                      onPressed: () => _cartManager.updateQuantity(item.id, 1),
+                                      onPressed: () => _cartManager.updateQuantity(
+                                        item.id,
+                                        1,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -712,7 +794,7 @@ class _CartPageState extends State<CartPage> {
                             ),
                           ),
                           Text(
-                            '\$${_cartManager.totalPrice.toStringAsFixed(2)}',
+                            '₺${_cartManager.totalPrice.toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,

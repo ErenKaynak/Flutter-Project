@@ -14,13 +14,14 @@ class _AdminProductsState extends State<AdminProducts> {
   final TextEditingController imagePathController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
 
-  final CollectionReference products = FirebaseFirestore.instance.collection('products');
+  final CollectionReference products =
+      FirebaseFirestore.instance.collection('products');
 
   void showProductDialog({DocumentSnapshot? doc}) {
     final isEditing = doc != null;
     if (isEditing) {
       nameController.text = doc['name'];
-      priceController.text = doc['price'].toString();
+      priceController.text = doc['price']?.toString() ?? '';
       imagePathController.text = doc['imagePath'] ?? '';
       descriptionController.text = doc['description'] ?? '';
     } else {
@@ -44,8 +45,9 @@ class _AdminProductsState extends State<AdminProducts> {
               ),
               TextField(
                 controller: priceController,
-                decoration: const InputDecoration(labelText: 'Price'),
-                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Price (TRY)'),
+                keyboardType:
+                    TextInputType.numberWithOptions(decimal: true),
               ),
               TextField(
                 controller: imagePathController,
@@ -68,15 +70,21 @@ class _AdminProductsState extends State<AdminProducts> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700),
             onPressed: () async {
               final name = nameController.text.trim();
-              final price = double.tryParse(priceController.text.trim());
+              final price = priceController.text.trim();
               final imagePath = imagePathController.text.trim();
               final description = descriptionController.text.trim();
 
-              if (name.isEmpty || price == null) return;
+              if (name.isEmpty || price.isEmpty || double.tryParse(price) == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text('Please enter a valid name and price')),
+                );
+                return;
+              }
 
               final productData = {
                 'name': name,
-                'price': price,
+                'price': price, // Store as string
                 'imagePath': imagePath,
                 'description': description,
               };
@@ -88,7 +96,7 @@ class _AdminProductsState extends State<AdminProducts> {
               }
               if (mounted) Navigator.pop(context);
             },
-            child: Text(isEditing ? 'Update' : 'Add'),
+            child: Text(isEditing ? 'Update' : 'Add',style: TextStyle(color: Colors.white),),
           ),
         ],
       ),
@@ -104,14 +112,15 @@ class _AdminProductsState extends State<AdminProducts> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.red.shade700,
-        title: const Text('Manage Products', style: TextStyle(color: Colors.white)),
+        title:
+            const Text('Manage Products', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showProductDialog(),
         backgroundColor: Colors.red.shade700,
-        child: const Icon(Icons.add,color: Colors.white),
-        ),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: products.orderBy('name').snapshots(),
         builder: (context, snapshot) {
@@ -129,25 +138,28 @@ class _AdminProductsState extends State<AdminProducts> {
             itemCount: productDocs.length,
             itemBuilder: (context, index) {
               final doc = productDocs[index];
-              final name = doc['name'];
-              final price = doc['price'];
+              final name = doc['name'] ?? 'Unknown';
+              final price = doc['price']?.toString() ?? '0';
               final imagePath = doc['imagePath'] ?? '';
               final description = doc['description'] ?? '';
 
               return Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: ListTile(
                   leading: imagePath.isNotEmpty
                       ? CircleAvatar(backgroundImage: NetworkImage(imagePath))
                       : Icon(Icons.inventory_2, color: Colors.red.shade700),
-                  title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  title: Text(name,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('€$price'),
+                      Text('₺$price'),
                       if (description.isNotEmpty)
-                        Text(description, maxLines: 2, overflow: TextOverflow.ellipsis),
+                        Text(description,
+                            maxLines: 2, overflow: TextOverflow.ellipsis),
                     ],
                   ),
                   trailing: Row(

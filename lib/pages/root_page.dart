@@ -190,9 +190,9 @@ class _RootScreenState extends State<RootScreen> {
                 label: 'Home',
               ),
               NavigationDestination(
-                icon: Icon(Icons.search_sharp, 
+                icon: Icon(Icons.favorite_border_outlined, 
                   color: currentScreen == 1 ? Colors.red.shade400 : Colors.black, size: 30),
-                label: 'Search',
+                label: 'Favorites',
               ),
               NavigationDestination(
                 icon: Icon(Icons.shopping_bag_outlined, 

@@ -30,18 +30,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   bool _isLoading = true;
   TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
-  // Use the CartManager from cart_page.dart
   final CartManager _cartManager = CartManager();
-  // Map to store animation controllers for each product
   final Map<String, AnimationController> _animationControllers = {};
 
   @override
   void initState() {
     super.initState();
     fetchProducts();
-    _cartManager.loadCart(); // Load existing cart items
-    _cartManager.addListener(_updateUI); // Add listener to update UI when cart changes
-    
+    _cartManager.loadCart();
+    _cartManager.addListener(_updateUI);
+
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text;
@@ -51,49 +49,37 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   void _updateUI(List<CartItem> _) {
     if (mounted) {
-      setState(() {
-        // This will update the UI when cart changes
-      });
+      setState(() {});
     }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _cartManager.removeListener(_updateUI); // Remove listener when disposing
-    
-    // Dispose all animation controllers
+    _cartManager.removeListener(_updateUI);
+
     _animationControllers.forEach((_, controller) {
       controller.dispose();
     });
-    
+    _animationControllers.clear();
+
     super.dispose();
   }
 
-  // Initialize animation controllers for products
   void _initializeAnimationControllers() {
-  // Clean up existing controllers first to prevent memory leaks
-  _animationControllers.forEach((_, controller) {
-    controller.dispose();
-  });
-  _animationControllers.clear();
-
-  // Create new controllers for each product with delayed start
-  int delayMilliseconds = 50;
-  for (int i = 0; i < products.length; i++) {
-    final product = products[i];
-    final controller = AnimationController(
-      vsync: this,
-      duration: Duration(seconds: 2),
-    );
-    _animationControllers[product['id']] = controller;
-
-    // Start animation with staggered delay
-    Future.delayed(Duration(milliseconds: i * delayMilliseconds), () {
-      if (mounted) controller.forward();
+    _animationControllers.forEach((_, controller) {
+      controller.dispose();
     });
+    _animationControllers.clear();
+
+    for (var product in products) {
+      final controller = AnimationController(
+        vsync: this,
+        duration: Duration(seconds: 2),
+      );
+      _animationControllers[product['id']] = controller;
+    }
   }
-}
 
   Future<void> fetchProducts() async {
     setState(() {
@@ -109,19 +95,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       snapshot.docs.forEach((doc) {
         final data = doc.data() as Map<String, dynamic>;
 
-        // Debug print to check image paths
         print('Product: ${data['name']}, Image path: ${data['imagePath']}');
 
-        // Convert price to string regardless of its original type
-        String priceString;
-        var priceValue = data['price'];
-        if (priceValue is int) {
-          priceString = priceValue.toString();
-        } else if (priceValue is double) {
-          priceString = priceValue.toString();
-        } else {
-          priceString = priceValue?.toString() ?? '0';
-        }
+        String priceString = data['price']?.toString() ?? '0';
 
         loadedProducts.add({
           'id': doc.id,
@@ -130,18 +106,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           'category': data['category'] ?? 'Uncategorized',
           'image': data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
           'description': data['description'] ?? 'No description available',
-          'stock':
-              data['stock'] ?? 0, // Include stock data, default to 0 if missing
+          'stock': data['stock'] ?? 0,
         });
       });
 
       setState(() {
         products = loadedProducts;
-        _initializeAnimationControllers();
         _isLoading = false;
       });
-      
-      // Initialize animation controllers after loading products
+
       _initializeAnimationControllers();
     } catch (error) {
       print('Error fetching products: $error');
@@ -157,11 +130,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           .where(
             (product) =>
                 product["name"].toString().toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ||
+                      _searchQuery.toLowerCase(),
+                    ) ||
                 product["description"].toString().toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ),
+                      _searchQuery.toLowerCase(),
+                    ),
           )
           .toList();
     } else if (_selectedCategory == "All") {
@@ -176,7 +149,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void _selectCategory(String category) {
     setState(() {
       _selectedCategory = category;
-      // Clear search when changing category
       _searchController.clear();
     });
   }
@@ -190,62 +162,52 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // Updated method to add item to cart using Firebase
   Future<void> _addToCart(Map<String, dynamic> product) async {
-    // Get the controller for this specific product
     final controller = _animationControllers[product['id']];
-    if (controller != null) {
-      // Reset animation to start
+    if (controller != null && mounted) {
       controller.reset();
-      
-      // Play animation forward and then reset
-      controller.forward().then((_) {
-        // After animation completes, reset it back to initial state
-        controller.reset();
-      });
-      
-      try {
-        // Check if user is logged in
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) {
+      await controller.forward();
+      controller.reset();
+    }
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Please log in to add items to cart'),
               duration: Duration(seconds: 2),
             ),
           );
-          return;
         }
-        
-        // Reference to the user's cart in Firestore
-        final cartRef = FirebaseFirestore.instance
-            .collection('cart')
-            .doc(user.uid)
-            .collection('userCart')
-            .doc(product['id']);
-        
-        // Check if item already exists in cart
-        final docSnapshot = await cartRef.get();
-        
-        if (docSnapshot.exists) {
-          // Item already exists, increment quantity
-          final currentQuantity = docSnapshot.data()?['quantity'] ?? 1;
-          final newQuantity = (currentQuantity + 1).clamp(1, 10);
-          
-          await cartRef.update({
-            'quantity': newQuantity,
-          });
-        } else {
-          // Item doesn't exist, add it with quantity 1
-          await cartRef.set({
-            'name': product['name'],
-            'price': product['price'],
-            'imagePath': product['image'],
-            'quantity': 1,
-          });
-        }
+        return;
+      }
 
-        // Show a snackbar to confirm the item was added
+      final cartRef = FirebaseFirestore.instance
+          .collection('cart')
+          .doc(user.uid)
+          .collection('userCart')
+          .doc(product['id']);
+
+      final docSnapshot = await cartRef.get();
+
+      if (docSnapshot.exists) {
+        final currentQuantity = docSnapshot.data()?['quantity'] ?? 1;
+        final newQuantity = (currentQuantity + 1).clamp(1, 10);
+        await cartRef.update({
+          'quantity': newQuantity,
+        });
+      } else {
+        await cartRef.set({
+          'name': product['name'],
+          'price': product['price'],
+          'imagePath': product['image'],
+          'quantity': 1,
+        });
+      }
+
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${product["name"]} added to cart'),
@@ -253,16 +215,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             action: SnackBarAction(
               label: 'VIEW CART',
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => CartPage()),
-                );
+                if (mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CartPage()),
+                  );
+                }
               },
             ),
           ),
         );
-      } catch (e) {
-        print('Error adding item to cart: $e');
+      }
+    } catch (e) {
+      print('Error adding item to cart: $e');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to add item to cart: $e'),
@@ -291,15 +257,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 prefixIcon: Icon(Icons.search, size: 25),
                 contentPadding: EdgeInsets.symmetric(vertical: 10),
                 alignLabelWithHint: true,
-                suffixIcon:
-                    _searchQuery.isNotEmpty
-                        ? IconButton(
-                          icon: Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                          },
-                        )
-                        : null,
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                        },
+                      )
+                    : null,
               ),
             ),
           ),
@@ -342,53 +307,39 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
           ],
         ),
-        body:
-            _isLoading
-                ? Center(child: CircularProgressIndicator())
-                : RefreshIndicator(
-                  onRefresh: fetchProducts,
-                  child: CustomScrollView(
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(10.0),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceAround,
-                                children: [
-                                  _buildCategoryButton(
-                                    Icons.favorite,
-                                    "Favorites",
-                                  ),
-                                  _buildCategoryButton(
-                                    Icons.history,
-                                    "History",
-                                  ),
-                                  _buildCategoryButton(
-                                    Icons.person,
-                                    "Following",
-                                  ),
-                                ],
-                              ),
+        body: _isLoading
+            ? Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: fetchProducts,
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.all(10.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _buildCategoryButton(Icons.favorite, "Favorites"),
+                                _buildCategoryButton(Icons.history, "History"),
+                                _buildCategoryButton(Icons.person, "Following"),
+                              ],
                             ),
-                            // Banner Section
-                            _buildBannerSection(),
-                            SizedBox(height: 10),
-                            // Categories Section
-                            _buildCategoriesHeader(),
-                            _buildCategoriesRow(),
-                            _buildProductsHeader(),
-                          ],
-                        ),
+                          ),
+                          _buildBannerSection(),
+                          SizedBox(height: 10),
+                          _buildCategoriesHeader(),
+                          _buildCategoriesRow(),
+                          _buildProductsHeader(),
+                        ],
                       ),
-                      // Products Grid
-                      _buildProductsGrid(),
-                    ],
-                  ),
+                    ),
+                    _buildProductsGrid(),
+                  ],
                 ),
+              ),
       ),
     );
   }
@@ -427,7 +378,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(10),
         child: Stack(
           children: [
-            // Banner background
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -437,7 +387,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
               ),
             ),
-            // Banner content
             Padding(
               padding: EdgeInsets.all(20),
               child: Column(
@@ -552,20 +501,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: isSelected ? Colors.red.shade50 : Colors.grey.shade200,
-              border:
-                  isSelected
-                      ? Border.all(color: Colors.red.shade400, width: 2)
-                      : null,
-              boxShadow:
-                  isSelected
-                      ? [
-                        BoxShadow(
-                          color: Colors.red.shade200.withOpacity(0.5),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                      : null,
+              border: isSelected
+                  ? Border.all(color: Colors.red.shade400, width: 2)
+                  : null,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: Colors.red.shade200.withOpacity(0.5),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
             ),
             padding: EdgeInsets.all(10),
             child: Image.asset(imagePath, fit: BoxFit.contain),
@@ -649,7 +596,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           final int stock = product["stock"] is int ? product["stock"] : 0;
           final bool isOutOfStock = stock <= 0;
 
-          // Create animation controller for any new products that might have appeared in search/filter
           if (!_animationControllers.containsKey(product['id'])) {
             _animationControllers[product['id']] = AnimationController(
               vsync: this,
@@ -668,44 +614,41 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildProductCard({
-  required Map<String, dynamic> product,
-  required bool isOutOfStock,
-  required AnimationController animationController,
-}) {
-  return GestureDetector(
-    onTap: () => _navigateToProductDetail(product),
-    child: Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        height: double.infinity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Product image section (unchanged)
-            Flexible(
-              flex: 3,
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(12),
+    required Map<String, dynamic> product,
+    required bool isOutOfStock,
+    required AnimationController animationController,
+  }) {
+    return GestureDetector(
+      onTap: () => _navigateToProductDetail(product),
+      child: Card(
+        elevation: 3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
+          height: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Flexible(
+                flex: 3,
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(12),
+                    ),
                   ),
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Product image with improved handling
-                    Center(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(12),
-                        ),
-                        child:
-                            (product["image"].startsWith('http') ||
-                                    product["image"].startsWith('https'))
-                                ? Image.network(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Center(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(12),
+                          ),
+                          child: (product["image"].startsWith('http') ||
+                                  product["image"].startsWith('https'))
+                              ? Image.network(
                                   product["image"],
                                   fit: BoxFit.cover,
                                   width: double.infinity,
@@ -716,28 +659,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                       fit: BoxFit.cover,
                                     );
                                   },
-                                  loadingBuilder: (
-                                    context,
-                                    child,
-                                    loadingProgress,
-                                  ) {
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
                                     if (loadingProgress == null) return child;
                                     return Center(
                                       child: CircularProgressIndicator(
-                                        value:
-                                            loadingProgress
-                                                        .expectedTotalBytes !=
-                                                    null
-                                                ? loadingProgress
-                                                        .cumulativeBytesLoaded /
-                                                    loadingProgress
-                                                        .expectedTotalBytes!
-                                                : null,
+                                        value: loadingProgress
+                                                    .expectedTotalBytes !=
+                                                null
+                                            ? loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!
+                                            : null,
                                       ),
                                     );
                                   },
                                 )
-                                : Image.asset(
+                              : Image.asset(
                                   product["image"],
                                   fit: BoxFit.cover,
                                   width: double.infinity,
@@ -750,105 +689,99 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                     );
                                   },
                                 ),
-                      ),
-                    ),
-                    // Favorite button
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.8),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.favorite_border,
-                          color: Colors.red,
-                          size: 20,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // Product info section
-            Flexible(
-              flex: 2,
-              child: Container(
-                padding: EdgeInsets.all(10.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Product name
-                    Text(
-                      product["name"],
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 4),
-                    // Product price
-                    Text(
-                      "₺${product["price"]}",
-                      style: TextStyle(
-                        color: Colors.green.shade700,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    
-                   SizedBox(height: 10),
-                    
-                    // Show either "Out of Stock" or Add to Cart button with same height
-                    SizedBox(
-                      width: double.infinity,
-                      height: 40, // Same height as the ADD TO CART button
-                      child: isOutOfStock
-                        ? Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.red.shade200),
-                        ),
-                        child: Text(
-                          "Out of Stock",
-                          style: TextStyle(
-                            color: Colors.red.shade700,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.8),
+                            shape: BoxShape.circle,
                           ),
-                          textAlign: TextAlign.center,
+                          child: Icon(
+                            Icons.favorite_border,
+                            color: Colors.red,
+                            size: 20,
+                          ),
                         ),
-                      )
-                        : GestureDetector(
-                            onTap: () => _addToCart(product),
-                            child: SizedBox(
-                              child: Lottie.asset(
-                                'lib/assets/button-test/3.json',
-                                controller: animationController,
-                                fit: BoxFit.cover,
-                                width: 100,
-                                height: 20,
-                                repeat: false,
-                              ),
-                            ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+              Flexible(
+                flex: 2,
+                child: Container(
+                  padding: EdgeInsets.all(10.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product["name"],
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        "₺${product["price"]}",
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 40,
+                        child: isOutOfStock
+                            ? Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border:
+                                      Border.all(color: Colors.red.shade200),
+                                ),
+                                child: Text(
+                                  "Out of Stock",
+                                  style: TextStyle(
+                                    color: Colors.red.shade700,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              )
+                            : GestureDetector(
+                                onTap: () => _addToCart(product),
+                                child: SizedBox(
+                                  child: Lottie.asset(
+                                    'lib/assets/button-test/3.json',
+                                    controller: animationController,
+                                    fit: BoxFit.cover,
+                                    width: 100,
+                                    height: 20,
+                                    repeat: false,
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-} 
+    );
+  }
 }

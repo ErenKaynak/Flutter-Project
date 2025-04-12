@@ -1,3 +1,4 @@
+import 'package:engineering_project/admin-panel/admin_order_management.dart';
 import 'package:engineering_project/admin-panel/admin_products.dart';
 import 'package:engineering_project/admin-panel/admin_user.dart';
 import 'package:flutter/material.dart';
@@ -77,9 +78,12 @@ class _AdminPageState extends State<AdminPage> {
                   title: const Text("Order Management"),
                   subtitle: const Text("View and process orders"),
                   trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
+                  onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const OrderManagementPage()),
+              ),
                     // Navigate to order management screen
-                  },
+                  
                 ),
               ),
               

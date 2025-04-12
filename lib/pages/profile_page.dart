@@ -1,8 +1,13 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:engineering_project/admin-panel/admin_main.dart';
-import 'package:engineering_project/admin-panel/admin_root.dart';
+import 'package:engineering_project/pages/login_page.dart';
+import 'package:engineering_project/pages/past_orders_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:engineering_project/assets/components/auth_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -17,6 +22,8 @@ class _ProfilePageState extends State<ProfilePage> {
   String? imageUrl;
   String? role;
   bool isLoading = true;
+  bool isUploading = false;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -44,8 +51,163 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } catch (e) {
       print('Error fetching profile: $e');
+      setState(() {
+        isLoading = false;
+      });
     }
   }
+
+  Future<void> _uploadImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (pickedFile == null) return;
+
+      setState(() {
+        isUploading = true;
+      });
+
+      final File imageFile = File(pickedFile.path);
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      
+      if (uid == null) {
+        setState(() {
+          isUploading = false;
+        });
+        return;
+      }
+
+      // Upload to Firebase Storage
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_images')
+          .child('$uid.jpg');
+      
+      final uploadTask = storageRef.putFile(
+        imageFile,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+
+      // Wait for the upload to complete
+      final snapshot = await uploadTask;
+      
+      // Get the download URL
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+
+      // Update Firestore with the new image URL
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'profileImageUrl': downloadUrl,
+      });
+
+      // Update UI
+      setState(() {
+        imageUrl = downloadUrl;
+        isUploading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile picture updated successfully')),
+      );
+    } catch (e) {
+      setState(() {
+        isUploading = false;
+      });
+      print('Error uploading image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update profile picture: $e')),
+      );
+    }
+  }
+
+  Future<void> _changeProfilePicture() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Take a photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _uploadImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _uploadImage(ImageSource.gallery);
+              },
+            ),
+            if (imageUrl != null && imageUrl!.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Remove photo', 
+                  style: TextStyle(color: Colors.red)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final uid = FirebaseAuth.instance.currentUser?.uid;
+                  if (uid == null) return;
+
+                  setState(() {
+                    isUploading = true;
+                  });
+
+                  try {
+                    // Update Firestore to remove the profile image URL
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(uid)
+                        .update({
+                      'profileImageUrl': '',
+                    });
+
+                    // Try to delete the file from storage (ignore errors if it doesn't exist)
+                    try {
+                      await FirebaseStorage.instance
+                          .ref()
+                          .child('profile_images')
+                          .child('$uid.jpg')
+                          .delete();
+                    } catch (e) {
+                      print('Error deleting image from storage: $e');
+                    }
+
+                    setState(() {
+                      imageUrl = '';
+                      isUploading = false;
+                    });
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Profile picture removed')),
+                    );
+                  } catch (e) {
+                    setState(() {
+                      isUploading = false;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to remove photo: $e')),
+                    );
+                  }
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+   }
 
   Widget buildButton(String label, IconData icon, VoidCallback onPressed) {
     return Padding(
@@ -96,66 +258,97 @@ class _ProfilePageState extends State<ProfilePage> {
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
         ),
       ),
-      body:
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Profile image
-                    Center(
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundImage:
-                            imageUrl != null && imageUrl!.isNotEmpty
-                                ? NetworkImage(imageUrl!)
-                                : const AssetImage(
-                                      'lib/assets/Images/default_avatar.png',
-                                    )
-                                    as ImageProvider,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Name + Surname
-                    Center(
-                      child: Text(
-                        '$name $surname',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Profile image with upload functionality
+                  GestureDetector(
+                    onTap: _changeProfilePicture,
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        isUploading
+                            ? const CircleAvatar(
+                                radius: 50,
+                                child: CircularProgressIndicator(),
+                              )
+                            : CircleAvatar(
+                                radius: 50,
+                                backgroundImage: imageUrl != null && imageUrl!.isNotEmpty
+                                    ? NetworkImage(imageUrl!)
+                                    : const AssetImage(
+                                          'lib/assets/Images/default_avatar.png',
+                                        ) as ImageProvider,
+                              ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade700,
+                            shape: BoxShape.circle,
+                          ),
+                          padding: const EdgeInsets.all(5),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                         ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Name + Surname
+                  Center(
+                    child: Text(
+                      '$name $surname',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
+                  ),
 
-                    const SizedBox(height: 32),
+                  const SizedBox(height: 32),
 
-                    // Buttons
-                    /*buildButton(
+                  // Buttons
+                  buildButton(
                     'Past Orders',
                     Icons.history,
                     () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => const PastOrdersPage()),
+                          builder: (context) => OrderHistoryPage()),
                     ),
-                  ),*/
-                    if (role == 'admin')
-                      buildButton(
-                        'Admin Panel',
-                        Icons.admin_panel_settings,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AdminPage(),
-                          ),
+                  ),
+                  if (role == 'admin')
+                    buildButton(
+                      'Admin Panel',
+                      Icons.admin_panel_settings,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminPage(),
                         ),
                       ),
-                  ],
-                ),
+                    ),
+                  // Log out button
+                buildButton(
+                    'Log Out',
+                    Icons.logout,
+                    () async {
+                        await FirebaseAuth.instance.signOut();
+                        Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (context) => LoginPage()),
+                      );
+                    },
+                  ),
+                ],
               ),
+            ),
     );
   }
 }

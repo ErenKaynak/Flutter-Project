@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:engineering_project/assets/components/cart_manager.dart';
+import 'package:engineering_project/pages/cart_page.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final String productId;
@@ -59,58 +59,60 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     });
   }
 
-Future<void> addToCart() async {
-  final user = FirebaseAuth.instance.currentUser;
+  Future<void> addToCart() async {
+    final user = FirebaseAuth.instance.currentUser;
 
-  if (user == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('You must be logged in to add to cart')),
-    );
-    return;
-  }
-
-  print('🧪 addToCart() started');
-  print('👤 User UID: ${user.uid}');
-  print('📦 Product Data: $productData');
-
-  final cartRef = FirebaseFirestore.instance
-      .collection('cart')
-      .doc(user.uid)
-      .collection('userCart')
-      .doc(widget.productId);
-
-  try {
-    final existingItem = await cartRef.get();
-
-    if (existingItem.exists) {
-      final prevQuantity = existingItem['quantity'] ?? 1;
-      await cartRef.update({'quantity': prevQuantity + quantity});
-      print('📝 Cart updated with new quantity: ${prevQuantity + quantity}');
-    } else {
-      await cartRef.set({
-        'productId': widget.productId,
-        'name': productData?['name'],
-        'price': productData?['price'],
-        'imagePath': productData?['imagePath'],
-        'quantity': quantity,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      print('🆕 Product added to cart');
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('You must be logged in to add to cart')),
+      );
+      return;
     }
 
-    if (!mounted) return;
+    print('🧪 addToCart() started');
+    print('👤 User UID: ${user.uid}');
+    print('📦 Product Data: $productData');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${productData?['name']} x$quantity added to cart')),
-    );
-  } catch (e) {
-    print('❌ Error adding to cart: $e');
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to add to cart')),
-    );
+    final cartRef = FirebaseFirestore.instance
+        .collection('cart')
+        .doc(user.uid)
+        .collection('userCart')
+        .doc(widget.productId);
+
+    try {
+      final existingItem = await cartRef.get();
+
+      if (existingItem.exists) {
+        final prevQuantity = existingItem['quantity'] ?? 1;
+        await cartRef.update({'quantity': prevQuantity + quantity});
+        print('📝 Cart updated with new quantity: ${prevQuantity + quantity}');
+      } else {
+        await cartRef.set({
+          'productId': widget.productId,
+          'name': productData?['name'],
+          'price': productData?['price'], // Store as string
+          'imagePath': productData?['imagePath'],
+          'quantity': quantity,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+        print('🆕 Product added to cart');
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('${productData?['name']} x$quantity added to cart')),
+      );
+    } catch (e) {
+      print('❌ Error adding to cart: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add to cart')),
+      );
+    }
   }
-}
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -128,10 +130,11 @@ Future<void> addToCart() async {
     }
 
     final name = productData!['name'] ?? 'Unknown';
-    final price = productData!['price']?.toDouble() ?? 0.0;
+    final price = productData!['price']?.toString() ?? '0';
     final imagePath = productData!['imagePath'] ?? '';
     final category = productData!['category'] ?? 'Uncategorized';
-    final description = productData!['description'] ?? 'No description available.';
+    final description =
+        productData!['description'] ?? 'No description available.';
     final List<String> images = (productData!['images'] as List<dynamic>?)
             ?.map((e) => e.toString())
             .toList() ??
@@ -146,7 +149,10 @@ Future<void> addToCart() async {
           IconButton(
             icon: Icon(Icons.shopping_cart),
             onPressed: () {
-              // Navigate to cart page
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CartPage()),
+              );
             },
           ),
         ],
@@ -182,7 +188,8 @@ Future<void> addToCart() async {
                       width: 80,
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: selectedImageIndex == index ? Colors.red : Colors.grey,
+                          color:
+                              selectedImageIndex == index ? Colors.red : Colors.grey,
                           width: 2,
                         ),
                         color: Colors.grey[200],
@@ -215,7 +222,8 @@ Future<void> addToCart() async {
                           children: [
                             Text(
                               name,
-                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                              style:
+                                  TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                             ),
                             SizedBox(height: 4),
                             Text("Category: $category",
@@ -224,7 +232,7 @@ Future<void> addToCart() async {
                         ),
                       ),
                       Text(
-                        '${price.toStringAsFixed(2)}',
+                        '₺$price',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
