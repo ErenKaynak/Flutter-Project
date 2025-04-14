@@ -1,5 +1,5 @@
 import 'package:engineering_project/pages/cart_page.dart';
-import 'package:engineering_project/pages/product-detail-page.dart';// Import the favorites page
+import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:engineering_project/pages/search_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -34,6 +34,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   String _searchQuery = "";
   final CartManager _cartManager = CartManager();
   final Map<String, AnimationController> _animationControllers = {};
+  bool _isDisposed = false;
 
   @override
   void initState() {
@@ -44,24 +45,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _cartManager.addListener(_updateUI);
 
     _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text;
-      });
+      if (mounted) {
+        setState(() {
+          _searchQuery = _searchController.text;
+        });
+      }
     });
   }
 
   void _updateUI(List<CartItem> _) {
-    if (mounted) {
+    if (mounted && !_isDisposed) {
       setState(() {});
     }
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
     _searchController.dispose();
     _cartManager.removeListener(_updateUI);
 
+    // Properly dispose of all animation controllers
     _animationControllers.forEach((_, controller) {
+      controller.stop();
       controller.dispose();
     });
     _animationControllers.clear();
@@ -70,10 +76,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _initializeAnimationControllers() {
+    // Safely dispose of any existing controllers
     _animationControllers.forEach((_, controller) {
+      controller.stop();
       controller.dispose();
     });
     _animationControllers.clear();
+
+    // Only create new controllers if the widget is still mounted
+    if (!mounted) return;
 
     for (var product in products) {
       final controller = AnimationController(
@@ -85,6 +96,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> fetchProducts() async {
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = true;
     });
@@ -113,6 +126,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         });
       });
 
+      if (!mounted) return;
+      
       setState(() {
         products = loadedProducts;
         _isLoading = false;
@@ -121,9 +136,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       _initializeAnimationControllers();
     } catch (error) {
       print('Error fetching products: $error');
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -133,9 +150,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         // If not logged in, can't have favorites
-        setState(() {
-          favoriteProductIds = [];
-        });
+        if (mounted) {
+          setState(() {
+            favoriteProductIds = [];
+          });
+        }
         return;
       }
 
@@ -150,9 +169,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         loadedFavorites.add(doc.id);
       });
 
-      setState(() {
-        favoriteProductIds = loadedFavorites;
-      });
+      if (mounted) {
+        setState(() {
+          favoriteProductIds = loadedFavorites;
+        });
+      }
     } catch (error) {
       print('Error fetching favorites: $error');
     }
@@ -162,12 +183,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<void> toggleFavorite(Map<String, dynamic> product) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please log in to add favorites'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please log in to add favorites'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
       return;
     }
 
@@ -184,15 +207,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (isFavorite) {
         // Remove from favorites
         await favRef.delete();
-        setState(() {
-          favoriteProductIds.remove(productId);
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Removed from favorites'),
-            duration: Duration(seconds: 1),
-          ),
-        );
+        if (mounted) {
+          setState(() {
+            favoriteProductIds.remove(productId);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Removed from favorites'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
       } else {
         // Add to favorites
         await favRef.set({
@@ -204,24 +229,28 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           'stock': product['stock'],
           'addedAt': FieldValue.serverTimestamp(),
         });
-        setState(() {
-          favoriteProductIds.add(productId);
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Added to favorites'),
-            duration: Duration(seconds: 1),
-          ),
-        );
+        if (mounted) {
+          setState(() {
+            favoriteProductIds.add(productId);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Added to favorites'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
       }
     } catch (e) {
       print('Error toggling favorite: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update favorites'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update favorites'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -248,13 +277,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _selectCategory(String category) {
-    setState(() {
-      _selectedCategory = category;
-      _searchController.clear();
-    });
+    if (mounted) {
+      setState(() {
+        _selectedCategory = category;
+        _searchController.clear();
+      });
+    }
   }
 
   void _navigateToProductDetail(Map<String, dynamic> product) {
+    if (!mounted) return;
+    
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -264,6 +297,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _navigateToFavoritesPage() {
+    if (!mounted) return;
+    
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -276,16 +311,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       ),
     ).then((_) {
       // Refresh favorites when returning from favorites page
-      fetchFavorites();
+      if (mounted) {
+        fetchFavorites();
+      }
     });
   }
 
   Future<void> _addToCart(Map<String, dynamic> product) async {
     final controller = _animationControllers[product['id']];
-    if (controller != null && mounted) {
+    if (controller != null && mounted && !_isDisposed) {
       controller.reset();
-      await controller.forward();
-      controller.reset();
+      try {
+        await controller.forward();
+        if (mounted && !_isDisposed) {
+          controller.reset();
+        }
+      } catch (e) {
+        print('Animation error: $e');
+      }
     }
 
     try {
@@ -393,10 +436,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 IconButton(
                   icon: Icon(Icons.shopping_cart),
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => CartPage()),
-                    );
+                    if (mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => CartPage()),
+                      );
+                    }
                   },
                 ),
                 if (_cartManager.itemCount > 0)
@@ -558,9 +603,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
           TextButton(
             onPressed: () {
-              setState(() {
-                _selectedCategory = "All";
-              });
+              if (mounted) {
+                setState(() {
+                  _selectedCategory = "All";
+                });
+              }
             },
             child: Text("Show All", style: TextStyle(color: Colors.red)),
           ),
@@ -719,19 +766,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           final bool isOutOfStock = stock <= 0;
           final bool isFavorite = favoriteProductIds.contains(product['id']);
           
-
-          if (!_animationControllers.containsKey(product['id'])) {
+          // Create controller if it doesn't exist
+          if (!_animationControllers.containsKey(product['id']) && mounted && !_isDisposed) {
             _animationControllers[product['id']] = AnimationController(
               vsync: this,
               duration: Duration(seconds: 2),
             );
           }
 
+          final animationController = _animationControllers[product['id']];
+          if (animationController == null) {
+            // Fallback if controller is null
+            return Container();
+          }
+
           return _buildProductCard(
             product: product,
             isOutOfStock: isOutOfStock,
             isFavorite: isFavorite,
-            animationController: _animationControllers[product['id']]!,
+            animationController: animationController,
           );
         }, childCount: filteredProducts.length),
       ),

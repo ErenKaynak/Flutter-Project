@@ -10,9 +10,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:engineering_project/assets/components/auth_service.dart';
 
 class ProfilePage extends StatefulWidget {
-  final dynamic themeNotifier; // <-- Tema kontrolcüsü eklendi
 
-  const ProfilePage({super.key, required this.themeNotifier});
+  const ProfilePage({super.key});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -331,16 +330,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
 
                     // 🌙 Tema değiştirici
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 1),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: GestureDetector(
                         onTap: () {
                           // İsteğe bağlı: Kutunun kendisine tıklanırsa da değişebilir
                           setState(() {
-                            widget.themeNotifier.toggleTheme(
-                              !widget.themeNotifier.isDarkMode,
-                            );
+                           
                           });
                         },
                         child: Container(
@@ -378,12 +375,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ],
                               ),
                               Switch(
-                                value: widget.themeNotifier.isDarkMode,
-                                onChanged: (val) {
-                                  setState(() {
-                                    widget.themeNotifier.toggleTheme(val);
-                                  });
-                                },
+                               value: false,
+                               onChanged:(value) {
+                                 
+                               },
                               ),
                             ],
                           ),
