@@ -20,11 +20,22 @@ class _LoginPageState extends State<LoginPage> {
   final passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool passToggle = true;
+  bool _mounted = true;
 
   String? emailError;
   String? passwordError;
 
+  @override
+  void dispose() {
+    _mounted = false;
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
   void signInWithGoogleAndNavigate() async {
+    if (!mounted) return;
+    
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -34,8 +45,10 @@ class _LoginPageState extends State<LoginPage> {
     try {
       await AuthService().signInWithGoogle();
 
+      if (!_mounted) return;
       if (context.mounted) Navigator.pop(context);
 
+      if (!_mounted) return;
       if (context.mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const RootScreen()),
@@ -43,8 +56,10 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } catch (e) {
+      if (!_mounted) return;
       if (context.mounted) Navigator.pop(context);
 
+      if (!_mounted) return;
       setState(() {
         emailError = "Google sign-in failed. Please try again.";
         print("Google Sign-In Error: $e");
@@ -53,6 +68,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void signUserIn() async {
+    if (!mounted) return;
+    
     setState(() {
       emailError = null;
       passwordError = null;
@@ -72,15 +89,21 @@ class _LoginPageState extends State<LoginPage> {
         password: passwordController.text.trim(),
       );
 
+      if (!_mounted) return;
+      
       User? user = credential.user;
       if (user != null) {
         await _saveUserToFirestore(user);
 
+        if (!_mounted) return;
+        
         final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
         String role = userDoc['role'] ?? 'user';
 
+        if (!_mounted) return;
         if (context.mounted) Navigator.pop(context);
 
+        if (!_mounted) return;
         if (context.mounted) {
           if (role == 'admin') {
             Navigator.of(context).pushAndRemoveUntil(
@@ -96,8 +119,10 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
     } on FirebaseAuthException catch (e) {
+      if (!_mounted) return;
       if (context.mounted) Navigator.pop(context);
 
+      if (!_mounted) return;
       setState(() {
         switch (e.code) {
           case 'invalid-credential':
@@ -124,7 +149,10 @@ class _LoginPageState extends State<LoginPage> {
         }
       });
     } catch (e) {
+      if (!_mounted) return;
       if (context.mounted) Navigator.pop(context);
+      
+      if (!_mounted) return;
       setState(() {
         emailError = "An unexpected error occurred. Please try again.";
         print("Unexpected Error: $e");
@@ -133,9 +161,13 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _saveUserToFirestore(User user) async {
+    if (!_mounted) return;
+    
     final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
     final docSnapshot = await userDoc.get();
 
+    if (!_mounted) return;
+    
     if (!docSnapshot.exists) {
       await userDoc.set({
         'uid': user.uid,

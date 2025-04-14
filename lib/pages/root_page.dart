@@ -104,12 +104,13 @@ class _RootScreenState extends State<RootScreen> {
   int currentScreen = 0;
   List<Widget> screens = [
           HomePage(), 
-    const SearchPage(), 
+    const FavoritesPage(), 
     const CartPage(), 
     const ProfilePage()
   ];
   bool isAdmin = false;
   bool isLoading = true;
+  bool _mounted = true;
 
   @override
   void initState() {
@@ -118,7 +119,16 @@ class _RootScreenState extends State<RootScreen> {
     checkAdminStatus();
   }
 
+  @override
+  void dispose() {
+    _mounted = false;
+    controller.dispose();
+    super.dispose();
+  }
+
   Future<void> checkAdminStatus() async {
+    if (!mounted) return;
+    
     setState(() {
       isLoading = true;
     });
@@ -127,12 +137,12 @@ class _RootScreenState extends State<RootScreen> {
       // Check if user is admin using the AuthService
       bool adminStatus = await AuthService().isUserAdmin();
       
-      if (adminStatus) {
+      if (adminStatus && _mounted) {
         setState(() {
           isAdmin = true;
           screens = [
                   HomePage(), 
-            const SearchPage(), 
+            const FavoritesPage(), 
             const CartPage(), 
             const ProfilePage(),
             const AdminPage()
@@ -142,9 +152,11 @@ class _RootScreenState extends State<RootScreen> {
     } catch (e) {
       print("Error checking admin status: $e");
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      if (_mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 

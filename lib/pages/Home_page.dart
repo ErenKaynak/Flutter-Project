@@ -1,5 +1,6 @@
 import 'package:engineering_project/pages/cart_page.dart';
-import 'package:engineering_project/pages/product-detail-page.dart';
+import 'package:engineering_project/pages/product-detail-page.dart';// Import the favorites page
+import 'package:engineering_project/pages/search_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -28,6 +29,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   String _selectedCategory = "All";
   List<Map<String, dynamic>> products = [];
   bool _isLoading = true;
+  List<String> favoriteProductIds = []; // Store only product IDs for favorites
   TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
   final CartManager _cartManager = CartManager();
@@ -37,6 +39,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     fetchProducts();
+    fetchFavorites(); // Fetch favorites on initialization
     _cartManager.loadCart();
     _cartManager.addListener(_updateUI);
 
@@ -124,6 +127,104 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
+  // Fetch favorites from Firestore
+  Future<void> fetchFavorites() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        // If not logged in, can't have favorites
+        setState(() {
+          favoriteProductIds = [];
+        });
+        return;
+      }
+
+      final favoritesSnapshot = await FirebaseFirestore.instance
+          .collection('favorites')
+          .doc(user.uid)
+          .collection('userFavorites')
+          .get();
+
+      final List<String> loadedFavorites = [];
+      favoritesSnapshot.docs.forEach((doc) {
+        loadedFavorites.add(doc.id);
+      });
+
+      setState(() {
+        favoriteProductIds = loadedFavorites;
+      });
+    } catch (error) {
+      print('Error fetching favorites: $error');
+    }
+  }
+
+  // Toggle favorite status of a product
+  Future<void> toggleFavorite(Map<String, dynamic> product) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please log in to add favorites'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final productId = product['id'];
+    final isFavorite = favoriteProductIds.contains(productId);
+
+    try {
+      final favRef = FirebaseFirestore.instance
+          .collection('favorites')
+          .doc(user.uid)
+          .collection('userFavorites')
+          .doc(productId);
+
+      if (isFavorite) {
+        // Remove from favorites
+        await favRef.delete();
+        setState(() {
+          favoriteProductIds.remove(productId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Removed from favorites'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      } else {
+        // Add to favorites
+        await favRef.set({
+          'name': product['name'],
+          'price': product['price'],
+          'image': product['image'],
+          'category': product['category'],
+          'description': product['description'],
+          'stock': product['stock'],
+          'addedAt': FieldValue.serverTimestamp(),
+        });
+        setState(() {
+          favoriteProductIds.add(productId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Added to favorites'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error toggling favorite: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update favorites'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   List<Map<String, dynamic>> get filteredProducts {
     if (_searchQuery.isNotEmpty) {
       return products
@@ -160,6 +261,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         builder: (context) => ProductDetailPage(productId: product["id"]),
       ),
     );
+  }
+
+  void _navigateToFavoritesPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FavoritesPage(
+          onFavoritesChanged: () {
+            // Refresh favorites when returning from favorites page
+            fetchFavorites();
+          },
+        ),
+      ),
+    ).then((_) {
+      // Refresh favorites when returning from favorites page
+      fetchFavorites();
+    });
   }
 
   Future<void> _addToCart(Map<String, dynamic> product) async {
@@ -322,7 +440,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
-                                _buildCategoryButton(Icons.favorite, "Favorites"),
+                                _buildCategoryButton(
+                                  Icons.favorite, 
+                                  "Favorites",
+                                  onTap: _navigateToFavoritesPage,
+                                ),
                                 _buildCategoryButton(Icons.history, "History"),
                                 _buildCategoryButton(Icons.person, "Following"),
                               ],
@@ -344,9 +466,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildCategoryButton(IconData icon, String label) {
+  Widget _buildCategoryButton(IconData icon, String label, {VoidCallback? onTap}) {
     return InkWell(
-      onTap: () {},
+      onTap: onTap ?? () {},
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
@@ -595,6 +717,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           final product = filteredProducts[index];
           final int stock = product["stock"] is int ? product["stock"] : 0;
           final bool isOutOfStock = stock <= 0;
+          final bool isFavorite = favoriteProductIds.contains(product['id']);
+          
 
           if (!_animationControllers.containsKey(product['id'])) {
             _animationControllers[product['id']] = AnimationController(
@@ -606,6 +730,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           return _buildProductCard(
             product: product,
             isOutOfStock: isOutOfStock,
+            isFavorite: isFavorite,
             animationController: _animationControllers[product['id']]!,
           );
         }, childCount: filteredProducts.length),
@@ -616,6 +741,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Widget _buildProductCard({
     required Map<String, dynamic> product,
     required bool isOutOfStock,
+    required bool isFavorite,
     required AnimationController animationController,
   }) {
     return GestureDetector(
@@ -700,10 +826,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             color: Colors.white.withOpacity(0.8),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
-                            Icons.favorite_border,
-                            color: Colors.red,
-                            size: 20,
+                          child: GestureDetector(
+                            onTap: () => toggleFavorite(product),
+                            child: Icon(
+                              isFavorite ? Icons.favorite : Icons.favorite_border,
+                              color: Colors.red,
+                              size: 20,
+                            ),
                           ),
                         ),
                       ),
