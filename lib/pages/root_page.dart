@@ -6,7 +6,19 @@ import 'search_page.dart';
 import 'home_page.dart';
 import 'package:engineering_project/assets/components/auth_service.dart';
 
-// Import or create an admin page
+/// Tema kontrolü için sınıf
+class ThemeNotifier extends ChangeNotifier {
+  bool isDarkMode = false;
+
+  ThemeMode get currentTheme => isDarkMode ? ThemeMode.dark : ThemeMode.light;
+
+  void toggleTheme(bool isOn) {
+    isDarkMode = isOn;
+    notifyListeners();
+  }
+}
+
+// -------------------- Admin Page --------------------
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
 
@@ -32,14 +44,9 @@ class _AdminPageState extends State<AdminPage> {
             children: [
               const Text(
                 "Admin Controls",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
-              
-              // User Management Card
               Card(
                 elevation: 2,
                 child: ListTile(
@@ -47,15 +54,10 @@ class _AdminPageState extends State<AdminPage> {
                   title: const Text("User Management"),
                   subtitle: const Text("View and manage users"),
                   trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // Navigate to user management screen
-                  },
+                  onTap: () {},
                 ),
               ),
-              
               const SizedBox(height: 10),
-              
-              // Product Management Card
               Card(
                 elevation: 2,
                 child: ListTile(
@@ -63,25 +65,21 @@ class _AdminPageState extends State<AdminPage> {
                   title: const Text("Product Management"),
                   subtitle: const Text("Add, edit or remove products"),
                   trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // Navigate to product management screen
-                  },
+                  onTap: () {},
                 ),
               ),
-              
               const SizedBox(height: 10),
-              
-              // Order Management Card
               Card(
                 elevation: 2,
                 child: ListTile(
-                  leading: Icon(Icons.shopping_cart, color: Colors.red.shade500),
+                  leading: Icon(
+                    Icons.shopping_cart,
+                    color: Colors.red.shade500,
+                  ),
                   title: const Text("Order Management"),
                   subtitle: const Text("View and process orders"),
                   trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // Navigate to order management screen
-                  },
+                  onTap: () {},
                 ),
               ),
             ],
@@ -92,6 +90,7 @@ class _AdminPageState extends State<AdminPage> {
   }
 }
 
+// -------------------- RootScreen --------------------
 class RootScreen extends StatefulWidget {
   const RootScreen({super.key});
 
@@ -102,19 +101,17 @@ class RootScreen extends StatefulWidget {
 class _RootScreenState extends State<RootScreen> {
   late PageController controller;
   int currentScreen = 0;
-  List<Widget> screens = [
-          HomePage(), 
-    const SearchPage(), 
-    const CartPage(), 
-    const ProfilePage()
-  ];
   bool isAdmin = false;
   bool isLoading = true;
+  late ThemeNotifier themeNotifier;
+
+  List<Widget> screens = [];
 
   @override
   void initState() {
     super.initState();
     controller = PageController(initialPage: currentScreen);
+    themeNotifier = ThemeNotifier(); // Burada oluşturduk
     checkAdminStatus();
   }
 
@@ -122,23 +119,20 @@ class _RootScreenState extends State<RootScreen> {
     setState(() {
       isLoading = true;
     });
-    
+
     try {
-      // Check if user is admin using the AuthService
       bool adminStatus = await AuthService().isUserAdmin();
-      
-      if (adminStatus) {
-        setState(() {
-          isAdmin = true;
-          screens = [
-                  HomePage(), 
-            const SearchPage(), 
-            const CartPage(), 
-            const ProfilePage(),
-            const AdminPage()
-          ];
-        });
-      }
+
+      setState(() {
+        isAdmin = adminStatus;
+        screens = [
+          HomePage(),
+          const SearchPage(),
+          const CartPage(),
+          ProfilePage(themeNotifier: themeNotifier),
+          if (adminStatus) const AdminPage(),
+        ];
+      });
     } catch (e) {
       print("Error checking admin status: $e");
     } finally {
@@ -151,13 +145,9 @@ class _RootScreenState extends State<RootScreen> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    
+
     return Scaffold(
       body: PageView(
         controller: controller,
@@ -167,9 +157,7 @@ class _RootScreenState extends State<RootScreen> {
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16.0),
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16.0)),
           child: NavigationBar(
             indicatorColor: Colors.white,
             height: kBottomNavigationBarHeight,
@@ -185,30 +173,49 @@ class _RootScreenState extends State<RootScreen> {
             },
             destinations: [
               NavigationDestination(
-                icon: Icon(Icons.home_outlined, 
-                  color: currentScreen == 0 ? Colors.red.shade400 : Colors.black, size: 30),
+                icon: Icon(
+                  Icons.home_outlined,
+                  color:
+                      currentScreen == 0 ? Colors.red.shade400 : Colors.black,
+                  size: 30,
+                ),
                 label: 'Home',
               ),
               NavigationDestination(
-                icon: Icon(Icons.favorite_border_outlined, 
-                  color: currentScreen == 1 ? Colors.red.shade400 : Colors.black, size: 30),
+                icon: Icon(
+                  Icons.favorite_border_outlined,
+                  color:
+                      currentScreen == 1 ? Colors.red.shade400 : Colors.black,
+                  size: 30,
+                ),
                 label: 'Favorites',
               ),
               NavigationDestination(
-                icon: Icon(Icons.shopping_bag_outlined, 
-                  color: currentScreen == 2 ? Colors.red.shade400 : Colors.black, size: 30),
+                icon: Icon(
+                  Icons.shopping_bag_outlined,
+                  color:
+                      currentScreen == 2 ? Colors.red.shade400 : Colors.black,
+                  size: 30,
+                ),
                 label: 'Cart',
               ),
               NavigationDestination(
-                icon: Icon(Icons.person_outline_rounded, 
-                  color: currentScreen == 3 ? Colors.red.shade400 : Colors.black, size: 30),
+                icon: Icon(
+                  Icons.person_outline_rounded,
+                  color:
+                      currentScreen == 3 ? Colors.red.shade400 : Colors.black,
+                  size: 30,
+                ),
                 label: 'Profile',
               ),
-              // Admin navigation destination - only shown to admin users
               if (isAdmin)
                 NavigationDestination(
-                  icon: Icon(Icons.admin_panel_settings_outlined, 
-                    color: currentScreen == 4 ? Colors.red.shade400 : Colors.black, size: 30),
+                  icon: Icon(
+                    Icons.admin_panel_settings_outlined,
+                    color:
+                        currentScreen == 4 ? Colors.red.shade400 : Colors.black,
+                    size: 30,
+                  ),
                   label: 'Admin',
                 ),
             ],
