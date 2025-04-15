@@ -448,7 +448,7 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
                           fontSize: 15,
                         ),
                       ),
-                      SizedBox(height: 10),
+                      SizedBox(height: 1),
                       SizedBox(
   width: double.infinity,
   height: 40, // Set a fixed height for the entire row
@@ -471,46 +471,20 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
             ),
           ),
         )
-      : Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              flex: 5, // Give more space to the Lottie animation
-              child: GestureDetector(
+      : GestureDetector(
                 onTap: () => addToCart(product),
                 child: Lottie.asset(
-                                    'lib/assets/button-test/3.json',
-                                    controller: animationController,
-                                    fit: BoxFit.cover,
-                                    width: 100,
-                                    height: 20,
-                                    repeat: false,
-                                  ),
+                    'lib/assets/button-test/3.json',
+                    controller: animationController,
+                    fit: BoxFit.cover,
+                    width: 200,
+                    height: 50,
+                    repeat: false,
+                    ),
               ),
-            ),
-            SizedBox(width: 8), // Add spacing between buttons
-            Container(
-              height: 40,
-              width: 40,
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.red.shade200),
-              ),
-              child: IconButton(
-                icon: Icon(
-                  Icons.delete_outline,
-                  size: 18,
-                  color: Colors.red.shade700,
-                ),
-                onPressed: () => removeFromFavorites(product['id']),
-                padding: EdgeInsets.zero,
-              ),
-            ),
-          ],
+          
         ),
-),
+
                     ],
                   ),
                 ),

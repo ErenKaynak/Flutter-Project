@@ -1,6 +1,7 @@
-import 'package:engineering_project/pages/cart_page.dart';
+import 'package:engineering_project/pages/cart_page.dart' as CartPage;
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:engineering_project/pages/search_page.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -34,7 +35,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   String _searchQuery = "";
   final CartManager _cartManager = CartManager();
   final Map<String, AnimationController> _animationControllers = {};
+  
   bool _isDisposed = false;
+  String _userName = "Guest"; // Default user name
 
   @override
   void initState() {
@@ -43,6 +46,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     fetchFavorites(); // Fetch favorites on initialization
     _cartManager.loadCart();
     _cartManager.addListener(_updateUI);
+    _getUserName(); // Get current user name
 
     _searchController.addListener(() {
       if (mounted) {
@@ -53,11 +57,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
   }
 
-  void _updateUI(List<CartItem> _) {
-    if (mounted && !_isDisposed) {
-      setState(() {});
-    }
+  void _updateUI() {
+  if (mounted && !_isDisposed) {
+    setState(() {});
   }
+}
 
   @override
   void dispose() {
@@ -73,6 +77,37 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _animationControllers.clear();
 
     super.dispose();
+  }
+
+  // Fetch current user name from Firestore
+  Future<void> _getUserName() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Try to get user profile from Firestore
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        
+        if (userDoc.exists && userDoc.data()?['name'] != null) {
+          if (mounted) {
+            setState(() {
+              _userName = userDoc.data()?['name'];
+            });
+          }
+        } else if (user.displayName != null && user.displayName!.isNotEmpty) {
+          // Fallback to Firebase Auth display name
+          if (mounted) {
+            setState(() {
+              _userName = user.displayName!;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      print('Error fetching user name: $e');
+    }
   }
 
   void _initializeAnimationControllers() {
@@ -296,27 +331,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  void _navigateToFavoritesPage() {
-    if (!mounted) return;
-    
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FavoritesPage(
-          onFavoritesChanged: () {
-            // Refresh favorites when returning from favorites page
-            fetchFavorites();
-          },
-        ),
-      ),
-    ).then((_) {
-      // Refresh favorites when returning from favorites page
-      if (mounted) {
-        fetchFavorites();
-      }
-    });
-  }
-
   Future<void> _addToCart(Map<String, dynamic> product) async {
     final controller = _animationControllers[product['id']];
     if (controller != null && mounted && !_isDisposed) {
@@ -379,7 +393,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 if (mounted) {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => CartPage()),
+                    MaterialPageRoute(builder: (context) => CartPage.CartPage()),
                   );
                 }
               },
@@ -439,7 +453,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     if (mounted) {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => CartPage()),
+                        MaterialPageRoute(builder: (context) => CartPage.CartPage()),
                       );
                     }
                   },
@@ -468,6 +482,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ),
               ],
             ),
+            SizedBox(width: 20,)
           ],
         ),
         body: _isLoading
@@ -480,18 +495,62 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Padding(
-                            padding: EdgeInsets.all(10.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _buildCategoryButton(
-                                  Icons.favorite, 
-                                  "Favorites",
-                                  onTap: _navigateToFavoritesPage,
+                          // Welcome section with user name and person icon
+                          Container(
+                            padding: EdgeInsets.all(16.0),
+                            margin: EdgeInsets.all(10.0),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Colors.red.shade300, Colors.white],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black12,
+                                  blurRadius: 5,
+                                  offset: Offset(0, 2),
                                 ),
-                                _buildCategoryButton(Icons.history, "History"),
-                                _buildCategoryButton(Icons.person, "Following"),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade300,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.person,
+                                    size: 36,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Welcome",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                      Text(
+                                        _userName,
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -507,25 +566,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ],
                 ),
               ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryButton(IconData icon, String label, {VoidCallback? onTap}) {
-    return InkWell(
-      onTap: onTap ?? () {},
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.black, width: 0.8),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [Icon(icon, size: 24), SizedBox(width: 8), Text(label)],
-        ),
       ),
     );
   }
@@ -676,7 +716,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                        color: Colors.red.shade200.withOpacity(0.5),
+                        color: Colors.red.shade300.withOpacity(0.5),
                         blurRadius: 8,
                         spreadRadius: 1,
                       ),
@@ -966,4 +1006,315 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       ),
     );
   }
+}
+
+class FavoritesPage extends StatefulWidget {
+  final Function onFavoritesChanged;
+
+  FavoritesPage({required this.onFavoritesChanged});
+
+  @override
+  _FavoritesPageState createState() => _FavoritesPageState();
+}
+
+class _FavoritesPageState extends State<FavoritesPage> {
+  List<Map<String, dynamic>> favorites = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchFavorites();
+  }
+
+  Future<void> fetchFavorites() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() {
+          favorites = [];
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final favoritesSnapshot = await FirebaseFirestore.instance
+          .collection('favorites')
+          .doc(user.uid)
+          .collection('userFavorites')
+          .get();
+
+      final List<Map<String, dynamic>> loadedFavorites = [];
+      favoritesSnapshot.docs.forEach((doc) {
+        final data = doc.data();
+        loadedFavorites.add({
+          'id': doc.id,
+          'name': data['name'] ?? 'Unknown Product',
+          'price': data['price']?.toString() ?? '0',
+          'image': data['image'] ?? 'lib/assets/Images/placeholder.png',
+          'category': data['category'] ?? 'Uncategorized',
+          'description': data['description'] ?? 'No description available',
+          'stock': data['stock'] ?? 0,
+        });
+      });
+
+      setState(() {
+        favorites = loadedFavorites;
+        _isLoading = false;
+      });
+    } catch (error) {
+      print('Error fetching favorites: $error');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> removeFromFavorites(String productId) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      await FirebaseFirestore.instance
+          .collection('favorites')
+          .doc(user.uid)
+          .collection('userFavorites')
+          .doc(productId)
+          .delete();
+
+      setState(() {
+        favorites.removeWhere((product) => product['id'] == productId);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Removed from favorites'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      widget.onFavoritesChanged();
+    } catch (e) {
+      print('Error removing from favorites: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to remove from favorites'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('My Favorites'),
+      ),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : favorites.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.favorite_border, size: 70, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        "No favorites yet",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        "Items you favorite will appear here",
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: EdgeInsets.all(10),
+                  itemCount: favorites.length,
+                  itemBuilder: (context, index) {
+                    final product = favorites[index];
+                    return Card(
+                      margin: EdgeInsets.only(bottom: 10),
+                      child: ListTile(
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: (product["image"].startsWith('http') ||
+                                  product["image"].startsWith('https'))
+                              ? Image.network(
+                                  product["image"],
+                                  width: 50,
+                                  height: 50,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Image.asset(
+                                      'lib/assets/Images/placeholder.png',
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                    );
+                                  },
+                                )
+                              : Image.asset(
+                                  product["image"],
+                                  width: 50,
+                                  height: 50,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.image_not_supported,
+                                      size: 30,
+                                    );
+                                  },
+                                ),
+                        ),
+                        title: Text(
+                          product["name"],
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text("₺${product["price"]}"),
+                        trailing: IconButton(
+                          icon: Icon(Icons.favorite, color: Colors.red),
+                          onPressed: () => removeFromFavorites(product["id"]),
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProductDetailPage(
+                                productId: product["id"],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
+
+// CartManager class to handle cart operations
+class CartManager extends ChangeNotifier {
+  List<CartItem> _items = [];
+  
+  List<CartItem> get items => _items;
+  int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
+  
+  void addItem(CartItem item) {
+    final index = _items.indexWhere((i) => i.id == item.id);
+    if (index >= 0) {
+      _items[index].quantity++;
+    } else {
+      _items.add(item);
+    }
+    notifyListeners();
+    saveCart();
+  }
+  
+  void removeItem(String id) {
+    _items.removeWhere((item) => item.id == id);
+    notifyListeners();
+    saveCart();
+  }
+  
+  void updateQuantity(String id, int quantity) {
+    final index = _items.indexWhere((item) => item.id == id);
+    if (index >= 0) {
+      _items[index].quantity = quantity;
+      notifyListeners();
+      saveCart();
+    }
+  }
+  
+  void clear() {
+    _items.clear();
+    notifyListeners();
+    saveCart();
+  }
+  
+  Future<void> loadCart() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('cart')
+          .doc(user.uid)
+          .collection('userCart')
+          .get();
+      
+      _items = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return CartItem(
+          id: doc.id,
+          name: data['name'] ?? 'Unknown Product',
+          price: double.tryParse(data['price']?.toString() ?? '0') ?? 0.0,
+          imagePath: data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
+          quantity: data['quantity'] ?? 1,
+        );
+      }).toList();
+      
+      notifyListeners();
+    } catch (e) {
+      print('Error loading cart: $e');
+    }
+  }
+  
+  Future<void> saveCart() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final cartRef = FirebaseFirestore.instance
+          .collection('cart')
+          .doc(user.uid)
+          .collection('userCart');
+      
+      // First, delete all existing items
+      final existingItems = await cartRef.get();
+      for (var doc in existingItems.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      // Then add current items
+      for (var item in _items) {
+        final docRef = cartRef.doc(item.id);
+        batch.set(docRef, {
+          'name': item.name,
+          'price': item.price.toString(),
+          'imagePath': item.imagePath,
+          'quantity': item.quantity,
+        });
+      }
+      
+      await batch.commit();
+    } catch (e) {
+      print('Error saving cart: $e');
+    }
+  }
+}
+
+class CartItem {
+  final String id;
+  final String name;
+  final double price;
+  final String imagePath;
+  int quantity;
+  
+  CartItem({
+    required this.id,
+    required this.name,
+    required this.price,
+    required this.imagePath,
+    this.quantity = 1,
+  });
 }

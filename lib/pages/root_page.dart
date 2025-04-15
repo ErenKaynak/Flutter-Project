@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'cart_page.dart';
 import 'profile_page.dart';
-import 'search_page.dart';
-import 'home_page.dart';
+import 'search_page.dart' as FavoritesPage;
+import 'home_page.dart' as HomePage;
 import 'package:engineering_project/assets/components/auth_service.dart';
 
 // Import or create an admin page
@@ -103,8 +103,8 @@ class _RootScreenState extends State<RootScreen> {
   late PageController controller;
   int currentScreen = 0;
   List<Widget> screens = [
-          HomePage(), 
-    const FavoritesPage(), 
+    HomePage.HomePage(), 
+    const FavoritesPage.FavoritesPage(), 
     const CartPage(), 
     const ProfilePage()
   ];
@@ -141,8 +141,8 @@ class _RootScreenState extends State<RootScreen> {
         setState(() {
           isAdmin = true;
           screens = [
-                  HomePage(), 
-            const FavoritesPage(), 
+            HomePage.HomePage(), 
+            const FavoritesPage.FavoritesPage(), 
             const CartPage(), 
             const ProfilePage(),
             const AdminPage()
