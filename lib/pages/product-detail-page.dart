@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:engineering_project/pages/cart_page.dart';
-import 'package:lottie/lottie.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final String productId;
@@ -20,23 +19,55 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
   int selectedImageIndex = 0;
   int availableStock = 0;
   bool isFavorite = false;
-  late AnimationController _addToCartController;
+  
+  // Initialize controllers with empty values initially
+  late AnimationController _colorAnimationController;
+  late Animation<Color?> _colorAnimation;
+  late AnimationController _tickAnimationController;
+  late Animation<double> _tickAnimation;
+  bool _isAddingToCart = false;
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize animation controllers immediately
+    _colorAnimationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 300),
+    );
+    
+    // Create color animation (red to green)
+    _colorAnimation = ColorTween(
+      begin: Colors.red.shade400,
+      end: Colors.green.shade500,
+    ).animate(_colorAnimationController);
+    
+    // Initialize tick animation controller
+    _tickAnimationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 500),
+    );
+    
+    // Create tick appearance animation
+    _tickAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _tickAnimationController,
+      curve: Curves.elasticOut,
+    ));
+    
+    // After initializing the animations, fetch the data
     fetchProductDetails();
     checkIfFavorite();
-    
-    _addToCartController = AnimationController(
-      vsync: this,
-      duration: Duration(seconds: 2),
-    );
   }
 
   @override
   void dispose() {
-    _addToCartController.dispose();
+    // Always dispose animation controllers
+    _colorAnimationController.dispose();
+    _tickAnimationController.dispose();
     super.dispose();
   }
 
@@ -54,19 +85,23 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
         final stockValue = data['stock'];
         final stock = stockValue is int ? stockValue : 0;
         
-        setState(() {
-          productData = data;
-          availableStock = stock;
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            productData = data;
+            availableStock = stock;
+            isLoading = false;
+          });
+        }
       } else {
         throw Exception('Product does not exist');
       }
     } catch (e) {
       print("❌ Error fetching product: $e");
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -82,9 +117,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
           .doc(widget.productId)
           .get();
 
-      setState(() {
-        isFavorite = docSnapshot.exists;
-      });
+      if (mounted) {
+        setState(() {
+          isFavorite = docSnapshot.exists;
+        });
+      }
     } catch (e) {
       print('Error checking favorite status: $e');
     }
@@ -109,15 +146,17 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
       if (isFavorite) {
         // Remove from favorites
         await favRef.delete();
-        setState(() {
-          isFavorite = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Removed from favorites'),
-            duration: Duration(seconds: 1),
-          ),
-        );
+        if (mounted) {
+          setState(() {
+            isFavorite = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Removed from favorites'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
       } else {
         // Add to favorites
         await favRef.set({
@@ -129,24 +168,28 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
           'stock': availableStock,
           'addedAt': FieldValue.serverTimestamp(),
         });
-        setState(() {
-          isFavorite = true;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Added to favorites'),
-            duration: Duration(seconds: 1),
-          ),
-        );
+        if (mounted) {
+          setState(() {
+            isFavorite = true;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Added to favorites'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
       }
     } catch (e) {
       print('Error toggling favorite: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update favorites'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update favorites'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -164,9 +207,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
   }
 
   Future<void> addToCart() async {
-    _addToCartController.reset();
-    _addToCartController.forward();
-    
+    if (_isAddingToCart) return;
+
     // If the product is out of stock, don't proceed
     if (availableStock <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -183,12 +225,22 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
       return;
     }
 
+    setState(() {
+      _isAddingToCart = true;
+    });
+
+    // Start animations
+    _colorAnimationController.forward();
+    await Future.delayed(Duration(milliseconds: 200));
+    _tickAnimationController.forward();
+
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('You must be logged in to add to cart')),
       );
+      _resetAnimations();
       return;
     }
 
@@ -206,9 +258,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
         
         // Check if the combined quantity exceeds available stock
         if (prevQuantity + quantity > availableStock) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Cannot add more than available stock ($availableStock)')),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Cannot add more than available stock ($availableStock)')),
+            );
+          }
+          _resetAnimations();
           return;
         }
         
@@ -224,7 +279,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
         });
       }
 
-      if (!mounted) return;
+      if (!mounted) {
+        _resetAnimations();
+        return;
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -240,12 +298,37 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
           ),
         ),
       );
+      
+      // Reset animations after a delay
+      await Future.delayed(Duration(seconds: 1));
+      if (mounted) {
+        _resetAnimations();
+      }
+      
     } catch (e) {
       print('❌ Error adding to cart: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add to cart')),
-      );
+      _resetAnimations();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add to cart')),
+        );
+      }
+    }
+  }
+  
+  void _resetAnimations() {
+    if (_colorAnimationController.isAnimating) {
+      _colorAnimationController.stop();
+    }
+    if (_tickAnimationController.isAnimating) {
+      _tickAnimationController.stop();
+    }
+    _colorAnimationController.reset();
+    _tickAnimationController.reset();
+    if (mounted) {
+      setState(() {
+        _isAddingToCart = false;
+      });
     }
   }
 
@@ -595,7 +678,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                             
                             SizedBox(height: 20),
                             
-                            // Add to Cart Button
+                            // Custom Animated Add to Cart Button
                             SizedBox(
                               width: double.infinity,
                               height: 54,
@@ -603,7 +686,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                               ? ElevatedButton(
                                   onPressed: null,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.grey,
+                                    backgroundColor: Colors.greenAccent,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10),
@@ -618,16 +701,58 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                                     ),
                                   ),
                                 )
-                              : GestureDetector(
-                                  onTap: addToCart,
-                                  child: SizedBox(
-                                    child: Lottie.asset(
-                                      'lib/assets/button-test/3.json',
-                                      controller: _addToCartController,
-                                      fit: BoxFit.cover,
-                                      repeat: false,
-                                    ),
-                                  ),
+                              : AnimatedBuilder(
+                                  animation: Listenable.merge([
+                                    _colorAnimationController, 
+                                    _tickAnimationController
+                                  ]),
+                                  builder: (context, child) {
+                                    return ElevatedButton(
+                                      onPressed: _isAddingToCart ? null : addToCart,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: _colorAnimation.value ?? Colors.red.shade400,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        elevation: 2,
+                                      ),
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          // Text fades out during animation
+                                          Opacity(
+                                            opacity: 1.0 - _colorAnimationController.value,
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.shopping_cart, size: 20),
+                                                SizedBox(width: 8),
+                                                Text(
+                                                  "ADD TO CART",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          
+                                          // Checkmark appears with animation
+                                          if (_colorAnimationController.value > 0)
+                                            Transform.scale(
+                                              scale: _tickAnimation.value,
+                                              child: Icon(
+                                                Icons.check,
+                                                color: Colors.white,
+                                                size: 30,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    );
+                                  },
                                 ),
                             ),
                           ],
