@@ -28,7 +28,7 @@ class _AdminProductsState extends State<AdminProducts> {
   final List<String> categories = [
     "CPU's", 
     "GPU's", 
-    "RAM", 
+    "RAM's", 
     "Storage", 
     "Motherboards",
     "Cases",

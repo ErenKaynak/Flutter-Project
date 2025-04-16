@@ -43,10 +43,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (data != null) {
         setState(() {
-          name = data['name'];
-          surname = data['surname'];
-          imageUrl = data['profileImageUrl'];
-          role = data['role'];
+          name = data['name'] ?? '';
+          surname = data['surname'] ?? '';
+          imageUrl = data['profileImageUrl'] ?? '';
+          role = data['role'] ?? '';
+          isLoading = false;
+        });
+      } else {
+        setState(() {
           isLoading = false;
         });
       }
