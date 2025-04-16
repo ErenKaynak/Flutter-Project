@@ -1,12 +1,15 @@
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/register_page.dart';
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart'; // Using Lottie animations like in your homepage
+import 'package:lottie/lottie.dart';
 
 class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Container(
           width: double.infinity,
@@ -14,7 +17,9 @@ class WelcomeScreen extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Colors.red.shade50, Colors.white],
+              colors: isDark
+                  ? [Colors.grey.shade900, Colors.black]
+                  : [Colors.red.shade50, Colors.white],
             ),
           ),
           child: Column(
@@ -26,61 +31,79 @@ class WelcomeScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Logo or animation at the top
+                      // Logo container with updated styling
                       Container(
                         height: 180,
                         width: 180,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: isDark ? Colors.grey.shade800 : Colors.white,
                           shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: isDark
+                                ? [Colors.red.shade900, Colors.grey.shade800]
+                                : [Colors.red.shade300, Colors.white],
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.red.shade100,
+                              color: isDark
+                                  ? Colors.black26
+                                  : Colors.red.shade100,
                               blurRadius: 15,
                               spreadRadius: 5,
                             ),
                           ],
                         ),
-                        // You can replace this with your actual logo or keep the icon
                         child: Icon(
                           Icons.computer,
                           size: 80,
-                          color: Colors.red.shade400,
+                          color: isDark ? Colors.white : Colors.red.shade400,
                         ),
                       ),
                       SizedBox(height: 40),
-                      // Welcome text
+                      // Welcome text with theme-aware colors
                       Text(
                         "Welcome to PARADISE",
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Colors.red.shade700,
+                          color: isDark
+                              ? Colors.white
+                              : Colors.red.shade700,
                         ),
                       ),
                       SizedBox(height: 16),
                       Text(
                         "Your one-stop shop for PC components and accessories",
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: isDark
+                              ? Colors.grey.shade300
+                              : Colors.black54,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
+              // Buttons section with updated styling
               Expanded(
                 flex: 3,
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? Colors.grey.shade900 : Colors.white,
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
+                        color: isDark
+                            ? Colors.black26
+                            : Colors.grey.withOpacity(0.2),
                         spreadRadius: 5,
                         blurRadius: 10,
                         offset: Offset(0, -3),
@@ -90,7 +113,7 @@ class WelcomeScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Login button that matches your homepage styling
+                      // Login button
                       ElevatedButton(
                         onPressed: () {
                           Navigator.push(
@@ -101,13 +124,13 @@ class WelcomeScreen extends StatelessWidget {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade400,
+                          backgroundColor: Theme.of(context).primaryColor,
                           foregroundColor: Colors.white,
                           minimumSize: Size.fromHeight(55),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          elevation: 2,
+                          elevation: isDark ? 1 : 2,
                         ),
                         child: Text(
                           "Log In",
@@ -118,7 +141,7 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: 16),
-                      // Register button with outlined style
+                      // Register button
                       OutlinedButton(
                         onPressed: () {
                           Navigator.push(
@@ -130,10 +153,10 @@ class WelcomeScreen extends StatelessWidget {
                         },
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(
-                            color: Colors.red.shade400,
+                            color: Theme.of(context).primaryColor,
                             width: 2,
                           ),
-                          foregroundColor: Colors.red.shade400,
+                          foregroundColor: Theme.of(context).primaryColor,
                           minimumSize: Size.fromHeight(55),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -148,8 +171,21 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: 20),
-
-                      // Continue as guest option
+                      // Continue as guest text
+                      TextButton(
+                        onPressed: () {
+                          // Handle guest login
+                        },
+                        child: Text(
+                          "Continue as Guest",
+                          style: TextStyle(
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade700,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

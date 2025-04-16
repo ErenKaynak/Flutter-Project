@@ -17,12 +17,13 @@ class AdminPage extends StatefulWidget {
 class _AdminPageState extends State<AdminPage> {
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade200,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text("Admin Dashboard"),
-        foregroundColor: Colors.white,
-        backgroundColor: Colors.red.shade500,
+        backgroundColor: Theme.of(context).primaryColor,
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -30,20 +31,34 @@ class _AdminPageState extends State<AdminPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "Admin Controls",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).textTheme.titleLarge?.color,
+                ),
               ),
               const SizedBox(height: 20),
 
               // User Management Card
               Card(
-                elevation: 2,
+                elevation: isDark ? 1 : 2,
+                color: Theme.of(context).cardColor,
                 child: ListTile(
-                  leading: Icon(Icons.people, color: Colors.red.shade500),
-                  title: const Text("User Management"),
-                  subtitle: const Text("View and manage users"),
-                  trailing: const Icon(Icons.arrow_forward_ios),
+                  leading: Icon(Icons.people, color: Theme.of(context).primaryColor),
+                  title: Text(
+                    "User Management",
+                    style: TextStyle(color: Theme.of(context).textTheme.titleMedium?.color),
+                  ),
+                  subtitle: Text(
+                    "View and manage users",
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                  ),
+                  trailing: Icon(
+                    Icons.arrow_forward_ios,
+                    color: Theme.of(context).iconTheme.color,
+                  ),
                   onTap: () {
                     // Navigate to user management screen
                   },
@@ -54,12 +69,22 @@ class _AdminPageState extends State<AdminPage> {
 
               // Product Management Card
               Card(
-                elevation: 2,
+                elevation: isDark ? 1 : 2,
+                color: Theme.of(context).cardColor,
                 child: ListTile(
-                  leading: Icon(Icons.inventory_2, color: Colors.red.shade500),
-                  title: const Text("Product Management"),
-                  subtitle: const Text("Add, edit or remove products"),
-                  trailing: const Icon(Icons.arrow_forward_ios),
+                  leading: Icon(Icons.inventory_2, color: Theme.of(context).primaryColor),
+                  title: Text(
+                    "Product Management",
+                    style: TextStyle(color: Theme.of(context).textTheme.titleMedium?.color),
+                  ),
+                  subtitle: Text(
+                    "Add, edit or remove products",
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                  ),
+                  trailing: Icon(
+                    Icons.arrow_forward_ios,
+                    color: Theme.of(context).iconTheme.color,
+                  ),
                   onTap: () {
                     // Navigate to product management screen
                   },
@@ -70,15 +95,25 @@ class _AdminPageState extends State<AdminPage> {
 
               // Order Management Card
               Card(
-                elevation: 2,
+                elevation: isDark ? 1 : 2,
+                color: Theme.of(context).cardColor,
                 child: ListTile(
                   leading: Icon(
                     Icons.shopping_cart,
-                    color: Colors.red.shade500,
+                    color: Theme.of(context).primaryColor,
                   ),
-                  title: const Text("Order Management"),
-                  subtitle: const Text("View and process orders"),
-                  trailing: const Icon(Icons.arrow_forward_ios),
+                  title: Text(
+                    "Order Management",
+                    style: TextStyle(color: Theme.of(context).textTheme.titleMedium?.color),
+                  ),
+                  subtitle: Text(
+                    "View and process orders",
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                  ),
+                  trailing: Icon(
+                    Icons.arrow_forward_ios,
+                    color: Theme.of(context).iconTheme.color,
+                  ),
                   onTap: () {
                     // Navigate to order management screen
                   },
@@ -163,8 +198,17 @@ class _RootScreenState extends State<RootScreen> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).primaryColor,
+          ),
+        ),
+      );
     }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: PageView(
@@ -175,9 +219,23 @@ class _RootScreenState extends State<RootScreen> {
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Container(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16.0)),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16.0),
+            color: isDark ? Colors.grey[900] : Colors.white,
+            boxShadow: isDark
+                ? []
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+          ),
           child: NavigationBar(
-            indicatorColor: Colors.white,
+            indicatorColor: isDark 
+                ? Colors.grey[800]!
+                : Colors.white,
             height: kBottomNavigationBarHeight,
             selectedIndex: currentScreen,
             backgroundColor: Colors.transparent,
@@ -190,57 +248,34 @@ class _RootScreenState extends State<RootScreen> {
               controller.jumpToPage(currentScreen);
             },
             destinations: [
-              NavigationDestination(
-                icon: Icon(
-                  Icons.home_outlined,
-                  color:
-                      currentScreen == 0 ? Colors.red.shade400 : Colors.black,
-                  size: 30,
-                ),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(
-                  Icons.favorite_border_outlined,
-                  color:
-                      currentScreen == 1 ? Colors.red.shade400 : Colors.black,
-                  size: 30,
-                ),
-                label: 'Favorites',
-              ),
-              NavigationDestination(
-                icon: Icon(
-                  Icons.shopping_bag_outlined,
-                  color:
-                      currentScreen == 2 ? Colors.red.shade400 : Colors.black,
-                  size: 30,
-                ),
-                label: 'Cart',
-              ),
-              NavigationDestination(
-                icon: Icon(
-                  Icons.person_outline_rounded,
-                  color:
-                      currentScreen == 3 ? Colors.red.shade400 : Colors.black,
-                  size: 30,
-                ),
-                label: 'Profile',
-              ),
-              // Admin navigation destination - only shown to admin users
+              _buildNavigationDestination(Icons.home_outlined, 'Home', 0),
+              _buildNavigationDestination(Icons.favorite_border_outlined, 'Favorites', 1),
+              _buildNavigationDestination(Icons.shopping_bag_outlined, 'Cart', 2),
+              _buildNavigationDestination(Icons.person_outline_rounded, 'Profile', 3),
               if (isAdmin)
-                NavigationDestination(
-                  icon: Icon(
-                    Icons.admin_panel_settings_outlined,
-                    color:
-                        currentScreen == 4 ? Colors.red.shade400 : Colors.black,
-                    size: 30,
-                  ),
-                  label: 'Admin',
-                ),
+                _buildNavigationDestination(Icons.admin_panel_settings_outlined, 'Admin', 4),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  NavigationDestination _buildNavigationDestination(IconData icon, String label, int index) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSelected = currentScreen == index;
+    
+    return NavigationDestination(
+      icon: Icon(
+        icon,
+        color: isSelected
+            ? Theme.of(context).primaryColor
+            : isDark
+                ? Colors.grey[400]
+                : Colors.black54,
+        size: 30,
+      ),
+      label: label,
     );
   }
 }

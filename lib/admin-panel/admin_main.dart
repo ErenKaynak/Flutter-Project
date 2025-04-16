@@ -14,141 +14,154 @@ class AdminPage extends StatefulWidget {
 class _AdminPageState extends State<AdminPage> {
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade200,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Center(child: const Text("Admin Dashboard")),
-        foregroundColor: Colors.white,
-        backgroundColor: Colors.red.shade700,
+        title: const Text("Admin Dashboard"),
+        backgroundColor: Theme.of(context).primaryColor,
+        elevation: isDark ? 0 : 2,
       ),
       body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Admin Controls",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Admin Controls",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).textTheme.titleLarge?.color,
               ),
-              const SizedBox(height: 20),
-              
-              // User Management Card
-              Card(
-                elevation: 2,
-                child: ListTile(
-                  leading: Icon(Icons.people, color: Colors.red.shade700),
-                  title: const Text("User Management"),
-                  subtitle: const Text("View and manage users"),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () => Navigator.push(
+            ),
+            const SizedBox(height: 20),
+            
+            _buildAdminCard(
+              icon: Icons.people,
+              title: "User Management",
+              subtitle: "View and manage users",
+              onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const AdminUsersPage()),
               ),
-                    // Navigate to user management screen
-                  
-                ),
-              ),
-              
-              const SizedBox(height: 10),
-              
-              // Product Management Card
-              Card(
-                elevation: 2,
-                child: ListTile(
-                  leading: Icon(Icons.inventory_2, color: Colors.red.shade700),
-                  title: const Text("Product Management"),
-                  subtitle: const Text("Add, edit or remove products"),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () => Navigator.push(
+            ),
+            
+            const SizedBox(height: 10),
+            
+            _buildAdminCard(
+              icon: Icons.inventory_2,
+              title: "Product Management",
+              subtitle: "Add, edit or remove products",
+              onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const AdminProducts()),
               ),
-                ),
-              ),
-              
-              const SizedBox(height: 10),
-              
-              // Order Management Card
-              Card(
-                elevation: 2,
-                child: ListTile(
-                  leading: Icon(Icons.shopping_cart, color: Colors.red.shade700),
-                  title: const Text("Order Management"),
-                  subtitle: const Text("View and process orders"),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () => Navigator.push(
+            ),
+            
+            const SizedBox(height: 10),
+            
+            _buildAdminCard(
+              icon: Icons.shopping_cart,
+              title: "Order Management",
+              subtitle: "View and process orders",
+              onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const OrderManagementPage()),
               ),
-                    // Navigate to order management screen
-                  
-                ),
+            ),
+            
+            const SizedBox(height: 10),
+            
+            _buildAdminCard(
+              icon: Icons.account_balance_wallet_rounded,
+              title: "Promo Codes",
+              subtitle: "Create Promocodes and Discounts",
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const DiscountAdminPage()),
               ),
-              
-              const SizedBox(height: 10),
-              
-              // Statistics Card
-              Card(
-                elevation: 2,
-                child: ListTile(
-                  leading: Icon(Icons.account_balance_wallet_rounded, color: Colors.red.shade700),
-                  title: const Text("Promo Codes"),
-                  subtitle: const Text("Create Promocodes and Discounts"),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () => Navigator.push(
-                    context,
-                       MaterialPageRoute(builder: (context) => const DiscountAdminPage()),
-                      ),
-                ),
+            ),
+            
+            const SizedBox(height: 20),
+            
+            Text(
+              "Admin Settings",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).textTheme.titleLarge?.color,
               ),
-              
-              const SizedBox(height: 20),
+            ),
+            
+            const SizedBox(height: 10),
+            
+            _buildAdminCard(
+              icon: Icons.settings,
+              title: "App Settings",
+              subtitle: "Configure application settings",
+              onTap: () {
+                // Navigate to app settings screen
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-              Card(
-                elevation: 2,
-                child: ListTile(
-                  leading: Icon(Icons.bar_chart, color: Colors.red.shade700),
-                  title: const Text("Statistics"),
-                  subtitle: const Text("View sales and user analytics"),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // Navigate to statistics screen
-                  },
-                ),
-              ),
+  Widget _buildAdminCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-              const SizedBox(height: 20),
-              
-              // Admin Settings
-              const Text(
-                "Admin Settings",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              
-              const SizedBox(height: 10),
-              
-              // App Settings Card
-              Card(
-                elevation: 2,
-                child: ListTile(
-                  leading: Icon(Icons.settings, color: Colors.red.shade700),
-                  title: const Text("App Settings"),
-                  subtitle: const Text("Configure application settings"),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // Navigate to app settings screen
-                  },
-                ),
-              ),
-            ],
+    return Card(
+      elevation: isDark ? 1 : 2,
+      color: Theme.of(context).cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isDark ? Colors.grey.shade800 : Colors.transparent,
+          width: isDark ? 1 : 0,
+        ),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.red.shade900.withOpacity(0.2) : Colors.red.shade50,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: isDark ? Colors.red.shade400 : Colors.red.shade700,
           ),
         ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).textTheme.titleMedium?.color,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            color: Theme.of(context).textTheme.bodyMedium?.color,
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
+          size: 20,
+        ),
+        onTap: onTap,
+      ),
     );
   }
 }

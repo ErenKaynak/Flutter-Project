@@ -25,7 +25,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
   
   DateTime? _selectedExpiryDate;
   bool _hasExpiry = false;
-  List<String> _allCategories = ['Electronics', 'Clothing', 'Food', 'Books', 'Other'];
+  final List<String> _allCategories = ["All", "GPU's", "Motherboards", "CPU's", "RAM's"];
   List<String> _selectedCategories = [];
   bool _isCreatingCode = false;
 
@@ -65,9 +65,9 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
           .get();
       
       if (categoriesSnapshot.docs.isNotEmpty) {
-        _allCategories = categoriesSnapshot.docs
+        _allCategories.addAll(categoriesSnapshot.docs
             .map((doc) => doc.data()['name'] as String)
-            .toList();
+            .toList());
       }
     } catch (e) {
       print('Error fetching categories: $e');
@@ -209,15 +209,18 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Discount Management'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).textTheme.titleLarge?.color,
+        elevation: isDark ? 0 : 2,
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh),
+            icon: Icon(Icons.refresh, color: Theme.of(context).iconTheme.color),
             onPressed: _loadDiscountCodes,
           ),
           SizedBox(width: 8),
@@ -230,6 +233,9 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
               color: Colors.red,
               child: CustomScrollView(
                 slivers: [
+                  SliverToBoxAdapter(
+                    child: _buildCategorySelector(),
+                  ),
                   SliverToBoxAdapter(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,17 +275,21 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
   }
 
   Widget _buildHeaderSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       padding: EdgeInsets.all(16.0),
       margin: EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.red.shade300, Colors.white],
+          colors: isDark 
+              ? [Colors.red.shade900, Colors.grey.shade900]
+              : [Colors.red.shade300, Colors.white],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
+        boxShadow: isDark ? [] : [
           BoxShadow(
             color: Colors.black12,
             blurRadius: 5,
@@ -294,14 +304,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
             height: 60,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.red.shade300,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 5,
-                  offset: Offset(0, 2),
-                ),
-              ],
+              color: isDark ? Colors.red.shade900 : Colors.red.shade300,
             ),
             child: Icon(
               Icons.discount_outlined,
@@ -318,15 +321,15 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   "Discount Manager",
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.black54,
+                    color: isDark ? Colors.grey[400] : Colors.black54,
                   ),
                 ),
                 Text(
-                  "Create & Manage Offers",
+                  "${_discountCodes.length} Active Discounts",
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
               ],
@@ -337,28 +340,103 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
     );
   }
 
+  Widget _buildCategorySelector() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      height: 60,
+      margin: EdgeInsets.only(top: 16, bottom: 8),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _allCategories.length,
+        itemBuilder: (context, index) {
+          final category = _allCategories[index];
+          final isSelected = _selectedCategories.contains(category);
+          return Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: FilterChip(
+              selected: isSelected,
+              label: Text(category),
+              onSelected: (selected) {
+                setState(() {
+                  if (category == "All") {
+                    _selectedCategories = selected ? _allCategories.sublist(1) : [];
+                  } else {
+                    if (selected) {
+                      _selectedCategories.add(category);
+                    } else {
+                      _selectedCategories.remove(category);
+                    }
+                  }
+                });
+              },
+              backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+              selectedColor: isDark 
+                  ? Colors.red.shade900.withOpacity(0.5) 
+                  : Colors.red.shade50,
+              checkmarkColor: isDark ? Colors.white : Colors.red.shade700,
+              labelStyle: TextStyle(
+                color: isSelected
+                    ? (isDark ? Colors.white : Colors.red.shade700)
+                    : Theme.of(context).textTheme.bodyMedium?.color,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: isSelected
+                      ? (isDark ? Colors.red.shade700 : Colors.red.shade400)
+                      : Colors.transparent,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildCreateDiscountForm() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     final inputDecoration = InputDecoration(
       filled: true,
-      fillColor: Colors.grey.shade50,
+      fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: BorderSide(
+          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: BorderSide(
+          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+        borderSide: BorderSide(
+          color: isDark ? Colors.red.shade700 : Colors.red.shade400,
+          width: 2,
+        ),
+      ),
+      labelStyle: TextStyle(
+        color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8),
       ),
     );
 
     return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: isDark ? 1 : 3,
+      color: isDark ? Colors.grey.shade900 : Theme.of(context).cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: isDark 
+            ? BorderSide(color: Colors.grey.shade800)
+            : BorderSide.none,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -377,6 +455,67 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                 ],
               ),
               Divider(height: 24),
+              
+              Text(
+                'Applicable Categories',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              Text(
+                'Leave empty for all products',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+              ),
+              SizedBox(height: 8),
+              Center(
+                child: Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                    ),
+                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                  ),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _allCategories.map((category) {
+                      final isSelected = _selectedCategories.contains(category);
+                      return FilterChip(
+                        label: Text(category),
+                        selected: isSelected,
+                        selectedColor: Colors.red.shade100,
+                        checkmarkColor: Colors.red.shade700,
+                        backgroundColor: isDark ? Colors.grey.shade800 : Colors.white,
+                        side: BorderSide(
+                          color: isSelected 
+                              ? Colors.red.shade400 
+                              : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedCategories.add(category);
+                            } else {
+                              _selectedCategories.remove(category);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
               TextFormField(
                 controller: _codeController,
                 decoration: inputDecoration.copyWith(
@@ -418,11 +557,36 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                 },
               ),
               SizedBox(height: 16),
+              TextFormField(
+                controller: _usageLimitController,
+                decoration: inputDecoration.copyWith(
+                  labelText: 'Usage Limit (Optional)',
+                  hintText: 'Leave empty for unlimited use',
+                  prefixIcon: Icon(Icons.repeat, color: Colors.red.shade300),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    try {
+                      final limit = int.parse(value);
+                      if (limit < 0) {
+                        return 'Enter a positive number';
+                      }
+                    } catch (e) {
+                      return 'Enter a valid number';
+                    }
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 24),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
+                  color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
+                  border: Border.all(
+                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  ),
                 ),
                 child: CheckboxListTile(
                   title: Text('Set Expiration Date'),
@@ -451,8 +615,10 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
-                        color: Colors.grey.shade50,
+                        border: Border.all(
+                          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                        ),
+                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
                       ),
                       child: Row(
                         children: [
@@ -464,7 +630,9 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                                 : 'Expires: ${DateFormat('yyyy-MM-dd').format(_selectedExpiryDate!)}',
                             style: TextStyle(
                               fontSize: 16,
-                              color: _selectedExpiryDate == null ? Colors.grey.shade700 : Colors.black87,
+                              color: _selectedExpiryDate == null 
+                                  ? (isDark ? Colors.grey.shade400 : Colors.grey.shade700) 
+                                  : (isDark ? Colors.white : Colors.black87),
                             ),
                           ),
                           Spacer(),
@@ -474,84 +642,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                     ),
                   ),
                 ),
-              SizedBox(height: 16),
-              Text(
-                'Applicable Categories',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              Text(
-                'Leave empty for all products',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              SizedBox(height: 8),
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
-                  color: Colors.grey.shade50,
-                ),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _allCategories.map((category) {
-                    final isSelected = _selectedCategories.contains(category);
-                    return FilterChip(
-                      label: Text(category),
-                      selected: isSelected,
-                      selectedColor: Colors.red.shade100,
-                      checkmarkColor: Colors.red.shade700,
-                      backgroundColor: Colors.white,
-                      side: BorderSide(
-                        color: isSelected ? Colors.red.shade400 : Colors.grey.shade300,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            _selectedCategories.add(category);
-                          } else {
-                            _selectedCategories.remove(category);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-              ),
-              SizedBox(height: 16),
-              TextFormField(
-                controller: _usageLimitController,
-                decoration: inputDecoration.copyWith(
-                  labelText: 'Usage Limit (Optional)',
-                  hintText: 'Leave empty for unlimited use',
-                  prefixIcon: Icon(Icons.repeat, color: Colors.red.shade300),
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    try {
-                      final limit = int.parse(value);
-                      if (limit < 0) {
-                        return 'Enter a positive number';
-                      }
-                    } catch (e) {
-                      return 'Enter a valid number';
-                    }
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 24),
+                SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 height: 54,
@@ -598,22 +689,34 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
   }
 
   Widget _buildDiscountCodesList() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (_discountCodes.isEmpty) {
       return SliverFillRemaining(
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.discount_outlined, size: 70, color: Colors.grey),
+              Icon(
+                Icons.discount_outlined,
+                size: 70,
+                color: isDark ? Colors.grey.shade600 : Colors.grey,
+              ),
               SizedBox(height: 16),
               Text(
                 "No discount codes available",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).textTheme.titleLarge?.color,
+                ),
               ),
               SizedBox(height: 8),
               Text(
                 "Create a new discount code above",
-                style: TextStyle(color: Colors.grey[600]),
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                ),
               ),
             ],
           ),
@@ -644,8 +747,14 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
             
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: isDark ? 1 : 2,
+              color: isDark ? Colors.grey.shade900 : Theme.of(context).cardColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: isDark 
+                    ? BorderSide(color: Colors.grey.shade800)
+                    : BorderSide.none,
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(4.0),
                 child: ExpansionTile(
@@ -737,6 +846,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                         SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
+                          
                           children: [
                             OutlinedButton.icon(
                               icon: Icon(Icons.delete),
@@ -799,17 +909,23 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
   }
 
   Future<void> _showDeleteConfirmation(DiscountCode code) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: Theme.of(context).dialogBackgroundColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             children: [
               Icon(Icons.warning_amber_rounded, color: Colors.orange),
               SizedBox(width: 8),
-              Text('Delete Discount Code'),
+              Text(
+                'Delete Discount Code',
+                style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
+              ),
             ],
           ),
           content: SingleChildScrollView(
@@ -817,15 +933,20 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Are you sure you want to delete the discount code:'),
+                Text(
+                  'Are you sure you want to delete the discount code:',
+                  style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                ),
                 SizedBox(height: 8),
                 Container(
                   width: double.infinity,
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300),
+                    border: Border.all(
+                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,

@@ -36,67 +36,70 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final CartManager _cartManager = CartManager();
   final Map<String, AnimationController> _animationControllers = {};
   String? _userProfilePicture;
-  
+
+  final Map<String, AnimationController> _colorAnimationControllers = {};
+  final Map<String, Animation<Color?>> _colorAnimations = {};
+  final Map<String, AnimationController> _tickAnimationControllers = {};
+  final Map<String, Animation<double>> _tickAnimations = {};
+  final Map<String, bool> _isAddingToCartMap = {};
+
   bool _isDisposed = false;
   String _userName = "Guest"; // Default user name
 
   @override
   void initState() {
-  super.initState();
-  _cartManager.loadCart();
-  _cartManager.addListener(_updateUI);
-  _getUserProfile(); // Get current user name
+    super.initState();
+    _cartManager.loadCart();
+    _cartManager.addListener(_updateUI);
+    _getUserProfile(); // Get current user name
 
-  _searchController.addListener(() {
-    if (mounted) {
-      setState(() {
-        _searchQuery = _searchController.text;
-      });
-    }
-  });
+    _searchController.addListener(() {
+      if (mounted) {
+        setState(() {
+          _searchQuery = _searchController.text;
+        });
+      }
+    });
 
-  _loadInitialData();
-
+    _loadInitialData();
   }
 
   Future<void> _loadInitialData() async {
-  if (!mounted) return;
-  
-  setState(() {
-    _isLoading = true;
-  });
+    if (!mounted) return;
 
-  try {
-    // First fetch products
-    await fetchProducts();
-    
-    // Then fetch favorites
-    await fetchFavorites();
-    
-    // Finally update loading state if still mounted
-    if (mounted && !_isDisposed) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  } catch (error) {
-    print('Error loading initial data: $error');
-    // Ensure loading indicator is removed even if there's an error
-    if (mounted && !_isDisposed) {
-      setState(() {
-        _isLoading = false;
-      });
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // First fetch products
+      await fetchProducts();
+
+      // Then fetch favorites
+      await fetchFavorites();
+
+      // Finally update loading state if still mounted
+      if (mounted && !_isDisposed) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (error) {
+      print('Error loading initial data: $error');
+      // Ensure loading indicator is removed even if there's an error
+      if (mounted && !_isDisposed) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
-}
 
-  
-  
   void _updateUI() {
-  if (mounted && !_isDisposed) {
-    setState(() {});
+    if (mounted && !_isDisposed) {
+      setState(() {});
+    }
   }
-}
 
   @override
   void dispose() {
@@ -104,161 +107,188 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _searchController.dispose();
     _cartManager.removeListener(_updateUI);
 
-    // Properly dispose of all animation controllers
-    _animationControllers.forEach((_, controller) {
-      controller.stop();
-      controller.dispose();
-    });
-    _animationControllers.clear();
+    // Dispose all animation controllers
+    _colorAnimationControllers.forEach((_, controller) => controller.dispose());
+    _tickAnimationControllers.forEach((_, controller) => controller.dispose());
 
     super.dispose();
   }
 
   // Fetch current user name from Firestore
   Future<void> _getUserProfile() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) {
-    setState(() {
-      _userName = "Guest";
-      _userProfilePicture = null;
-    });
-    return;
-  }
-
-  try {
-    // Get user data from Firestore
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
-
-    // Get profile image URL from Firebase Storage
-    final storageRef = FirebaseStorage.instance
-        .ref()
-        .child('profile_images/${user.uid}.jpg');
-    
-    String imageUrl;
-    try {
-      imageUrl = await storageRef.getDownloadURL();
-    } catch (e) {
-      print('Error getting profile image: $e');
-      imageUrl = ''; // Set empty if image doesn't exist
-    }
-
-    if (mounted) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
       setState(() {
-        _userName = userDoc.data()?['name'] ?? 'User';
-        _userProfilePicture = imageUrl.isNotEmpty ? imageUrl : null;
-      });
-    }
-  } catch (e) {
-    print('Error fetching user profile: $e');
-    if (mounted) {
-      setState(() {
-        _userName = "User";
+        _userName = "Guest";
         _userProfilePicture = null;
       });
+      return;
+    }
+
+    try {
+      // Get user data from Firestore
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      // Get profile image URL from Firebase Storage
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_images/${user.uid}.jpg');
+
+      String imageUrl;
+      try {
+        imageUrl = await storageRef.getDownloadURL();
+      } catch (e) {
+        print('Error getting profile image: $e');
+        imageUrl = ''; // Set empty if image doesn't exist
+      }
+
+      if (mounted) {
+        setState(() {
+          _userName = userDoc.data()?['name'] ?? 'User';
+          _userProfilePicture = imageUrl.isNotEmpty ? imageUrl : null;
+        });
+      }
+    } catch (e) {
+      print('Error fetching user profile: $e');
+      if (mounted) {
+        setState(() {
+          _userName = "User";
+          _userProfilePicture = null;
+        });
+      }
     }
   }
-}
+
   void _initializeAnimationControllers() {
-    // Safely dispose of any existing controllers
-    _animationControllers.forEach((_, controller) {
-      controller.stop();
-      controller.dispose();
-    });
-    _animationControllers.clear();
+    // Dispose existing controllers
+    _colorAnimationControllers.forEach((_, controller) => controller.dispose());
+    _tickAnimationControllers.forEach((_, controller) => controller.dispose());
+    _colorAnimationControllers.clear();
+    _colorAnimations.clear();
+    _tickAnimationControllers.clear();
+    _tickAnimations.clear();
+    _isAddingToCartMap.clear();
 
     // Only create new controllers if the widget is still mounted
     if (!mounted) return;
 
     for (var product in products) {
-      final controller = AnimationController(
+      final productId = product['id'];
+
+      // Color animation controller
+      final colorController = AnimationController(
         vsync: this,
-        duration: Duration(seconds: 2),
+        duration: Duration(milliseconds: 300),
       );
-      _animationControllers[product['id']] = controller;
+      _colorAnimationControllers[productId] = colorController;
+
+      // Color animation
+      _colorAnimations[productId] = ColorTween(
+        begin: Colors.red.shade400,
+        end: Colors.green.shade500,
+      ).animate(colorController);
+
+      // Tick animation controller
+      final tickController = AnimationController(
+        vsync: this,
+        duration: Duration(milliseconds: 500),
+      );
+      _tickAnimationControllers[productId] = tickController;
+
+      // Tick animation
+      _tickAnimations[productId] = Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: tickController,
+        curve: Curves.elasticOut,
+      ));
+
+      _isAddingToCartMap[productId] = false;
     }
   }
 
   Future<void> fetchProducts() async {
-  if (!mounted) return;
-  
-  try {
-    final QuerySnapshot snapshot =
-        await FirebaseFirestore.instance.collection('products').get();
-
-    final List<Map<String, dynamic>> loadedProducts = [];
-
-    snapshot.docs.forEach((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-
-      print('Product: ${data['name']}, Image path: ${data['imagePath']}');
-
-      String priceString = data['price']?.toString() ?? '0';
-
-      loadedProducts.add({
-        'id': doc.id,
-        'name': data['name'] ?? 'Unknown Product',
-        'price': priceString,
-        'category': data['category'] ?? 'Uncategorized',
-        'image': data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-        'description': data['description'] ?? 'No description available',
-        'stock': data['stock'] ?? 0,
-      });
-    });
-
     if (!mounted) return;
-    
-    setState(() {
-      products = loadedProducts;
-      // Don't set _isLoading = false here
-    });
 
-    _initializeAnimationControllers();
-  } catch (error) {
-    print('Error fetching products: $error');
-    // Don't set _isLoading = false here either
+    try {
+      final QuerySnapshot snapshot =
+          await FirebaseFirestore.instance.collection('products').get();
+
+      final List<Map<String, dynamic>> loadedProducts = [];
+
+      snapshot.docs.forEach((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+
+        print('Product: ${data['name']}, Image path: ${data['imagePath']}');
+
+        String priceString = data['price']?.toString() ?? '0';
+
+        loadedProducts.add({
+          'id': doc.id,
+          'name': data['name'] ?? 'Unknown Product',
+          'price': priceString,
+          'category': data['category'] ?? 'Uncategorized',
+          'image': data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
+          'description': data['description'] ?? 'No description available',
+          'stock': data['stock'] ?? 0,
+        });
+      });
+
+      if (!mounted) return;
+
+      setState(() {
+        products = loadedProducts;
+        // Don't set _isLoading = false here
+      });
+
+      _initializeAnimationControllers();
+    } catch (error) {
+      print('Error fetching products: $error');
+      // Don't set _isLoading = false here either
+    }
   }
-}
 
   // Fetch favorites from Firestore
   Future<void> fetchFavorites() async {
-  try {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      // If not logged in, can't have favorites
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        // If not logged in, can't have favorites
+        if (mounted) {
+          setState(() {
+            favoriteProductIds = [];
+            // Don't set _isLoading = false here
+          });
+        }
+        return;
+      }
+
+      final favoritesSnapshot = await FirebaseFirestore.instance
+          .collection('favorites')
+          .doc(user.uid)
+          .collection('userFavorites')
+          .get();
+
+      final List<String> loadedFavorites = [];
+      favoritesSnapshot.docs.forEach((doc) {
+        loadedFavorites.add(doc.id);
+      });
+
       if (mounted) {
         setState(() {
-          favoriteProductIds = [];
+          favoriteProductIds = loadedFavorites;
           // Don't set _isLoading = false here
         });
       }
-      return;
+    } catch (error) {
+      print('Error fetching favorites: $error');
+      // Don't set _isLoading = false here
     }
-
-    final favoritesSnapshot = await FirebaseFirestore.instance
-        .collection('favorites')
-        .doc(user.uid)
-        .collection('userFavorites')
-        .get();
-
-    final List<String> loadedFavorites = [];
-    favoritesSnapshot.docs.forEach((doc) {
-      loadedFavorites.add(doc.id);
-    });
-
-    if (mounted) {
-      setState(() {
-        favoriteProductIds = loadedFavorites;
-        // Don't set _isLoading = false here
-      });
-    }
-  } catch (error) {
-    print('Error fetching favorites: $error');
-    // Don't set _isLoading = false here
   }
-}
 
   // Toggle favorite status of a product
   Future<void> toggleFavorite(Map<String, dynamic> product) async {
@@ -368,7 +398,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   void _navigateToProductDetail(Map<String, dynamic> product) {
     if (!mounted) return;
-    
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -378,18 +408,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> _addToCart(Map<String, dynamic> product) async {
-    final controller = _animationControllers[product['id']];
-    if (controller != null && mounted && !_isDisposed) {
-      controller.reset();
-      try {
-        await controller.forward();
-        if (mounted && !_isDisposed) {
-          controller.reset();
-        }
-      } catch (e) {
-        print('Animation error: $e');
-      }
-    }
+    if (_isAddingToCartMap[product['id']] == true) return;
+
+    _isAddingToCartMap[product['id']] = true;
+
+    // Start animations
+    _colorAnimationControllers[product['id']]?.forward();
+    await Future.delayed(Duration(milliseconds: 200));
+    _tickAnimationControllers[product['id']]?.forward();
 
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -447,8 +473,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
         );
       }
+
+      // Reset animations after success
+      await Future.delayed(Duration(seconds: 1));
+      if (mounted) {
+        _resetAnimations(product['id']);
+      }
     } catch (e) {
       print('Error adding item to cart: $e');
+      _resetAnimations(product['id']);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -457,6 +490,26 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
         );
       }
+    }
+  }
+
+  void _resetAnimations(String productId) {
+    final colorController = _colorAnimationControllers[productId];
+    final tickController = _tickAnimationControllers[productId];
+
+    if (colorController?.isAnimating ?? false) {
+      colorController?.stop();
+    }
+    if (tickController?.isAnimating ?? false) {
+      tickController?.stop();
+    }
+    colorController?.reset();
+    tickController?.reset();
+
+    if (mounted) {
+      setState(() {
+        _isAddingToCartMap[productId] = false;
+      });
     }
   }
 
@@ -547,14 +600,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   margin: EdgeInsets.all(10.0),
   decoration: BoxDecoration(
     gradient: LinearGradient(
-      colors: [Colors.red.shade300, Colors.white],
+      colors: Theme.of(context).brightness == Brightness.dark
+          ? [Colors.red.shade900, Colors.grey.shade900]
+          : [Colors.red.shade300, Colors.white],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     borderRadius: BorderRadius.circular(12),
     boxShadow: [
       BoxShadow(
-        color: Colors.black12,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.black26
+            : Colors.black12,
         blurRadius: 5,
         offset: Offset(0, 2),
       ),
@@ -562,21 +619,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   ),
   child: Row(
     children: [
-      // CircleAvatar to display the profile picture
-     CircleAvatar(
-  radius: 30,
-  backgroundColor: Colors.red.shade300,
-  backgroundImage: _userProfilePicture != null 
-      ? NetworkImage(_userProfilePicture!)
-      : null,
-  child: _userProfilePicture == null
-      ? Icon(
-          Icons.person,
-          size: 36,
-          color: Colors.white,
-        )
-      : null,
-),
+      CircleAvatar(
+        radius: 30,
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? Colors.red.shade700
+            : Colors.red.shade300,
+        backgroundImage: _userProfilePicture != null 
+            ? NetworkImage(_userProfilePicture!)
+            : null,
+        child: _userProfilePicture == null
+            ? Icon(
+                Icons.person,
+                size: 36,
+                color: Colors.white,
+              )
+            : null,
+      ),
       SizedBox(width: 16),
       Expanded(
         child: Column(
@@ -586,7 +644,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               "Welcome",
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.black54,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey[400]
+                    : Colors.black54,
               ),
             ),
             Text(
@@ -594,7 +654,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black87,
               ),
             ),
           ],
@@ -625,9 +687,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       height: 180,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        color: Colors.blue.shade100,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.grey.shade800
+            : Colors.blue.shade100,
         boxShadow: [
-          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+          BoxShadow(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black26
+                : Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
         ],
       ),
       child: ClipRRect(
@@ -637,7 +707,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.red.shade300, Colors.red.shade100],
+                  colors: Theme.of(context).brightness == Brightness.dark
+                      ? [Colors.red.shade900, Colors.black54]
+                      : [Colors.red.shade300, Colors.red.shade100],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -748,6 +820,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     bool isSelected,
     VoidCallback onTap,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -757,14 +831,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             height: 70,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isSelected ? Colors.red.shade50 : Colors.grey.shade200,
+              color: isDark
+                  ? (isSelected ? Colors.red.shade900 : Colors.grey.shade800)
+                  : (isSelected ? Colors.red.shade50 : Colors.grey.shade200),
               border: isSelected
-                  ? Border.all(color: Colors.red.shade400, width: 2)
+                  ? Border.all(color: isDark ? Colors.red.shade700 : Colors.red.shade400, width: 2)
                   : null,
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                        color: Colors.red.shade300.withOpacity(0.5),
+                        color: isDark
+                            ? Colors.red.shade900.withOpacity(0.5)
+                            : Colors.red.shade300.withOpacity(0.5),
                         blurRadius: 8,
                         spreadRadius: 1,
                       ),
@@ -772,14 +850,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   : null,
             ),
             padding: EdgeInsets.all(10),
-            child: Image.asset(imagePath, fit: BoxFit.contain),
+            child: Image.asset(
+              imagePath,
+              fit: BoxFit.contain,
+              color: isDark ? Colors.white70 : null,
+            ),
           ),
           SizedBox(height: 8),
           Text(
             label,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? Colors.red : Colors.black,
+              color: isDark
+                  ? (isSelected ? Colors.red.shade400 : Colors.white70)
+                  : (isSelected ? Colors.red : Colors.black),
             ),
           ),
         ],
@@ -889,6 +973,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       onTap: () => _navigateToProductDetail(product),
       child: Card(
         elevation: 3,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.grey.shade800
+            : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Container(
           height: double.infinity,
@@ -900,7 +987,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade900
+                        : Colors.grey[200],
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(12),
                     ),
@@ -994,39 +1083,60 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       SizedBox(
                         width: double.infinity,
                         height: 40,
-                        child: isOutOfStock
-                            ? Container(
-                                width: double.infinity,
-                                padding: EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.shade50,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border:
-                                      Border.all(color: Colors.red.shade200),
+                        child: AnimatedBuilder(
+                          animation: Listenable.merge([
+                            _colorAnimationControllers[product['id']]!,
+                            _tickAnimationControllers[product['id']]!
+                          ]),
+                          builder: (context, child) {
+                            return ElevatedButton(
+                              onPressed: isOutOfStock || _isAddingToCartMap[product['id']] == true
+                                  ? null
+                                  : () => _addToCart(product),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _colorAnimations[product['id']]?.value ?? Colors.red.shade400,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: Text(
-                                  "Out of Stock",
-                                  style: TextStyle(
-                                    color: Colors.red.shade700,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              )
-                            : GestureDetector(
-                                onTap: () => _addToCart(product),
-                                child: SizedBox(
-                                  child: Lottie.asset(
-                                    'lib/assets/button-test/3.json',
-                                    controller: animationController,
-                                    fit: BoxFit.cover,
-                                    width: 100,
-                                    height: 20,
-                                    repeat: false,
-                                  ),
-                                ),
+                                elevation: 2,
                               ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Opacity(
+                                    opacity: 1.0 - (_colorAnimationControllers[product['id']]?.value ?? 0.0),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        if (!isOutOfStock) Icon(Icons.shopping_cart, size: 16),
+                                        if (!isOutOfStock) SizedBox(width: 8),
+                                        Text(
+                                          isOutOfStock ? "OUT OF STOCK" : "ADD TO CART",
+                                          style: TextStyle(
+                                            fontSize: isOutOfStock ? 12 : 14,  // Smaller font for OUT OF STOCK
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,  // Ensure single line
+                                          overflow: TextOverflow.visible,  // Handle overflow
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if ((_colorAnimationControllers[product['id']]?.value ?? 0.0) > 0)
+                                    Transform.scale(
+                                      scale: _tickAnimations[product['id']]?.value ?? 0.0,
+                                      child: Icon(
+                                        Icons.check,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),

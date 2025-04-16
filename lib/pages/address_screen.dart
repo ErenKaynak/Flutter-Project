@@ -12,7 +12,7 @@ class _AddressScreenState extends State<AddressScreen> {
   Stream<QuerySnapshot>? addressesStream;
   String _userName = "Guest"; // Default user name
   bool _isLoading = true;
-  
+
   @override
   void initState() {
     super.initState();
@@ -24,10 +24,10 @@ class _AddressScreenState extends State<AddressScreen> {
           .where('userId', isEqualTo: uid)
           .orderBy('createdAt', descending: true)
           .snapshots();
-      
+
       _getUserName(); // Get current user name
     }
-    
+
     Future.delayed(Duration(milliseconds: 500), () {
       if (mounted) {
         setState(() {
@@ -47,7 +47,7 @@ class _AddressScreenState extends State<AddressScreen> {
             .collection('users')
             .doc(user.uid)
             .get();
-        
+
         if (userDoc.exists && userDoc.data()?['name'] != null) {
           if (mounted) {
             setState(() {
@@ -78,93 +78,239 @@ class _AddressScreenState extends State<AddressScreen> {
 
   String _formatAddress(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
+
     String formattedAddress = '';
-    
+
     if (data['street'] != null && data['street'].toString().isNotEmpty) {
       formattedAddress += data['street'];
     }
-    
+
     if (data['buildingNo'] != null && data['buildingNo'].toString().isNotEmpty) {
       formattedAddress += ' No:${data['buildingNo']}';
     }
-    
+
     if (data['doorNo'] != null && data['doorNo'].toString().isNotEmpty) {
       formattedAddress += ' D${data['doorNo']}';
     }
-    
+
     if (data['apartment'] != null && data['apartment'].toString().isNotEmpty) {
       formattedAddress += ', ${data['apartment']} Apartment';
     }
-    
+
     if (data['neighborhood'] != null && data['neighborhood'].toString().isNotEmpty) {
       formattedAddress = '${data['neighborhood']}, ' + formattedAddress;
     }
-    
+
     if (data['city'] != null && data['city'].toString().isNotEmpty) {
       formattedAddress += ', ${data['city']}';
     }
-    
+
     return formattedAddress;
+  }
+
+  // Method to handle editing address
+  void _editAddress(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddAddressPage(
+          isEditing: true,
+          addressData: data,
+          addressId: doc.id,
+        ),
+      ),
+    );
+  }
+
+  // Method to handle address deletion
+  Future<void> _deleteAddress(String addressId) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Show confirmation dialog
+    bool? confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        title: Text(
+          'Delete Address',
+          style: TextStyle(
+            color: Theme.of(context).textTheme.titleLarge?.color,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to delete this address?',
+          style: TextStyle(
+            color: Theme.of(context).textTheme.bodyLarge?.color,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('addresses')
+            .doc(addressId)
+            .delete();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Address deleted successfully'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting address: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  // Method to set address as default
+  Future<void> _setAsDefault(String addressId) async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+
+      // Start a batch write
+      final batch = FirebaseFirestore.instance.batch();
+
+      // First, remove isDefault from all addresses
+      final addresses = await FirebaseFirestore.instance
+          .collection('addresses')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      for (var doc in addresses.docs) {
+        batch.update(doc.reference, {'isDefault': false});
+      }
+
+      // Set the selected address as default
+      batch.update(
+        FirebaseFirestore.instance.collection('addresses').doc(addressId),
+        {'isDefault': true},
+      );
+
+      // Commit the batch
+      await batch.commit();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Default address updated'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error updating default address: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SafeArea(
       child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           title: Text(
             'My Addresses',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).textTheme.titleLarge?.color,
+            ),
           ),
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
           elevation: 0,
         ),
-        body: _isLoading 
-            ? Center(child: CircularProgressIndicator(color: Colors.red.shade300))
+        body: _isLoading
+            ? Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor))
             : RefreshIndicator(
                 onRefresh: () async {
-                  // Pull to refresh functionality
-                  setState(() {
-                    _isLoading = true;
-                  });
+                  setState(() => _isLoading = true);
                   await Future.delayed(Duration(seconds: 1));
-                  setState(() {
-                    _isLoading = false;
-                  });
+                  setState(() => _isLoading = false);
                 },
-                color: Colors.red.shade300,
+                color: Theme.of(context).primaryColor,
                 child: CustomScrollView(
                   slivers: [
                     SliverToBoxAdapter(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Welcome section with user name and person icon
+                          // Welcome section
                           Container(
                             padding: EdgeInsets.all(16.0),
                             margin: EdgeInsets.all(10.0),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [Colors.red.shade300, Colors.white],
+                                colors: isDark
+                                    ? [Colors.red.shade900, Colors.grey.shade900]
+                                    : [Colors.red.shade300, Colors.white],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
                               borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black12,
-                                  blurRadius: 5,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
+                              boxShadow: isDark
+                                  ? []
+                                  : [
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        blurRadius: 5,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
                             ),
                             child: Row(
                               children: [
                                 Container(
                                   padding: EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.red.shade300,
+                                    color: isDark ? Colors.red.shade900 : Colors.red.shade300,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
@@ -182,7 +328,7 @@ class _AddressScreenState extends State<AddressScreen> {
                                         "Hello",
                                         style: TextStyle(
                                           fontSize: 16,
-                                          color: Colors.black54,
+                                          color: isDark ? Colors.grey[400] : Colors.black54,
                                         ),
                                       ),
                                       Text(
@@ -190,7 +336,7 @@ class _AddressScreenState extends State<AddressScreen> {
                                         style: TextStyle(
                                           fontSize: 24,
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.black87,
+                                          color: isDark ? Colors.white : Colors.black87,
                                         ),
                                       ),
                                     ],
@@ -199,38 +345,46 @@ class _AddressScreenState extends State<AddressScreen> {
                               ],
                             ),
                           ),
-                          
+
                           // Information container
                           Container(
                             padding: EdgeInsets.all(16.0),
                             margin: EdgeInsets.symmetric(horizontal: 10.0),
                             decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
+                              color: isDark
+                                  ? Colors.blue.shade900.withOpacity(0.2)
+                                  : Colors.blue.shade50,
                               borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 3,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
+                              boxShadow: isDark
+                                  ? []
+                                  : [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 3,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.info_outline, color: Colors.blue.shade700),
+                                Icon(Icons.info_outline,
+                                    color: isDark ? Colors.blue.shade300 : Colors.blue.shade700),
                                 SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     'Changes here do not affect current orders.',
-                                    style: TextStyle(color: Colors.blue.shade700),
+                                    style: TextStyle(
+                                        color: isDark
+                                            ? Colors.blue.shade300
+                                            : Colors.blue.shade700),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          
+
                           SizedBox(height: 20),
-                          
+
                           // Add new address button
                           Container(
                             margin: EdgeInsets.symmetric(horizontal: 10.0),
@@ -243,7 +397,7 @@ class _AddressScreenState extends State<AddressScreen> {
                               ),
                               style: ElevatedButton.styleFrom(
                                 minimumSize: Size.fromHeight(54),
-                                backgroundColor: Colors.red.shade300,
+                                backgroundColor: Colors.red.shade700,
                                 foregroundColor: Colors.white,
                                 elevation: 2,
                                 shape: RoundedRectangleBorder(
@@ -252,9 +406,9 @@ class _AddressScreenState extends State<AddressScreen> {
                               ),
                             ),
                           ),
-                          
+
                           SizedBox(height: 20),
-                          
+
                           // Addresses header
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: 16.0),
@@ -263,17 +417,15 @@ class _AddressScreenState extends State<AddressScreen> {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                                color: isDark ? Colors.white : Colors.black87,
                               ),
                             ),
                           ),
-                          
+
                           SizedBox(height: 10),
                         ],
                       ),
                     ),
-                    
-                    // Addresses list
                     _buildAddressesList(),
                   ],
                 ),
@@ -283,6 +435,8 @@ class _AddressScreenState extends State<AddressScreen> {
   }
 
   Widget _buildAddressesList() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return StreamBuilder<QuerySnapshot>(
       stream: addressesStream,
       builder: (context, snapshot) {
@@ -293,29 +447,34 @@ class _AddressScreenState extends State<AddressScreen> {
               padding: EdgeInsets.all(20),
               margin: EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
+                color: isDark ? Colors.red.shade900.withOpacity(0.2) : Colors.red.shade50,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red.shade200),
+                border: Border.all(
+                  color: isDark ? Colors.red.shade800 : Colors.red.shade200,
+                ),
               ),
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+                    Icon(Icons.error_outline,
+                        size: 48,
+                        color: isDark ? Colors.red.shade300 : Colors.red.shade700),
                     SizedBox(height: 16),
                     Text(
                       'Error loading addresses',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: Colors.red.shade700,
+                        color: isDark ? Colors.red.shade300 : Colors.red.shade700,
                       ),
                     ),
                     SizedBox(height: 8),
                     Text(
                       '${snapshot.error}',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.red.shade700),
+                      style: TextStyle(
+                          color: isDark ? Colors.red.shade300 : Colors.red.shade700),
                     ),
                   ],
                 ),
@@ -323,18 +482,18 @@ class _AddressScreenState extends State<AddressScreen> {
             ),
           );
         }
-        
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return SliverToBoxAdapter(
             child: Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(color: Colors.red.shade300),
+                child: CircularProgressIndicator(color: Theme.of(context).primaryColor),
               ),
             ),
           );
         }
-        
+
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return SliverToBoxAdapter(
             child: Container(
@@ -342,27 +501,32 @@ class _AddressScreenState extends State<AddressScreen> {
               padding: EdgeInsets.all(20),
               margin: EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: isDark ? Colors.grey.shade900.withOpacity(0.2) : Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(
+                  color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                ),
               ),
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.location_off, size: 48, color: Colors.grey),
+                    Icon(Icons.location_off,
+                        size: 48, color: isDark ? Colors.grey.shade400 : Colors.grey),
                     SizedBox(height: 16),
                     Text(
                       'No addresses saved yet',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
+                        color: isDark ? Colors.grey.shade400 : Colors.black,
                       ),
                     ),
                     SizedBox(height: 8),
                     Text(
                       'Add your first address!',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(
+                          color: isDark ? Colors.grey.shade400 : Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -370,13 +534,13 @@ class _AddressScreenState extends State<AddressScreen> {
             ),
           );
         }
-        
+
         return SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, index) {
               final doc = snapshot.data!.docs[index];
               final data = doc.data() as Map<String, dynamic>;
-              
+
               return Container(
                 margin: EdgeInsets.fromLTRB(10, 0, 10, 12),
                 child: Card(
@@ -388,7 +552,7 @@ class _AddressScreenState extends State<AddressScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Colors.grey.shade200,
+                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
                         width: 1,
                       ),
                     ),
@@ -397,61 +561,71 @@ class _AddressScreenState extends State<AddressScreen> {
                         Container(
                           padding: EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: data['addressType'] == 'Home' 
-                                ? Colors.blue.shade50 
-                                : Colors.orange.shade50,
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                            color: data['addressType'] == 'Home'
+                                ? (isDark
+                                    ? Colors.blue.shade900.withOpacity(0.2)
+                                    : Colors.blue.shade50)
+                                : (isDark
+                                    ? Colors.orange.shade900.withOpacity(0.2)
+                                    : Colors.orange.shade50),
+                            borderRadius:
+                                BorderRadius.vertical(top: Radius.circular(12)),
                           ),
                           child: Row(
                             children: [
                               Container(
                                 padding: EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: data['addressType'] == 'Home' 
-                                      ? Colors.blue.shade100 
-                                      : Colors.orange.shade100,
+                                  color: data['addressType'] == 'Home'
+                                      ? (isDark
+                                          ? Colors.blue.shade900
+                                          : Colors.blue.shade100)
+                                      : (isDark
+                                          ? Colors.orange.shade900
+                                          : Colors.orange.shade100),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
-                                  data['addressType'] == 'Home' ? Icons.home : Icons.work,
-                                  color: data['addressType'] == 'Home' 
-                                      ? Colors.blue.shade700 
-                                      : Colors.orange.shade700,
+                                  data['addressType'] == 'Home'
+                                      ? Icons.home
+                                      : Icons.work,
+                                  color: data['addressType'] == 'Home'
+                                      ? (isDark
+                                          ? Colors.blue.shade300
+                                          : Colors.blue.shade700)
+                                      : (isDark
+                                          ? Colors.orange.shade300
+                                          : Colors.orange.shade700),
                                 ),
                               ),
                               SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  data['label'] != null && data['label'].toString().isNotEmpty
+                                  data['label'] != null &&
+                                          data['label'].toString().isNotEmpty
                                       ? data['label'].toString().toUpperCase()
                                       : data['addressType'].toString().toUpperCase(),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
-                                    color: data['addressType'] == 'Home' 
-                                        ? Colors.blue.shade700 
-                                        : Colors.orange.shade700,
+                                    color: data['addressType'] == 'Home'
+                                        ? (isDark
+                                            ? Colors.blue.shade300
+                                            : Colors.blue.shade700)
+                                        : (isDark
+                                            ? Colors.orange.shade300
+                                            : Colors.orange.shade700),
                                   ),
                                 ),
                               ),
                               IconButton(
                                 icon: Icon(
                                   Icons.edit,
-                                  color: Colors.grey.shade600,
+                                  color: isDark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600,
                                 ),
-                                onPressed: () {
-                                  // TO DO: Implement edit functionality
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Edit feature coming soon'),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      backgroundColor: Colors.red.shade300,
-                                    ),
-                                  );
-                                },
+                                onPressed: () => _editAddress(doc),
                               ),
                             ],
                           ),
@@ -466,7 +640,9 @@ class _AddressScreenState extends State<AddressScreen> {
                                   Icon(
                                     Icons.person,
                                     size: 18,
-                                    color: Colors.grey.shade600,
+                                    color: isDark
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
                                   ),
                                   SizedBox(width: 8),
                                   Text(
@@ -474,6 +650,9 @@ class _AddressScreenState extends State<AddressScreen> {
                                     style: TextStyle(
                                       fontWeight: FontWeight.w500,
                                       fontSize: 15,
+                                      color: isDark
+                                          ? Colors.grey.shade400
+                                          : Colors.black,
                                     ),
                                   ),
                                 ],
@@ -485,7 +664,9 @@ class _AddressScreenState extends State<AddressScreen> {
                                   Icon(
                                     Icons.location_on,
                                     size: 18,
-                                    color: Colors.grey.shade600,
+                                    color: isDark
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
                                   ),
                                   SizedBox(width: 8),
                                   Expanded(
@@ -493,7 +674,9 @@ class _AddressScreenState extends State<AddressScreen> {
                                       _formatAddress(doc),
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: Colors.grey.shade800,
+                                        color: isDark
+                                            ? Colors.grey.shade400
+                                            : Colors.grey.shade800,
                                       ),
                                     ),
                                   ),
@@ -505,14 +688,18 @@ class _AddressScreenState extends State<AddressScreen> {
                                   Icon(
                                     Icons.phone,
                                     size: 18,
-                                    color: Colors.grey.shade600,
+                                    color: isDark
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
                                   ),
                                   SizedBox(width: 8),
                                   Text(
                                     '${data['phone']}',
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color: Colors.grey.shade800,
+                                      color: isDark
+                                          ? Colors.grey.shade400
+                                          : Colors.grey.shade800,
                                     ),
                                   ),
                                 ],
@@ -523,53 +710,47 @@ class _AddressScreenState extends State<AddressScreen> {
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+                            color: isDark
+                                ? Colors.grey.shade900.withOpacity(0.2)
+                                : Colors.grey.shade50,
+                            borderRadius:
+                                BorderRadius.vertical(bottom: Radius.circular(12)),
                             border: Border(
-                              top: BorderSide(color: Colors.grey.shade200),
+                              top: BorderSide(
+                                  color: isDark
+                                      ? Colors.grey.shade800
+                                      : Colors.grey.shade200),
                             ),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               TextButton.icon(
-                                onPressed: () {
-                                  // TO DO: Implement delete functionality
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Delete feature coming soon'),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      backgroundColor: Colors.red.shade300,
-                                    ),
-                                  );
-                                },
-                                icon: Icon(Icons.delete_outline, color: Colors.red.shade300),
+                                onPressed: () => _deleteAddress(doc.id),
+                                icon: Icon(Icons.delete_outline,
+                                    color: Colors.red.shade300),
                                 label: Text(
                                   'Delete',
                                   style: TextStyle(color: Colors.red.shade300),
                                 ),
                               ),
                               TextButton.icon(
-                                onPressed: () {
-                                  // TO DO: Implement set as default functionality
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Set as default feature coming soon'),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      backgroundColor: Colors.red.shade300,
-                                    ),
-                                  );
-                                },
-                                icon: Icon(Icons.check_circle_outline, color: Colors.green.shade600),
+                                onPressed: () => _setAsDefault(doc.id),
+                                icon: Icon(
+                                  Icons.check_circle_outline,
+                                  color: data['isDefault'] == true
+                                      ? Colors.green
+                                      : Colors.green.shade600,
+                                ),
                                 label: Text(
-                                  'Set as Default',
-                                  style: TextStyle(color: Colors.green.shade600),
+                                  data['isDefault'] == true
+                                      ? 'Default'
+                                      : 'Set as Default',
+                                  style: TextStyle(
+                                    color: data['isDefault'] == true
+                                        ? Colors.green
+                                        : Colors.green.shade600,
+                                  ),
                                 ),
                               ),
                             ],

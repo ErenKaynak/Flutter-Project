@@ -19,8 +19,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
   int selectedImageIndex = 0;
   int availableStock = 0;
   bool isFavorite = false;
-  
-  // Initialize controllers with empty values initially
+
   late AnimationController _colorAnimationController;
   late Animation<Color?> _colorAnimation;
   late AnimationController _tickAnimationController;
@@ -30,26 +29,22 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
   @override
   void initState() {
     super.initState();
-    
-    // Initialize animation controllers immediately
+
     _colorAnimationController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 300),
     );
-    
-    // Create color animation (red to green)
+
     _colorAnimation = ColorTween(
       begin: Colors.red.shade400,
       end: Colors.green.shade500,
     ).animate(_colorAnimationController);
-    
-    // Initialize tick animation controller
+
     _tickAnimationController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 500),
     );
-    
-    // Create tick appearance animation
+
     _tickAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -57,15 +52,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
       parent: _tickAnimationController,
       curve: Curves.elasticOut,
     ));
-    
-    // After initializing the animations, fetch the data
+
     fetchProductDetails();
     checkIfFavorite();
   }
 
   @override
   void dispose() {
-    // Always dispose animation controllers
     _colorAnimationController.dispose();
     _tickAnimationController.dispose();
     super.dispose();
@@ -80,11 +73,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
 
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
-        
-        // Get the stock value from the product data
+
         final stockValue = data['stock'];
         final stock = stockValue is int ? stockValue : 0;
-        
+
         if (mounted) {
           setState(() {
             productData = data;
@@ -144,7 +136,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
           .doc(widget.productId);
 
       if (isFavorite) {
-        // Remove from favorites
         await favRef.delete();
         if (mounted) {
           setState(() {
@@ -158,7 +149,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
           );
         }
       } else {
-        // Add to favorites
         await favRef.set({
           'name': productData?['name'] ?? 'Unknown Product',
           'price': productData?['price']?.toString() ?? '0',
@@ -195,7 +185,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
 
   void incrementQuantity() {
     setState(() {
-      // Only allow increasing quantity if it's less than available stock and less than 10
       if (quantity < availableStock && quantity < 10) quantity++;
     });
   }
@@ -209,15 +198,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
   Future<void> addToCart() async {
     if (_isAddingToCart) return;
 
-    // If the product is out of stock, don't proceed
     if (availableStock <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Sorry, this product is out of stock')),
       );
       return;
     }
-    
-    // Check if the requested quantity exceeds available stock
+
     if (quantity > availableStock) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Cannot add more than available stock ($availableStock)')),
@@ -229,7 +216,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
       _isAddingToCart = true;
     });
 
-    // Start animations
     _colorAnimationController.forward();
     await Future.delayed(Duration(milliseconds: 200));
     _tickAnimationController.forward();
@@ -255,8 +241,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
 
       if (existingItem.exists) {
         final prevQuantity = existingItem['quantity'] ?? 1;
-        
-        // Check if the combined quantity exceeds available stock
+
         if (prevQuantity + quantity > availableStock) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -266,7 +251,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
           _resetAnimations();
           return;
         }
-        
+
         await cartRef.update({'quantity': prevQuantity + quantity});
       } else {
         await cartRef.set({
@@ -298,13 +283,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
           ),
         ),
       );
-      
-      // Reset animations after a delay
+
       await Future.delayed(Duration(seconds: 1));
       if (mounted) {
         _resetAnimations();
       }
-      
     } catch (e) {
       print('❌ Error adding to cart: $e');
       _resetAnimations();
@@ -315,7 +298,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
       }
     }
   }
-  
+
   void _resetAnimations() {
     if (_colorAnimationController.isAnimating) {
       _colorAnimationController.stop();
@@ -334,17 +317,40 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (isLoading) {
       return Scaffold(
-        appBar: AppBar(title: Text("Loading...")),
-        body: Center(child: CircularProgressIndicator()),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          title: Text(
+            "Loading...",
+            style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
+          ),
+        ),
+        body: Center(
+          child: CircularProgressIndicator(color: Theme.of(context).primaryColor),
+        ),
       );
     }
 
     if (productData == null) {
       return Scaffold(
-        appBar: AppBar(title: Text("Error")),
-        body: Center(child: Text("Product not found")),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          title: Text(
+            "Error",
+            style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
+          ),
+        ),
+        body: Center(
+          child: Text(
+            "Product not found",
+            style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+          ),
+        ),
       );
     }
 
@@ -360,15 +366,29 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
 
     if (images.isEmpty) images.add(imagePath);
 
-    // Check if product is out of stock
     final bool isOutOfStock = availableStock <= 0;
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(name, style: TextStyle(fontSize: 18)),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        elevation: isDark ? 0 : 2,
+        title: Text(
+          name,
+          style: TextStyle(
+            fontSize: 18,
+            color: Theme.of(context).textTheme.titleLarge?.color,
+          ),
+        ),
+        iconTheme: IconThemeData(color: Theme.of(context).iconTheme.color),
         actions: [
           IconButton(
-            icon: Icon(Icons.favorite, color: isFavorite ? Colors.red : Colors.grey),
+            icon: Icon(
+              Icons.favorite,
+              color: isFavorite
+                  ? Colors.red
+                  : Theme.of(context).iconTheme.color?.withOpacity(0.5),
+            ),
             onPressed: toggleFavorite,
           ),
           Stack(
@@ -383,21 +403,19 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                   );
                 },
               ),
-              // Add cart counter badge here if you have a cartItemCount
-              // Positioned(...)
             ],
           ),
           SizedBox(width: 12),
         ],
       ),
       body: RefreshIndicator(
+        color: Theme.of(context).primaryColor,
         onRefresh: fetchProductDetails,
         child: SingleChildScrollView(
           physics: AlwaysScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Product image with gradient overlay
               Stack(
                 children: [
                   Container(
@@ -407,7 +425,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.grey.shade200, Colors.white],
+                        colors: isDark
+                            ? [Colors.grey.shade900, Theme.of(context).scaffoldBackgroundColor]
+                            : [Colors.grey.shade200, Colors.white],
                       ),
                     ),
                     child: Hero(
@@ -420,7 +440,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                       ),
                     ),
                   ),
-                  // Out of Stock ribbon
                   if (isOutOfStock)
                     Positioned(
                       top: 20,
@@ -452,8 +471,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                     ),
                 ],
               ),
-
-              // Image thumbnails
               if (images.length > 1)
                 Container(
                   height: 80,
@@ -470,22 +487,24 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                           width: 70,
                           decoration: BoxDecoration(
                             border: Border.all(
-                              color: selectedImageIndex == index 
-                                  ? Colors.red.shade400 
-                                  : Colors.grey.shade300,
+                              color: selectedImageIndex == index
+                                  ? Theme.of(context).primaryColor
+                                  : isDark
+                                      ? Colors.grey.shade700
+                                      : Colors.grey.shade300,
                               width: 2,
                             ),
                             borderRadius: BorderRadius.circular(8),
-                            color: Colors.white,
-                            boxShadow: selectedImageIndex == index 
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.red.shade300.withOpacity(0.3),
-                                    blurRadius: 4,
-                                    spreadRadius: 1,
-                                  ),
-                                ]
-                              : null,
+                            color: Theme.of(context).cardColor,
+                            boxShadow: selectedImageIndex == index && !isDark
+                                ? [
+                                    BoxShadow(
+                                      color: Theme.of(context).primaryColor.withOpacity(0.3),
+                                      blurRadius: 4,
+                                      spreadRadius: 1,
+                                    ),
+                                  ]
+                                : null,
                           ),
                           padding: EdgeInsets.all(4),
                           child: ClipRRect(
@@ -502,27 +521,26 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                     },
                   ),
                 ),
-
-              // Product information card
               Container(
                 margin: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      spreadRadius: 1,
-                    ),
-                  ],
+                  boxShadow: isDark
+                      ? []
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            spreadRadius: 1,
+                          ),
+                        ],
                 ),
                 child: Padding(
                   padding: EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Product Name and Price
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -531,34 +549,39 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                             child: Text(
                               name,
                               style: TextStyle(
-                                fontSize: 24, 
+                                fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                                color: Theme.of(context).textTheme.titleLarge?.color,
                               ),
                             ),
                           ),
                           Container(
                             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Colors.green.shade50,
+                              color: isDark
+                                  ? Colors.green.shade900.withOpacity(0.3)
+                                  : Colors.green.shade50,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.green.shade100),
+                              border: Border.all(
+                                color: isDark
+                                    ? Colors.green.shade700
+                                    : Colors.green.shade100,
+                              ),
                             ),
                             child: Text(
                               '₺$price',
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.green.shade700,
+                                color: isDark
+                                    ? Colors.green.shade400
+                                    : Colors.green.shade700,
                               ),
                             ),
                           ),
                         ],
                       ),
-                      
                       SizedBox(height: 8),
-                      
-                      // Category
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
@@ -573,10 +596,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                           ),
                         ),
                       ),
-                      
                       SizedBox(height: 16),
-                      
-                      // Availability
                       Row(
                         children: [
                           Container(
@@ -590,9 +610,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                           ),
                           SizedBox(width: 8),
                           Text(
-                            isOutOfStock 
-                              ? "Out of Stock" 
-                              : "In Stock: $availableStock available",
+                            isOutOfStock
+                                ? "Out of Stock"
+                                : "In Stock: $availableStock available",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
@@ -601,10 +621,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                           ),
                         ],
                       ),
-                      
                       Divider(height: 32),
-                      
-                      // Quantity Control
                       if (!isOutOfStock)
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -612,9 +629,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                             Text(
                               "Quantity",
                               style: TextStyle(
-                                fontSize: 16, 
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                                color: Theme.of(context).textTheme.titleLarge?.color,
                               ),
                             ),
                             SizedBox(height: 10),
@@ -675,85 +692,80 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                                 ],
                               ),
                             ),
-                            
                             SizedBox(height: 20),
-                            
-                            // Custom Animated Add to Cart Button
                             SizedBox(
                               width: double.infinity,
                               height: 54,
                               child: isOutOfStock
-                              ? ElevatedButton(
-                                  onPressed: null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.greenAccent,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  child: Text(
-                                    "OUT OF STOCK",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                )
-                              : AnimatedBuilder(
-                                  animation: Listenable.merge([
-                                    _colorAnimationController, 
-                                    _tickAnimationController
-                                  ]),
-                                  builder: (context, child) {
-                                    return ElevatedButton(
-                                      onPressed: _isAddingToCart ? null : addToCart,
+                                  ? ElevatedButton(
+                                      onPressed: null,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: _colorAnimation.value ?? Colors.red.shade400,
+                                        backgroundColor: Colors.greenAccent,
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(10),
                                         ),
-                                        elevation: 2,
+                                        elevation: 0,
                                       ),
-                                      child: Stack(
-                                        alignment: Alignment.center,
-                                        children: [
-                                          // Text fades out during animation
-                                          Opacity(
-                                            opacity: 1.0 - _colorAnimationController.value,
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                Icon(Icons.shopping_cart, size: 20),
-                                                SizedBox(width: 8),
-                                                Text(
-                                                  "ADD TO CART",
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
+                                      child: Text(
+                                        "OUT OF STOCK",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    )
+                                  : AnimatedBuilder(
+                                      animation: Listenable.merge([
+                                        _colorAnimationController,
+                                        _tickAnimationController
+                                      ]),
+                                      builder: (context, child) {
+                                        return ElevatedButton(
+                                          onPressed: _isAddingToCart ? null : addToCart,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: _colorAnimation.value ??
+                                                Colors.red.shade400,
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            elevation: 2,
+                                          ),
+                                          child: Stack(
+                                            alignment: Alignment.center,
+                                            children: [
+                                              Opacity(
+                                                opacity: 1.0 - _colorAnimationController.value,
+                                                child: Row(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(Icons.shopping_cart, size: 20),
+                                                    SizedBox(width: 8),
+                                                    Text(
+                                                      "ADD TO CART",
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              if (_colorAnimationController.value > 0)
+                                                Transform.scale(
+                                                  scale: _tickAnimation.value,
+                                                  child: Icon(
+                                                    Icons.check,
+                                                    color: Colors.white,
+                                                    size: 30,
                                                   ),
                                                 ),
-                                              ],
-                                            ),
+                                            ],
                                           ),
-                                          
-                                          // Checkmark appears with animation
-                                          if (_colorAnimationController.value > 0)
-                                            Transform.scale(
-                                              scale: _tickAnimation.value,
-                                              child: Icon(
-                                                Icons.check,
-                                                color: Colors.white,
-                                                size: 30,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
+                                        );
+                                      },
+                                    ),
                             ),
                           ],
                         ),
@@ -761,20 +773,20 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                   ),
                 ),
               ),
-              
-              // Description Card
               Container(
                 margin: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      spreadRadius: 1,
-                    ),
-                  ],
+                  boxShadow: isDark
+                      ? []
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            spreadRadius: 1,
+                          ),
+                        ],
                 ),
                 child: Padding(
                   padding: EdgeInsets.all(20),
@@ -786,7 +798,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: Theme.of(context).textTheme.titleLarge?.color,
                         ),
                       ),
                       SizedBox(height: 12),
@@ -795,28 +807,28 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                         style: TextStyle(
                           fontSize: 15,
                           height: 1.5,
-                          color: Colors.black87,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-              
-              // Specifications Card (if available)
               if (productData!['specifications'] != null)
                 Container(
                   margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        spreadRadius: 1,
-                      ),
-                    ],
+                    boxShadow: isDark
+                        ? []
+                        : [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              spreadRadius: 1,
+                            ),
+                          ],
                   ),
                   child: Padding(
                     padding: EdgeInsets.all(20),
@@ -828,24 +840,22 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            color: Theme.of(context).textTheme.titleLarge?.color,
                           ),
                         ),
                         SizedBox(height: 12),
-                        // Add specifications details here if available
                         Text(
                           productData!['specifications'].toString(),
                           style: TextStyle(
                             fontSize: 15,
                             height: 1.5,
-                            color: Colors.black87,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                
               SizedBox(height: 30),
             ],
           ),
