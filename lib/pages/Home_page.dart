@@ -116,41 +116,51 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   // Fetch current user name from Firestore
   Future<void> _getUserProfile() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        // Try to get user profile from Firestore
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-        
-        if (userDoc.exists) {
-          if (mounted) {
-            setState(() {
-              // Get name from Firestore
-              _userName = userDoc.data()?['name'] ?? 'Guest';
-              
-              // Get profile picture URL from Firestore
-              _userProfilePicture = userDoc.data()?['profilePicture'];
-            });
-          }
-        } else if (user.displayName != null && user.displayName!.isNotEmpty) {
-          // Fallback to Firebase Auth display name
-          if (mounted) {
-            setState(() {
-              _userName = user.displayName!;
-              // Try to get photoURL from Firebase Auth
-              _userProfilePicture = user.photoURL;
-            });
-          }
-        }
-      }
-    } catch (e) {
-      print('Error fetching user profile: $e');
-    }
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    setState(() {
+      _userName = "Guest";
+      _userProfilePicture = null;
+    });
+    return;
   }
 
+  try {
+    // Get user data from Firestore
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    // Get profile image URL from Firebase Storage
+    final storageRef = FirebaseStorage.instance
+        .ref()
+        .child('profile_images/${user.uid}.jpg');
+    
+    String imageUrl;
+    try {
+      imageUrl = await storageRef.getDownloadURL();
+    } catch (e) {
+      print('Error getting profile image: $e');
+      imageUrl = ''; // Set empty if image doesn't exist
+    }
+
+    if (mounted) {
+      setState(() {
+        _userName = userDoc.data()?['name'] ?? 'User';
+        _userProfilePicture = imageUrl.isNotEmpty ? imageUrl : null;
+      });
+    }
+  } catch (e) {
+    print('Error fetching user profile: $e');
+    if (mounted) {
+      setState(() {
+        _userName = "User";
+        _userProfilePicture = null;
+      });
+    }
+  }
+}
   void _initializeAnimationControllers() {
     // Safely dispose of any existing controllers
     _animationControllers.forEach((_, controller) {
@@ -532,104 +542,67 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           // Welcome section with user name and person icon
-                          Container(
-    padding: EdgeInsets.all(16.0),
-    margin: EdgeInsets.all(10.0),
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [Colors.red.shade300, Colors.white],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+                         Container(
+  padding: EdgeInsets.all(16.0),
+  margin: EdgeInsets.all(10.0),
+  decoration: BoxDecoration(
+    gradient: LinearGradient(
+      colors: [Colors.red.shade300, Colors.white],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    borderRadius: BorderRadius.circular(12),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black12,
+        blurRadius: 5,
+        offset: Offset(0, 2),
       ),
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black12,
-          blurRadius: 5,
-          offset: Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Row(
-      children: [
-        // Replace the Icon with a CircleAvatar that shows the profile picture
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.red.shade300,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 5,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: _userProfilePicture != null
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
-                  child: Image.network(
-                    _userProfilePicture!,
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      // Fallback to default icon if image fails to load
-                      return Icon(
-                        Icons.person,
-                        size: 36,
-                        color: Colors.white,
-                      );
-                    },
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null,
-                          color: Colors.white,
-                          strokeWidth: 2.0,
-                        ),
-                      );
-                    },
-                  ),
-                )
-              : Icon(
-                  Icons.person,
-                  size: 36,
-                  color: Colors.white,
-                ),
-        ),
-        SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Welcome",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                ),
-              ),
-              Text(
-                _userName,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
+    ],
   ),
+  child: Row(
+    children: [
+      // CircleAvatar to display the profile picture
+     CircleAvatar(
+  radius: 30,
+  backgroundColor: Colors.red.shade300,
+  backgroundImage: _userProfilePicture != null 
+      ? NetworkImage(_userProfilePicture!)
+      : null,
+  child: _userProfilePicture == null
+      ? Icon(
+          Icons.person,
+          size: 36,
+          color: Colors.white,
+        )
+      : null,
+),
+      SizedBox(width: 16),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Welcome",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.black54,
+              ),
+            ),
+            Text(
+              _userName,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+),
                           _buildBannerSection(),
                           SizedBox(height: 10),
                           _buildCategoriesHeader(),
