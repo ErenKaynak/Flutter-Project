@@ -21,7 +21,6 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   bool passToggle = true;
   bool _mounted = true;
-
   String? emailError;
   String? passwordError;
 
@@ -35,19 +34,15 @@ class _LoginPageState extends State<LoginPage> {
 
   void signInWithGoogleAndNavigate() async {
     if (!mounted) return;
-
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
-
     try {
       await AuthService().signInWithGoogle();
-
       if (!_mounted) return;
       if (context.mounted) Navigator.pop(context);
-
       if (!_mounted) return;
       if (context.mounted) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -58,7 +53,6 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       if (!_mounted) return;
       if (context.mounted) Navigator.pop(context);
-
       if (!_mounted) return;
       setState(() {
         emailError = "Google sign-in failed. Please try again.";
@@ -69,45 +63,35 @@ class _LoginPageState extends State<LoginPage> {
 
   void signUserIn() async {
     if (!mounted) return;
-
     setState(() {
       emailError = null;
       passwordError = null;
     });
-
     if (!_formKey.currentState!.validate()) return;
-
     showDialog(
       context: context,
       barrierDismissible: true,
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
-
     try {
       UserCredential credential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(
             email: emailController.text.trim(),
             password: passwordController.text.trim(),
           );
-
       if (!_mounted) return;
-
       User? user = credential.user;
       if (user != null) {
         await _saveUserToFirestore(user);
-
         if (!_mounted) return;
-
         final userDoc =
             await FirebaseFirestore.instance
                 .collection('users')
                 .doc(user.uid)
                 .get();
         String role = userDoc['role'] ?? 'user';
-
         if (!_mounted) return;
         if (context.mounted) Navigator.pop(context);
-
         if (!_mounted) return;
         if (context.mounted) {
           if (role == 'admin') {
@@ -126,7 +110,6 @@ class _LoginPageState extends State<LoginPage> {
     } on FirebaseAuthException catch (e) {
       if (!_mounted) return;
       if (context.mounted) Navigator.pop(context);
-
       if (!_mounted) return;
       setState(() {
         switch (e.code) {
@@ -157,7 +140,6 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       if (!_mounted) return;
       if (context.mounted) Navigator.pop(context);
-
       if (!_mounted) return;
       setState(() {
         emailError = "An unexpected error occurred. Please try again.";
@@ -168,14 +150,11 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _saveUserToFirestore(User user) async {
     if (!_mounted) return;
-
     final userDoc = FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid);
     final docSnapshot = await userDoc.get();
-
     if (!_mounted) return;
-
     if (!docSnapshot.exists) {
       await userDoc.set({
         'uid': user.uid,
@@ -188,8 +167,20 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if device is in dark mode
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Define colors based on theme
+    final backgroundColor = isDarkMode ? Color(0xFF121212) : Colors.grey[200];
+    final textColor = isDarkMode ? Colors.white : Colors.grey[700];
+    final secondaryTextColor = isDarkMode ? Colors.grey[300] : Colors.grey[800];
+    final inputFillColor = isDarkMode ? Color(0xFF2C2C2C) : Colors.grey[300];
+    final dividerColor = isDarkMode ? Colors.grey[700] : Colors.grey[400];
+    final iconColor = Colors.red.shade700;
+    final accentColor = Colors.red.shade500;
+
     return Scaffold(
-      backgroundColor: Colors.grey[200],
+      backgroundColor: backgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Form(
@@ -200,12 +191,12 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 100),
-                  Icon(Icons.lock, size: 100, color: Colors.red.shade700),
+                  Icon(Icons.lock, size: 100, color: iconColor),
                   const SizedBox(height: 20),
                   Text(
                     'Welcome Back! Log in Here',
                     style: TextStyle(
-                      color: Colors.grey[700],
+                      color: textColor,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -214,20 +205,35 @@ class _LoginPageState extends State<LoginPage> {
                   TextFormField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
                     decoration: InputDecoration(
-                      fillColor: Colors.grey.shade300,
+                      fillColor: inputFillColor,
                       filled: true,
                       hintText: 'Email',
-                      prefixIcon: const Icon(Icons.email),
+                      hintStyle: TextStyle(
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                      prefixIcon: Icon(
+                        Icons.email,
+                        color: isDarkMode ? Colors.grey[400] : null,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.red.shade700),
+                        borderSide: BorderSide(color: iconColor),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: iconColor, width: 2),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: Colors.red.shade700,
-                          width: 2,
+                          color:
+                              isDarkMode
+                                  ? Colors.grey[700]!
+                                  : Colors.grey[300]!,
                         ),
                       ),
                     ),
@@ -236,27 +242,43 @@ class _LoginPageState extends State<LoginPage> {
                   TextFormField(
                     controller: passwordController,
                     obscureText: passToggle,
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
                     decoration: InputDecoration(
-                      fillColor: Colors.grey.shade300,
+                      fillColor: inputFillColor,
                       filled: true,
                       hintText: 'Password',
-                      prefixIcon: const Icon(Icons.lock),
+                      hintStyle: TextStyle(
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                      prefixIcon: Icon(
+                        Icons.lock,
+                        color: isDarkMode ? Colors.grey[400] : null,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
                           passToggle ? Icons.visibility : Icons.visibility_off,
+                          color: isDarkMode ? Colors.grey[400] : null,
                         ),
                         onPressed:
                             () => setState(() => passToggle = !passToggle),
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.red.shade700),
+                        borderSide: BorderSide(color: iconColor),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: iconColor, width: 2),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: Colors.red.shade700,
-                          width: 2,
+                          color:
+                              isDarkMode
+                                  ? Colors.grey[700]!
+                                  : Colors.grey[300]!,
                         ),
                       ),
                     ),
@@ -285,7 +307,7 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       Text(
                         'Not a member?',
-                        style: TextStyle(color: Colors.grey[800]),
+                        style: TextStyle(color: secondaryTextColor),
                       ),
                       const SizedBox(width: 4),
                       GestureDetector(
@@ -300,7 +322,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: Text(
                           'Register!',
                           style: TextStyle(
-                            color: Colors.red.shade500,
+                            color: accentColor,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -320,15 +342,15 @@ class _LoginPageState extends State<LoginPage> {
                     child: Text(
                       'Forgot your password?',
                       style: TextStyle(
-                        color: Colors.red.shade500,
+                        color: accentColor,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                   SizedBox(height: 10),
                   FloatingActionButton(
-                    backgroundColor: Colors.red.shade700,
-                    foregroundColor: Colors.grey[200],
+                    backgroundColor: iconColor,
+                    foregroundColor: Colors.white,
                     onPressed: signUserIn,
                     child: const Icon(Icons.arrow_forward, size: 25),
                   ),
@@ -338,14 +360,17 @@ class _LoginPageState extends State<LoginPage> {
                     child: Row(
                       children: [
                         Expanded(
-                          child: Divider(thickness: 1, color: Colors.grey[400]),
+                          child: Divider(thickness: 1, color: dividerColor),
                         ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text('Or Log in With'),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            'Or Log in With',
+                            style: TextStyle(color: secondaryTextColor),
+                          ),
                         ),
                         Expanded(
-                          child: Divider(thickness: 1, color: Colors.grey[400]),
+                          child: Divider(thickness: 1, color: dividerColor),
                         ),
                       ],
                     ),

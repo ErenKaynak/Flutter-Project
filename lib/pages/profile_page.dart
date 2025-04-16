@@ -115,7 +115,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget buildButton(String label, IconData icon, VoidCallback onTap) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: GestureDetector(
@@ -125,16 +124,10 @@ class _ProfilePageState extends State<ProfilePage> {
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(16),
-            boxShadow:
-                isDark
-                    ? []
-                    : [
-                      BoxShadow(
-                        color: Colors.grey.shade300,
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+            border: Border.all(
+              color: isDark ? Colors.grey.shade700 : Colors.transparent,
+              width: 1,
+            ),
           ),
           child: Row(
             children: [
@@ -213,6 +206,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     const SizedBox(height: 32),
+
                     buildButton('My Orders', Icons.history, () {
                       Navigator.push(
                         context,
@@ -221,12 +215,14 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       );
                     }),
+
                     buildButton('My Addresses', Icons.location_on, () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => AddressScreen()),
                       );
                     }),
+
                     if (role == 'admin')
                       buildButton(
                         'Admin Panel',
@@ -242,29 +238,27 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
 
                     const SizedBox(height: 16),
+
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       height: 60,
                       decoration: BoxDecoration(
                         color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow:
-                            isDark
-                                ? []
-                                : [
-                                  BoxShadow(
-                                    color: Colors.grey.shade300,
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
+                        border: Border.all(
+                          color:
+                              isDark
+                                  ? Colors.grey.shade700
+                                  : Colors.transparent,
+                          width: 1,
+                        ),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(
                             children: const [
-                              Icon(Icons.brightness_6, color: Colors.red,),
+                              Icon(Icons.brightness_6, color: Colors.red),
                               SizedBox(width: 12),
                               Text(
                                 "Dark Mode",
@@ -286,6 +280,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
 
                     const SizedBox(height: 24),
+
                     buildButton('Log Out', Icons.logout, () async {
                       await FirebaseAuth.instance.signOut();
                       Navigator.pushReplacement(

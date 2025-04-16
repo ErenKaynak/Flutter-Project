@@ -21,7 +21,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   final nameController = TextEditingController();
   final surnameController = TextEditingController();
-  final profileImageController = TextEditingController(); // optional
+  final profileImageController = TextEditingController();
 
   bool passToggle = true;
 
@@ -80,15 +80,14 @@ class _RegisterPageState extends State<RegisterPage> {
       });
       return;
     }
-    // Check for special character
-    if (!passwordController.text.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+
+    if (!passwordController.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'))) {
       setState(() {
         passwordError = "Password must contain at least one special character";
       });
       return;
     }
 
-    // Check for uppercase letter
     if (!passwordController.text.contains(RegExp(r'[A-Z]'))) {
       setState(() {
         passwordError = "Password must contain at least one uppercase letter";
@@ -96,7 +95,6 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Check for lowercase letter
     if (!passwordController.text.contains(RegExp(r'[a-z]'))) {
       setState(() {
         passwordError = "Password must contain at least one lowercase letter";
@@ -174,8 +172,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.grey[200],
+      backgroundColor: colorScheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Form(
@@ -191,207 +192,88 @@ class _RegisterPageState extends State<RegisterPage> {
                   Text(
                     'Welcome Sign in Here...',
                     style: TextStyle(
-                      color: Colors.grey[700],
+                      color: colorScheme.onBackground,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 25),
-
                   Row(
                     children: [
                       Expanded(
-                        child: TextFormField(
+                        child: _buildTextField(
                           controller: nameController,
-                          decoration: InputDecoration(
-                            fillColor: Colors.grey.shade300,
-                            filled: true,
-                            hintText: 'First Name',
-                            prefixIcon: const Icon(Icons.person),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Colors.red.shade700,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Colors.red.shade700,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty)
-                              return 'Enter first name';
-                            return null;
-                          },
+                          hintText: 'First Name',
+                          icon: Icons.person,
+                          validatorMsg: 'Enter first name',
+                          colorScheme: colorScheme,
+                          isDark: isDark,
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: TextFormField(
+                        child: _buildTextField(
                           controller: surnameController,
-                          decoration: InputDecoration(
-                            fillColor: Colors.grey.shade300,
-                            filled: true,
-                            hintText: 'Last Name',
-                            prefixIcon: const Icon(Icons.person),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Colors.red.shade700,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Colors.red.shade700,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty)
-                              return 'Enter last name';
-                            return null;
-                          },
+                          hintText: 'Last Name',
+                          icon: Icons.person,
+                          validatorMsg: 'Enter last name',
+                          colorScheme: colorScheme,
+                          isDark: isDark,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 10),
-
-                  // Email Input
-                  TextFormField(
+                  _buildTextField(
                     controller: emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      fillColor: Colors.grey.shade300,
-                      filled: true,
-                      hintText: 'Email',
-                      prefixIcon: const Icon(Icons.email),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.red.shade700),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.red.shade700,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Enter a email';
-                      }
-                      return null;
-                    },
+                    hintText: 'Email',
+                    icon: Icons.email,
+                    validatorMsg: 'Enter a email',
+                    colorScheme: colorScheme,
+                    isDark: isDark,
                   ),
                   const SizedBox(height: 10),
-
-                  // Password Input
-                  TextFormField(
+                  _buildPasswordField(
                     controller: passwordController,
-                    obscureText: passToggle,
-                    decoration: InputDecoration(
-                      fillColor: Colors.grey.shade300,
-                      filled: true,
-                      hintText: 'Password',
-                      prefixIcon: const Icon(Icons.lock),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          passToggle ? Icons.visibility : Icons.visibility_off,
-                        ),
-                        onPressed:
-                            () => setState(() => passToggle = !passToggle),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.red.shade700),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.red.shade700,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Enter a Password';
-                      }
-                      return null;
-                    },
+                    hintText: 'Password',
+                    toggle: passToggle,
+                    onToggle: () => setState(() => passToggle = !passToggle),
+                    validatorMsg: 'Enter a Password',
+                    colorScheme: colorScheme,
+                    isDark: isDark,
                   ),
                   const SizedBox(height: 10),
-
-                  // Confirm Password Input
-                  TextFormField(
+                  _buildPasswordField(
                     controller: confirmPasswordController,
-                    obscureText: passToggle,
-                    decoration: InputDecoration(
-                      fillColor: Colors.grey.shade300,
-                      filled: true,
-                      hintText: 'Confirm Password',
-                      prefixIcon: const Icon(Icons.lock),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          passToggle ? Icons.visibility : Icons.visibility_off,
-                        ),
-                        onPressed:
-                            () => setState(() => passToggle = !passToggle),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.red.shade700),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.red.shade700,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value != passwordController.text) {
-                        return 'Enter a password';
-                      }
-                      return null;
-                    },
+                    hintText: 'Confirm Password',
+                    toggle: passToggle,
+                    onToggle: () => setState(() => passToggle = !passToggle),
+                    validatorMsg: 'Enter a password',
+                    colorScheme: colorScheme,
+                    isDark: isDark,
+                    matchPassword: passwordController.text,
                   ),
                   const SizedBox(height: 5),
-
                   if (emailError != null || passwordError != null)
-                    Align(
-                      alignment: Alignment.center,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Text(
-                          emailError ?? passwordError ?? '',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Text(
+                        emailError ?? passwordError ?? '',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-
                   const SizedBox(height: 5),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         'You Have An Account?',
-                        style: TextStyle(color: Colors.grey[800]),
+                        style: TextStyle(color: colorScheme.onBackground),
                       ),
                       const SizedBox(width: 4),
                       GestureDetector(
@@ -414,37 +296,34 @@ class _RegisterPageState extends State<RegisterPage> {
                     ],
                   ),
                   const SizedBox(height: 20),
-
-                  // Register Button
                   FloatingActionButton(
                     backgroundColor: Colors.red.shade700,
-                    foregroundColor: Colors.grey[200],
+                    foregroundColor: colorScheme.onPrimary,
                     onPressed: signUserUp,
                     child: const Icon(Icons.arrow_forward, size: 25),
                   ),
                   const SizedBox(height: 25),
-
-                  // Divider
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Divider(thickness: 1, color: Colors.grey[400]),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          thickness: 1,
+                          color: colorScheme.onSurface.withOpacity(0.3),
                         ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text('Or Log in With'),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Text('Or Log in With'),
+                      ),
+                      Expanded(
+                        child: Divider(
+                          thickness: 1,
+                          color: colorScheme.onSurface.withOpacity(0.3),
                         ),
-                        Expanded(
-                          child: Divider(thickness: 1, color: Colors.grey[400]),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 25),
-
-                  // Social Login
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -460,6 +339,82 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hintText,
+    required IconData icon,
+    required String validatorMsg,
+    required ColorScheme colorScheme,
+    required bool isDark,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        fillColor: isDark ? Colors.grey[800] : Colors.grey[300],
+        filled: true,
+        hintText: hintText,
+        hintStyle: TextStyle(color: colorScheme.onSurface),
+        prefixIcon: Icon(icon, color: colorScheme.onSurface),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade700),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade700, width: 2),
+        ),
+      ),
+      style: TextStyle(color: colorScheme.onBackground),
+      validator: (value) {
+        if (value == null || value.isEmpty) return validatorMsg;
+        return null;
+      },
+    );
+  }
+
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    required String hintText,
+    required bool toggle,
+    required VoidCallback onToggle,
+    required String validatorMsg,
+    required ColorScheme colorScheme,
+    required bool isDark,
+    String? matchPassword,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: toggle,
+      decoration: InputDecoration(
+        fillColor: isDark ? Colors.grey[800] : Colors.grey[300],
+        filled: true,
+        hintText: hintText,
+        hintStyle: TextStyle(color: colorScheme.onSurface),
+        prefixIcon: Icon(Icons.lock, color: colorScheme.onSurface),
+        suffixIcon: IconButton(
+          icon: Icon(toggle ? Icons.visibility : Icons.visibility_off),
+          onPressed: onToggle,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade700),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade700, width: 2),
+        ),
+      ),
+      style: TextStyle(color: colorScheme.onBackground),
+      validator: (value) {
+        if (value == null || value.isEmpty) return validatorMsg;
+        if (matchPassword != null && value != matchPassword) {
+          return 'Passwords do not match';
+        }
+        return null;
+      },
     );
   }
 }

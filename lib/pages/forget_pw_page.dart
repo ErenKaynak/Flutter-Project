@@ -26,9 +26,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       showDialog(
         context: context,
         builder: (context) {
-          return (AlertDialog(
-            content: Text('Link sended successfully Check your inbox!'),
-          ));
+          return AlertDialog(
+            content: Text('Link sent successfully. Check your inbox!'),
+          );
         },
       );
     } on FirebaseAuthException catch (e) {
@@ -36,7 +36,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       showDialog(
         context: context,
         builder: (context) {
-          return (AlertDialog(content: Text(e.message.toString())));
+          return AlertDialog(content: Text(e.message.toString()));
         },
       );
     }
@@ -44,41 +44,57 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.grey[200],
-      appBar: AppBar(backgroundColor: Colors.red.shade400, elevation: 0),
+      backgroundColor: isDarkMode ? Colors.black : Colors.grey[200],
+      appBar: AppBar(
+        backgroundColor: Colors.red.shade400,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            'Enter your email and we will send you a password reset link',
-            textAlign: TextAlign.center,
-          ),
-
-          SizedBox(height: 25),
-
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 25),
+            padding: const EdgeInsets.symmetric(horizontal: 25.0),
+            child: Text(
+              'Enter your email and we will send you a password reset link',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isDarkMode ? Colors.white : Colors.black,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          const SizedBox(height: 25),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 25),
             child: TextFormField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
+              style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
               decoration: InputDecoration(
-                fillColor: Colors.grey.shade300,
                 filled: true,
+                fillColor: isDarkMode ? Colors.grey[800] : Colors.grey.shade300,
                 hintText: 'Email',
-                prefixIcon: const Icon(Icons.email),
+                hintStyle: TextStyle(
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                ),
+                prefixIcon: Icon(
+                  Icons.email,
+                  color: isDarkMode ? Colors.white : Colors.black,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
             ),
           ),
-
-          SizedBox(height: 25),
-
+          const SizedBox(height: 25),
           FloatingActionButton(
             backgroundColor: Colors.red.shade700,
-            foregroundColor: Colors.grey[200],
+            foregroundColor: Colors.white,
             child: const Icon(Icons.arrow_forward, size: 25),
             onPressed: () async {
               await passwordReset();

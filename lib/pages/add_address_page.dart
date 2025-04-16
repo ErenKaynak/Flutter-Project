@@ -53,9 +53,21 @@ class _AddAddressPageState extends State<AddAddressPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Colors.red.shade700;
+    final accentColor = Colors.red.shade300;
+
+    // Dynamic colors based on theme
+    final backgroundColor = isDarkMode ? Color(0xFF121212) : Colors.white;
+    final cardColor = isDarkMode ? Color(0xFF1E1E1E) : Colors.white;
+    final textFieldBgColor =
+        isDarkMode ? Color(0xFF2C2C2C) : Colors.grey.shade50;
+    final dividerColor =
+        isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200;
+
     return Scaffold(
       appBar: AppBar(
-        surfaceTintColor: Colors.red.shade700,
+        surfaceTintColor: primaryColor,
         title: Text('Add New Address'),
         leading: BackButton(),
         elevation: 2,
@@ -63,7 +75,10 @@ class _AddAddressPageState extends State<AddAddressPage> {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.white, Colors.red.shade50],
+            colors:
+                isDarkMode
+                    ? [Color(0xFF121212), Color(0xFF1D1D1D)]
+                    : [Colors.white, Colors.red.shade50],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -77,9 +92,14 @@ class _AddAddressPageState extends State<AddAddressPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSectionHeader('Recipient Info', Icons.person),
+                  _buildSectionHeader(
+                    'Recipient Info',
+                    Icons.person,
+                    accentColor,
+                  ),
                   SizedBox(height: 15),
                   _buildInputCard(
+                    cardColor: cardColor,
                     child: Column(
                       children: [
                         Row(
@@ -99,6 +119,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
                                     context,
                                   ).requestFocus(_lastNameFocus);
                                 },
+                                isDarkMode: isDarkMode,
+                                accentColor: accentColor,
+                                bgColor: textFieldBgColor,
                               ),
                             ),
                             SizedBox(width: 12),
@@ -118,6 +141,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
                                     context,
                                   ).requestFocus(_phoneFocus);
                                 },
+                                isDarkMode: isDarkMode,
+                                accentColor: accentColor,
+                                bgColor: textFieldBgColor,
                               ),
                             ),
                           ],
@@ -141,20 +167,37 @@ class _AddAddressPageState extends State<AddAddressPage> {
                           onFieldSubmitted: (_) {
                             FocusScope.of(context).requestFocus(_streetFocus);
                           },
+                          isDarkMode: isDarkMode,
+                          accentColor: accentColor,
+                          bgColor: textFieldBgColor,
                         ),
                       ],
                     ),
                   ),
 
                   SizedBox(height: 25),
-                  _buildSectionHeader('Address Type', Icons.location_on),
+                  _buildSectionHeader(
+                    'Address Type',
+                    Icons.location_on,
+                    accentColor,
+                  ),
                   SizedBox(height: 15),
-                  _buildAddressTypeSelector(),
+                  _buildAddressTypeSelector(
+                    isDarkMode: isDarkMode,
+                    primaryColor: primaryColor,
+                    accentColor: accentColor,
+                    cardColor: cardColor,
+                  ),
 
                   SizedBox(height: 25),
-                  _buildSectionHeader('Address Details', Icons.home),
+                  _buildSectionHeader(
+                    'Address Details',
+                    Icons.home,
+                    accentColor,
+                  ),
                   SizedBox(height: 15),
                   _buildInputCard(
+                    cardColor: cardColor,
                     child: Column(
                       children: [
                         _buildTextField(
@@ -172,6 +215,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
                               context,
                             ).requestFocus(_neighborhoodFocus);
                           },
+                          isDarkMode: isDarkMode,
+                          accentColor: accentColor,
+                          bgColor: textFieldBgColor,
                         ),
                         SizedBox(height: 16),
                         _buildTextField(
@@ -189,6 +235,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
                               context,
                             ).requestFocus(_buildingNoFocus);
                           },
+                          isDarkMode: isDarkMode,
+                          accentColor: accentColor,
+                          bgColor: textFieldBgColor,
                         ),
                         SizedBox(height: 16),
                         Row(
@@ -209,6 +258,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
                                     context,
                                   ).requestFocus(_apartmentFocus);
                                 },
+                                isDarkMode: isDarkMode,
+                                accentColor: accentColor,
+                                bgColor: textFieldBgColor,
                               ),
                             ),
                             SizedBox(width: 12),
@@ -228,6 +280,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
                                     context,
                                   ).requestFocus(_floorFocus);
                                 },
+                                isDarkMode: isDarkMode,
+                                accentColor: accentColor,
+                                bgColor: textFieldBgColor,
                               ),
                             ),
                           ],
@@ -251,6 +306,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
                                     context,
                                   ).requestFocus(_doorNoFocus);
                                 },
+                                isDarkMode: isDarkMode,
+                                accentColor: accentColor,
+                                bgColor: textFieldBgColor,
                               ),
                             ),
                             SizedBox(width: 12),
@@ -265,12 +323,19 @@ class _AddAddressPageState extends State<AddAddressPage> {
                                   }
                                   return null;
                                 },
+                                isDarkMode: isDarkMode,
+                                accentColor: accentColor,
+                                bgColor: textFieldBgColor,
                               ),
                             ),
                           ],
                         ),
                         SizedBox(height: 16),
-                        _buildCityDropdown(),
+                        _buildCityDropdown(
+                          isDarkMode: isDarkMode,
+                          accentColor: accentColor,
+                          bgColor: textFieldBgColor,
+                        ),
                         SizedBox(height: 16),
                         _buildTextField(
                           label: 'Address Label',
@@ -283,13 +348,16 @@ class _AddAddressPageState extends State<AddAddressPage> {
                             }
                             return null;
                           },
+                          isDarkMode: isDarkMode,
+                          accentColor: accentColor,
+                          bgColor: textFieldBgColor,
                         ),
                       ],
                     ),
                   ),
 
                   SizedBox(height: 30),
-                  _buildSaveButton(),
+                  _buildSaveButton(primaryColor: primaryColor),
                 ],
               ),
             ),
@@ -299,13 +367,13 @@ class _AddAddressPageState extends State<AddAddressPage> {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
+  Widget _buildSectionHeader(String title, IconData icon, Color accentColor) {
     return Row(
       children: [
         Container(
           padding: EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.red.shade300,
+            color: accentColor,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: Colors.white, size: 20),
@@ -319,11 +387,11 @@ class _AddAddressPageState extends State<AddAddressPage> {
     );
   }
 
-  Widget _buildInputCard({required Widget child}) {
+  Widget _buildInputCard({required Widget child, required Color cardColor}) {
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -345,6 +413,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
     String? Function(String?)? validator,
     FocusNode? focusNode,
     Function(String)? onFieldSubmitted,
+    required bool isDarkMode,
+    required Color accentColor,
+    required Color bgColor,
   }) {
     return TextFormField(
       focusNode: focusNode,
@@ -352,17 +423,22 @@ class _AddAddressPageState extends State<AddAddressPage> {
         labelText: label,
         hintText: hintText,
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: bgColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(
+            color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.red.shade300, width: 2),
+          borderSide: BorderSide(color: accentColor, width: 2),
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        labelStyle: TextStyle(color: isDarkMode ? Colors.grey.shade300 : null),
+        hintStyle: TextStyle(color: isDarkMode ? Colors.grey.shade500 : null),
       ),
+      style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
       keyboardType: keyboardType,
       onChanged: onChanged,
       validator: validator,
@@ -370,10 +446,25 @@ class _AddAddressPageState extends State<AddAddressPage> {
     );
   }
 
-  Widget _buildAddressTypeSelector() {
+  Widget _buildAddressTypeSelector({
+    required bool isDarkMode,
+    required Color primaryColor,
+    required Color accentColor,
+    required Color cardColor,
+  }) {
+    final selectedBgColor = isDarkMode ? Color(0xFF2C2C2C) : Colors.red.shade50;
+    final unselectedBgColor = cardColor;
+    final selectedBorderColor = accentColor;
+    final unselectedBorderColor = Colors.transparent;
+    final selectedTextColor = primaryColor;
+    final unselectedTextColor =
+        isDarkMode ? Colors.grey.shade300 : Colors.black87;
+    final dividerColor =
+        isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -392,15 +483,17 @@ class _AddAddressPageState extends State<AddAddressPage> {
                 padding: EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
                   color:
-                      addressType == 'Home' ? Colors.red.shade50 : Colors.white,
+                      addressType == 'Home'
+                          ? selectedBgColor
+                          : unselectedBgColor,
                   borderRadius: BorderRadius.horizontal(
                     left: Radius.circular(12),
                   ),
                   border: Border.all(
                     color:
                         addressType == 'Home'
-                            ? Colors.red.shade300
-                            : Colors.transparent,
+                            ? selectedBorderColor
+                            : unselectedBorderColor,
                     width: addressType == 'Home' ? 2 : 0,
                   ),
                 ),
@@ -409,9 +502,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
                     Icon(
                       Icons.home,
                       color:
-                          addressType == 'Home'
-                              ? Colors.red.shade700
-                              : Colors.grey,
+                          primaryColor, // Always red in both light and dark mode
                       size: 28,
                     ),
                     SizedBox(height: 8),
@@ -424,8 +515,8 @@ class _AddAddressPageState extends State<AddAddressPage> {
                                 : FontWeight.normal,
                         color:
                             addressType == 'Home'
-                                ? Colors.red.shade700
-                                : Colors.black87,
+                                ? selectedTextColor
+                                : unselectedTextColor,
                       ),
                     ),
                   ],
@@ -433,7 +524,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
               ),
             ),
           ),
-          Container(width: 1, height: 90, color: Colors.grey.shade200),
+          Container(width: 1, height: 90, color: dividerColor),
           Expanded(
             child: InkWell(
               onTap: () => setState(() => addressType = 'Work'),
@@ -441,15 +532,17 @@ class _AddAddressPageState extends State<AddAddressPage> {
                 padding: EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
                   color:
-                      addressType == 'Work' ? Colors.red.shade50 : Colors.white,
+                      addressType == 'Work'
+                          ? selectedBgColor
+                          : unselectedBgColor,
                   borderRadius: BorderRadius.horizontal(
                     right: Radius.circular(12),
                   ),
                   border: Border.all(
                     color:
                         addressType == 'Work'
-                            ? Colors.red.shade300
-                            : Colors.transparent,
+                            ? selectedBorderColor
+                            : unselectedBorderColor,
                     width: addressType == 'Work' ? 2 : 0,
                   ),
                 ),
@@ -458,9 +551,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
                     Icon(
                       Icons.work,
                       color:
-                          addressType == 'Work'
-                              ? Colors.red.shade700
-                              : Colors.grey,
+                          primaryColor, // Always red in both light and dark mode
                       size: 28,
                     ),
                     SizedBox(height: 8),
@@ -473,8 +564,8 @@ class _AddAddressPageState extends State<AddAddressPage> {
                                 : FontWeight.normal,
                         color:
                             addressType == 'Work'
-                                ? Colors.red.shade700
-                                : Colors.black87,
+                                ? selectedTextColor
+                                : unselectedTextColor,
                       ),
                     ),
                   ],
@@ -487,24 +578,33 @@ class _AddAddressPageState extends State<AddAddressPage> {
     );
   }
 
-  Widget _buildCityDropdown() {
+  Widget _buildCityDropdown({
+    required bool isDarkMode,
+    required Color accentColor,
+    required Color bgColor,
+  }) {
     return DropdownButtonFormField<String>(
       decoration: InputDecoration(
         labelText: 'City',
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: bgColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(
+            color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.red.shade300, width: 2),
+          borderSide: BorderSide(color: accentColor, width: 2),
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        labelStyle: TextStyle(color: isDarkMode ? Colors.grey.shade300 : null),
       ),
       value: city.isEmpty ? null : city,
       hint: Text('Select City'),
+      dropdownColor: isDarkMode ? Color(0xFF2C2C2C) : Colors.white,
+      style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
       validator: (val) {
         if (val == null || val.isEmpty) {
           return 'Please select a city';
@@ -521,13 +621,13 @@ class _AddAddressPageState extends State<AddAddressPage> {
     );
   }
 
-  Widget _buildSaveButton() {
+  Widget _buildSaveButton({required Color primaryColor}) {
     return Container(
       width: double.infinity,
       height: 55,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.red.shade400, Colors.red.shade700],
+          colors: [Colors.red.shade400, primaryColor],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -623,12 +723,15 @@ class _AddAddressPageState extends State<AddAddressPage> {
   }
 
   void _showLoadingDialog() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final dialogBgColor = isDarkMode ? Color(0xFF1E1E1E) : Colors.white;
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
-          backgroundColor: Colors.white,
+          backgroundColor: dialogBgColor,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 20),
             child: Column(
@@ -640,7 +743,10 @@ class _AddAddressPageState extends State<AddAddressPage> {
                 SizedBox(height: 16),
                 Text(
                   'Saving address...',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
                 ),
               ],
             ),
