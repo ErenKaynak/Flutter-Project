@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:engineering_project/admin-panel/admin_main.dart';
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/past_orders_page.dart';
+import 'package:engineering_project/pages/welcome_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -392,7 +393,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     buildButton('Log Out', Icons.logout, () async {
                       await FirebaseAuth.instance.signOut();
                       Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (context) => LoginPage()),
+                        MaterialPageRoute(
+                          builder: (context) => WelcomeScreen(),
+                        ),
                       );
                     }),
                   ],
