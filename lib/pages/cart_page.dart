@@ -98,11 +98,9 @@ class CartManager {
                 snapshot.docs
                     .map((doc) => CartItem.fromFirestore(doc))
                     .toList();
-            print('Cart loaded: ${_cartItems.length} items');
             _notifyListeners();
           },
           onError: (error) {
-            print('Error loading cart: $error');
             _cartItems = [];
             _notifyListeners();
           },
@@ -126,11 +124,8 @@ class CartManager {
         final newQuantity = (currentQuantity + change).clamp(1, 10);
 
         await docRef.update({'quantity': newQuantity});
-        print('Updated quantity for $id to $newQuantity');
       }
-    } catch (e) {
-      print('Error updating quantity: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> removeItem(String id) async {
@@ -144,10 +139,7 @@ class CartManager {
           .collection('userCart')
           .doc(id)
           .delete();
-      print('Removed item $id from cart');
-    } catch (e) {
-      print('Error removing item: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> clearCart() async {
@@ -168,10 +160,7 @@ class CartManager {
       }
 
       await batch.commit();
-      print('Cart cleared');
-    } catch (e) {
-      print('Error clearing cart: $e');
-    }
+    } catch (_) {}
   }
 
   double get totalPrice {
@@ -202,11 +191,13 @@ class OrderSuccessPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Order Confirmation'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
       ),
       body: Center(
@@ -216,34 +207,38 @@ class OrderSuccessPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.green.shade100,
+                color: colorScheme.secondaryContainer,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.check_circle,
-                color: Colors.green.shade700,
+                color: colorScheme.secondary,
                 size: 80,
               ),
             ),
             const SizedBox(height: 32),
-            const Text(
+            Text(
               'Payment Successful!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
             Text(
               'Amount Paid: ₺${totalAmount.toStringAsFixed(2)}',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Your order has been placed successfully.',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).hintColor,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Order ID: ${orderId.substring(0, 8)}',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).hintColor,
+              ),
             ),
             const SizedBox(height: 40),
             Row(
@@ -251,8 +246,9 @@ class OrderSuccessPage extends StatelessWidget {
               children: [
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey.shade200,
-                    foregroundColor: Colors.black,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.surfaceVariant,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 12,
@@ -263,9 +259,7 @@ class OrderSuccessPage extends StatelessWidget {
                   ),
                   onPressed: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => OrderHistoryPage(),
-                      ),
+                      MaterialPageRoute(builder: (_) => OrderHistoryPage()),
                     );
                   },
                   child: const Text(
@@ -288,8 +282,8 @@ class OrderSuccessPage extends StatelessWidget {
                   ),
                   onPressed: () {
                     Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (context) => RootScreen()),
-                      (Route<dynamic> route) => false,
+                      MaterialPageRoute(builder: (_) => RootScreen()),
+                      (route) => false,
                     );
                   },
                   child: const Text(
@@ -306,6 +300,7 @@ class OrderSuccessPage extends StatelessWidget {
   }
 }
 
+// CartPage class tanımı ve state’inin başlangıcı bir sonraki mesajda.
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
 
@@ -323,6 +318,48 @@ class _CartPageState extends State<CartPage> {
   DiscountCode? _appliedDiscount;
   bool _isApplyingDiscount = false;
   String? _discountError;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginAndLoadCart();
+  }
+
+  Future<void> _checkLoginAndLoadCart() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() {
+          _loginError = 'Please log in to view your cart';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      _cartManager.addListener(_updateCartState);
+      await _cartManager.loadCart();
+
+      setState(() => _isLoading = false);
+    } catch (e) {
+      setState(() {
+        _loginError = 'Error loading cart: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _updateCartState(List<CartItem> _) {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _cartManager.removeListener(_updateCartState);
+    _discountCodeController.dispose();
+    super.dispose();
+  }
 
   Future<void> _applyDiscountCode() async {
     final code = _discountCodeController.text.trim();
@@ -348,10 +385,8 @@ class _CartPageState extends State<CartPage> {
         return;
       }
 
-      // Check if applicable to cart items
       if (discount.applicableCategories != null &&
           discount.applicableCategories!.isNotEmpty) {
-        // Fetch categories for cart items
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) return;
 
@@ -367,7 +402,6 @@ class _CartPageState extends State<CartPage> {
           }),
         );
 
-        // Check if any item matches the applicable categories
         final hasMatchingCategory = cartItemsWithCategories.any(
           (item) => discount.isApplicableToCategory(item['category'] as String),
         );
@@ -411,136 +445,62 @@ class _CartPageState extends State<CartPage> {
     });
   }
 
-  // Calculate the discounted total price
   double get _discountedTotal {
     final originalTotal = _cartManager.totalPrice;
-
-    if (_appliedDiscount == null) {
-      return originalTotal;
-    }
-
+    if (_appliedDiscount == null) return originalTotal;
     final discountAmount = _appliedDiscount!.calculateDiscount(originalTotal);
     return originalTotal - discountAmount;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _checkLoginAndLoadCart();
-  }
-
-  Future<void> _checkLoginAndLoadCart() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        setState(() {
-          _loginError = 'Please log in to view your cart';
-          _isLoading = false;
-        });
-        return;
-      }
-
-      _cartManager.addListener(_updateCartState);
-      await _cartManager.loadCart();
-
-      setState(() {
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('Error in cart initialization: $e');
-      setState(() {
-        _loginError = 'Error loading cart: $e';
-        _isLoading = false;
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _cartManager.removeListener(_updateCartState);
-    _discountCodeController.dispose(); // Add this line
-    super.dispose();
-  }
-
-  void _updateCartState(List<CartItem> _) {
-    if (mounted) {
-      setState(() {});
-    }
   }
 
   Future<void> _processPayment() async {
     if (_cartManager.items.isEmpty) return;
 
-    setState(() {
-      _isProcessingPayment = true;
-    });
+    setState(() => _isProcessingPayment = true);
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('User not logged in');
-      }
+      if (user == null) throw Exception('User not logged in');
 
       final originalAmount = _cartManager.totalPrice;
       final discountAmount =
           _appliedDiscount?.calculateDiscount(originalAmount) ?? 0.0;
       final totalAmount = originalAmount - discountAmount;
 
-      // Create a list of order items for saving to Firestore
       final orderItems =
           _cartManager.items.map((item) => item.toMap()).toList();
-
-      // Get user info (optional)
-      DocumentSnapshot userDoc =
+      final userDoc =
           await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
               .get();
-
-      Map<String, dynamic>? userData =
+      final userData =
           userDoc.exists ? userDoc.data() as Map<String, dynamic>? : null;
-
-      String shippingAddress =
+      final shippingAddress =
           userData?['address'] ?? 'Default Shipping Address';
 
-      // Create a batch to handle multiple operations atomically
       final batch = FirebaseFirestore.instance.batch();
 
-      // Update product stock levels
       for (var item in _cartManager.items) {
         final productRef = FirebaseFirestore.instance
             .collection('products')
             .doc(item.id);
-
-        // Get current product data to check stock
         final productDoc = await productRef.get();
+
         if (productDoc.exists) {
           final productData = productDoc.data();
-          if (productData != null) {
-            final currentStock = productData['stock'] ?? 0;
-
-            // Ensure we don't go below zero stock
-            final newStock =
-                (currentStock - item.quantity) < 0
-                    ? 0
-                    : currentStock - item.quantity;
-
-            // Add stock update to batch
-            batch.update(productRef, {'stock': newStock});
-          }
+          final currentStock = productData?['stock'] ?? 0;
+          final newStock =
+              (currentStock - item.quantity) < 0
+                  ? 0
+                  : currentStock - item.quantity;
+          batch.update(productRef, {'stock': newStock});
         }
       }
 
-      // Apply discount if present
       if (_appliedDiscount != null) {
         await _discountService.applyDiscount(_appliedDiscount!.id);
       }
 
-      // Order data with discount information
       final orderData = {
         'items': orderItems,
         'originalAmount': originalAmount,
@@ -554,8 +514,6 @@ class _CartPageState extends State<CartPage> {
         'shippingAddress': shippingAddress,
       };
 
-      // Save order to both locations with consistent structure
-      // 1. Save in userOrders collection (for user's order history)
       final userOrderRef =
           FirebaseFirestore.instance
               .collection('orders')
@@ -565,7 +523,6 @@ class _CartPageState extends State<CartPage> {
 
       batch.set(userOrderRef, orderData);
 
-      // 2. Save in orders collection (for admin panel)
       batch.set(
         FirebaseFirestore.instance.collection('orders').doc(userOrderRef.id),
         {
@@ -578,10 +535,7 @@ class _CartPageState extends State<CartPage> {
         },
       );
 
-      // Execute all operations as a single atomic batch
       await batch.commit();
-
-      // Clear the cart after successful order
       await _cartManager.clearCart();
 
       if (mounted) {
@@ -596,535 +550,502 @@ class _CartPageState extends State<CartPage> {
         );
       }
     } catch (e) {
-      print('Payment error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Payment failed: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isProcessingPayment = false;
-        });
+        setState(() => _isProcessingPayment = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final cartItems = _cartManager.items;
 
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-          elevation: 0,
-          title: Text(
-            'Your Cart',
-            style: TextStyle(
-              color: Theme.of(context).textTheme.titleLarge?.color,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
+          backgroundColor: theme.appBarTheme.backgroundColor,
+          title: Text('Your Cart', style: theme.appBarTheme.titleTextStyle),
+          leading: BackButton(color: theme.iconTheme.color),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_loginError != null) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: theme.appBarTheme.backgroundColor,
+          title: Text('Your Cart', style: theme.appBarTheme.titleTextStyle),
+          leading: BackButton(color: theme.iconTheme.color),
         ),
         body: Center(
-          child: CircularProgressIndicator(
-            color: Theme.of(context).primaryColor,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.account_circle,
+                size: 80,
+                color: theme.iconTheme.color?.withOpacity(0.5),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                _loginError!,
+                style: theme.textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('GO TO LOGIN'),
+              ),
+            ],
           ),
         ),
       );
     }
 
-    final cartItems = _cartManager.items;
-
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        elevation: 0,
-        title: Text(
-          'Your Cart',
-          style: TextStyle(
-            color: Theme.of(context).textTheme.titleLarge?.color,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        backgroundColor: theme.appBarTheme.backgroundColor,
+        title: Text('Your Cart', style: theme.appBarTheme.titleTextStyle),
+        leading: BackButton(color: theme.iconTheme.color),
         actions: [
           if (cartItems.isNotEmpty)
             IconButton(
-              icon: Icon(Icons.delete_outline, color: Theme.of(context).errorColor),
+              icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
               onPressed: () {
                 showDialog(
                   context: context,
-                  builder: (context) => AlertDialog(
-                    title: Text(
-                      'Clear Cart',
-                      style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
-                    ),
-                    content: Text(
-                      'Are you sure you want to remove all items?',
-                      style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text(
-                          'CANCEL',
-                          style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                  builder:
+                      (_) => AlertDialog(
+                        title: const Text('Clear Cart'),
+                        content: const Text(
+                          'Are you sure you want to remove all items?',
                         ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('CANCEL'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              _cartManager.clearCart();
+                              Navigator.pop(context);
+                            },
+                            child: const Text(
+                              'CLEAR',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
                       ),
-                      TextButton(
-                        onPressed: () {
-                          _cartManager.clearCart();
-                          Navigator.pop(context);
-                        },
-                        child: Text(
-                          'CLEAR',
-                          style: TextStyle(color: Theme.of(context).errorColor),
-                        ),
-                      ),
-                    ],
-                  ),
                 );
               },
             ),
         ],
       ),
-      body: cartItems.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.shopping_cart_outlined,
-                    size: 80,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                  SizedBox(height: 20),
-                  Text(
-                    'Your cart is empty',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(context).textTheme.titleMedium?.color,
+      body:
+          cartItems.isEmpty
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.shopping_cart_outlined,
+                      size: 80,
+                      color: Colors.red,
                     ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Add items to your cart to checkout',
-                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
-                  ),
-                ],
-              ),
-            )
-          : Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: cartItems.length,
-                    itemBuilder: (context, index) {
-                      final item = cartItems[index];
-                      return Dismissible(
-                        key: Key(item.id),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          alignment: Alignment.centerRight,
-                          padding: EdgeInsets.only(right: 20),
-                          color: Theme.of(context).errorColor,
-                          child: Icon(
-                            Icons.delete,
-                            color: Theme.of(context).colorScheme.onError,
+                    const SizedBox(height: 20),
+                    Text(
+                      'Your cart is empty',
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Add items to your cart to checkout',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              )
+              : Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: cartItems.length,
+                      itemBuilder: (context, index) {
+                        final item = cartItems[index];
+                        return Dismissible(
+                          key: Key(item.id),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            color: Colors.red,
+                            child: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        onDismissed: (direction) {
-                          _cartManager.removeItem(item.id);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${item.name} removed from cart'),
-                              action: SnackBarAction(
-                                label: 'UNDO',
-                                onPressed: () {
-                                  // Undo logic would require re-adding the item
-                                },
+                          onDismissed: (_) => _cartManager.removeItem(item.id),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: theme.shadowColor.withOpacity(0.1),
+                                  blurRadius: 5,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.surfaceVariant,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child:
+                                          item.image.startsWith('http')
+                                              ? Image.network(
+                                                item.image,
+                                                fit: BoxFit.cover,
+                                              )
+                                              : Image.asset(
+                                                item.image,
+                                                fit: BoxFit.cover,
+                                              ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.name,
+                                          style: theme.textTheme.titleMedium,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '₺${item.price}',
+                                          style: theme.textTheme.bodyLarge
+                                              ?.copyWith(color: Colors.red),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: CircleAvatar(
+                                          radius: 14,
+                                          backgroundColor: Colors.red.shade100,
+                                          child: const Icon(
+                                            Icons.remove,
+                                            size: 16,
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                        onPressed:
+                                            () => _cartManager.updateQuantity(
+                                              item.id,
+                                              -1,
+                                            ),
+                                      ),
+                                      Text(
+                                        '${item.quantity}',
+                                        style: theme.textTheme.titleMedium,
+                                      ),
+                                      IconButton(
+                                        icon: CircleAvatar(
+                                          radius: 14,
+                                          backgroundColor: Colors.red.shade100,
+                                          child: const Icon(
+                                            Icons.add,
+                                            size: 16,
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                        onPressed:
+                                            () => _cartManager.updateQuantity(
+                                              item.id,
+                                              1,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                          );
-                        },
-                        child: Container(
-                          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).cardColor,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: isDark
-                                ? []
-                                : [
-                                    BoxShadow(
-                                      color: Colors.grey.withOpacity(0.1),
-                                      spreadRadius: 1,
-                                      blurRadius: 5,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
                           ),
-                          child: Padding(
-                            padding: EdgeInsets.all(12),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 80,
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    color: isDark ? Colors.grey[800] : Colors.grey[200],
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: (item.image.startsWith('http') ||
-                                            item.image.startsWith('https'))
-                                        ? Image.network(
-                                            item.image,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return Icon(
-                                                Icons.image,
-                                                color: Theme.of(context).iconTheme.color,
-                                              );
-                                            },
-                                          )
-                                        : Image.asset(
-                                            item.image,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return Icon(
-                                                Icons.image,
-                                                color: Theme.of(context).iconTheme.color,
-                                              );
-                                            },
-                                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  // Devamında: kupon alanı + ödeme özeti
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_appliedDiscount == null) ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _discountCodeController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Discount Code',
+                                    hintText: 'Enter code',
+                                    errorText: _discountError,
+                                    filled: true,
+                                    fillColor:
+                                        Theme.of(
+                                          context,
+                                        ).inputDecorationTheme.fillColor,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: Theme.of(context).dividerColor,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                                SizedBox(width: 16),
+                              ),
+                              const SizedBox(width: 10),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                    horizontal: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                onPressed:
+                                    _isApplyingDiscount
+                                        ? null
+                                        : _applyDiscountCode,
+                                child:
+                                    _isApplyingDiscount
+                                        ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                        : const Text('APPLY'),
+                              ),
+                            ],
+                          ),
+                        ] else ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.green.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.discount_outlined,
+                                  color: Colors.green,
+                                ),
+                                const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        item.name,
+                                        'Discount applied: ${_appliedDiscount!.code}',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                                          color: Colors.green.shade800,
                                         ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                      SizedBox(height: 4),
                                       Text(
-                                        '₺${item.price}',
+                                        '${_appliedDiscount!.discountPercentage}% off',
                                         style: TextStyle(
-                                          color: Theme.of(context).primaryColor,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
+                                          color: Theme.of(context).hintColor,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: Container(
-                                        padding: EdgeInsets.all(2),
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(context).colorScheme.secondaryContainer,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          Icons.remove,
-                                          size: 16,
-                                          color: Theme.of(context).colorScheme.secondary,
-                                        ),
-                                      ),
-                                      onPressed: () => _cartManager.updateQuantity(item.id, -1),
-                                    ),
-                                    Text(
-                                      '${item.quantity}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: Container(
-                                        padding: EdgeInsets.all(2),
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(context).colorScheme.secondaryContainer,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          Icons.add,
-                                          size: 16,
-                                          color: Theme.of(context).colorScheme.secondary,
-                                        ),
-                                      ),
-                                      onPressed: () => _cartManager.updateQuantity(item.id, 1),
-                                    ),
-                                  ],
+                                IconButton(
+                                  onPressed: _removeDiscount,
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.grey,
+                                    size: 20,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        ],
+                      ],
+                    ),
                   ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.grey[900] : Colors.grey[50],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_appliedDiscount == null) ...[
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _discountCodeController,
-                                decoration: InputDecoration(
-                                  labelText: 'Discount Code',
-                                  hintText: 'Enter code',
-                                  errorText: _discountError,
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 12,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
-                                      color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                                    ),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
-                                      color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                                    ),
-                                  ),
-                                  labelStyle: TextStyle(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color,
-                                  ),
-                                ),
-                                style: TextStyle(
-                                  color: Theme.of(context).textTheme.bodyLarge?.color,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 10),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).primaryColor,
-                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                                padding: EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              onPressed: _isApplyingDiscount ? null : _applyDiscountCode,
-                              child: _isApplyingDiscount
-                                  ? SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        color: Theme.of(context).colorScheme.onPrimary,
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : Text('APPLY'),
-                            ),
-                          ],
+
+                  // Ödeme özeti ve buton
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(context).shadowColor.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, -2),
                         ),
-                      ] else ...[
-                        Container(
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green.shade200),
-                          ),
-                          child: Row(
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        if (_appliedDiscount != null) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Icon(
-                                Icons.discount_outlined,
-                                color: Colors.green,
+                              const Text(
+                                'Subtotal',
+                                style: TextStyle(fontSize: 14),
                               ),
-                              SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Discount applied: ${_appliedDiscount!.code}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${_appliedDiscount!.discountPercentage}% off',
-                                      style: TextStyle(
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: _removeDiscount,
-                                icon: Icon(
-                                  Icons.close,
-                                  color: Colors.grey,
-                                  size: 20,
+                              Text(
+                                '₺${_cartManager.totalPrice.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Theme.of(context).hintColor,
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    boxShadow: isDark
-                        ? []
-                        : [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.1),
-                              spreadRadius: 1,
-                              blurRadius: 10,
-                              offset: Offset(0, -2),
-                            ),
-                          ],
-                  ),
-                  child: Column(
-                    children: [
-                      if (_appliedDiscount != null) ...[
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Subtotal',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).textTheme.bodyMedium?.color,
-                              ),
-                            ),
-                            Text(
-                              '₺${_cartManager.totalPrice.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).textTheme.bodyMedium?.color,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Discount (${_appliedDiscount!.discountPercentage}%)',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.green.shade700,
-                              ),
-                            ),
-                            Text(
-                              '-₺${_appliedDiscount!.calculateDiscount(_cartManager.totalPrice).toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.green.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Divider(height: 20),
-                      ],
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Total',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).textTheme.titleLarge?.color,
-                            ),
-                          ),
-                          Text(
-                            '₺${_discountedTotal.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).primaryColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
-                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: cartItems.isEmpty || _isProcessingPayment ? null : _processPayment,
-                          child: _isProcessingPayment
-                              ? SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    color: Theme.of(context).colorScheme.onPrimary,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(
-                                  'CHECKOUT',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Discount (${_appliedDiscount!.discountPercentage}%)',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.green.shade700,
                                 ),
+                              ),
+                              Text(
+                                '-₺${_appliedDiscount!.calculateDiscount(_cartManager.totalPrice).toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.green.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 20),
+                        ],
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Total',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '₺${_discountedTotal.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed:
+                                cartItems.isEmpty || _isProcessingPayment
+                                    ? null
+                                    : _processPayment,
+                            child:
+                                _isProcessingPayment
+                                    ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                    : const Text(
+                                      'CHECKOUT',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
     );
   }
-}
-
-extension on ThemeData {
-  get errorColor => null;
 }

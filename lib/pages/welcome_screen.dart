@@ -6,50 +6,42 @@ import 'package:lottie/lottie.dart';
 class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: isDark
-                  ? [Colors.grey.shade900, Colors.black]
-                  : [Colors.red.shade50, Colors.white],
-            ),
+            gradient:
+                isDarkMode
+                    ? null
+                    : LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.red.shade50, Colors.white],
+                    ),
+            color: isDarkMode ? Colors.black : null,
           ),
           child: Column(
             children: [
               Expanded(
                 flex: 5,
                 child: Container(
-                  padding: EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Logo container with updated styling
+                      // Logo or animation at the top
                       Container(
                         height: 180,
                         width: 180,
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.grey.shade800 : Colors.white,
+                          color: isDarkMode ? Colors.grey[900] : Colors.white,
                           shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: isDark
-                                ? [Colors.red.shade900, Colors.grey.shade800]
-                                : [Colors.red.shade300, Colors.white],
-                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: isDark
-                                  ? Colors.black26
-                                  : Colors.red.shade100,
+                              color: Colors.red.shade100,
                               blurRadius: 15,
                               spreadRadius: 5,
                             ),
@@ -58,62 +50,56 @@ class WelcomeScreen extends StatelessWidget {
                         child: Icon(
                           Icons.computer,
                           size: 80,
-                          color: isDark ? Colors.white : Colors.red.shade400,
+                          color: Colors.red.shade400,
                         ),
                       ),
-                      SizedBox(height: 40),
-                      // Welcome text with theme-aware colors
+                      const SizedBox(height: 40),
                       Text(
                         "Welcome to PARADISE",
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? Colors.white
-                              : Colors.red.shade700,
+                          color: Colors.red.shade700,
                         ),
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       Text(
                         "Your one-stop shop for PC components and accessories",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 16,
-                          color: isDark
-                              ? Colors.grey.shade300
-                              : Colors.black54,
+                          color: isDarkMode ? Colors.grey[300] : Colors.black54,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-              // Buttons section with updated styling
               Expanded(
                 flex: 3,
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 20,
+                  ),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.grey.shade900 : Colors.white,
-                    borderRadius: BorderRadius.only(
+                    color: isDarkMode ? Colors.grey[900] : Colors.white,
+                    borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: isDark
-                            ? Colors.black26
-                            : Colors.grey.withOpacity(0.2),
+                        color: Colors.grey.withOpacity(0.2),
                         spreadRadius: 5,
                         blurRadius: 10,
-                        offset: Offset(0, -3),
+                        offset: const Offset(0, -3),
                       ),
                     ],
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Login button
                       ElevatedButton(
                         onPressed: () {
                           Navigator.push(
@@ -124,15 +110,15 @@ class WelcomeScreen extends StatelessWidget {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
+                          backgroundColor: Colors.red.shade400,
                           foregroundColor: Colors.white,
-                          minimumSize: Size.fromHeight(55),
+                          minimumSize: const Size.fromHeight(55),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          elevation: isDark ? 1 : 2,
+                          elevation: 2,
                         ),
-                        child: Text(
+                        child: const Text(
                           "Log In",
                           style: TextStyle(
                             fontSize: 18,
@@ -140,8 +126,7 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      SizedBox(height: 16),
-                      // Register button
+                      const SizedBox(height: 16),
                       OutlinedButton(
                         onPressed: () {
                           Navigator.push(
@@ -153,16 +138,16 @@ class WelcomeScreen extends StatelessWidget {
                         },
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(
-                            color: Theme.of(context).primaryColor,
+                            color: Colors.red.shade400,
                             width: 2,
                           ),
-                          foregroundColor: Theme.of(context).primaryColor,
-                          minimumSize: Size.fromHeight(55),
+                          foregroundColor: Colors.red.shade400,
+                          minimumSize: const Size.fromHeight(55),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: Text(
+                        child: const Text(
                           "Register",
                           style: TextStyle(
                             fontSize: 18,
@@ -170,22 +155,8 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      SizedBox(height: 20),
-                      // Continue as guest text
-                      TextButton(
-                        onPressed: () {
-                          // Handle guest login
-                        },
-                        child: Text(
-                          "Continue as Guest",
-                          style: TextStyle(
-                            color: isDark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade700,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
+                      const SizedBox(height: 20),
+                      // Continue as guest option (optional)
                     ],
                   ),
                 ),
