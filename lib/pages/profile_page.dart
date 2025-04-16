@@ -1,15 +1,16 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:engineering_project/admin-panel/admin_main.dart';
-import 'package:engineering_project/pages/login_page.dart';
-import 'package:engineering_project/pages/past_orders_page.dart';
-import 'package:engineering_project/pages/welcome_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:engineering_project/assets/components/auth_service.dart';
-import 'package:engineering_project/pages/address_screen.dart'; // ✅ ADRES EKRANI IMPORT
+import 'package:provider/provider.dart';
+
+import 'theme_notifier.dart';
+import 'address_screen.dart';
+import 'past_orders_page.dart';
+import 'welcome_screen.dart';
+import '../admin-panel/admin_main.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -25,6 +26,7 @@ class _ProfilePageState extends State<ProfilePage> {
   String? role;
   bool isLoading = true;
   bool isUploading = false;
+
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -37,101 +39,55 @@ class _ProfilePageState extends State<ProfilePage> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    try {
-      final doc =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      final data = doc.data();
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final data = doc.data();
 
-      if (data != null) {
-        setState(() {
-          name = data['name'] ?? '';
-          surname = data['surname'] ?? '';
-          imageUrl = data['profileImageUrl'] ?? '';
-          role = data['role'] ?? '';
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      print('Error fetching profile: $e');
+    if (data != null) {
       setState(() {
+        name = data['name'] ?? '';
+        surname = data['surname'] ?? '';
+        imageUrl = data['profileImageUrl'] ?? '';
+        role = data['role'] ?? '';
         isLoading = false;
       });
+    } else {
+      setState(() => isLoading = false);
     }
   }
 
   Future<void> _uploadImage(ImageSource source) async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
-      );
+    final XFile? pickedFile = await _picker.pickImage(source: source);
+    if (pickedFile == null) return;
 
-      if (pickedFile == null) return;
+    setState(() => isUploading = true);
 
-      setState(() {
-        isUploading = true;
-      });
+    final File imageFile = File(pickedFile.path);
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
 
-      final File imageFile = File(pickedFile.path);
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+    final ref = FirebaseStorage.instance.ref().child('profile_images/$uid.jpg');
+    await ref.putFile(imageFile);
+    final downloadUrl = await ref.getDownloadURL();
 
-      if (uid == null) {
-        setState(() {
-          isUploading = false;
-        });
-        return;
-      }
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'profileImageUrl': downloadUrl,
+    });
 
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('profile_images')
-          .child('$uid.jpg');
-
-      final uploadTask = storageRef.putFile(
-        imageFile,
-        SettableMetadata(contentType: 'image/jpeg'),
-      );
-
-      final snapshot = await uploadTask;
-      final downloadUrl = await snapshot.ref.getDownloadURL();
-
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
-        'profileImageUrl': downloadUrl,
-      });
-
-      setState(() {
-        imageUrl = downloadUrl;
-        isUploading = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile picture updated successfully')),
-      );
-    } catch (e) {
-      setState(() {
-        isUploading = false;
-      });
-      print('Error uploading image: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update profile picture: $e')),
-      );
-    }
+    setState(() {
+      imageUrl = downloadUrl;
+      isUploading = false;
+    });
   }
 
-  Future<void> _changeProfilePicture() async {
+  void _changeProfilePicture() {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder:
-          (context) => SafeArea(
+          (_) => SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -151,81 +107,34 @@ class _ProfilePageState extends State<ProfilePage> {
                     _uploadImage(ImageSource.gallery);
                   },
                 ),
-                if (imageUrl != null && imageUrl!.isNotEmpty)
-                  ListTile(
-                    leading: const Icon(Icons.delete, color: Colors.red),
-                    title: const Text(
-                      'Remove photo',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    onTap: () async {
-                      Navigator.pop(context);
-                      final uid = FirebaseAuth.instance.currentUser?.uid;
-                      if (uid == null) return;
-
-                      setState(() {
-                        isUploading = true;
-                      });
-
-                      try {
-                        await FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(uid)
-                            .update({'profileImageUrl': ''});
-
-                        try {
-                          await FirebaseStorage.instance
-                              .ref()
-                              .child('profile_images')
-                              .child('$uid.jpg')
-                              .delete();
-                        } catch (e) {
-                          print('Error deleting image from storage: $e');
-                        }
-
-                        setState(() {
-                          imageUrl = '';
-                          isUploading = false;
-                        });
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Profile picture removed'),
-                          ),
-                        );
-                      } catch (e) {
-                        setState(() {
-                          isUploading = false;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to remove photo: $e')),
-                        );
-                      }
-                    },
-                  ),
               ],
             ),
           ),
     );
   }
 
-  Widget buildButton(String label, IconData icon, VoidCallback onPressed) {
+  Widget buildButton(String label, IconData icon, VoidCallback onTap) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: GestureDetector(
-        onTap: onPressed,
+        onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.grey[100],
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.shade300,
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            boxShadow:
+                isDark
+                    ? []
+                    : [
+                      BoxShadow(
+                        color: Colors.grey.shade300,
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
           ),
           child: Row(
             children: [
@@ -233,10 +142,9 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(width: 16),
               Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -247,21 +155,22 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.grey[200],
       appBar: AppBar(
-        backgroundColor: Colors.grey[200],
-        elevation: 0,
+        title: const Text('Profile'),
         centerTitle: true,
-        title: const Text(
-          'Profile',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-        ),
+        backgroundColor: isDark ? Colors.black : Colors.red.shade700,
+        foregroundColor: Colors.white,
       ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body:
           isLoading
               ? const Center(child: CircularProgressIndicator())
-              : Padding(
+              : SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -271,21 +180,16 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: Stack(
                         alignment: Alignment.bottomRight,
                         children: [
-                          isUploading
-                              ? const CircleAvatar(
-                                radius: 50,
-                                child: CircularProgressIndicator(),
-                              )
-                              : CircleAvatar(
-                                radius: 50,
-                                backgroundImage:
-                                    imageUrl != null && imageUrl!.isNotEmpty
-                                        ? NetworkImage(imageUrl!)
-                                        : const AssetImage(
-                                              'lib/assets/Images/default_avatar.png',
-                                            )
-                                            as ImageProvider,
-                              ),
+                          CircleAvatar(
+                            radius: 50,
+                            backgroundImage:
+                                imageUrl != null && imageUrl!.isNotEmpty
+                                    ? NetworkImage(imageUrl!)
+                                    : const AssetImage(
+                                          'lib/assets/Images/default_avatar.png',
+                                        )
+                                        as ImageProvider,
+                          ),
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.red.shade700,
@@ -302,100 +206,91 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Center(
-                      child: Text(
-                        '$name $surname',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    Text(
+                      '$name $surname',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 32),
-                    buildButton(
-                      'Past Orders',
-                      Icons.history,
-                      () => Navigator.push(
+                    buildButton('My Orders', Icons.history, () {
+                      Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => OrderHistoryPage(),
+                          builder: (_) => const OrderHistoryPage(),
                         ),
-                      ),
-                    ),
-                    buildButton(
-                      'My Addresses',
-                      Icons.location_on,
-                      () => Navigator.push(
+                      );
+                    }),
+                    buildButton('My Addresses', Icons.location_on, () {
+                      Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => AddressScreen(),
-                        ),
-                      ),
-                    ),
+                        MaterialPageRoute(builder: (_) => AddressScreen()),
+                      );
+                    }),
                     if (role == 'admin')
                       buildButton(
                         'Admin Panel',
                         Icons.admin_panel_settings,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AdminPage(),
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 1),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {});
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AdminPage(),
+                            ),
+                          );
                         },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.shade300,
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.brightness_6,
-                                    color: Colors.red.shade700,
-                                    size: 28,
-                                  ),
-                                  const SizedBox(width: 16),
-                                  const Text(
-                                    "Karanlık Tema",
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                      ),
+
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow:
+                            isDark
+                                ? []
+                                : [
+                                  BoxShadow(
+                                    color: Colors.grey.shade300,
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
                                   ),
                                 ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(Icons.brightness_6),
+                              SizedBox(width: 12),
+                              Text(
+                                "Dark Mode",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                              Switch(value: false, onChanged: (value) {}),
                             ],
                           ),
-                        ),
+                          Switch(
+                            value: isDarkMode,
+                            onChanged: (_) {
+                              themeNotifier.toggleTheme();
+                            },
+                          ),
+                        ],
                       ),
                     ),
+
+                    const SizedBox(height: 24),
                     buildButton('Log Out', Icons.logout, () async {
                       await FirebaseAuth.instance.signOut();
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (context) => WelcomeScreen(),
-                        ),
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => WelcomeScreen()),
                       );
                     }),
                   ],

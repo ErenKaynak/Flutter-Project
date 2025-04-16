@@ -95,7 +95,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
                                   return null;
                                 },
                                 onFieldSubmitted: (_) {
-                                  FocusScope.of(context).requestFocus(_lastNameFocus);
+                                  FocusScope.of(
+                                    context,
+                                  ).requestFocus(_lastNameFocus);
                                 },
                               ),
                             ),
@@ -112,7 +114,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
                                   return null;
                                 },
                                 onFieldSubmitted: (_) {
-                                  FocusScope.of(context).requestFocus(_phoneFocus);
+                                  FocusScope.of(
+                                    context,
+                                  ).requestFocus(_phoneFocus);
                                 },
                               ),
                             ),
@@ -141,12 +145,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
                       ],
                     ),
                   ),
-                  
+
                   SizedBox(height: 25),
                   _buildSectionHeader('Address Type', Icons.location_on),
                   SizedBox(height: 15),
                   _buildAddressTypeSelector(),
-                  
+
                   SizedBox(height: 25),
                   _buildSectionHeader('Address Details', Icons.home),
                   SizedBox(height: 15),
@@ -164,7 +168,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
                             return null;
                           },
                           onFieldSubmitted: (_) {
-                            FocusScope.of(context).requestFocus(_neighborhoodFocus);
+                            FocusScope.of(
+                              context,
+                            ).requestFocus(_neighborhoodFocus);
                           },
                         ),
                         SizedBox(height: 16),
@@ -179,7 +185,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
                             return null;
                           },
                           onFieldSubmitted: (_) {
-                            FocusScope.of(context).requestFocus(_buildingNoFocus);
+                            FocusScope.of(
+                              context,
+                            ).requestFocus(_buildingNoFocus);
                           },
                         ),
                         SizedBox(height: 16),
@@ -197,7 +205,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
                                   return null;
                                 },
                                 onFieldSubmitted: (_) {
-                                  FocusScope.of(context).requestFocus(_apartmentFocus);
+                                  FocusScope.of(
+                                    context,
+                                  ).requestFocus(_apartmentFocus);
                                 },
                               ),
                             ),
@@ -214,7 +224,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
                                   return null;
                                 },
                                 onFieldSubmitted: (_) {
-                                  FocusScope.of(context).requestFocus(_floorFocus);
+                                  FocusScope.of(
+                                    context,
+                                  ).requestFocus(_floorFocus);
                                 },
                               ),
                             ),
@@ -235,7 +247,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
                                   return null;
                                 },
                                 onFieldSubmitted: (_) {
-                                  FocusScope.of(context).requestFocus(_doorNoFocus);
+                                  FocusScope.of(
+                                    context,
+                                  ).requestFocus(_doorNoFocus);
                                 },
                               ),
                             ),
@@ -273,7 +287,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
                       ],
                     ),
                   ),
-                  
+
                   SizedBox(height: 30),
                   _buildSaveButton(),
                 ],
@@ -294,19 +308,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
             color: Colors.red.shade300,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 20,
-          ),
+          child: Icon(icon, color: Colors.white, size: 20),
         ),
         SizedBox(width: 12),
         Text(
           title,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -384,10 +391,16 @@ class _AddAddressPageState extends State<AddAddressPage> {
               child: Container(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  color: addressType == 'Home' ? Colors.red.shade50 : Colors.white,
-                  borderRadius: BorderRadius.horizontal(left: Radius.circular(12)),
+                  color:
+                      addressType == 'Home' ? Colors.red.shade50 : Colors.white,
+                  borderRadius: BorderRadius.horizontal(
+                    left: Radius.circular(12),
+                  ),
                   border: Border.all(
-                    color: addressType == 'Home' ? Colors.red.shade300 : Colors.transparent,
+                    color:
+                        addressType == 'Home'
+                            ? Colors.red.shade300
+                            : Colors.transparent,
                     width: addressType == 'Home' ? 2 : 0,
                   ),
                 ),
@@ -395,15 +408,24 @@ class _AddAddressPageState extends State<AddAddressPage> {
                   children: [
                     Icon(
                       Icons.home,
-                      color: addressType == 'Home' ? Colors.red.shade700 : Colors.grey,
+                      color:
+                          addressType == 'Home'
+                              ? Colors.red.shade700
+                              : Colors.grey,
                       size: 28,
                     ),
                     SizedBox(height: 8),
                     Text(
                       'Home',
                       style: TextStyle(
-                        fontWeight: addressType == 'Home' ? FontWeight.bold : FontWeight.normal,
-                        color: addressType == 'Home' ? Colors.red.shade700 : Colors.black87,
+                        fontWeight:
+                            addressType == 'Home'
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                        color:
+                            addressType == 'Home'
+                                ? Colors.red.shade700
+                                : Colors.black87,
                       ),
                     ),
                   ],
@@ -411,21 +433,23 @@ class _AddAddressPageState extends State<AddAddressPage> {
               ),
             ),
           ),
-          Container(
-            width: 1,
-            height: 90,
-            color: Colors.grey.shade200,
-          ),
+          Container(width: 1, height: 90, color: Colors.grey.shade200),
           Expanded(
             child: InkWell(
               onTap: () => setState(() => addressType = 'Work'),
               child: Container(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  color: addressType == 'Work' ? Colors.red.shade50 : Colors.white,
-                  borderRadius: BorderRadius.horizontal(right: Radius.circular(12)),
+                  color:
+                      addressType == 'Work' ? Colors.red.shade50 : Colors.white,
+                  borderRadius: BorderRadius.horizontal(
+                    right: Radius.circular(12),
+                  ),
                   border: Border.all(
-                    color: addressType == 'Work' ? Colors.red.shade300 : Colors.transparent,
+                    color:
+                        addressType == 'Work'
+                            ? Colors.red.shade300
+                            : Colors.transparent,
                     width: addressType == 'Work' ? 2 : 0,
                   ),
                 ),
@@ -433,15 +457,24 @@ class _AddAddressPageState extends State<AddAddressPage> {
                   children: [
                     Icon(
                       Icons.work,
-                      color: addressType == 'Work' ? Colors.red.shade700 : Colors.grey,
+                      color:
+                          addressType == 'Work'
+                              ? Colors.red.shade700
+                              : Colors.grey,
                       size: 28,
                     ),
                     SizedBox(height: 8),
                     Text(
                       'Work',
                       style: TextStyle(
-                        fontWeight: addressType == 'Work' ? FontWeight.bold : FontWeight.normal,
-                        color: addressType == 'Work' ? Colors.red.shade700 : Colors.black87,
+                        fontWeight:
+                            addressType == 'Work'
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                        color:
+                            addressType == 'Work'
+                                ? Colors.red.shade700
+                                : Colors.black87,
                       ),
                     ),
                   ],
@@ -478,12 +511,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
         }
         return null;
       },
-      items: ['Istanbul', 'Ankara', 'Izmir', 'Antalya', 'Bursa'].map((String city) {
-        return DropdownMenuItem<String>(
-          value: city,
-          child: Text(city),
-        );
-      }).toList(),
+      items:
+          ['Istanbul', 'Ankara', 'Izmir', 'Antalya', 'Bursa'].map((
+            String city,
+          ) {
+            return DropdownMenuItem<String>(value: city, child: Text(city));
+          }).toList(),
       onChanged: (val) => setState(() => city = val!),
     );
   }
@@ -584,7 +617,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
         duration: Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
-      
+
       _showErrorSnackBar('Please fill all required fields');
     }
   }

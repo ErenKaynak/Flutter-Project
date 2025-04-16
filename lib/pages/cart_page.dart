@@ -95,7 +95,9 @@ class CartManager {
         .listen(
           (snapshot) {
             _cartItems =
-                snapshot.docs.map((doc) => CartItem.fromFirestore(doc)).toList();
+                snapshot.docs
+                    .map((doc) => CartItem.fromFirestore(doc))
+                    .toList();
             print('Cart loaded: ${_cartItems.length} items');
             _notifyListeners();
           },
@@ -338,7 +340,7 @@ class _CartPageState extends State<CartPage> {
 
     try {
       final discount = await _discountService.validateCode(code);
-      
+
       if (discount == null) {
         setState(() {
           _discountError = 'Invalid or expired discount code';
@@ -347,30 +349,33 @@ class _CartPageState extends State<CartPage> {
       }
 
       // Check if applicable to cart items
-      if (discount.applicableCategories != null && discount.applicableCategories!.isNotEmpty) {
+      if (discount.applicableCategories != null &&
+          discount.applicableCategories!.isNotEmpty) {
         // Fetch categories for cart items
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) return;
-        
+
         final cartItemsWithCategories = await Future.wait(
           _cartManager.items.map((item) async {
-            final productDoc = await FirebaseFirestore.instance
-                .collection('products')
-                .doc(item.id)
-                .get();
+            final productDoc =
+                await FirebaseFirestore.instance
+                    .collection('products')
+                    .doc(item.id)
+                    .get();
             final category = productDoc.data()?['category'] ?? '';
             return {'item': item, 'category': category};
-          })
+          }),
         );
-        
+
         // Check if any item matches the applicable categories
         final hasMatchingCategory = cartItemsWithCategories.any(
-          (item) => discount.isApplicableToCategory(item['category'] as String)
+          (item) => discount.isApplicableToCategory(item['category'] as String),
         );
-        
+
         if (!hasMatchingCategory) {
           setState(() {
-            _discountError = 'This code is not applicable to items in your cart';
+            _discountError =
+                'This code is not applicable to items in your cart';
           });
           return;
         }
@@ -379,9 +384,13 @@ class _CartPageState extends State<CartPage> {
       setState(() {
         _appliedDiscount = discount;
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Discount code applied: ${discount.discountPercentage}% off')),
+        SnackBar(
+          content: Text(
+            'Discount code applied: ${discount.discountPercentage}% off',
+          ),
+        ),
       );
     } catch (e) {
       setState(() {
@@ -394,7 +403,7 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
-   void _removeDiscount() {
+  void _removeDiscount() {
     setState(() {
       _appliedDiscount = null;
       _discountCodeController.clear();
@@ -405,11 +414,11 @@ class _CartPageState extends State<CartPage> {
   // Calculate the discounted total price
   double get _discountedTotal {
     final originalTotal = _cartManager.totalPrice;
-    
+
     if (_appliedDiscount == null) {
       return originalTotal;
     }
-    
+
     final discountAmount = _appliedDiscount!.calculateDiscount(originalTotal);
     return originalTotal - discountAmount;
   }
@@ -463,7 +472,7 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
-   Future<void> _processPayment() async {
+  Future<void> _processPayment() async {
     if (_cartManager.items.isEmpty) return;
 
     setState(() {
@@ -477,41 +486,49 @@ class _CartPageState extends State<CartPage> {
       }
 
       final originalAmount = _cartManager.totalPrice;
-      final discountAmount = _appliedDiscount?.calculateDiscount(originalAmount) ?? 0.0;
+      final discountAmount =
+          _appliedDiscount?.calculateDiscount(originalAmount) ?? 0.0;
       final totalAmount = originalAmount - discountAmount;
-      
+
       // Create a list of order items for saving to Firestore
-      final orderItems = _cartManager.items.map((item) => item.toMap()).toList();
+      final orderItems =
+          _cartManager.items.map((item) => item.toMap()).toList();
 
       // Get user info (optional)
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-          
-      Map<String, dynamic>? userData = userDoc.exists 
-          ? userDoc.data() as Map<String, dynamic>? 
-          : null;
+      DocumentSnapshot userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
 
-      String shippingAddress = userData?['address'] ?? 'Default Shipping Address';
+      Map<String, dynamic>? userData =
+          userDoc.exists ? userDoc.data() as Map<String, dynamic>? : null;
+
+      String shippingAddress =
+          userData?['address'] ?? 'Default Shipping Address';
 
       // Create a batch to handle multiple operations atomically
       final batch = FirebaseFirestore.instance.batch();
 
       // Update product stock levels
       for (var item in _cartManager.items) {
-        final productRef = FirebaseFirestore.instance.collection('products').doc(item.id);
-        
+        final productRef = FirebaseFirestore.instance
+            .collection('products')
+            .doc(item.id);
+
         // Get current product data to check stock
         final productDoc = await productRef.get();
         if (productDoc.exists) {
           final productData = productDoc.data();
           if (productData != null) {
             final currentStock = productData['stock'] ?? 0;
-            
+
             // Ensure we don't go below zero stock
-            final newStock = (currentStock - item.quantity) < 0 ? 0 : currentStock - item.quantity;
-            
+            final newStock =
+                (currentStock - item.quantity) < 0
+                    ? 0
+                    : currentStock - item.quantity;
+
             // Add stock update to batch
             batch.update(productRef, {'stock': newStock});
           }
@@ -539,23 +556,27 @@ class _CartPageState extends State<CartPage> {
 
       // Save order to both locations with consistent structure
       // 1. Save in userOrders collection (for user's order history)
-      final userOrderRef = FirebaseFirestore.instance
-          .collection('orders')
-          .doc(user.uid)
-          .collection('userOrders')
-          .doc();
-          
+      final userOrderRef =
+          FirebaseFirestore.instance
+              .collection('orders')
+              .doc(user.uid)
+              .collection('userOrders')
+              .doc();
+
       batch.set(userOrderRef, orderData);
 
       // 2. Save in orders collection (for admin panel)
-      batch.set(FirebaseFirestore.instance.collection('orders').doc(userOrderRef.id), {
-        'userId': user.uid,
-        'userEmail': user.email,
-        'userName': userData?['name'] ?? user.displayName ?? 'Anonymous User',
-        ...orderData,
-        'timestamp': FieldValue.serverTimestamp(),
-        'trackingNumber': '',
-      });
+      batch.set(
+        FirebaseFirestore.instance.collection('orders').doc(userOrderRef.id),
+        {
+          'userId': user.uid,
+          'userEmail': user.email,
+          'userName': userData?['name'] ?? user.displayName ?? 'Anonymous User',
+          ...orderData,
+          'timestamp': FieldValue.serverTimestamp(),
+          'trackingNumber': '',
+        },
+      );
 
       // Execute all operations as a single atomic batch
       await batch.commit();
@@ -566,10 +587,11 @@ class _CartPageState extends State<CartPage> {
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => OrderSuccessPage(
-              totalAmount: totalAmount,
-              orderId: userOrderRef.id,
-            ),
+            builder:
+                (_) => OrderSuccessPage(
+                  totalAmount: totalAmount,
+                  orderId: userOrderRef.id,
+                ),
           ),
         );
       }
@@ -593,547 +615,569 @@ class _CartPageState extends State<CartPage> {
   }
 
   @override
-Widget build(BuildContext context) {
-  if (_isLoading) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Your Cart',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: const Text(
+            'Your Cart',
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: const Center(child: CircularProgressIndicator()),
-    );
-  }
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
-  if (_loginError != null) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Your Cart',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+    if (_loginError != null) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: const Text(
+            'Your Cart',
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.account_circle, size: 80, color: Colors.grey),
-            const SizedBox(height: 20),
-            Text(
-              _loginError!,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.account_circle, size: 80, color: Colors.grey),
+              const SizedBox(height: 20),
+              Text(
+                _loginError!,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('GO TO LOGIN'),
               ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('GO TO LOGIN'),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
-  final cartItems = _cartManager.items;
+    final cartItems = _cartManager.items;
 
-  return Scaffold(
-    backgroundColor: Colors.white,
-    appBar: AppBar(
+    return Scaffold(
       backgroundColor: Colors.white,
-      elevation: 0,
-      title: const Text(
-        'Your Cart',
-        style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-      ),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.black),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
-      actions: [
-        if (cartItems.isNotEmpty)
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Clear Cart'),
-                  content: const Text(
-                    'Are you sure you want to remove all items?',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('CANCEL'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        _cartManager.clearCart();
-                        Navigator.pop(context);
-                      },
-                      child: const Text(
-                        'CLEAR',
-                        style: TextStyle(color: Colors.red),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Your Cart',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          if (cartItems.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder:
+                      (context) => AlertDialog(
+                        title: const Text('Clear Cart'),
+                        content: const Text(
+                          'Are you sure you want to remove all items?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('CANCEL'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              _cartManager.clearCart();
+                              Navigator.pop(context);
+                            },
+                            child: const Text(
+                              'CLEAR',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
                       ),
+                );
+              },
+            ),
+        ],
+      ),
+      body:
+          cartItems.isEmpty
+              ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.shopping_cart_outlined,
+                      size: 80,
+                      color: Colors.red,
+                    ),
+                    SizedBox(height: 20),
+                    Text(
+                      'Your cart is empty',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Add items to your cart to checkout',
+                      style: TextStyle(color: Colors.grey),
                     ),
                   ],
                 ),
-              );
-            },
-          ),
-      ],
-    ),
-    body: cartItems.isEmpty
-        ? const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.shopping_cart_outlined,
-                  size: 80,
-                  color: Colors.red,
-                ),
-                SizedBox(height: 20),
-                Text(
-                  'Your cart is empty',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  'Add items to your cart to checkout',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
-          )
-        : Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: cartItems.length,
-                  itemBuilder: (context, index) {
-                    final item = cartItems[index];
-                    return Dismissible(
-                      key: Key(item.id),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
-                        color: Colors.red,
-                        child: const Icon(
-                          Icons.delete,
-                          color: Colors.white,
-                        ),
-                      ),
-                      onDismissed: (direction) {
-                        _cartManager.removeItem(item.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${item.name} removed from cart'),
-                            action: SnackBarAction(
-                              label: 'UNDO',
-                              onPressed: () {
-                                // Undo logic would require re-adding the item
-                              },
+              )
+              : Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: cartItems.length,
+                      itemBuilder: (context, index) {
+                        final item = cartItems[index];
+                        return Dismissible(
+                          key: Key(item.id),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            color: Colors.red,
+                            child: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                            ),
+                          ),
+                          onDismissed: (direction) {
+                            _cartManager.removeItem(item.id);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('${item.name} removed from cart'),
+                                action: SnackBarAction(
+                                  label: 'UNDO',
+                                  onPressed: () {
+                                    // Undo logic would require re-adding the item
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.1),
+                                  spreadRadius: 1,
+                                  blurRadius: 5,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade200,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child:
+                                          (item.image.startsWith('http') ||
+                                                  item.image.startsWith(
+                                                    'https',
+                                                  ))
+                                              ? Image.network(
+                                                item.image,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (
+                                                  context,
+                                                  error,
+                                                  stackTrace,
+                                                ) {
+                                                  return const Icon(
+                                                    Icons.image,
+                                                    color: Colors.grey,
+                                                  );
+                                                },
+                                              )
+                                              : Image.asset(
+                                                item.image,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (
+                                                  context,
+                                                  error,
+                                                  stackTrace,
+                                                ) {
+                                                  return const Icon(
+                                                    Icons.image,
+                                                    color: Colors.grey,
+                                                  );
+                                                },
+                                              ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '₺${item.price}',
+                                          style: const TextStyle(
+                                            color: Colors.red,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: Container(
+                                          padding: const EdgeInsets.all(2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade100,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.remove,
+                                            size: 16,
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                        onPressed:
+                                            () => _cartManager.updateQuantity(
+                                              item.id,
+                                              -1,
+                                            ),
+                                      ),
+                                      Text(
+                                        '${item.quantity}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Container(
+                                          padding: const EdgeInsets.all(2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade100,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.add,
+                                            size: 16,
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                        onPressed:
+                                            () => _cartManager.updateQuantity(
+                                              item.id,
+                                              1,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         );
                       },
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.1),
-                              spreadRadius: 1,
-                              blurRadius: 5,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
+                    ),
+                  ),
+                  // Discount code section
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(color: Colors.grey.shade50),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_appliedDiscount == null) ...[
+                          // Input field for discount code
+                          Row(
                             children: [
-                              Container(
-                                width: 80,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: (item.image.startsWith('http') ||
-                                          item.image.startsWith('https'))
-                                      ? Image.network(
-                                          item.image,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (
-                                            context,
-                                            error,
-                                            stackTrace,
-                                          ) {
-                                            return const Icon(
-                                              Icons.image,
-                                              color: Colors.grey,
-                                            );
-                                          },
-                                        )
-                                      : Image.asset(
-                                          item.image,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (
-                                            context,
-                                            error,
-                                            stackTrace,
-                                          ) {
-                                            return const Icon(
-                                              Icons.image,
-                                              color: Colors.grey,
-                                            );
-                                          },
-                                        ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.name,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
+                                child: TextField(
+                                  controller: _discountCodeController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Discount Code',
+                                    hintText: 'Enter code',
+                                    errorText: _discountError,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 12,
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '₺${item.price}',
-                                      style: const TextStyle(
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: Colors.grey.shade300,
                                       ),
                                     ),
-                                  ],
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: Colors.grey.shade300,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: Container(
-                                      padding: const EdgeInsets.all(2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red.shade100,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.remove,
-                                        size: 16,
-                                        color: Colors.red,
-                                      ),
-                                    ),
-                                    onPressed: () => _cartManager.updateQuantity(
-                                      item.id,
-                                      -1,
-                                    ),
+                              const SizedBox(width: 10),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
                                   ),
-                                  Text(
-                                    '${item.quantity}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  IconButton(
-                                    icon: Container(
-                                      padding: const EdgeInsets.all(2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red.shade100,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.add,
-                                        size: 16,
-                                        color: Colors.red,
-                                      ),
-                                    ),
-                                    onPressed: () => _cartManager.updateQuantity(
-                                      item.id,
-                                      1,
-                                    ),
-                                  ),
-                                ],
+                                ),
+                                onPressed:
+                                    _isApplyingDiscount
+                                        ? null
+                                        : _applyDiscountCode,
+                                child:
+                                    _isApplyingDiscount
+                                        ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                        : const Text('APPLY'),
                               ),
                             ],
                           ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              // Discount code section
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_appliedDiscount == null) ...[
-                      // Input field for discount code
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _discountCodeController,
-                              decoration: InputDecoration(
-                                labelText: 'Discount Code',
-                                hintText: 'Enter code',
-                                errorText: _discountError,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 12,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
-                                ),
-                              ),
+                        ] else ...[
+                          // Show applied discount
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.green.shade200),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.discount_outlined,
+                                  color: Colors.green,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Discount applied: ${_appliedDiscount!.code}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${_appliedDiscount!.discountPercentage}% off',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: _removeDiscount,
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.grey,
+                                    size: 20,
+                                  ),
+                                ),
+                              ],
                             ),
-                            onPressed: _isApplyingDiscount ? null : _applyDiscountCode,
-                            child: _isApplyingDiscount
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text('APPLY'),
                           ),
                         ],
-                      ),
-                    ] else ...[
-                      // Show applied discount
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green.shade200),
+                      ],
+                    ),
+                  ),
+                  // Summary and checkout section
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          spreadRadius: 1,
+                          blurRadius: 10,
+                          offset: const Offset(0, -2),
                         ),
-                        child: Row(
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Original price row (if discount applied)
+                        if (_appliedDiscount != null) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Subtotal',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              Text(
+                                '₺${_cartManager.totalPrice.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Discount (${_appliedDiscount!.discountPercentage}%)',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.green.shade700,
+                                ),
+                              ),
+                              Text(
+                                '-₺${_appliedDiscount!.calculateDiscount(_cartManager.totalPrice).toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.green.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 20),
+                        ],
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Icon(
-                              Icons.discount_outlined,
-                              color: Colors.green,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Discount applied: ${_appliedDiscount!.code}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${_appliedDiscount!.discountPercentage}% off',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade700,
-                                    ),
-                                  ),
-                                ],
+                            const Text(
+                              'Total',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            IconButton(
-                              onPressed: _removeDiscount,
-                              icon: const Icon(
-                                Icons.close,
-                                color: Colors.grey,
-                                size: 20,
+                            Text(
+                              '₺${_discountedTotal.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              // Summary and checkout section
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 10,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Original price row (if discount applied)
-                    if (_appliedDiscount != null) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Subtotal',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                          ),
-                          Text(
-                            '₺${_cartManager.totalPrice.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Discount (${_appliedDiscount!.discountPercentage}%)',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.green.shade700,
-                            ),
-                          ),
-                          Text(
-                            '-₺${_appliedDiscount!.calculateDiscount(_cartManager.totalPrice).toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.green.shade700,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 20),
-                    ],
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Total',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          '₺${_discountedTotal.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red,
+                            onPressed:
+                                cartItems.isEmpty || _isProcessingPayment
+                                    ? null
+                                    : _processPayment,
+                            child:
+                                _isProcessingPayment
+                                    ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                    : const Text(
+                                      'CHECKOUT',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: cartItems.isEmpty || _isProcessingPayment
-                            ? null
-                            : _processPayment,
-                        child: _isProcessingPayment
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text(
-                                'CHECKOUT',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
-  );
-}
+    );
+  }
 }

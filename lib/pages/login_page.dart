@@ -35,7 +35,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void signInWithGoogleAndNavigate() async {
     if (!mounted) return;
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -69,7 +69,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void signUserIn() async {
     if (!mounted) return;
-    
+
     setState(() {
       emailError = null;
       passwordError = null;
@@ -84,20 +84,25 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     try {
-      UserCredential credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
+      UserCredential credential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: emailController.text.trim(),
+            password: passwordController.text.trim(),
+          );
 
       if (!_mounted) return;
-      
+
       User? user = credential.user;
       if (user != null) {
         await _saveUserToFirestore(user);
 
         if (!_mounted) return;
-        
-        final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
         String role = userDoc['role'] ?? 'user';
 
         if (!_mounted) return;
@@ -138,7 +143,8 @@ class _LoginPageState extends State<LoginPage> {
             emailError = "This user account has been disabled.";
             break;
           case 'too-many-requests':
-            emailError = "Too many unsuccessful login attempts. Please try again later.";
+            emailError =
+                "Too many unsuccessful login attempts. Please try again later.";
             break;
           case 'missing-password':
             emailError = "Please Enter A Password.";
@@ -151,7 +157,7 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       if (!_mounted) return;
       if (context.mounted) Navigator.pop(context);
-      
+
       if (!_mounted) return;
       setState(() {
         emailError = "An unexpected error occurred. Please try again.";
@@ -162,12 +168,14 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _saveUserToFirestore(User user) async {
     if (!_mounted) return;
-    
-    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+    final userDoc = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid);
     final docSnapshot = await userDoc.get();
 
     if (!_mounted) return;
-    
+
     if (!docSnapshot.exists) {
       await userDoc.set({
         'uid': user.uid,
@@ -212,13 +220,16 @@ class _LoginPageState extends State<LoginPage> {
                       hintText: 'Email',
                       prefixIcon: const Icon(Icons.email),
                       border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.red.shade700),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
-                ),
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.red.shade700),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.red.shade700,
+                          width: 2,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -234,16 +245,20 @@ class _LoginPageState extends State<LoginPage> {
                         icon: Icon(
                           passToggle ? Icons.visibility : Icons.visibility_off,
                         ),
-                        onPressed: () => setState(() => passToggle = !passToggle),
+                        onPressed:
+                            () => setState(() => passToggle = !passToggle),
                       ),
                       border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.red.shade700),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
-                ),
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.red.shade700),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.red.shade700,
+                          width: 2,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 5),
@@ -268,18 +283,26 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Not a member?', style: TextStyle(color: Colors.grey[800])),
+                      Text(
+                        'Not a member?',
+                        style: TextStyle(color: Colors.grey[800]),
+                      ),
                       const SizedBox(width: 4),
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => RegisterPage()),
+                            MaterialPageRoute(
+                              builder: (context) => RegisterPage(),
+                            ),
                           );
                         },
                         child: Text(
                           'Register!',
-                          style: TextStyle(color: Colors.red.shade500, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: Colors.red.shade500,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -289,12 +312,17 @@ class _LoginPageState extends State<LoginPage> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => ForgotPasswordPage()),
+                        MaterialPageRoute(
+                          builder: (context) => ForgotPasswordPage(),
+                        ),
                       );
                     },
                     child: Text(
                       'Forgot your password?',
-                      style: TextStyle(color: Colors.red.shade500, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.red.shade500,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   SizedBox(height: 10),
@@ -309,12 +337,16 @@ class _LoginPageState extends State<LoginPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
                       children: [
-                        Expanded(child: Divider(thickness: 1, color: Colors.grey[400])),
+                        Expanded(
+                          child: Divider(thickness: 1, color: Colors.grey[400]),
+                        ),
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
                           child: Text('Or Log in With'),
                         ),
-                        Expanded(child: Divider(thickness: 1, color: Colors.grey[400])),
+                        Expanded(
+                          child: Divider(thickness: 1, color: Colors.grey[400]),
+                        ),
                       ],
                     ),
                   ),

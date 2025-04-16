@@ -74,35 +74,35 @@ class _RegisterPageState extends State<RegisterPage> {
         passwordError = "Passwords must be 8 characters long";
       });
       return;
-    }else if (passwordController.text.length > 20) {
+    } else if (passwordController.text.length > 20) {
       setState(() {
         passwordError = "Passwords must be less than 20 characters long";
       });
       return;
     }
-     // Check for special character
-  if (!passwordController.text.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
-    setState(() {
-      passwordError = "Password must contain at least one special character";
-    });
-    return;
-  }
-  
-  // Check for uppercase letter
-  if (!passwordController.text.contains(RegExp(r'[A-Z]'))) {
-    setState(() {
-      passwordError = "Password must contain at least one uppercase letter";
-    });
-    return;
-  }
-  
-  // Check for lowercase letter
-  if (!passwordController.text.contains(RegExp(r'[a-z]'))) {
-    setState(() {
-      passwordError = "Password must contain at least one lowercase letter";
-    });
-    return;
-  }
+    // Check for special character
+    if (!passwordController.text.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+      setState(() {
+        passwordError = "Password must contain at least one special character";
+      });
+      return;
+    }
+
+    // Check for uppercase letter
+    if (!passwordController.text.contains(RegExp(r'[A-Z]'))) {
+      setState(() {
+        passwordError = "Password must contain at least one uppercase letter";
+      });
+      return;
+    }
+
+    // Check for lowercase letter
+    if (!passwordController.text.contains(RegExp(r'[a-z]'))) {
+      setState(() {
+        passwordError = "Password must contain at least one lowercase letter";
+      });
+      return;
+    }
 
     showDialog(
       context: context,
@@ -209,13 +209,18 @@ class _RegisterPageState extends State<RegisterPage> {
                             hintText: 'First Name',
                             prefixIcon: const Icon(Icons.person),
                             border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.red.shade700),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
-                ),
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.red.shade700,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.red.shade700,
+                                width: 2,
+                              ),
+                            ),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty)
@@ -234,13 +239,18 @@ class _RegisterPageState extends State<RegisterPage> {
                             hintText: 'Last Name',
                             prefixIcon: const Icon(Icons.person),
                             border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.red.shade700),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
-                ),
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.red.shade700,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.red.shade700,
+                                width: 2,
+                              ),
+                            ),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty)
@@ -263,13 +273,16 @@ class _RegisterPageState extends State<RegisterPage> {
                       hintText: 'Email',
                       prefixIcon: const Icon(Icons.email),
                       border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.red.shade700),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
-                ),
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.red.shade700),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.red.shade700,
+                          width: 2,
+                        ),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -297,13 +310,16 @@ class _RegisterPageState extends State<RegisterPage> {
                             () => setState(() => passToggle = !passToggle),
                       ),
                       border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.red.shade700),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
-                ),
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.red.shade700),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.red.shade700,
+                          width: 2,
+                        ),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -331,13 +347,16 @@ class _RegisterPageState extends State<RegisterPage> {
                             () => setState(() => passToggle = !passToggle),
                       ),
                       border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.red.shade700),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
-                ),
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.red.shade700),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.red.shade700,
+                          width: 2,
+                        ),
+                      ),
                     ),
                     validator: (value) {
                       if (value != passwordController.text) {
