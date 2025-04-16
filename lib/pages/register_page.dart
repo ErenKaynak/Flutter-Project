@@ -69,12 +69,40 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    if (passwordController.text.length < 6) {
+    if (passwordController.text.length < 8) {
       setState(() {
-        passwordError = "Passwords must be 6 characters long";
+        passwordError = "Passwords must be 8 characters long";
+      });
+      return;
+    }else if (passwordController.text.length > 20) {
+      setState(() {
+        passwordError = "Passwords must be less than 20 characters long";
       });
       return;
     }
+     // Check for special character
+  if (!passwordController.text.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+    setState(() {
+      passwordError = "Password must contain at least one special character";
+    });
+    return;
+  }
+  
+  // Check for uppercase letter
+  if (!passwordController.text.contains(RegExp(r'[A-Z]'))) {
+    setState(() {
+      passwordError = "Password must contain at least one uppercase letter";
+    });
+    return;
+  }
+  
+  // Check for lowercase letter
+  if (!passwordController.text.contains(RegExp(r'[a-z]'))) {
+    setState(() {
+      passwordError = "Password must contain at least one lowercase letter";
+    });
+    return;
+  }
 
     showDialog(
       context: context,
@@ -176,6 +204,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         child: TextFormField(
                           controller: nameController,
                           decoration: InputDecoration(
+                            hoverColor: Colors.red,
                             fillColor: Colors.grey.shade300,
                             filled: true,
                             hintText: 'First Name',
