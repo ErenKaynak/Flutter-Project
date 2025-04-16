@@ -45,5 +45,19 @@
       "**/.*",
       "**/node_modules/**"
     ]
-  }
+  },
+  "functions": [
+    {
+      "source": "userdelete",
+      "codebase": "userdelete",
+      "runtime": "nodejs18",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ]
 }

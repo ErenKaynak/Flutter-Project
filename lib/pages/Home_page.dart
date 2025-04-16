@@ -35,28 +35,63 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   String _searchQuery = "";
   final CartManager _cartManager = CartManager();
   final Map<String, AnimationController> _animationControllers = {};
+  String? _userProfilePicture;
   
   bool _isDisposed = false;
   String _userName = "Guest"; // Default user name
 
   @override
   void initState() {
-    super.initState();
-    fetchProducts();
-    fetchFavorites(); // Fetch favorites on initialization
-    _cartManager.loadCart();
-    _cartManager.addListener(_updateUI);
-    _getUserName(); // Get current user name
+  super.initState();
+  _cartManager.loadCart();
+  _cartManager.addListener(_updateUI);
+  _getUserProfile(); // Get current user name
 
-    _searchController.addListener(() {
-      if (mounted) {
-        setState(() {
-          _searchQuery = _searchController.text;
-        });
-      }
-    });
+  _searchController.addListener(() {
+    if (mounted) {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    }
+  });
+
+  _loadInitialData();
+
   }
 
+  Future<void> _loadInitialData() async {
+  if (!mounted) return;
+  
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    // First fetch products
+    await fetchProducts();
+    
+    // Then fetch favorites
+    await fetchFavorites();
+    
+    // Finally update loading state if still mounted
+    if (mounted && !_isDisposed) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  } catch (error) {
+    print('Error loading initial data: $error');
+    // Ensure loading indicator is removed even if there's an error
+    if (mounted && !_isDisposed) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+}
+
+  
+  
   void _updateUI() {
   if (mounted && !_isDisposed) {
     setState(() {});
@@ -80,7 +115,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   // Fetch current user name from Firestore
-  Future<void> _getUserName() async {
+  Future<void> _getUserProfile() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -90,10 +125,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             .doc(user.uid)
             .get();
         
-        if (userDoc.exists && userDoc.data()?['name'] != null) {
+        if (userDoc.exists) {
           if (mounted) {
             setState(() {
-              _userName = userDoc.data()?['name'];
+              // Get name from Firestore
+              _userName = userDoc.data()?['name'] ?? 'Guest';
+              
+              // Get profile picture URL from Firestore
+              _userProfilePicture = userDoc.data()?['profilePicture'];
             });
           }
         } else if (user.displayName != null && user.displayName!.isNotEmpty) {
@@ -101,12 +140,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           if (mounted) {
             setState(() {
               _userName = user.displayName!;
+              // Try to get photoURL from Firebase Auth
+              _userProfilePicture = user.photoURL;
             });
           }
         }
       }
     } catch (e) {
-      print('Error fetching user name: $e');
+      print('Error fetching user profile: $e');
     }
   }
 
@@ -131,88 +172,83 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> fetchProducts() async {
+  if (!mounted) return;
+  
+  try {
+    final QuerySnapshot snapshot =
+        await FirebaseFirestore.instance.collection('products').get();
+
+    final List<Map<String, dynamic>> loadedProducts = [];
+
+    snapshot.docs.forEach((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+
+      print('Product: ${data['name']}, Image path: ${data['imagePath']}');
+
+      String priceString = data['price']?.toString() ?? '0';
+
+      loadedProducts.add({
+        'id': doc.id,
+        'name': data['name'] ?? 'Unknown Product',
+        'price': priceString,
+        'category': data['category'] ?? 'Uncategorized',
+        'image': data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
+        'description': data['description'] ?? 'No description available',
+        'stock': data['stock'] ?? 0,
+      });
+    });
+
     if (!mounted) return;
     
     setState(() {
-      _isLoading = true;
+      products = loadedProducts;
+      // Don't set _isLoading = false here
     });
 
-    try {
-      final QuerySnapshot snapshot =
-          await FirebaseFirestore.instance.collection('products').get();
-
-      final List<Map<String, dynamic>> loadedProducts = [];
-
-      snapshot.docs.forEach((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-
-        print('Product: ${data['name']}, Image path: ${data['imagePath']}');
-
-        String priceString = data['price']?.toString() ?? '0';
-
-        loadedProducts.add({
-          'id': doc.id,
-          'name': data['name'] ?? 'Unknown Product',
-          'price': priceString,
-          'category': data['category'] ?? 'Uncategorized',
-          'image': data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-          'description': data['description'] ?? 'No description available',
-          'stock': data['stock'] ?? 0,
-        });
-      });
-
-      if (!mounted) return;
-      
-      setState(() {
-        products = loadedProducts;
-        _isLoading = false;
-      });
-
-      _initializeAnimationControllers();
-    } catch (error) {
-      print('Error fetching products: $error');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
+    _initializeAnimationControllers();
+  } catch (error) {
+    print('Error fetching products: $error');
+    // Don't set _isLoading = false here either
   }
+}
 
   // Fetch favorites from Firestore
   Future<void> fetchFavorites() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        // If not logged in, can't have favorites
-        if (mounted) {
-          setState(() {
-            favoriteProductIds = [];
-          });
-        }
-        return;
-      }
-
-      final favoritesSnapshot = await FirebaseFirestore.instance
-          .collection('favorites')
-          .doc(user.uid)
-          .collection('userFavorites')
-          .get();
-
-      final List<String> loadedFavorites = [];
-      favoritesSnapshot.docs.forEach((doc) {
-        loadedFavorites.add(doc.id);
-      });
-
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // If not logged in, can't have favorites
       if (mounted) {
         setState(() {
-          favoriteProductIds = loadedFavorites;
+          favoriteProductIds = [];
+          // Don't set _isLoading = false here
         });
       }
-    } catch (error) {
-      print('Error fetching favorites: $error');
+      return;
     }
+
+    final favoritesSnapshot = await FirebaseFirestore.instance
+        .collection('favorites')
+        .doc(user.uid)
+        .collection('userFavorites')
+        .get();
+
+    final List<String> loadedFavorites = [];
+    favoritesSnapshot.docs.forEach((doc) {
+      loadedFavorites.add(doc.id);
+    });
+
+    if (mounted) {
+      setState(() {
+        favoriteProductIds = loadedFavorites;
+        // Don't set _isLoading = false here
+      });
+    }
+  } catch (error) {
+    print('Error fetching favorites: $error');
+    // Don't set _isLoading = false here
   }
+}
 
   // Toggle favorite status of a product
   Future<void> toggleFavorite(Map<String, dynamic> product) async {
@@ -488,7 +524,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         body: _isLoading
             ? Center(child: CircularProgressIndicator())
             : RefreshIndicator(
-                onRefresh: fetchProducts,
+                onRefresh: _loadInitialData,
                 child: CustomScrollView(
                   slivers: [
                     SliverToBoxAdapter(
@@ -497,63 +533,103 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         children: [
                           // Welcome section with user name and person icon
                           Container(
-                            padding: EdgeInsets.all(16.0),
-                            margin: EdgeInsets.all(10.0),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Colors.red.shade300, Colors.white],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black12,
-                                  blurRadius: 5,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.shade300,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 36,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Welcome",
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.black54,
-                                        ),
-                                      ),
-                                      Text(
-                                        _userName,
-                                        style: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+    padding: EdgeInsets.all(16.0),
+    margin: EdgeInsets.all(10.0),
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Colors.red.shade300, Colors.white],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black12,
+          blurRadius: 5,
+          offset: Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        // Replace the Icon with a CircleAvatar that shows the profile picture
+        Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.red.shade300,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 5,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: _userProfilePicture != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: Image.network(
+                    _userProfilePicture!,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Fallback to default icon if image fails to load
+                      return Icon(
+                        Icons.person,
+                        size: 36,
+                        color: Colors.white,
+                      );
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                          color: Colors.white,
+                          strokeWidth: 2.0,
+                        ),
+                      );
+                    },
+                  ),
+                )
+              : Icon(
+                  Icons.person,
+                  size: 36,
+                  color: Colors.white,
+                ),
+        ),
+        SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Welcome",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black54,
+                ),
+              ),
+              Text(
+                _userName,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  ),
                           _buildBannerSection(),
                           SizedBox(height: 10),
                           _buildCategoriesHeader(),
@@ -631,6 +707,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+
   Widget _buildCategoriesHeader() {
     return Padding(
       padding: EdgeInsets.all(10),
@@ -641,20 +718,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             "Categories",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          TextButton(
-            onPressed: () {
-              if (mounted) {
-                setState(() {
-                  _selectedCategory = "All";
-                });
-              }
-            },
-            child: Text("Show All", style: TextStyle(color: Colors.red)),
-          ),
         ],
       ),
     );
   }
+  
 
   Widget _buildCategoriesRow() {
     return SingleChildScrollView(
@@ -688,6 +756,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             'lib/assets/Images/ram-icon.png',
             _selectedCategory == "RAM's",
             () => _selectCategory("RAM's"),
+          ),
+          SizedBox(width: 15),
+          _buildCategoryCircle(
+            "Show All",
+            'lib/assets/Images/all-icon.png',
+            _selectedCategory == "All",
+            () => _selectCategory("All"),
           ),
         ],
       ),
@@ -876,22 +951,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                     return Image.asset(
                                       'lib/assets/Images/placeholder.png',
                                       fit: BoxFit.cover,
-                                    );
-                                  },
-                                  loadingBuilder:
-                                      (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Center(
-                                      child: CircularProgressIndicator(
-                                        value: loadingProgress
-                                                    .expectedTotalBytes !=
-                                                null
-                                            ? loadingProgress
-                                                    .cumulativeBytesLoaded /
-                                                loadingProgress
-                                                    .expectedTotalBytes!
-                                            : null,
-                                      ),
                                     );
                                   },
                                 )

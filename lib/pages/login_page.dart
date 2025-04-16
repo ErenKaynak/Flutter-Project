@@ -212,8 +212,13 @@ class _LoginPageState extends State<LoginPage> {
                       hintText: 'Email',
                       prefixIcon: const Icon(Icons.email),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
+                ),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -232,8 +237,13 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: () => setState(() => passToggle = !passToggle),
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
+                ),
                     ),
                   ),
                   const SizedBox(height: 5),

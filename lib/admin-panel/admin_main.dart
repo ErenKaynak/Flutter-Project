@@ -1,3 +1,4 @@
+import 'package:engineering_project/admin-panel/admin_discount.dart';
 import 'package:engineering_project/admin-panel/admin_order_management.dart';
 import 'package:engineering_project/admin-panel/admin_products.dart';
 import 'package:engineering_project/admin-panel/admin_user.dart';
@@ -93,6 +94,22 @@ class _AdminPageState extends State<AdminPage> {
               Card(
                 elevation: 2,
                 child: ListTile(
+                  leading: Icon(Icons.account_balance_wallet_rounded, color: Colors.red.shade700),
+                  title: const Text("Promo Codes"),
+                  subtitle: const Text("Create Promocodes and Discounts"),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () => Navigator.push(
+                    context,
+                       MaterialPageRoute(builder: (context) => const DiscountAdminPage()),
+                      ),
+                ),
+              ),
+              
+              const SizedBox(height: 20),
+
+              Card(
+                elevation: 2,
+                child: ListTile(
                   leading: Icon(Icons.bar_chart, color: Colors.red.shade700),
                   title: const Text("Statistics"),
                   subtitle: const Text("View sales and user analytics"),
@@ -102,7 +119,7 @@ class _AdminPageState extends State<AdminPage> {
                   },
                 ),
               ),
-              
+
               const SizedBox(height: 20),
               
               // Admin Settings

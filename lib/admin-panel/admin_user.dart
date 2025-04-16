@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class AdminUsersPage extends StatefulWidget {
@@ -37,9 +38,36 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   }
 
   Future<void> deleteUser(String uid) async {
+  try {
+    // Get admin credentials
+    // Note: This requires admin privileges and should be handled securely
+    final adminUser = FirebaseAuth.instance.currentUser;
+    
+    if (adminUser == null) {
+      throw Exception('Admin authentication required');
+    }
+    
+    // Delete from Firestore
     await _firestore.collection('users').doc(uid).delete();
+    
+    // For security reasons, you typically can't delete other users directly from client-side code
+    // The proper approach is to use Firebase Cloud Functions or your backend
+    
+    // Show success message with note about auth
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('User document deleted. Please use Firebase console or Cloud Functions to remove authentication credentials.'),
+        duration: Duration(seconds: 5),
+      ),
+    );
+    
     setState(() {});
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: ${e.toString()}')),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {

@@ -16,6 +16,10 @@ class _AdminProductsState extends State<AdminProducts> {
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController stockController = TextEditingController();
   
+  // Search functionality
+  final TextEditingController searchController = TextEditingController();
+  String searchQuery = '';
+  
   // For additional images - added more controllers for flexibility
   final List<TextEditingController> additionalImagesControllers = [
     TextEditingController(),
@@ -37,6 +41,34 @@ class _AdminProductsState extends State<AdminProducts> {
 
   final CollectionReference products =
       FirebaseFirestore.instance.collection('products');
+
+  @override
+  void initState() {
+    super.initState();
+    // Set up search listener
+    searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    searchController.removeListener(_onSearchChanged);
+    searchController.dispose();
+    nameController.dispose();
+    priceController.dispose();
+    imagePathController.dispose();
+    descriptionController.dispose();
+    stockController.dispose();
+    for (var controller in additionalImagesControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      searchQuery = searchController.text.trim().toLowerCase();
+    });
+  }
 
   void showProductDialog({DocumentSnapshot? doc}) {
     final isEditing = doc != null;
@@ -280,139 +312,204 @@ class _AdminProductsState extends State<AdminProducts> {
         backgroundColor: Colors.red.shade700,
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: products.orderBy('name').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final productDocs = snapshot.data!.docs;
-          
-          if (productDocs.isEmpty) {
-            return const Center(child: Text('No products found. Add some!'));
-          }
-
-          return ListView.builder(
-            itemCount: productDocs.length,
-            itemBuilder: (context, index) {
-              final doc = productDocs[index];
-              final data = doc.data() as Map<String, dynamic>;
-              
-              final name = data['name'] ?? 'Unknown Product';
-              final price = data['price']?.toString() ?? '0';
-              final imagePath = data['imagePath'] ?? '';
-              final description = data['description'] ?? '';
-              final category = data['category'] ?? 'Uncategorized';
-              final stock = data['stock'] ?? 0;
-
-              return Card(
-                shape: RoundedRectangleBorder(
+      body: Column(
+        children: [
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                hintText: 'Search products...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          searchController.clear();
+                          setState(() {
+                            searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700),
                 ),
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                elevation: 2,
-                child: ExpansionTile(
-                  leading: imagePath.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            imagePath,
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(Icons.image_not_supported, color: Colors.red.shade300, size: 50);
-                            },
-                          ),
-                        )
-                      : Icon(Icons.inventory_2, color: Colors.red.shade700, size: 40),
-                  title: Text(
-                    name,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    '₺$price • Category: $category • Stock: $stock',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.edit, color: Colors.blue.shade700),
-                        onPressed: () => showProductDialog(doc: doc),
-                        tooltip: 'Edit',
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
+                ),
+              ),
+            ),
+          ),
+          // Product List
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: products.orderBy('name').snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final productDocs = snapshot.data!.docs;
+                
+                if (productDocs.isEmpty) {
+                  return const Center(child: Text('No products found. Add some!'));
+                }
+
+                // Filter products based on search query
+                var filteredProducts = productDocs;
+                if (searchQuery.isNotEmpty) {
+                  filteredProducts = productDocs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final name = (data['name'] ?? '').toString().toLowerCase();
+                    final description = (data['description'] ?? '').toString().toLowerCase();
+                    final category = (data['category'] ?? '').toString().toLowerCase();
+                    
+                    return name.contains(searchQuery) || 
+                           description.contains(searchQuery) ||
+                           category.contains(searchQuery);
+                  }).toList();
+                }
+                
+                if (filteredProducts.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
+                        const SizedBox(height: 16),
+                        Text('No products matching "${searchController.text}"'),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: filteredProducts.length,
+                  itemBuilder: (context, index) {
+                    final doc = filteredProducts[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    
+                    final name = data['name'] ?? 'Unknown Product';
+                    final price = data['price']?.toString() ?? '0';
+                    final imagePath = data['imagePath'] ?? '';
+                    final description = data['description'] ?? '';
+                    final category = data['category'] ?? 'Uncategorized';
+                    final stock = data['stock'] ?? 0;
+
+                    return Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => deleteProduct(doc.id),
-                        tooltip: 'Delete',
-                      ),
-                    ],
-                  ),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (description.isNotEmpty) ...[
-                            const Text('Description:', style: TextStyle(fontWeight: FontWeight.bold)),
-                            Text(description),
-                            const SizedBox(height: 8),
-                          ],
-                          
-                          // Display additional images if available
-                          if ((data['images'] as List<dynamic>?)?.isNotEmpty ?? false) ...[
-                            const Text('Additional Images:', style: TextStyle(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              height: 100,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: (data['images'] as List<dynamic>).length,
-                                itemBuilder: (context, imgIndex) {
-                                  final imgUrl = (data['images'] as List<dynamic>)[imgIndex];
-                                  return Padding(
-                                    padding: const EdgeInsets.only(right: 8.0),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      child: Image.network(
-                                        imgUrl,
-                                        height: 100,
-                                        width: 100,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Container(
-                                            height: 100,
-                                            width: 100,
-                                            color: Colors.grey.shade200,
-                                            child: const Icon(Icons.broken_image),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      elevation: 2,
+                      child: ExpansionTile(
+                        leading: imagePath.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  imagePath,
+                                  width: 60,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(Icons.image_not_supported, color: Colors.red.shade300, size: 50);
+                                  },
+                                ),
+                              )
+                            : Icon(Icons.inventory_2, color: Colors.red.shade700, size: 40),
+                        title: Text(
+                          name,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          '₺$price • Category: $category • Stock: $stock',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.edit, color: Colors.blue.shade700),
+                              onPressed: () => showProductDialog(doc: doc),
+                              tooltip: 'Edit',
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => deleteProduct(doc.id),
+                              tooltip: 'Delete',
                             ),
                           ],
+                        ),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (description.isNotEmpty) ...[
+                                  const Text('Description:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  Text(description),
+                                  const SizedBox(height: 8),
+                                ],
+                                
+                                // Display additional images if available
+                                if ((data['images'] as List<dynamic>?)?.isNotEmpty ?? false) ...[
+                                  const Text('Additional Images:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    height: 100,
+                                    child: ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: (data['images'] as List<dynamic>).length,
+                                      itemBuilder: (context, imgIndex) {
+                                        final imgUrl = (data['images'] as List<dynamic>)[imgIndex];
+                                        return Padding(
+                                          padding: const EdgeInsets.only(right: 8.0),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(8.0),
+                                            child: Image.network(
+                                              imgUrl,
+                                              height: 100,
+                                              width: 100,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return Container(
+                                                  height: 100,
+                                                  width: 100,
+                                                  color: Colors.grey.shade200,
+                                                  child: const Icon(Icons.broken_image),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

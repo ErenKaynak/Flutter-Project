@@ -204,14 +204,18 @@ class _RegisterPageState extends State<RegisterPage> {
                         child: TextFormField(
                           controller: nameController,
                           decoration: InputDecoration(
-                            hoverColor: Colors.red,
                             fillColor: Colors.grey.shade300,
                             filled: true,
                             hintText: 'First Name',
                             prefixIcon: const Icon(Icons.person),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
+                ),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty)
@@ -230,8 +234,13 @@ class _RegisterPageState extends State<RegisterPage> {
                             hintText: 'Last Name',
                             prefixIcon: const Icon(Icons.person),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
+                ),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty)
@@ -254,8 +263,13 @@ class _RegisterPageState extends State<RegisterPage> {
                       hintText: 'Email',
                       prefixIcon: const Icon(Icons.email),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
+                ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -283,8 +297,13 @@ class _RegisterPageState extends State<RegisterPage> {
                             () => setState(() => passToggle = !passToggle),
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
+                ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -312,8 +331,13 @@ class _RegisterPageState extends State<RegisterPage> {
                             () => setState(() => passToggle = !passToggle),
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.red.shade700, width: 2),
+                ),
                     ),
                     validator: (value) {
                       if (value != passwordController.text) {
