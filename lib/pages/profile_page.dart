@@ -8,9 +8,9 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:engineering_project/assets/components/auth_service.dart';
+import 'package:engineering_project/pages/address_screen.dart'; // ✅ ADRES EKRANI IMPORT
 
 class ProfilePage extends StatefulWidget {
-
   const ProfilePage({super.key});
 
   @override
@@ -321,6 +321,16 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                     ),
+                    buildButton(
+                      'My Addresses',
+                      Icons.location_on,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AddressScreen(),
+                        ),
+                      ),
+                    ),
                     if (role == 'admin')
                       buildButton(
                         'Admin Panel',
@@ -332,21 +342,16 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         ),
                       ),
-
-                    // 🌙 Tema değiştirici
                     const SizedBox(height: 1),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: GestureDetector(
                         onTap: () {
-                          // İsteğe bağlı: Kutunun kendisine tıklanırsa da değişebilir
-                          setState(() {
-                           
-                          });
+                          setState(() {});
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          height: 60, // Diğer butonlarla aynı yükseklik
+                          height: 60,
                           decoration: BoxDecoration(
                             color: Colors.grey[100],
                             borderRadius: BorderRadius.circular(16),
@@ -378,19 +383,12 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 ],
                               ),
-                              Switch(
-                               value: false,
-                               onChanged:(value) {
-                                 
-                               },
-                              ),
+                              Switch(value: false, onChanged: (value) {}),
                             ],
                           ),
                         ),
                       ),
                     ),
-
-                    // 🔓 Çıkış
                     buildButton('Log Out', Icons.logout, () async {
                       await FirebaseAuth.instance.signOut();
                       Navigator.of(context).pushReplacement(
