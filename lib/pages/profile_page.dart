@@ -264,7 +264,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         children: [
                           Row(
                             children: const [
-                              Icon(Icons.brightness_6),
+                              Icon(Icons.brightness_6, color: Colors.red,),
                               SizedBox(width: 12),
                               Text(
                                 "Dark Mode",

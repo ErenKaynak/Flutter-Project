@@ -1,3 +1,4 @@
+import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -272,9 +273,10 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
           ),
           SizedBox(height: 1),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const RootScreen()),
+              ),
             child: Text("Explore Products"),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
