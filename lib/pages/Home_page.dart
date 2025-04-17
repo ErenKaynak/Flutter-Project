@@ -515,25 +515,61 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
+          backgroundColor: isDark ? Colors.black : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(
+              Radius.circular(15),
+            ),
+          ),
+          elevation: 10,
           title: Container(
             height: 40,
             child: TextField(
               controller: _searchController,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black87,
+              ),
               decoration: InputDecoration(
-                hoverColor: Colors.red,
                 hintText: "Search products",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                hintStyle: TextStyle(
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
                 ),
-                prefixIcon: Icon(Icons.search, size: 25),
-                contentPadding: EdgeInsets.symmetric(vertical: 10),
+                fillColor: isDark ? Colors.grey.shade800 : Colors.white,
+                filled: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.black),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                    width: 1,
+                  ),
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  size: 22,
+                ),
+                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                 alignLabelWithHint: true,
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: Icon(Icons.clear),
+                        icon: Icon(
+                          Icons.clear,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          size: 20,
+                        ),
                         onPressed: () {
                           _searchController.clear();
                         },
@@ -602,7 +638,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     gradient: LinearGradient(
       colors: Theme.of(context).brightness == Brightness.dark
           ? [Colors.red.shade900, Colors.grey.shade900]
-          : [Colors.red.shade300, Colors.white],
+          : [Colors.red.shade500, Colors.red.shade100],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
@@ -709,7 +745,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 gradient: LinearGradient(
                   colors: Theme.of(context).brightness == Brightness.dark
                       ? [Colors.red.shade900, Colors.black54]
-                      : [Colors.red.shade300, Colors.red.shade100],
+                      : [Colors.red.shade500, Colors.red.shade100],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -737,9 +773,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {},
-                    child: Text('Shop Now'),
+                    child: Text('Shop Now',
+                    style: TextStyle(color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.red,),),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade900
+                          : Colors.white,
                       foregroundColor: Colors.red.shade700,
                     ),
                   ),

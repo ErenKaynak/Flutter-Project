@@ -6,7 +6,7 @@ class AppTheme {
     primaryColor: Colors.red.shade700,
     scaffoldBackgroundColor: Colors.white,
     appBarTheme: AppBarTheme(
-      backgroundColor: Colors.red.shade700,
+      backgroundColor: Colors.red.shade50,
       foregroundColor: Colors.white,
     ),
     cardColor: Colors.white,
