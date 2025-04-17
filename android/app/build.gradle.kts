@@ -47,4 +47,5 @@ dependencies {
     implementation("com.google.firebase:firebase-functions")
     implementation("com.google.android.gms:play-services-basement:18.2.0")
     implementation("com.google.android.gms:play-services-safetynet:18.0.1")
+    implementation ("com.google.android.material:material:1.8.0")
 }
