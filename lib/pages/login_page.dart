@@ -191,7 +191,30 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 100),
-                  Icon(Icons.lock, size: 100, color: iconColor),
+                 Container(
+                        height: 120,
+                        width: 120,
+                        decoration: BoxDecoration(
+                          color: isDarkMode ? Colors.grey[900] : Colors.white54,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.shade100,
+                              blurRadius: 10,
+                              spreadRadius: 3,
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            isDarkMode 
+                              ? 'lib/assets/Images/app-icon-dark.png'
+                              : 'lib/assets/Images/app-icon-light.png',
+                            width: 150,
+                            height: 150,
+                          ),
+                        ),
+                      ),
                   const SizedBox(height: 20),
                   Text(
                     'Welcome Back! Log in Here',

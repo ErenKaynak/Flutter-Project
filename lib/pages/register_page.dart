@@ -187,7 +187,30 @@ class _RegisterPageState extends State<RegisterPage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 100),
-                  Icon(Icons.lock, size: 100, color: Colors.red.shade700),
+                  Container(
+                        height: 120,
+                        width: 120,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey[900] : Colors.white54,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.shade100,
+                              blurRadius: 10,
+                              spreadRadius: 3,
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            isDark 
+                              ? 'lib/assets/Images/app-icon-dark.png'
+                              : 'lib/assets/Images/app-icon-light.png',
+                            width: 150,
+                            height: 150,
+                          ),
+                        ),
+                      ),
                   const SizedBox(height: 20),
                   Text(
                     'Welcome Sign in Here...',

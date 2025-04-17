@@ -36,21 +36,24 @@ class WelcomeScreen extends StatelessWidget {
                       Container(
                         height: 180,
                         width: 180,
-                        decoration: BoxDecoration(
-                          color: isDarkMode ? Colors.grey[900] : Colors.white,
+                       decoration: BoxDecoration(
+                          color: isDarkMode ? Colors.grey[900] : Colors.white54,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
                               color: Colors.red.shade100,
                               blurRadius: 15,
                               spreadRadius: 5,
-                            ),
+                              )
                           ],
                         ),
-                        child: Icon(
-                          Icons.computer,
-                          size: 80,
-                          color: Colors.red.shade400,
+                        child: ClipOval(
+                          child: Image.asset(
+                            isDarkMode 
+                              ? 'lib/assets/Images/app-icon-dark.png'
+                              : 'lib/assets/Images/app-icon-light.png',
+                            fit: BoxFit.scaleDown,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 40),

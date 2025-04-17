@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class AdminUsersPage extends StatefulWidget {
   const AdminUsersPage({super.key});
@@ -37,34 +39,72 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     setState(() {});
   }
 
+  Future<bool> checkAdminStatus() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        print('Checking admin status for user: ${user.email}');
+        print('User data from Firestore: ${userDoc.data()}');
+        
+        // Check for 'role' field instead of 'isAdmin'
+        return userDoc.data()?['role'] == 'admin';
+      }
+      return false;
+    } catch (e) {
+      print('Error checking admin status: $e');
+      return false;
+    }
+  }
+
   Future<void> deleteUser(String uid) async {
     try {
-      // Get admin credentials
-      // Note: This requires admin privileges and should be handled securely
-      final adminUser = FirebaseAuth.instance.currentUser;
+      print('Starting delete process for user: $uid');
+      final isAdmin = await checkAdminStatus();
+      print('Admin status check result: $isAdmin');
 
-      if (adminUser == null) {
+      if (!isAdmin) {
         throw Exception('Admin authentication required');
       }
 
-      // Delete from Firestore
-      await _firestore.collection('users').doc(uid).delete();
-
-      // For security reasons, you typically can't delete other users directly from client-side code
-      // The proper approach is to use Firebase Cloud Functions or your backend
-
-      // Show success message with note about auth
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('User document deleted. Please use Firebase console or Cloud Functions to remove authentication credentials.'),
-          duration: Duration(seconds: 5),
+      final functions = FirebaseFunctions.instanceFor(
+        region: 'us-central1',
+        app: Firebase.app(),
+      );
+      
+      print('Calling deleteUserCompletely function...');
+      final callable = functions.httpsCallable(
+        'deleteUserCompletely',
+        options: HttpsCallableOptions(
+          timeout: const Duration(seconds: 30),
         ),
       );
-
-      setState(() {});
+      
+      final result = await callable.call({'uid': uid});
+      print('Function response: ${result.data}');
+      
+      if (result.data['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('User successfully deleted'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        setState(() {});
+      }
     } catch (e) {
+      print('Error in deleteUser: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
       );
     }
   }
@@ -242,7 +282,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                         ),
                       ),
                       confirmDismiss: (direction) async {
-                        return await showDialog(
+                        final shouldDelete = await showDialog(
                           context: context,
                           builder: (context) => AlertDialog(
                             backgroundColor: Theme.of(context).cardColor,
@@ -270,6 +310,12 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                             ],
                           ),
                         );
+
+                        if (shouldDelete == true) {
+                          await deleteUser(uid);
+                          return true;
+                        }
+                        return false;
                       },
                       child: Card(
                         shape: RoundedRectangleBorder(
