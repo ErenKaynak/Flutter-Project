@@ -133,7 +133,7 @@ class _AddressScreenState extends State<AddressScreen> {
                               child: Row(
                                 children: [
                                   CircleAvatar(
-                                    backgroundColor: Colors.red.shade300,
+                                    backgroundColor: Colors.red.shade700,
                                     radius: 24,
                                     child: const Icon(
                                       Icons.location_on,
@@ -174,11 +174,11 @@ class _AddressScreenState extends State<AddressScreen> {
                               ),
                               child: ElevatedButton.icon(
                                 onPressed: _navigateToAddAddress,
-                                icon: const Icon(Icons.add_location_alt),
+                                icon: const Icon(Icons.add_location_alt, ),
                                 label: const Text('Add New Address'),
                                 style: ElevatedButton.styleFrom(
                                   minimumSize: const Size.fromHeight(54),
-                                  backgroundColor: Colors.red.shade300,
+                                  backgroundColor: Colors.red.shade700,
                                   foregroundColor: Colors.white,
                                   elevation: 2,
                                   shape: RoundedRectangleBorder(
@@ -257,8 +257,8 @@ class _AddressScreenState extends State<AddressScreen> {
                       decoration: BoxDecoration(
                         color:
                             isDark
-                                ? Colors.blueGrey.shade800
-                                : Colors.blue.shade50,
+                                ? Colors.red.shade900
+                                : Colors.red.shade50,
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(12),
                         ),
@@ -267,13 +267,13 @@ class _AddressScreenState extends State<AddressScreen> {
                         children: [
                           CircleAvatar(
                             backgroundColor:
-                                isDark ? Colors.blueGrey : Colors.blue.shade100,
+                                isDark ? Colors.red.shade800 : Colors.red.shade100,
                             child: Icon(
                               data['addressType'] == 'Home'
                                   ? Icons.home
                                   : Icons.work,
                               color:
-                                  isDark ? Colors.white : Colors.blue.shade700,
+                                  isDark ? Colors.white : Colors.red.shade700,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -287,7 +287,7 @@ class _AddressScreenState extends State<AddressScreen> {
                                 color:
                                     isDark
                                         ? Colors.white
-                                        : Colors.blue.shade700,
+                                        : Colors.red.shade700,
                               ),
                             ),
                           ),
@@ -314,7 +314,7 @@ class _AddressScreenState extends State<AddressScreen> {
                               Icon(
                                 Icons.person,
                                 size: 18,
-                                color: Colors.grey.shade500,
+                                color: Colors.red.shade700,
                               ),
                               const SizedBox(width: 8),
                               Text(
@@ -329,7 +329,7 @@ class _AddressScreenState extends State<AddressScreen> {
                               Icon(
                                 Icons.location_on,
                                 size: 18,
-                                color: Colors.grey.shade500,
+                                color: Colors.red.shade700,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -346,7 +346,7 @@ class _AddressScreenState extends State<AddressScreen> {
                               Icon(
                                 Icons.phone,
                                 size: 18,
-                                color: Colors.grey.shade500,
+                                color: Colors.red.shade700,
                               ),
                               const SizedBox(width: 8),
                               Text(

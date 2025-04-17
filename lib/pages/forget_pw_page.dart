@@ -44,63 +44,190 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? Colors.black : Colors.grey[200],
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.red.shade400,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: Theme.of(context).primaryColor,
+        elevation: isDark ? 0 : 2,
+        title: Text(
+          'Reset Password',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        iconTheme: IconThemeData(color: Colors.white),
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25.0),
-            child: Text(
-              'Enter your email and we will send you a password reset link',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: isDarkMode ? Colors.white : Colors.black,
-                fontSize: 16,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Header Section
+            Container(
+              padding: EdgeInsets.all(16.0),
+              margin: EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isDark
+                      ? [Colors.red.shade900, Colors.grey.shade900]
+                      : [Colors.red.shade300, Colors.white],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: isDark
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 5,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.red.shade900 : Colors.red.shade300,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.lock_reset,
+                      size: 30,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Password Reset",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: isDark ? Colors.grey[400] : Colors.black54,
+                          ),
+                        ),
+                        Text(
+                          "Recover your account",
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 25),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25),
-            child: TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: isDarkMode ? Colors.grey[800] : Colors.grey.shade300,
-                hintText: 'Email',
-                hintStyle: TextStyle(
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
-                ),
-                prefixIcon: Icon(
-                  Icons.email,
-                  color: isDarkMode ? Colors.white : Colors.black,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+
+            // Instructions Card
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
                 ),
               ),
+              child: Text(
+                'Enter your email address and we will send you a password reset link',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
-          ),
-          const SizedBox(height: 25),
-          FloatingActionButton(
-            backgroundColor: Colors.red.shade700,
-            foregroundColor: Colors.white,
-            child: const Icon(Icons.arrow_forward, size: 25),
-            onPressed: () async {
-              await passwordReset();
-            },
-          ),
-        ],
+
+            // Email Input Section
+            Container(
+              margin: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Email Address',
+                      hintText: 'Enter your email',
+                      prefixIcon: Icon(
+                        Icons.email_outlined,
+                        color: Theme.of(context).iconTheme.color,
+                      ),
+                      filled: true,
+                      fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.red.shade700,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 24),
+                  Container(
+                    width: double.infinity,
+                    height: 55,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.red.shade700, Colors.red.shade900],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.shade200.withOpacity(0.5),
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton(
+                      onPressed: passwordReset,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Send Reset Link',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

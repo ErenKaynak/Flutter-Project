@@ -30,7 +30,7 @@ class AppTheme {
       backgroundColor: Colors.black,
       foregroundColor: Colors.white,
     ),
-    cardColor: Colors.grey.shade800,
+    cardColor: Colors.grey.shade900,
     colorScheme: ColorScheme.dark(
       primary: Colors.red.shade700,
       secondary: Colors.red.shade400,

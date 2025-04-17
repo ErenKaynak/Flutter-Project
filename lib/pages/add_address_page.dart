@@ -55,7 +55,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Colors.red.shade700;
-    final accentColor = Colors.red.shade300;
+    final accentColor = Colors.red.shade700;
 
     // Dynamic colors based on theme
     final backgroundColor = isDarkMode ? Color(0xFF121212) : Colors.white;
@@ -627,7 +627,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
       height: 55,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.red.shade400, primaryColor],
+          colors: [primaryColor, Colors.red.shade500],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
