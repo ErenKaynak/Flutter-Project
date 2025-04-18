@@ -951,7 +951,7 @@ Widget _buildCategoryCircle(
   String imagePath,
   bool isSelected,
   VoidCallback onTap,
-  bool isAsset, // Add this parameter
+  bool isAsset,
 ) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
   
@@ -987,17 +987,22 @@ Widget _buildCategoryCircle(
               ? Image.asset(
                   imagePath,
                   fit: BoxFit.contain,
-                  color: isDark ? Colors.white70 : null,
+                  color: isDark ? Colors.white60 : null,
                 )
-              : Image.network(
-                  imagePath,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    print('Error loading category image: $error');
-                    return Icon(Icons.category, 
-                      color: isDark ? Colors.white70 : Colors.grey,
-                    );
-                  },
+              : ColorFiltered(  // Add ColorFiltered widget for network images
+                  colorFilter: isDark
+                      ? ColorFilter.mode(Colors.white70, BlendMode.srcIn)
+                      : ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                  child: Image.network(
+                    imagePath,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      print('Error loading category image: $error');
+                      return Icon(Icons.category, 
+                        color: isDark ? Colors.white70 : Colors.grey,
+                      );
+                    },
+                  ),
                 ),
         ),
         SizedBox(height: 8),
