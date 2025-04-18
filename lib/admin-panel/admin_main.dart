@@ -1,7 +1,9 @@
+import 'package:engineering_project/admin-panel/admin_categories.dart';
 import 'package:engineering_project/admin-panel/admin_discount.dart';
 import 'package:engineering_project/admin-panel/admin_order_management.dart';
 import 'package:engineering_project/admin-panel/admin_products.dart';
 import 'package:engineering_project/admin-panel/admin_user.dart';
+import 'package:engineering_project/admin-panel/admin_statistics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -206,6 +208,20 @@ class _AdminPageState extends State<AdminPage> {
               ),
             ),
 
+            const SizedBox(height: 10),
+
+            _buildAdminCard(
+              icon: Icons.analytics,
+              title: "Sales Statistics",
+              subtitle: "View sales analytics and charts",
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AdminStatisticsPage()),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
             const SizedBox(height: 20),
 
             Text(
@@ -224,7 +240,31 @@ class _AdminPageState extends State<AdminPage> {
               title: "App Settings",
               subtitle: "Configure application settings",
               onTap: () {
-                // Navigate to app settings screen
+                showModalBottomSheet(
+                  context: context,
+                  builder: (context) => Container(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          leading: Icon(Icons.category),
+                          title: Text('Category Management'),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CategoryManagementPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        // Add more settings options here
+                      ],
+                    ),
+                  ),
+                );
               },
             ),
           ],

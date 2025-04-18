@@ -49,6 +49,7 @@ dependencies:
   intl: ^0.20.2
   image_picker: ^1.1.2
   flutter_launcher_icons: ^0.14.3
+  fl_chart: ^0.71.0
 
 dev_dependencies:
   flutter_test:

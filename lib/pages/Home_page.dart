@@ -29,6 +29,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   String _selectedCategory = "All";
   List<Map<String, dynamic>> products = [];
+  List<Map<String, dynamic>> categories = [];
   bool _isLoading = true;
   List<String> favoriteProductIds = []; // Store only product IDs for favorites
   TextEditingController _searchController = TextEditingController();
@@ -52,7 +53,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _cartManager.loadCart();
     _cartManager.addListener(_updateUI);
     _getUserProfile(); // Get current user name
-
+    _loadCategories();
     _searchController.addListener(() {
       if (mounted) {
         setState(() {
@@ -62,6 +63,30 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
 
     _loadInitialData();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('categories')
+          .orderBy('name')
+          .get();
+
+      if (mounted) {
+        setState(() {
+          categories = snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'id': doc.id,
+              'name': data['name'] ?? 'Unnamed Category',
+              'iconPath': data['iconPath'] ?? '',
+            };
+          }).toList();
+        });
+      }
+    } catch (e) {
+      print('Error loading categories: $e');
+    }
   }
 
   Future<void> _loadInitialData() async {
@@ -890,106 +915,106 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 }
 
   Widget _buildCategoriesRow() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: EdgeInsets.symmetric(horizontal: 10),
-      child: Row(
-        children: [
-          _buildCategoryCircle(
-            "GPU's",
-            'lib/assets/Images/gpu-icon.png',
-            _selectedCategory == "GPU's",
-            () => _selectCategory("GPU's"),
-          ),
-          SizedBox(width: 15),
-          _buildCategoryCircle(
-            "Motherboards",
-            'lib/assets/Images/motherboard-icon.png',
-            _selectedCategory == "Motherboards",
-            () => _selectCategory("Motherboards"),
-          ),
-          SizedBox(width: 15),
-          _buildCategoryCircle(
-            "CPU's",
-            'lib/assets/Images/cpu-icon.png',
-            _selectedCategory == "CPU's",
-            () => _selectCategory("CPU's"),
-          ),
-          SizedBox(width: 15),
-          _buildCategoryCircle(
-            "RAM's",
-            'lib/assets/Images/ram-icon.png',
-            _selectedCategory == "RAM's",
-            () => _selectCategory("RAM's"),
-          ),
-          SizedBox(width: 15),
-          _buildCategoryCircle(
-            "Show All",
-            'lib/assets/Images/all-icon.png',
-            _selectedCategory == "All",
-            () => _selectCategory("All"),
-          ),
-        ],
-      ),
-    );
-  }
+  return SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    padding: EdgeInsets.symmetric(horizontal: 10),
+    child: Row(
+      children: [
+        // Add "Show All" category first
+        _buildCategoryCircle(
+          "All",
+          'lib/assets/Images/all-icon.png',
+          _selectedCategory == "All",
+          () => _selectCategory("All"),
+          true, // isAsset = true for local asset
+        ),
+        SizedBox(width: 15),
+        // Then add dynamic categories
+        ...categories.map((category) => Row(
+          children: [
+            _buildCategoryCircle(
+              category['name'],
+              category['iconPath'],
+              _selectedCategory == category['name'],
+              () => _selectCategory(category['name']),
+              false, // isAsset = false for network image
+            ),
+            SizedBox(width: 15),
+          ],
+        )).toList(),
+      ],
+    ),
+  );
+}
 
-  Widget _buildCategoryCircle(
-    String label,
-    String imagePath,
-    bool isSelected,
-    VoidCallback onTap,
-  ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isDark
-                  ? (isSelected ? Colors.red.shade900 : Colors.grey.shade800)
-                  : (isSelected ? Colors.red.shade50 : Colors.grey.shade200),
-              border: isSelected
-                  ? Border.all(color: isDark ? Colors.red.shade700 : Colors.red.shade400, width: 2)
-                  : null,
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: isDark
-                            ? Colors.red.shade900.withOpacity(0.5)
-                            : Colors.red.shade300.withOpacity(0.5),
-                        blurRadius: 8,
-                        spreadRadius: 1,
-                      ),
-                    ]
-                  : null,
-            ),
-            padding: EdgeInsets.all(10),
-            child: Image.asset(
-              imagePath,
-              fit: BoxFit.contain,
-              color: isDark ? Colors.white70 : null,
-            ),
+Widget _buildCategoryCircle(
+  String label,
+  String imagePath,
+  bool isSelected,
+  VoidCallback onTap,
+  bool isAsset, // Add this parameter
+) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  
+  return GestureDetector(
+    onTap: onTap,
+    child: Column(
+      children: [
+        Container(
+          width: 70,
+          height: 70,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isDark
+                ? (isSelected ? Colors.red.shade900 : Colors.grey.shade800)
+                : (isSelected ? Colors.red.shade50 : Colors.grey.shade200),
+            border: isSelected
+                ? Border.all(color: isDark ? Colors.red.shade700 : Colors.red.shade400, width: 2)
+                : null,
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: isDark
+                          ? Colors.red.shade900.withOpacity(0.5)
+                          : Colors.red.shade300.withOpacity(0.5),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
           ),
-          SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isDark
-                  ? (isSelected ? Colors.red.shade400 : Colors.white70)
-                  : (isSelected ? Colors.red : Colors.black),
-            ),
+          padding: EdgeInsets.all(10),
+          child: isAsset
+              ? Image.asset(
+                  imagePath,
+                  fit: BoxFit.contain,
+                  color: isDark ? Colors.white70 : null,
+                )
+              : Image.network(
+                  imagePath,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    print('Error loading category image: $error');
+                    return Icon(Icons.category, 
+                      color: isDark ? Colors.white70 : Colors.grey,
+                    );
+                  },
+                ),
+        ),
+        SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isDark
+                ? (isSelected ? Colors.red.shade400 : Colors.white70)
+                : (isSelected ? Colors.red : Colors.black),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildProductsHeader() {
     return Padding(
