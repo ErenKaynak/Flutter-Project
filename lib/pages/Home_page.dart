@@ -920,16 +920,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     padding: EdgeInsets.symmetric(horizontal: 10),
     child: Row(
       children: [
-        // Add "Show All" category first
-        _buildCategoryCircle(
-          "All",
-          'lib/assets/Images/all-icon.png',
-          _selectedCategory == "All",
-          () => _selectCategory("All"),
-          true, // isAsset = true for local asset
-        ),
-        SizedBox(width: 15),
-        // Then add dynamic categories
+        // First add dynamic categories
         ...categories.map((category) => Row(
           children: [
             _buildCategoryCircle(
@@ -942,6 +933,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             SizedBox(width: 15),
           ],
         )).toList(),
+        // Add "Show All" category last
+        _buildCategoryCircle(
+          "All",
+          'lib/assets/Images/all-icon.png',
+          _selectedCategory == "All",
+          () => _selectCategory("All"),
+          true, // isAsset = true for local asset
+        ),
       ],
     ),
   );
