@@ -39,19 +39,33 @@ class _ProfilePageState extends State<ProfilePage> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    final doc =
-        await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    final data = doc.data();
+    try {
+      final userDoc = FirebaseFirestore.instance.collection('users').doc(uid);
+      final docSnapshot = await userDoc.get();
 
-    if (data != null) {
-      setState(() {
-        name = data['name'] ?? '';
-        surname = data['surname'] ?? '';
-        imageUrl = data['profileImageUrl'] ?? '';
-        role = data['role'] ?? '';
-        isLoading = false;
-      });
-    } else {
+      if (!docSnapshot.exists) {
+        // Create user document if it doesn't exist
+        await userDoc.set({
+          'name': '',
+          'surname': '',
+          'profileImageUrl': '',
+          'role': 'user', // Default role
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      final data = (await userDoc.get()).data();
+      if (data != null) {
+        setState(() {
+          name = data['name'] ?? '';
+          surname = data['surname'] ?? '';
+          imageUrl = data['profileImageUrl'] ?? '';
+          role = data['role'] ?? '';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching profile data: $e');
       setState(() => isLoading = false);
     }
   }

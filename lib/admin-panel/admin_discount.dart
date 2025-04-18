@@ -785,7 +785,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
-                      color: isValid ? Colors.black87 : Colors.grey,
+                      color: isValid ? Colors.white : Colors.grey,
                     ),
                   ),
                   subtitle: Row(
