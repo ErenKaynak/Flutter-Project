@@ -2,6 +2,7 @@ import 'package:engineering_project/admin-panel/admin_discount.dart';
 import 'package:engineering_project/admin-panel/admin_order_management.dart';
 import 'package:engineering_project/admin-panel/admin_products.dart';
 import 'package:engineering_project/admin-panel/admin_user.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class AdminPage extends StatefulWidget {
@@ -12,6 +13,50 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
+  bool isNotificationsExpanded = false;
+  late Stream<QuerySnapshot> lowStockProducts;
+
+  @override
+  void initState() {
+    super.initState();
+    // Optimized query with ordering and field selection
+    lowStockProducts = FirebaseFirestore.instance
+        .collection('products')
+        .where('stock', isLessThanOrEqualTo: 3)
+        .orderBy('stock', descending: false)
+        .snapshots();
+  }
+
+  Widget _buildLowStockList(List<QueryDocumentSnapshot> products) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: products.length,
+      itemBuilder: (context, index) {
+        final product = products[index].data() as Map<String, dynamic>;
+        final int stock = product['stock'] ?? 0;
+
+        return ListTile(
+          dense: true,
+          leading: const Icon(Icons.warning, color: Colors.orange),
+          title: Text(
+            product['name'] ?? 'Unnamed Product',
+            style: TextStyle(
+              color: stock == 0 ? Colors.red : null,
+              fontWeight: stock == 0 ? FontWeight.bold : null,
+            ),
+          ),
+          subtitle: Text(
+            'Stock remaining: $stock',
+            style: TextStyle(
+              color: stock == 0 ? Colors.red : null,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -37,7 +82,84 @@ class _AdminPageState extends State<AdminPage> {
               ),
             ),
             const SizedBox(height: 20),
-            
+
+            Card(
+              elevation: isDark ? 1 : 2,
+              color: Theme.of(context).cardColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: isDark ? Colors.grey.shade800 : Colors.transparent,
+                  width: isDark ? 1 : 0,
+                ),
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  setState(() {
+                    isNotificationsExpanded = !isNotificationsExpanded;
+                  });
+                },
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: lowStockProducts,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                      return const ListTile(
+                        subtitle: Text("Checking stock levels..."),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return ListTile(
+                        subtitle: Text("Error: ${snapshot.error}"),
+                      );
+                    }
+
+                    final products = snapshot.data?.docs ?? [];
+
+                    return Column(
+                      children: [
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.orange.shade900.withOpacity(0.2) : Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.notifications_active,
+                              color: isDark ? Colors.orange.shade400 : Colors.orange.shade700,
+                            ),
+                          ),
+                          title: const Text(
+                            "Low Stock Alerts",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            products.isEmpty
+                                ? "No products low on stock"
+                                : "${products.length} product${products.length == 1 ? '' : 's'} low on stock",
+                            style: TextStyle(
+                              color: products.isNotEmpty ? Colors.orange : null,
+                            ),
+                          ),
+                          trailing: Icon(
+                            isNotificationsExpanded ? Icons.expand_less : Icons.expand_more,
+                            color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
+                          ),
+                        ),
+                        if (isNotificationsExpanded && products.isNotEmpty)
+                          _buildLowStockList(products),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
             _buildAdminCard(
               icon: Icons.people,
               title: "User Management",
@@ -47,9 +169,9 @@ class _AdminPageState extends State<AdminPage> {
                 MaterialPageRoute(builder: (context) => const AdminUsersPage()),
               ),
             ),
-            
+
             const SizedBox(height: 10),
-            
+
             _buildAdminCard(
               icon: Icons.inventory_2,
               title: "Product Management",
@@ -59,9 +181,9 @@ class _AdminPageState extends State<AdminPage> {
                 MaterialPageRoute(builder: (context) => const AdminProducts()),
               ),
             ),
-            
+
             const SizedBox(height: 10),
-            
+
             _buildAdminCard(
               icon: Icons.shopping_cart,
               title: "Order Management",
@@ -71,9 +193,9 @@ class _AdminPageState extends State<AdminPage> {
                 MaterialPageRoute(builder: (context) => const OrderManagementPage()),
               ),
             ),
-            
+
             const SizedBox(height: 10),
-            
+
             _buildAdminCard(
               icon: Icons.account_balance_wallet_rounded,
               title: "Promo Codes",
@@ -83,9 +205,9 @@ class _AdminPageState extends State<AdminPage> {
                 MaterialPageRoute(builder: (context) => const DiscountAdminPage()),
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             Text(
               "Admin Settings",
               style: TextStyle(
@@ -94,9 +216,9 @@ class _AdminPageState extends State<AdminPage> {
                 color: Theme.of(context).textTheme.titleLarge?.color,
               ),
             ),
-            
+
             const SizedBox(height: 10),
-            
+
             _buildAdminCard(
               icon: Icons.settings,
               title: "App Settings",
