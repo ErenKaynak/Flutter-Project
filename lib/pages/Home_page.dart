@@ -795,20 +795,99 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
 
   Widget _buildCategoriesHeader() {
-    return Padding(
-      padding: EdgeInsets.all(10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            "Categories",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+  return Padding(
+    padding: EdgeInsets.all(10),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          "Categories",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        PopupMenuButton<String>(
+          icon: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.sort, size: 20, color: Colors.red.shade700),
+              SizedBox(width: 4),
+              Text(
+                "Sort",
+                style: TextStyle(
+                  color: Colors.red.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-  
+          onSelected: (String value) {
+            setState(() {
+              switch (value) {
+                case 'price_asc':
+                  products.sort((a, b) => double.parse(a["price"].toString())
+                      .compareTo(double.parse(b["price"].toString())));
+                  break;
+                case 'price_desc':
+                  products.sort((a, b) => double.parse(b["price"].toString())
+                      .compareTo(double.parse(a["price"].toString())));
+                  break;
+                case 'name_asc':
+                  products.sort((a, b) => 
+                      a["name"].toString().compareTo(b["name"].toString()));
+                  break;
+                case 'name_desc':
+                  products.sort((a, b) => 
+                      b["name"].toString().compareTo(a["name"].toString()));
+                  break;
+              }
+            });
+          },
+          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+            PopupMenuItem<String>(
+              value: 'price_asc',
+              child: Row(
+                children: [
+                  Icon(Icons.arrow_upward, size: 20),
+                  SizedBox(width: 8),
+                  Text('Price: Low to High'),
+                ],
+              ),
+            ),
+            PopupMenuItem<String>(
+              value: 'price_desc',
+              child: Row(
+                children: [
+                  Icon(Icons.arrow_downward, size: 20),
+                  SizedBox(width: 8),
+                  Text('Price: High to Low'),
+                ],
+              ),
+            ),
+            PopupMenuItem<String>(
+              value: 'name_asc',
+              child: Row(
+                children: [
+                  Icon(Icons.sort_by_alpha, size: 20),
+                  SizedBox(width: 8),
+                  Text('Name: A to Z'),
+                ],
+              ),
+            ),
+            PopupMenuItem<String>(
+              value: 'name_desc',
+              child: Row(
+                children: [
+                  Icon(Icons.sort_by_alpha, size: 20),
+                  SizedBox(width: 8),
+                  Text('Name: Z to A'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildCategoriesRow() {
     return SingleChildScrollView(

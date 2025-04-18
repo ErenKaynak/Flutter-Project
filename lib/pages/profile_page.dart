@@ -80,6 +80,63 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
+  Future<void> _updateUserProfile(String newName, String newSurname) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'name': newName,
+      'surname': newSurname,
+    });
+
+    setState(() {
+      name = newName;
+      surname = newSurname;
+    });
+  }
+
+  void _showEditProfileDialog() {
+    final TextEditingController nameController = TextEditingController(text: name);
+    final TextEditingController surnameController = TextEditingController(text: surname);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Profile'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Name'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: surnameController,
+              decoration: const InputDecoration(labelText: 'Surname'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              _updateUserProfile(
+                nameController.text.trim(),
+                surnameController.text.trim(),
+              );
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _changeProfilePicture() {
     showModalBottomSheet(
       context: context,
@@ -158,6 +215,12 @@ class _ProfilePageState extends State<ProfilePage> {
         centerTitle: true,
         backgroundColor: isDark ? Colors.black : Colors.red.shade700,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: _showEditProfileDialog,
+          ),
+        ],
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body:
