@@ -29,10 +29,31 @@ class _ProfilePageState extends State<ProfilePage> {
 
   final ImagePicker _picker = ImagePicker();
 
+  int _tapCount = 0;
+  bool _blackMode = false;
+  bool _showBlackModeToggle = false;
+
   @override
   void initState() {
     super.initState();
     fetchProfileData();
+  }
+
+  @override
+  void dispose() {
+    _blackMode = false;
+    _showBlackModeToggle = false;
+    super.dispose();
+  }
+
+  void _handleProfileTitleTap() {
+    setState(() {
+      _tapCount++;
+      if (_tapCount >= 5) {
+        _showBlackModeToggle = true;
+        _tapCount = 0;
+      }
+    });
   }
 
   Future<void> fetchProfileData() async {
@@ -44,12 +65,11 @@ class _ProfilePageState extends State<ProfilePage> {
       final docSnapshot = await userDoc.get();
 
       if (!docSnapshot.exists) {
-        // Create user document if it doesn't exist
         await userDoc.set({
           'name': '',
           'surname': '',
           'profileImageUrl': '',
-          'role': 'user', // Default role
+          'role': 'user',
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
@@ -110,44 +130,49 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showEditProfileDialog() {
-    final TextEditingController nameController = TextEditingController(text: name);
-    final TextEditingController surnameController = TextEditingController(text: surname);
+    final TextEditingController nameController = TextEditingController(
+      text: name,
+    );
+    final TextEditingController surnameController = TextEditingController(
+      text: surname,
+    );
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Profile'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Edit Profile'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: surnameController,
+                  decoration: const InputDecoration(labelText: 'Surname'),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: surnameController,
-              decoration: const InputDecoration(labelText: 'Surname'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  _updateUserProfile(
+                    nameController.text.trim(),
+                    surnameController.text.trim(),
+                  );
+                  Navigator.pop(context);
+                },
+                child: const Text('Save'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              _updateUserProfile(
-                nameController.text.trim(),
-                surnameController.text.trim(),
-              );
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -186,6 +211,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget buildButton(String label, IconData icon, VoidCallback onTap) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color =
+        _blackMode ? Colors.grey.shade900 : Theme.of(context).cardColor;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: GestureDetector(
@@ -193,7 +220,7 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
+            color: color,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isDark ? Colors.grey.shade700 : Colors.transparent,
@@ -206,9 +233,10 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(width: 16),
               Text(
                 label,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: _blackMode ? Colors.white : null,
+                ),
               ),
             ],
           ),
@@ -223,11 +251,26 @@ class _ProfilePageState extends State<ProfilePage> {
     final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final scaffoldBgColor =
+        _blackMode ? Colors.black : Theme.of(context).scaffoldBackgroundColor;
+    final cardColor =
+        _blackMode ? Colors.grey.shade900 : Theme.of(context).cardColor;
+    final textColor =
+        _blackMode
+            ? Colors.white
+            : Theme.of(context).textTheme.titleLarge?.color;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: GestureDetector(
+          onTap: _handleProfileTitleTap,
+          child: const Text('Profile'),
+        ),
         centerTitle: true,
-        backgroundColor: isDark ? Colors.black : Colors.red.shade700,
+        backgroundColor:
+            _blackMode
+                ? Colors.black
+                : (isDark ? Colors.black : Colors.red.shade700),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -236,7 +279,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: scaffoldBgColor,
       body:
           isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -280,6 +323,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       '$name $surname',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: textColor,
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -314,13 +358,63 @@ class _ProfilePageState extends State<ProfilePage> {
                         },
                       ),
 
+                    if (_showBlackModeToggle)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: cardColor,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color:
+                                  isDark
+                                      ? Colors.grey.shade700
+                                      : Colors.transparent,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.dark_mode,
+                                    color: Colors.red,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    "Black Mode",
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: textColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Switch(
+                                value: _blackMode,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _blackMode = val;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
                     const SizedBox(height: 16),
 
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       height: 60,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
+                        color: cardColor,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color:
