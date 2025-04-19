@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:csv/csv.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
 
 class OrderManagementPage extends StatefulWidget {
   const OrderManagementPage({Key? key}) : super(key: key);
@@ -167,6 +172,99 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
     );
   }
 
+  Future<void> _exportOrdersToCSV() async {
+    try {
+      setState(() => _isLoading = true);
+
+      // Get all orders first
+      final QuerySnapshot ordersSnapshot = await FirebaseFirestore.instance
+          .collection('orders')
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      // Create CSV data
+      List<List<dynamic>> rows = [
+        // Header row
+        [
+          'Order ID',
+          'Date',
+          'Customer Name',
+          'Email',
+          'Phone',
+          'Status',
+          'Total Amount',
+          'Tracking Number',
+          'Items',
+          'Address'
+        ]
+      ];
+
+      // Add order data
+      for (var doc in ordersSnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final timestamp = data['timestamp'] as Timestamp?;
+        final dateTime = timestamp != null 
+            ? DateFormat('dd/MM/yyyy HH:mm').format(timestamp.toDate())
+            : 'Unknown';
+
+        rows.add([
+          doc.id,
+          dateTime,
+          data['customerName'] ?? 'N/A',
+          data['customerEmail'] ?? 'N/A',
+          data['customerPhone'] ?? 'N/A',
+          data['status'] ?? 'Pending',
+          '₺${(data['totalAmount'] ?? 0.0).toStringAsFixed(2)}',
+          data['trackingNumber'] ?? 'Not provided',
+          (data['items'] as List<dynamic>?)?.map((item) =>
+              '${item['quantity']}x ${item['name']}').join('; ') ?? '',
+          data['shippingAddress'] ?? 'No address'
+        ]);
+      }
+
+      // Convert to CSV
+      final csv = const ListToCsvConverter().convert(rows);
+      
+      try {
+        // Try to use downloads directory first
+        final dir = await getApplicationDocumentsDirectory();
+        final fileName = 'orders_${DateTime.now().millisecondsSinceEpoch}.csv';
+        final file = File('${dir.path}/$fileName');
+        
+        // Write CSV file
+        await file.writeAsString(csv);
+
+        // Share the file
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          subject: 'Orders Export',
+          text: 'Orders export from ${DateFormat('dd/MM/yyyy').format(DateTime.now())}'
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Orders exported successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        print('Error sharing file: $e');
+        throw Exception('Failed to share file');
+      }
+
+      setState(() => _isLoading = false);
+    } catch (e) {
+      setState(() => _isLoading = false);
+      print('Error exporting orders: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Export failed: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -181,6 +279,13 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
         ),
         elevation: isDark ? 0 : 2,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.file_download),
+            onPressed: _exportOrdersToCSV,
+            tooltip: 'Export to CSV',
+          ),
+        ],
       ),
       body: Column(
         children: [

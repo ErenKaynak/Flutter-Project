@@ -50,6 +50,10 @@ dependencies:
   image_picker: ^1.1.2
   flutter_launcher_icons: ^0.14.3
   fl_chart: ^0.71.0
+  csv: ^6.0.0
+  path_provider: ^2.1.5
+  share_plus: ^10.1.4
+  permission_handler: ^12.0.0+1
 
 dev_dependencies:
   flutter_test:

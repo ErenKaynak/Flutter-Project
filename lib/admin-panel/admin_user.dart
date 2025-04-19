@@ -22,6 +22,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         'uid': doc.id,
         'email': data['email'] ?? '',
         'role': data['role'] ?? 'user',
+        'disabled': data['disabled'] ?? false,
+        'disabledAt': data['disabledAt'],
+        'disabledBy': data['disabledBy'],
       };
     }).toList();
 
@@ -63,40 +66,66 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
   Future<void> deleteUser(String uid) async {
     try {
-      print('Starting delete process for user: $uid');
+      // Check admin status
       final isAdmin = await checkAdminStatus();
-      print('Admin status check result: $isAdmin');
-
       if (!isAdmin) {
         throw Exception('Admin authentication required');
       }
 
-      final functions = FirebaseFunctions.instanceFor(
-        region: 'us-central1',
-        app: Firebase.app(),
-      );
+      // Get admin credentials
+      final adminUser = FirebaseAuth.instance.currentUser;
+      if (adminUser == null) {
+        throw Exception('Admin not authenticated');
+      }
+
+      // Start a batch write for Firestore operations
+      final batch = FirebaseFirestore.instance.batch();
+
+      // Delete user's data from various collections
+      batch.delete(_firestore.collection('users').doc(uid));
+      batch.delete(_firestore.collection('cart').doc(uid));
+      batch.delete(_firestore.collection('favorites').doc(uid));
+
+      // Get user's orders
+      final ordersQuery = await _firestore
+          .collection('orders')
+          .where('userId', isEqualTo: uid)
+          .get();
       
-      print('Calling deleteUserCompletely function...');
-      final callable = functions.httpsCallable(
-        'deleteUserCompletely',
-        options: HttpsCallableOptions(
-          timeout: const Duration(seconds: 30),
+      // Add order deletions to batch
+      for (var doc in ordersQuery.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Execute all Firestore deletions
+      await batch.commit();
+
+      // Delete from Authentication
+      final adminCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: adminUser.email!,
+        password: 'ADMIN_PASSWORD', // You'll need to handle this securely
+      );
+
+      // Create a new instance for the user to be deleted
+      final userToDelete = FirebaseAuth.instance.app.options.androidClientId != null
+          ? FirebaseAuth.instanceFor(app: FirebaseAuth.instance.app)
+          : FirebaseAuth.instance;
+
+      // Delete the user from Authentication
+      await userToDelete.currentUser?.delete();
+
+      // Sign back in as admin
+      await FirebaseAuth.instance.signInWithEmailAndPassword(email: adminUser.email!, password: 'ADMIN_PASSWORD');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('User successfully deleted'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
         ),
       );
-      
-      final result = await callable.call({'uid': uid});
-      print('Function response: ${result.data}');
-      
-      if (result.data['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('User successfully deleted'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-        setState(() {});
-      }
+
+      setState(() {});
     } catch (e) {
       print('Error in deleteUser: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -104,6 +133,100 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           content: Text('Error: ${e.toString()}'),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  // Add this method to handle the disable confirmation dialog
+  Future<void> _showDisableConfirmationDialog(String uid, String email, bool currentlyDisabled) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
+        title: Text(
+          currentlyDisabled ? 'Enable Account' : 'Disable Account',
+          style: TextStyle(
+            color: Theme.of(context).textTheme.titleLarge?.color,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          currentlyDisabled 
+            ? 'Are you sure you want to enable ${email}\'s account?'
+            : 'Are you sure you want to disable ${email}\'s account?\nThis will prevent the user from logging in.',
+          style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Theme.of(context).primaryColor),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(
+              currentlyDisabled ? 'Enable' : 'Disable',
+              style: TextStyle(
+                color: currentlyDisabled ? Colors.green : Colors.red,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Update the toggleUserAccount method
+  Future<void> toggleUserAccount(String uid, String email, bool disable) async {
+    try {
+      // Show confirmation dialog
+      final confirmed = await _showDisableConfirmationDialog(uid, email, !disable);
+
+      final isAdmin = await checkAdminStatus();
+      if (!isAdmin) {
+        throw Exception('Admin authentication required');
+      }
+
+      // Update user status in Firestore
+      await _firestore.collection('users').doc(uid).update({
+        'disabled': disable,
+        'disabledAt': disable ? FieldValue.serverTimestamp() : null,
+        'disabledBy': FirebaseAuth.instance.currentUser?.email,
+        'disabledReason': disable ? 'Administrative action' : null,
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                disable ? Icons.block : Icons.check_circle,
+                color: Colors.white,
+              ),
+              SizedBox(width: 8),
+              Text('Account ${disable ? 'disabled' : 'enabled'} successfully'),
+            ],
+          ),
+          backgroundColor: disable ? Colors.red : Colors.green,
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      setState(() {});
+    } catch (e) {
+      print('Error toggling user account: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -348,40 +471,54 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                   : Theme.of(context).textTheme.bodyMedium?.color,
                             ),
                           ),
-                          trailing: Theme(
-                            data: Theme.of(context).copyWith(
-                              dropdownMenuTheme: DropdownMenuThemeData(
-                                textStyle: TextStyle(
-                                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  user['disabled'] == true 
+                                    ? Icons.block 
+                                    : Icons.check_circle_outline,
+                                  color: user['disabled'] == true 
+                                    ? Colors.red 
+                                    : Colors.green,
+                                ),
+                                tooltip: user['disabled'] == true 
+                                  ? 'Enable Account' 
+                                  : 'Disable Account',
+                                onPressed: () => toggleUserAccount(
+                                  uid, 
+                                  email, 
+                                  !(user['disabled'] == true)
                                 ),
                               ),
-                            ),
-                            child: DropdownButton<String>(
-                              value: role,
-                              dropdownColor: Theme.of(context).cardColor,
-                              style: TextStyle(
-                                color: Theme.of(context).textTheme.bodyLarge?.color,
-                              ),
-                              items: ['user', 'admin'].map((r) {
-                                return DropdownMenuItem(
-                                  value: r,
-                                  child: Text(
-                                    r,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: r == 'admin'
-                                          ? (isDark ? Colors.red.shade400 : Colors.red.shade700)
-                                          : Theme.of(context).textTheme.bodyLarge?.color,
+                              DropdownButton<String>(
+                                value: role,
+                                dropdownColor: Theme.of(context).cardColor,
+                                style: TextStyle(
+                                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                                ),
+                                items: ['user', 'admin'].map((r) {
+                                  return DropdownMenuItem(
+                                    value: r,
+                                    child: Text(
+                                      r,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: r == 'admin'
+                                            ? (isDark ? Colors.red.shade400 : Colors.red.shade700)
+                                            : Theme.of(context).textTheme.bodyLarge?.color,
+                                      ),
                                     ),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (newRole) {
-                                if (newRole != null && newRole != role) {
-                                  updateUserRole(uid, newRole);
-                                }
-                              },
-                            ),
+                                  );
+                                }).toList(),
+                                onChanged: (newRole) {
+                                  if (newRole != null && newRole != role) {
+                                    updateUserRole(uid, newRole);
+                                  }
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       ),
