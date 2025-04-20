@@ -30,20 +30,12 @@ class _ProfilePageState extends State<ProfilePage> {
   final ImagePicker _picker = ImagePicker();
 
   int _tapCount = 0;
-  bool _blackMode = false;
   bool _showBlackModeToggle = false;
 
   @override
   void initState() {
     super.initState();
     fetchProfileData();
-  }
-
-  @override
-  void dispose() {
-    _blackMode = false;
-    _showBlackModeToggle = false;
-    super.dispose();
   }
 
   void _handleProfileTitleTap() {
@@ -209,10 +201,18 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget buildButton(String label, IconData icon, VoidCallback onTap) {
+  Widget buildButton(
+    String label,
+    IconData icon,
+    VoidCallback onTap,
+    ThemeNotifier themeNotifier,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color =
-        _blackMode ? Colors.grey.shade900 : Theme.of(context).cardColor;
+    final isBlack = themeNotifier.isBlackMode;
+
+    final color = isBlack ? Colors.grey.shade900 : Theme.of(context).cardColor;
+    final textColor = isBlack ? Colors.white : null;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: GestureDetector(
@@ -223,7 +223,8 @@ class _ProfilePageState extends State<ProfilePage> {
             color: color,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isDark ? Colors.grey.shade700 : Colors.transparent,
+              color:
+                  isDark || isBlack ? Colors.grey.shade700 : Colors.transparent,
               width: 1,
             ),
           ),
@@ -235,7 +236,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 label,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: _blackMode ? Colors.white : null,
+                  color: textColor,
                 ),
               ),
             ],
@@ -249,14 +250,16 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isBlackMode = themeNotifier.isBlackMode;
+    final isDark =
+        Theme.of(context).brightness == Brightness.dark || isBlackMode;
 
     final scaffoldBgColor =
-        _blackMode ? Colors.black : Theme.of(context).scaffoldBackgroundColor;
+        isBlackMode ? Colors.black : Theme.of(context).scaffoldBackgroundColor;
     final cardColor =
-        _blackMode ? Colors.grey.shade900 : Theme.of(context).cardColor;
+        isBlackMode ? Colors.grey.shade900 : Theme.of(context).cardColor;
     final textColor =
-        _blackMode
+        isBlackMode
             ? Colors.white
             : Theme.of(context).textTheme.titleLarge?.color;
 
@@ -268,9 +271,11 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         centerTitle: true,
         backgroundColor:
-            _blackMode
+            isBlackMode
                 ? Colors.black
-                : (isDark ? Colors.black : Colors.red.shade700),
+                : (isDark
+                    ? Theme.of(context).appBarTheme.backgroundColor
+                    : Colors.red.shade700),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -335,14 +340,14 @@ class _ProfilePageState extends State<ProfilePage> {
                           builder: (_) => const OrderHistoryPage(),
                         ),
                       );
-                    }),
+                    }, themeNotifier),
 
                     buildButton('My Addresses', Icons.location_on, () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => AddressScreen()),
                       );
-                    }),
+                    }, themeNotifier),
 
                     if (role == 'admin')
                       buildButton(
@@ -356,6 +361,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           );
                         },
+                        themeNotifier,
                       ),
 
                     if (_showBlackModeToggle)
@@ -396,11 +402,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ],
                               ),
                               Switch(
-                                value: _blackMode,
+                                value: isBlackMode,
                                 onChanged: (val) {
-                                  setState(() {
-                                    _blackMode = val;
-                                  });
+                                  themeNotifier.toggleBlackMode(val);
                                 },
                               ),
                             ],
@@ -428,14 +432,15 @@ class _ProfilePageState extends State<ProfilePage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(
-                            children: const [
-                              Icon(Icons.brightness_6, color: Colors.red),
-                              SizedBox(width: 12),
+                            children: [
+                              const Icon(Icons.brightness_6, color: Colors.red),
+                              const SizedBox(width: 12),
                               Text(
                                 "Dark Mode",
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w600,
+                                  color: textColor,
                                 ),
                               ),
                             ],
@@ -458,7 +463,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         context,
                         MaterialPageRoute(builder: (_) => WelcomeScreen()),
                       );
-                    }),
+                    }, themeNotifier),
                   ],
                 ),
               ),
