@@ -1,7 +1,10 @@
+import 'package:engineering_project/pages/cart_page.dart';
+import 'package:engineering_project/pages/checkout_page.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:engineering_project/assets/components/cart_manager.dart' hide CartItem;
 
 class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({Key? key}) : super(key: key);
@@ -525,6 +528,8 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           return _buildOrderCard(order);
         },
         childCount: filteredOrders.length,
+        addAutomaticKeepAlives: false, // Add this line
+        addRepaintBoundaries: true,    // Add this line
       ),
     );
   }
@@ -532,132 +537,136 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   Widget _buildOrderCard(Map<String, dynamic> order) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: isDark ? 1 : 2,
-      color: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: isDark 
-            ? BorderSide(color: Colors.grey.shade800)
-            : BorderSide.none,
-      ),
-      child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        childrenPadding: EdgeInsets.zero,
-        title: Text(
-          'Order #${order['orderNumber']}',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).textTheme.titleMedium?.color,
+    return RepaintBoundary(
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        elevation: isDark ? 1 : 2,
+        color: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isDark 
+              ? BorderSide(color: Colors.grey.shade800)
+              : BorderSide.none,
+        ),
+        child: ExpansionTile(
+          maintainState: false,
+          initiallyExpanded: false,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: EdgeInsets.zero,
+          title: Text(
+            'Order #${order['orderNumber']}',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).textTheme.titleMedium?.color,
+            ),
           ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              DateFormat('MMM dd, yyyy - HH:mm').format(
-                (order['timestamp'] as Timestamp).toDate(),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Text(
+                DateFormat('MMM dd, yyyy - HH:mm').format(
+                  (order['timestamp'] as Timestamp).toDate(),
+                ),
+                style: const TextStyle(fontSize: 12),
               ),
-              style: const TextStyle(fontSize: 12),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildStatusBadge(order['status']),
-                const Spacer(),
-                Text(
-                  'Total: ₺${order['total'].toString()}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green.shade700,
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _buildStatusBadge(order['status']),
+                  const Spacer(),
+                  Text(
+                    'Total: ₺${order['total'].toString()}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade700,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        children: [
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Items:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                ...order['items'].map<Widget>((item) => _buildOrderItem(item)).toList(),
-                const Divider(height: 32),
-                if (order['trackingNumber'] != null && order['trackingNumber'].isNotEmpty) ...[
+                ],
+              ),
+            ],
+          ),
+          children: [
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   const Text(
-                    'Tracking Number:',
+                    'Items:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  ...order['items'].map<Widget>((item) => _buildOrderItem(item)).toList(),
+                  const Divider(height: 32),
+                  if (order['trackingNumber'] != null && order['trackingNumber'].isNotEmpty) ...[
+                    const Text(
+                      'Tracking Number:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      order['trackingNumber'],
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  const Text(
+                    'Shipping Address:',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    order['trackingNumber'],
+                    order['shippingAddress'] ?? 'No address provided',
                     style: const TextStyle(fontSize: 14),
                   ),
                   const SizedBox(height: 8),
-                ],
-                const Text(
-                  'Shipping Address:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  order['shippingAddress'] ?? 'No address provided',
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Payment Method:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _capitalizeFirstLetter(order['paymentMethod'] ?? 'Not specified'),
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        _handleReorder(order);
-                      },
-                      icon: const Icon(Icons.replay),
-                      label: const Text('Reorder'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.blue,
-                        side: const BorderSide(color: Colors.blue),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      ),
-                    ),
-                    if (order['status'] == 'Pending')
+                  const Text(
+                    'Payment Method:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _capitalizeFirstLetter(order['paymentMethod'] ?? 'Not specified'),
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
                       OutlinedButton.icon(
                         onPressed: () {
-                          _handleCancelOrder(order);
+                          _handleReorder(order);
                         },
-                        icon: const Icon(Icons.cancel_outlined),
-                        label: const Text('Cancel'),
+                        icon: const Icon(Icons.replay),
+                        label: const Text('Reorder'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
+                          foregroundColor: Colors.blue,
+                          side: const BorderSide(color: Colors.blue),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         ),
                       ),
-                  ],
-                ),
-              ],
+                      if (order['status'] == 'Pending')
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            _handleCancelOrder(order);
+                          },
+                          icon: const Icon(Icons.cancel_outlined),
+                          label: const Text('Cancel'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -790,6 +799,8 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       return Image.network(
         imagePath,
         fit: BoxFit.cover,
+        cacheWidth: 120,  // Add this line
+        cacheHeight: 120, // Add this line
         errorBuilder: (context, error, stackTrace) {
           return _buildFallbackImage();
         },
@@ -798,6 +809,8 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       return Image.asset(
         imagePath,
         fit: BoxFit.cover,
+        cacheWidth: 120,  // Add this line
+        cacheHeight: 120, // Add this line
         errorBuilder: (context, error, stackTrace) {
           return _buildFallbackImage();
         },
@@ -815,49 +828,112 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     );
   }
   
-  void _handleReorder(Map<String, dynamic> order) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Reorder functionality coming soon'),
-        backgroundColor: Colors.blue,
+  void _handleReorder(Map<String, dynamic> order) async {
+    // Convert order items to CartItem objects
+    final List<CartItem> items = (order['items'] as List).map((item) => CartItem(
+      id: item['id'] ?? '',
+      name: item['name'] ?? '',
+      price: (double.tryParse(item['price']?.toString() ?? '0') ?? 0.0).toString(),
+      image: item['imagePath'] ?? item['image'] ?? '',
+      quantity: item['quantity'] ?? 1,
+    )).toList();
+
+    // Navigate to checkout page with the items
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CheckoutPage(
+          subtotal: (order['total'] ?? 0.0).toDouble(),
+          items: items,
+          appliedDiscount: null, // Reset any previous discounts
+        ),
       ),
     );
   }
-  
-  void _handleCancelOrder(Map<String, dynamic> order) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).dialogBackgroundColor,
+
+  void _handleCancelOrder(Map<String, dynamic> order) async {
+    // Store the context and theme information before showing dialog
+    final currentContext = context;
+    final isDark = Theme.of(currentContext).brightness == Brightness.dark;
+    final dialogBackgroundColor = Theme.of(currentContext).dialogBackgroundColor;
+    final titleTextColor = Theme.of(currentContext).textTheme.titleLarge?.color;
+    final bodyTextColor = Theme.of(currentContext).textTheme.bodyLarge?.color;
+    final primaryColor = Theme.of(currentContext).primaryColor;
+
+    if (!mounted) return;
+
+    final bool? shouldCancel = await showDialog<bool>(
+      context: currentContext,
+      builder: (BuildContext context) => AlertDialog(
+        backgroundColor: dialogBackgroundColor,
         title: Text(
           'Cancel Order',
-          style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
+          style: TextStyle(color: titleTextColor),
         ),
         content: Text(
           'Are you sure you want to cancel this order?',
-          style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+          style: TextStyle(color: bodyTextColor),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('NO', style: TextStyle(color: Theme.of(context).primaryColor)),
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('NO', style: TextStyle(color: primaryColor)),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Order cancellation functionality coming soon'),
-                  backgroundColor: isDark ? Colors.red.shade900 : Colors.red,
-                ),
-              );
-            },
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('YES', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+
+    if (shouldCancel != true || !mounted) return;
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('User not logged in');
+
+      // Update order status in main orders collection
+      await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(order['id'])
+          .update({
+            'status': 'Cancelled',
+            'cancelledAt': FieldValue.serverTimestamp(),
+          });
+
+      // Update order status in user's orders subcollection
+      await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(user.uid)
+          .collection('userOrders')
+          .doc(order['id'])
+          .update({
+            'status': 'Cancelled',
+            'cancelledAt': FieldValue.serverTimestamp(),
+          });
+
+      if (!mounted) return;
+
+      // Refresh orders list
+      _fetchOrders();
+
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        const SnackBar(
+          content: Text('Order cancelled successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('Error cancelling order: $e');
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        SnackBar(
+          content: Text('Failed to cancel order: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

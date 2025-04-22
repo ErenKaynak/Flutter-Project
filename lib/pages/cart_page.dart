@@ -1,5 +1,6 @@
 import 'package:engineering_project/assets/components/discount_code.dart';
 import 'package:engineering_project/assets/components/discount_service.dart';
+import 'package:engineering_project/pages/checkout_page.dart';
 import 'package:engineering_project/pages/home_page.dart';
 import 'package:engineering_project/pages/past_orders_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
@@ -444,6 +445,19 @@ class _CartPageState extends State<CartPage> {
       _discountError = null;
     });
   }
+
+  void _proceedToCheckout() {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => CheckoutPage(
+        subtotal: _cartManager.totalPrice,
+        appliedDiscount: _appliedDiscount,
+        items: _cartManager.items,
+      ),
+    ),
+  );
+}
 
   double get _discountedTotal {
     final originalTotal = _cartManager.totalPrice;
@@ -910,7 +924,7 @@ class _CartPageState extends State<CartPage> {
                                       Text(
                                         '${_appliedDiscount!.discountPercentage}% off',
                                         style: TextStyle(
-                                          color: Theme.of(context).hintColor,
+                                          color: Colors.green.shade800, 
                                         ),
                                       ),
                                     ],
@@ -1021,7 +1035,7 @@ class _CartPageState extends State<CartPage> {
                             onPressed:
                                 cartItems.isEmpty || _isProcessingPayment
                                     ? null
-                                    : _processPayment,
+                                    : _proceedToCheckout,
                             child:
                                 _isProcessingPayment
                                     ? const SizedBox(

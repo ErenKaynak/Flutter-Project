@@ -214,7 +214,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
           data['customerEmail'] ?? 'N/A',
           data['customerPhone'] ?? 'N/A',
           data['status'] ?? 'Pending',
-          '₺${(data['totalAmount'] ?? 0.0).toStringAsFixed(2)}',
+          '₺${(data['totalAmount'] ?? data['total'] ?? 0.0).toStringAsFixed(2)}',
           data['trackingNumber'] ?? 'Not provided',
           (data['items'] as List<dynamic>?)?.map((item) =>
               '${item['quantity']}x ${item['name']}').join('; ') ?? '',
@@ -497,7 +497,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                     final data = doc.data() as Map<String, dynamic>;
                     
                     final orderId = doc.id;
-                    final totalAmount = data['totalAmount'] ?? 0.0;
+                    final totalAmount = data['totalAmount'] ?? data['total'] ?? 0.0;
                     final status = data['status'] ?? 'Pending';
                     final timestamp = data['timestamp'] as Timestamp?;
                     final dateTime = timestamp != null 
@@ -547,7 +547,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                             ],
                           ),
                           trailing: Text(
-                            '₺${totalAmount.toStringAsFixed(2)}',
+                            '₺${(data['totalAmount'] ?? data['total'] ?? 0.0).toStringAsFixed(2)}',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -600,6 +600,27 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                                         ],
                                       ),
                                     ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ListTile(
+                                    title: Text('Order Summary'),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Subtotal: ₺${data['subtotal']?.toStringAsFixed(2) ?? '0.00'}'),
+                                        if (data['discountAmount'] != null && data['discountAmount'] > 0)
+                                          Text(
+                                            'Discount: -₺${data['discountAmount'].toStringAsFixed(2)} ' +
+                                            '(${data['discountCode'] ?? ''})',
+                                            style: TextStyle(color: Colors.green),
+                                          ),
+                                        Text('Shipping: ₺${data['shippingCost']?.toStringAsFixed(2) ?? '0.00'}'),
+                                        Text(
+                                          'Total: ₺${data['totalAmount']?.toStringAsFixed(2) ?? '0.00'}',
+                                          style: TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
                                   _buildCustomerInfo(data),

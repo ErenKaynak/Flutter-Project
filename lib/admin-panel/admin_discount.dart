@@ -807,14 +807,13 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                         ),
                       ),
                       SizedBox(width: 8),
-                      if (code.usageLimit > 0)
-                        Text(
-                          'Uses: ${code.usageCount}/${code.usageLimit}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
+                      Text(
+                        'Uses: ${(code.usageCount).toString()}/${code.usageLimit > 0 ? code.usageLimit.toString() : 'unlimited'}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
                         ),
+                      ),
                     ],
                   ),
                   trailing: IconButton(
