@@ -151,29 +151,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
 
     try {
-      // Get user data from Firestore
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .get();
 
-      // Get profile image URL from Firebase Storage
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('profile_images/${user.uid}.jpg');
-
-      String imageUrl;
-      try {
-        imageUrl = await storageRef.getDownloadURL();
-      } catch (e) {
-        print('Error getting profile image: $e');
-        imageUrl = ''; // Set empty if image doesn't exist
-      }
+      final profileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
 
       if (mounted) {
         setState(() {
           _userName = userDoc.data()?['name'] ?? 'User';
-          _userProfilePicture = imageUrl.isNotEmpty ? imageUrl : null;
+          _userProfilePicture = profileImageUrl.isNotEmpty ? profileImageUrl : null;
         });
       }
     } catch (e) {
@@ -685,10 +673,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? Colors.red.shade700
             : Colors.red.shade300,
-        backgroundImage: _userProfilePicture != null 
+        backgroundImage: _userProfilePicture != null && _userProfilePicture!.isNotEmpty
             ? NetworkImage(_userProfilePicture!)
             : null,
-        child: _userProfilePicture == null
+        child: _userProfilePicture == null || _userProfilePicture!.isEmpty
             ? Icon(
                 Icons.person,
                 size: 36,

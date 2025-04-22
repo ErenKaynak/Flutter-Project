@@ -151,6 +151,50 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
+  Future<void> _removeProfilePicture() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+
+      // Update Firestore
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'profileImageUrl': '',
+      });
+
+      // Try to delete the image from Storage if it exists
+      try {
+        final ref = FirebaseStorage.instance.ref().child('profile_images/$uid.jpg');
+        await ref.delete();
+      } catch (e) {
+        print('Error deleting image from storage: $e');
+        // Continue even if storage deletion fails
+      }
+
+      setState(() {
+        imageUrl = '';
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile picture removed'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error removing profile picture: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to remove profile picture'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   void _showEditProfileDialog() {
     final TextEditingController nameController = TextEditingController(
       text: name,
@@ -232,6 +276,17 @@ class _ProfilePageState extends State<ProfilePage> {
                 _showUrlInputDialog();
               },
             ),
+            if (imageUrl != null && imageUrl!.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text('Remove Photo', 
+                  style: TextStyle(color: Colors.red),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _removeProfilePicture();
+                },
+              ),
           ],
         ),
       ),

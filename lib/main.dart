@@ -74,12 +74,7 @@ class MyApp extends StatelessWidget {
     if (snapshot.hasData) {
       return const RootScreen();
     }
-
-    // Show login page directly on web
-    if (kIsWeb) {
-      return LoginPage(); // ← Replace with your actual login widget
-    }
-
+    
     return WelcomeScreen(); // ← Keep for mobile
   },
 ),
