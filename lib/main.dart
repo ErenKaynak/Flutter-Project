@@ -48,40 +48,6 @@ Future<void> main() async {
   }, (error, stackTrace) {
     print('Caught zoned error: $error\n$stackTrace');
   });
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  await FirebaseAppCheck.instance.activate(
-    androidProvider: AndroidProvider.debug,
-    appleProvider: AppleProvider.debug,
-    webProvider: ReCaptchaV3Provider(
-      '6Lfg6yArAAAAADqs862rWMhyE4fTd9OEPW-Fxjlh',
-    ),
-  );
-
-  // React to system theme change
-  WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged = () {
-    themeNotifier.notifyListeners();
-  };
-
-  if (kDebugMode) {
-    FirebaseFunctions.instance.useFunctionsEmulator('localhost', 5001);
-  }
-
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-  };
-
-  runZonedGuarded(() {
-    runApp(
-      ChangeNotifierProvider.value(
-        value: themeNotifier,
-        child: const MyApp(),
-      ),
-    );
-  }, (error, stackTrace) {
-    print('Caught zoned error: $error\n$stackTrace');
-  });
 }
 
 class MyApp extends StatelessWidget {
