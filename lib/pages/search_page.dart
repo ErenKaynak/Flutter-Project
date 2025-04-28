@@ -5,6 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:engineering_project/pages/cart_page.dart';
 import 'package:lottie/lottie.dart';
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 
 class FavoritesPage extends StatefulWidget {
   final Function? onFavoritesChanged;
@@ -15,7 +17,8 @@ class FavoritesPage extends StatefulWidget {
   _FavoritesPageState createState() => _FavoritesPageState();
 }
 
-class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateMixin {
+class _FavoritesPageState extends State<FavoritesPage>
+    with TickerProviderStateMixin {
   bool _isLoading = true;
   List<Map<String, dynamic>> favoriteProducts = [];
   final Map<String, AnimationController> _animationControllers = {};
@@ -65,12 +68,13 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
         return;
       }
 
-      final favoritesSnapshot = await FirebaseFirestore.instance
-          .collection('favorites')
-          .doc(user.uid)
-          .collection('userFavorites')
-          .orderBy('addedAt', descending: true)
-          .get();
+      final favoritesSnapshot =
+          await FirebaseFirestore.instance
+              .collection('favorites')
+              .doc(user.uid)
+              .collection('userFavorites')
+              .orderBy('addedAt', descending: true)
+              .get();
 
       final List<Map<String, dynamic>> loadedFavorites = [];
       favoritesSnapshot.docs.forEach((doc) {
@@ -90,7 +94,7 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
         favoriteProducts = loadedFavorites;
         _isLoading = false;
       });
-      
+
       _initializeAnimationControllers();
     } catch (error) {
       print('Error fetching favorites: $error');
@@ -170,9 +174,7 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
       if (docSnapshot.exists) {
         final currentQuantity = docSnapshot.data()?['quantity'] ?? 1;
         final newQuantity = (currentQuantity + 1).clamp(1, 10);
-        await cartRef.update({
-          'quantity': newQuantity,
-        });
+        await cartRef.update({'quantity': newQuantity});
       } else {
         await cartRef.set({
           'name': product['name'],
@@ -219,6 +221,8 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
@@ -235,9 +239,10 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
               ),
           ],
         ),
-        body: _isLoading
-            ? Center(child: CircularProgressIndicator())
-            : favoriteProducts.isEmpty
+        body:
+            _isLoading
+                ? Center(child: CircularProgressIndicator())
+                : favoriteProducts.isEmpty
                 ? _buildEmptyFavorites()
                 : _buildFavoritesList(),
       ),
@@ -245,15 +250,13 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
   }
 
   Widget _buildEmptyFavorites() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.favorite_border,
-            size: 80,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.favorite_border, size: 80, color: Colors.grey[400]),
           SizedBox(height: 1),
           Text(
             "No favorites yet",
@@ -266,22 +269,23 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
           SizedBox(height: 1),
           Text(
             "Items you mark as favorite will appear here",
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 16),
           ),
           SizedBox(height: 1),
           ElevatedButton(
-            onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const RootScreen()),
-              ),
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RootScreen()),
+                ),
             child: Text("Explore Products"),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               foregroundColor: Colors.white,
-              backgroundColor: Colors.red.shade700,
+              backgroundColor:
+                  themeNotifier.isBlackMode
+                      ? Theme.of(context).colorScheme.secondary
+                      : Colors.red.shade700,
             ),
           ),
         ],
@@ -319,6 +323,8 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
     required Map<String, dynamic> product,
     required bool isOutOfStock,
   }) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     // Initialize animation controller if it doesn't exist
     if (!_animationControllers.containsKey(product['id'])) {
       _animationControllers[product['id']] = AnimationController(
@@ -326,7 +332,7 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
         duration: Duration(seconds: 2),
       );
     }
-    
+
     final animationController = _animationControllers[product['id']]!;
 
     return GestureDetector(
@@ -357,49 +363,54 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
                           borderRadius: BorderRadius.vertical(
                             top: Radius.circular(12),
                           ),
-                          child: (product["image"].startsWith('http') ||
-                                  product["image"].startsWith('https'))
-                              ? Image.network(
-                                  product["image"],
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Image.asset(
-                                      'lib/assets/Images/placeholder.png',
-                                      fit: BoxFit.cover,
-                                    );
-                                  },
-                                  loadingBuilder:
-                                      (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Center(
-                                      child: CircularProgressIndicator(
-                                        value: loadingProgress
-                                                    .expectedTotalBytes !=
-                                                null
-                                            ? loadingProgress
-                                                    .cumulativeBytesLoaded /
-                                                loadingProgress
-                                                    .expectedTotalBytes!
-                                            : null,
-                                      ),
-                                    );
-                                  },
-                                )
-                              : Image.asset(
-                                  product["image"],
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(
-                                      Icons.image_not_supported,
-                                      size: 40,
-                                      color: Colors.grey[400],
-                                    );
-                                  },
-                                ),
+                          child:
+                              (product["image"].startsWith('http') ||
+                                      product["image"].startsWith('https'))
+                                  ? Image.network(
+                                    product["image"],
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Image.asset(
+                                        'lib/assets/Images/placeholder.png',
+                                        fit: BoxFit.cover,
+                                      );
+                                    },
+                                    loadingBuilder: (
+                                      context,
+                                      child,
+                                      loadingProgress,
+                                    ) {
+                                      if (loadingProgress == null) return child;
+                                      return Center(
+                                        child: CircularProgressIndicator(
+                                          value:
+                                              loadingProgress
+                                                          .expectedTotalBytes !=
+                                                      null
+                                                  ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                  : null,
+                                        ),
+                                      );
+                                    },
+                                  )
+                                  : Image.asset(
+                                    product["image"],
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(
+                                        Icons.image_not_supported,
+                                        size: 40,
+                                        color: Colors.grey[400],
+                                      );
+                                    },
+                                  ),
                         ),
                       ),
                       Positioned(
@@ -415,7 +426,10 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
                             onTap: () => removeFromFavorites(product['id']),
                             child: Icon(
                               Icons.favorite,
-                              color: Colors.red,
+                              color:
+                                  themeNotifier.isBlackMode
+                                      ? Theme.of(context).colorScheme.secondary
+                                      : Colors.red,
                               size: 20,
                             ),
                           ),
@@ -452,41 +466,55 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
                       ),
                       SizedBox(height: 1),
                       SizedBox(
-  width: double.infinity,
-  height: 40, // Set a fixed height for the entire row
-  child: isOutOfStock
-      ? Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.red.shade50,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.red.shade200),
-          ),
-          child: Center(
-            child: Text(
-              "Out of Stock",
-              style: TextStyle(
-                color: Colors.red.shade700,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        )
-      : GestureDetector(
-                onTap: () => addToCart(product),
-                child: Lottie.asset(
-                    'lib/assets/button-test/3.json',
-                    controller: animationController,
-                    fit: BoxFit.cover,
-                    width: 200,
-                    height: 50,
-                    repeat: false,
-                    ),
-              ),
-          
-        ),
-
+                        width: double.infinity,
+                        height: 40, // Set a fixed height for the entire row
+                        child:
+                            isOutOfStock
+                                ? Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        themeNotifier.isBlackMode
+                                            ? Colors.grey.shade50
+                                            : Colors.red.shade50,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color:
+                                          themeNotifier.isBlackMode
+                                              ? Theme.of(
+                                                context,
+                                              ).colorScheme.secondary
+                                              : Colors.red.shade200,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      "Out of Stock",
+                                      style: TextStyle(
+                                        color:
+                                            themeNotifier.isBlackMode
+                                                ? Theme.of(
+                                                  context,
+                                                ).colorScheme.secondary
+                                                : Colors.red.shade700,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                : GestureDetector(
+                                  onTap: () => addToCart(product),
+                                  child: Lottie.asset(
+                                    'lib/assets/button-test/3.json',
+                                    controller: animationController,
+                                    fit: BoxFit.cover,
+                                    width: 200,
+                                    height: 50,
+                                    repeat: false,
+                                  ),
+                                ),
+                      ),
                     ],
                   ),
                 ),

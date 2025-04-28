@@ -2,7 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'add_address_page.dart';
+import 'theme_notifier.dart';
 
 class AddressScreen extends StatefulWidget {
   @override
@@ -78,6 +80,7 @@ class _AddressScreenState extends State<AddressScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     final bgColor = Theme.of(context).scaffoldBackgroundColor;
     final cardColor = Theme.of(context).cardColor;
     final textColor = Theme.of(context).textTheme.bodyMedium?.color;
@@ -97,7 +100,12 @@ class _AddressScreenState extends State<AddressScreen> {
         body:
             _isLoading
                 ? Center(
-                  child: CircularProgressIndicator(color: Colors.red.shade300),
+                  child: CircularProgressIndicator(
+                    color:
+                        themeNotifier.isBlackMode
+                            ? Theme.of(context).colorScheme.secondary
+                            : Colors.red.shade300,
+                  ),
                 )
                 : RefreshIndicator(
                   onRefresh: () async {
@@ -105,7 +113,10 @@ class _AddressScreenState extends State<AddressScreen> {
                     await Future.delayed(const Duration(seconds: 1));
                     setState(() => _isLoading = false);
                   },
-                  color: Colors.red.shade300,
+                  color:
+                      themeNotifier.isBlackMode
+                          ? Theme.of(context).colorScheme.secondary
+                          : Colors.red.shade300,
                   child: CustomScrollView(
                     slivers: [
                       SliverToBoxAdapter(
@@ -133,7 +144,12 @@ class _AddressScreenState extends State<AddressScreen> {
                               child: Row(
                                 children: [
                                   CircleAvatar(
-                                    backgroundColor: Colors.red.shade700,
+                                    backgroundColor:
+                                        themeNotifier.isBlackMode
+                                            ? Theme.of(
+                                              context,
+                                            ).colorScheme.secondary
+                                            : Colors.red.shade700,
                                     radius: 24,
                                     child: const Icon(
                                       Icons.location_on,
@@ -174,11 +190,16 @@ class _AddressScreenState extends State<AddressScreen> {
                               ),
                               child: ElevatedButton.icon(
                                 onPressed: _navigateToAddAddress,
-                                icon: const Icon(Icons.add_location_alt, ),
+                                icon: const Icon(Icons.add_location_alt),
                                 label: const Text('Add New Address'),
                                 style: ElevatedButton.styleFrom(
                                   minimumSize: const Size.fromHeight(54),
-                                  backgroundColor: Colors.red.shade700,
+                                  backgroundColor:
+                                      themeNotifier.isBlackMode
+                                          ? Theme.of(
+                                            context,
+                                          ).colorScheme.secondary
+                                          : Colors.red.shade700,
                                   foregroundColor: Colors.white,
                                   elevation: 2,
                                   shape: RoundedRectangleBorder(
@@ -217,6 +238,7 @@ class _AddressScreenState extends State<AddressScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: addressesStream,
       builder: (context, snapshot) {
+        final themeNotifier = Provider.of<ThemeNotifier>(context);
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return SliverToBoxAdapter(
             child: Center(
@@ -257,8 +279,12 @@ class _AddressScreenState extends State<AddressScreen> {
                       decoration: BoxDecoration(
                         color:
                             isDark
-                                ? Colors.red.shade900
-                                : Colors.red.shade50,
+                                ? (themeNotifier.isBlackMode
+                                    ? Theme.of(context).colorScheme.secondary
+                                    : Colors.red.shade900)
+                                : (themeNotifier.isBlackMode
+                                    ? Colors.grey.shade50
+                                    : Colors.red.shade50),
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(12),
                         ),
@@ -267,13 +293,27 @@ class _AddressScreenState extends State<AddressScreen> {
                         children: [
                           CircleAvatar(
                             backgroundColor:
-                                isDark ? Colors.red.shade800 : Colors.red.shade100,
+                                isDark
+                                    ? (themeNotifier.isBlackMode
+                                        ? Theme.of(
+                                          context,
+                                        ).colorScheme.secondary
+                                        : Colors.red.shade800)
+                                    : (themeNotifier.isBlackMode
+                                        ? Colors.grey.shade100
+                                        : Colors.red.shade100),
                             child: Icon(
                               data['addressType'] == 'Home'
                                   ? Icons.home
                                   : Icons.work,
                               color:
-                                  isDark ? Colors.white : Colors.red.shade700,
+                                  isDark
+                                      ? Colors.white
+                                      : (themeNotifier.isBlackMode
+                                          ? Theme.of(
+                                            context,
+                                          ).colorScheme.secondary
+                                          : Colors.red.shade700),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -287,7 +327,11 @@ class _AddressScreenState extends State<AddressScreen> {
                                 color:
                                     isDark
                                         ? Colors.white
-                                        : Colors.red.shade700,
+                                        : (themeNotifier.isBlackMode
+                                            ? Theme.of(
+                                              context,
+                                            ).colorScheme.secondary
+                                            : Colors.red.shade700),
                               ),
                             ),
                           ),
@@ -314,7 +358,12 @@ class _AddressScreenState extends State<AddressScreen> {
                               Icon(
                                 Icons.person,
                                 size: 18,
-                                color: Colors.red.shade700,
+                                color:
+                                    themeNotifier.isBlackMode
+                                        ? Theme.of(
+                                          context,
+                                        ).colorScheme.secondary
+                                        : Colors.red.shade700,
                               ),
                               const SizedBox(width: 8),
                               Text(
@@ -329,7 +378,12 @@ class _AddressScreenState extends State<AddressScreen> {
                               Icon(
                                 Icons.location_on,
                                 size: 18,
-                                color: Colors.red.shade700,
+                                color:
+                                    themeNotifier.isBlackMode
+                                        ? Theme.of(
+                                          context,
+                                        ).colorScheme.secondary
+                                        : Colors.red.shade700,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -346,7 +400,12 @@ class _AddressScreenState extends State<AddressScreen> {
                               Icon(
                                 Icons.phone,
                                 size: 18,
-                                color: Colors.red.shade700,
+                                color:
+                                    themeNotifier.isBlackMode
+                                        ? Theme.of(
+                                          context,
+                                        ).colorScheme.secondary
+                                        : Colors.red.shade700,
                               ),
                               const SizedBox(width: 8),
                               Text(
@@ -378,11 +437,21 @@ class _AddressScreenState extends State<AddressScreen> {
                             onPressed: () {},
                             icon: Icon(
                               Icons.delete_outline,
-                              color: Colors.red.shade300,
+                              color:
+                                  themeNotifier.isBlackMode
+                                      ? Theme.of(context).colorScheme.secondary
+                                      : Colors.red.shade300,
                             ),
                             label: Text(
                               'Delete',
-                              style: TextStyle(color: Colors.red.shade300),
+                              style: TextStyle(
+                                color:
+                                    themeNotifier.isBlackMode
+                                        ? Theme.of(
+                                          context,
+                                        ).colorScheme.secondary
+                                        : Colors.red.shade300,
+                              ),
                             ),
                           ),
                           TextButton.icon(

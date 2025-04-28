@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 
 class AddAddressPage extends StatefulWidget {
   @override
@@ -54,8 +56,15 @@ class _AddAddressPageState extends State<AddAddressPage> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Colors.red.shade700;
-    final accentColor = Colors.red.shade700;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final primaryColor =
+        themeNotifier.isBlackMode
+            ? Theme.of(context).colorScheme.secondary
+            : Colors.red.shade700;
+    final accentColor =
+        themeNotifier.isBlackMode
+            ? Theme.of(context).colorScheme.secondary
+            : Colors.red.shade700;
 
     // Dynamic colors based on theme
     final backgroundColor = isDarkMode ? Color(0xFF121212) : Colors.white;
@@ -78,7 +87,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
             colors:
                 isDarkMode
                     ? [Color(0xFF121212), Color(0xFF1D1D1D)]
-                    : [Colors.white, Colors.red.shade50],
+                    : [
+                      Colors.white,
+                      themeNotifier.isBlackMode
+                          ? Colors.grey.shade100
+                          : Colors.red.shade50,
+                    ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -158,7 +172,6 @@ class _AddAddressPageState extends State<AddAddressPage> {
                             if (val == null || val.isEmpty) {
                               return 'Please enter phone number';
                             }
-                            // Basic phone validation
                             if (val.length < 10) {
                               return 'Please enter a valid phone number';
                             }
@@ -452,7 +465,13 @@ class _AddAddressPageState extends State<AddAddressPage> {
     required Color accentColor,
     required Color cardColor,
   }) {
-    final selectedBgColor = isDarkMode ? Color(0xFF2C2C2C) : Colors.red.shade50;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final selectedBgColor =
+        isDarkMode
+            ? Color(0xFF2C2C2C)
+            : (themeNotifier.isBlackMode
+                ? Colors.grey.shade50
+                : Colors.red.shade50);
     final unselectedBgColor = cardColor;
     final selectedBorderColor = accentColor;
     final unselectedBorderColor = Colors.transparent;
@@ -499,12 +518,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
                 ),
                 child: Column(
                   children: [
-                    Icon(
-                      Icons.home,
-                      color:
-                          primaryColor, // Always red in both light and dark mode
-                      size: 28,
-                    ),
+                    Icon(Icons.home, color: primaryColor, size: 28),
                     SizedBox(height: 8),
                     Text(
                       'Home',
@@ -548,12 +562,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
                 ),
                 child: Column(
                   children: [
-                    Icon(
-                      Icons.work,
-                      color:
-                          primaryColor, // Always red in both light and dark mode
-                      size: 28,
-                    ),
+                    Icon(Icons.work, color: primaryColor, size: 28),
                     SizedBox(height: 8),
                     Text(
                       'Work',
@@ -622,19 +631,28 @@ class _AddAddressPageState extends State<AddAddressPage> {
   }
 
   Widget _buildSaveButton({required Color primaryColor}) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     return Container(
       width: double.infinity,
       height: 55,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [primaryColor, Colors.red.shade500],
+          colors: [
+            primaryColor,
+            themeNotifier.isBlackMode
+                ? Theme.of(context).colorScheme.secondary
+                : Colors.red.shade500,
+          ],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.shade300.withOpacity(0.5),
+            color:
+                themeNotifier.isBlackMode
+                    ? Theme.of(context).colorScheme.secondary.withOpacity(0.5)
+                    : Colors.red.shade300.withOpacity(0.5),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -662,7 +680,6 @@ class _AddAddressPageState extends State<AddAddressPage> {
   }
 
   Future<void> _saveAddress() async {
-    // First validate all fields
     if (_formKey.currentState!.validate()) {
       try {
         final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -673,7 +690,6 @@ class _AddAddressPageState extends State<AddAddressPage> {
           return;
         }
 
-        // Show loading indicator
         _showLoadingDialog();
 
         await FirebaseFirestore.instance.collection('addresses').add({
@@ -693,25 +709,20 @@ class _AddAddressPageState extends State<AddAddressPage> {
           'createdAt': Timestamp.now(),
         });
 
-        // Dismiss loading dialog
         Navigator.pop(context);
 
         _showSuccessSnackBar('Address saved successfully');
 
-        // Return to previous screen
         Future.delayed(Duration(seconds: 1), () {
           Navigator.pop(context);
         });
       } catch (e) {
-        // Dismiss loading dialog if it's showing
         if (Navigator.canPop(context)) {
           Navigator.pop(context);
         }
         _showErrorSnackBar('Error saving address: $e');
       }
     } else {
-      // Form validation failed
-      // Auto-scroll to the first error
       _scrollController.animateTo(
         0.0,
         duration: Duration(milliseconds: 500),
@@ -724,6 +735,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
 
   void _showLoadingDialog() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
     final dialogBgColor = isDarkMode ? Color(0xFF1E1E1E) : Colors.white;
 
     showDialog(
@@ -738,7 +750,11 @@ class _AddAddressPageState extends State<AddAddressPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    themeNotifier.isBlackMode
+                        ? Theme.of(context).colorScheme.secondary
+                        : Colors.red,
+                  ),
                 ),
                 SizedBox(height: 16),
                 Text(
@@ -773,6 +789,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
   }
 
   void _showErrorSnackBar(String message) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -782,7 +799,10 @@ class _AddAddressPageState extends State<AddAddressPage> {
             Expanded(child: Text(message)),
           ],
         ),
-        backgroundColor: Colors.red.shade700,
+        backgroundColor:
+            themeNotifier.isBlackMode
+                ? Theme.of(context).colorScheme.secondary
+                : Colors.red.shade700,
         duration: Duration(seconds: 3),
       ),
     );

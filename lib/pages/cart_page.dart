@@ -1,12 +1,13 @@
 import 'package:engineering_project/assets/components/discount_code.dart';
 import 'package:engineering_project/assets/components/discount_service.dart';
 import 'package:engineering_project/pages/checkout_page.dart';
-import 'package:engineering_project/pages/home_page.dart';
 import 'package:engineering_project/pages/past_orders_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 import 'dart:async';
 
 class CartItem {
@@ -193,6 +194,7 @@ class OrderSuccessPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -271,7 +273,10 @@ class OrderSuccessPage extends StatelessWidget {
                 const SizedBox(width: 16),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
+                    backgroundColor:
+                        themeNotifier.isBlackMode
+                            ? Theme.of(context).colorScheme.secondary
+                            : Colors.red,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -301,7 +306,6 @@ class OrderSuccessPage extends StatelessWidget {
   }
 }
 
-// CartPage class tanımı ve state’inin başlangıcı bir sonraki mesajda.
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
 
@@ -447,17 +451,18 @@ class _CartPageState extends State<CartPage> {
   }
 
   void _proceedToCheckout() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => CheckoutPage(
-        subtotal: _cartManager.totalPrice,
-        appliedDiscount: _appliedDiscount,
-        items: _cartManager.items,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => CheckoutPage(
+              subtotal: _cartManager.totalPrice,
+              appliedDiscount: _appliedDiscount,
+              items: _cartManager.items,
+            ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   double get _discountedTotal {
     final originalTotal = _cartManager.totalPrice;
@@ -583,6 +588,7 @@ class _CartPageState extends State<CartPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cartItems = _cartManager.items;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     if (_isLoading) {
       return Scaffold(
@@ -622,7 +628,10 @@ class _CartPageState extends State<CartPage> {
               const SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor:
+                      themeNotifier.isBlackMode
+                          ? Theme.of(context).colorScheme.secondary
+                          : Colors.red,
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () => Navigator.of(context).pop(),
@@ -663,9 +672,16 @@ class _CartPageState extends State<CartPage> {
                               _cartManager.clearCart();
                               Navigator.pop(context);
                             },
-                            child: const Text(
+                            child: Text(
                               'CLEAR',
-                              style: TextStyle(color: Colors.red),
+                              style: TextStyle(
+                                color:
+                                    themeNotifier.isBlackMode
+                                        ? Theme.of(
+                                          context,
+                                        ).colorScheme.secondary
+                                        : Colors.red,
+                              ),
                             ),
                           ),
                         ],
@@ -684,7 +700,10 @@ class _CartPageState extends State<CartPage> {
                     Icon(
                       Icons.shopping_cart_outlined,
                       size: 80,
-                      color: Colors.red,
+                      color:
+                          themeNotifier.isBlackMode
+                              ? Theme.of(context).colorScheme.secondary
+                              : Colors.red,
                     ),
                     const SizedBox(height: 20),
                     Text(
@@ -712,7 +731,10 @@ class _CartPageState extends State<CartPage> {
                           background: Container(
                             alignment: Alignment.centerRight,
                             padding: const EdgeInsets.only(right: 20),
-                            color: Colors.red,
+                            color:
+                                themeNotifier.isBlackMode
+                                    ? Theme.of(context).colorScheme.secondary
+                                    : Colors.red,
                             child: const Icon(
                               Icons.delete,
                               color: Colors.white,
@@ -774,7 +796,14 @@ class _CartPageState extends State<CartPage> {
                                         Text(
                                           '₺${item.price}',
                                           style: theme.textTheme.bodyLarge
-                                              ?.copyWith(color: Colors.red),
+                                              ?.copyWith(
+                                                color:
+                                                    themeNotifier.isBlackMode
+                                                        ? Theme.of(
+                                                          context,
+                                                        ).colorScheme.secondary
+                                                        : Colors.red,
+                                              ),
                                         ),
                                       ],
                                     ),
@@ -784,11 +813,19 @@ class _CartPageState extends State<CartPage> {
                                       IconButton(
                                         icon: CircleAvatar(
                                           radius: 14,
-                                          backgroundColor: Colors.red.shade100,
-                                          child: const Icon(
+                                          backgroundColor:
+                                              themeNotifier.isBlackMode
+                                                  ? Colors.grey.shade100
+                                                  : Colors.red.shade100,
+                                          child: Icon(
                                             Icons.remove,
                                             size: 16,
-                                            color: Colors.red,
+                                            color:
+                                                themeNotifier.isBlackMode
+                                                    ? Theme.of(
+                                                      context,
+                                                    ).colorScheme.secondary
+                                                    : Colors.red,
                                           ),
                                         ),
                                         onPressed:
@@ -804,11 +841,19 @@ class _CartPageState extends State<CartPage> {
                                       IconButton(
                                         icon: CircleAvatar(
                                           radius: 14,
-                                          backgroundColor: Colors.red.shade100,
-                                          child: const Icon(
+                                          backgroundColor:
+                                              themeNotifier.isBlackMode
+                                                  ? Colors.grey.shade100
+                                                  : Colors.red.shade100,
+                                          child: Icon(
                                             Icons.add,
                                             size: 16,
-                                            color: Colors.red,
+                                            color:
+                                                themeNotifier.isBlackMode
+                                                    ? Theme.of(
+                                                      context,
+                                                    ).colorScheme.secondary
+                                                    : Colors.red,
                                           ),
                                         ),
                                         onPressed:
@@ -827,7 +872,6 @@ class _CartPageState extends State<CartPage> {
                       },
                     ),
                   ),
-                  // Devamında: kupon alanı + ödeme özeti
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -866,7 +910,12 @@ class _CartPageState extends State<CartPage> {
                               const SizedBox(width: 10),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
+                                  backgroundColor:
+                                      themeNotifier.isBlackMode
+                                          ? Theme.of(
+                                            context,
+                                          ).colorScheme.secondary
+                                          : Colors.red,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 12,
@@ -924,7 +973,7 @@ class _CartPageState extends State<CartPage> {
                                       Text(
                                         '${_appliedDiscount!.discountPercentage}% off',
                                         style: TextStyle(
-                                          color: Colors.green.shade800, 
+                                          color: Colors.green.shade800,
                                         ),
                                       ),
                                     ],
@@ -945,8 +994,6 @@ class _CartPageState extends State<CartPage> {
                       ],
                     ),
                   ),
-
-                  // Ödeme özeti ve buton
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -1012,10 +1059,15 @@ class _CartPageState extends State<CartPage> {
                             ),
                             Text(
                               '₺${_discountedTotal.toStringAsFixed(2)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.red,
+                                color:
+                                    themeNotifier.isBlackMode
+                                        ? Theme.of(
+                                          context,
+                                        ).colorScheme.secondary
+                                        : Colors.red,
                               ),
                             ),
                           ],
@@ -1025,7 +1077,10 @@ class _CartPageState extends State<CartPage> {
                           width: double.infinity,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
+                              backgroundColor:
+                                  themeNotifier.isBlackMode
+                                      ? Theme.of(context).colorScheme.secondary
+                                      : Colors.red,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(

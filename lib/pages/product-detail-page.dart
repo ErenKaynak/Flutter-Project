@@ -2,17 +2,21 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:engineering_project/pages/cart_page.dart';
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final String productId;
 
-  const ProductDetailPage({Key? key, required this.productId}) : super(key: key);
+  const ProductDetailPage({Key? key, required this.productId})
+    : super(key: key);
 
   @override
   _ProductDetailPageState createState() => _ProductDetailPageState();
 }
 
-class _ProductDetailPageState extends State<ProductDetailPage> with TickerProviderStateMixin {
+class _ProductDetailPageState extends State<ProductDetailPage>
+    with TickerProviderStateMixin {
   Map<String, dynamic>? productData;
   bool isLoading = true;
   int quantity = 1;
@@ -35,23 +39,17 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
       duration: Duration(milliseconds: 300),
     );
 
-    _colorAnimation = ColorTween(
-      begin: Colors.red.shade400,
-      end: Colors.green.shade500,
-    ).animate(_colorAnimationController);
-
     _tickAnimationController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 500),
     );
 
-    _tickAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _tickAnimationController,
-      curve: Curves.elasticOut,
-    ));
+    _tickAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _tickAnimationController,
+        curve: Curves.elasticOut,
+      ),
+    );
 
     fetchProductDetails();
     checkIfFavorite();
@@ -66,10 +64,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
 
   Future<void> fetchProductDetails() async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('products')
-          .doc(widget.productId)
-          .get();
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('products')
+              .doc(widget.productId)
+              .get();
 
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
@@ -102,12 +101,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      final docSnapshot = await FirebaseFirestore.instance
-          .collection('favorites')
-          .doc(user.uid)
-          .collection('userFavorites')
-          .doc(widget.productId)
-          .get();
+      final docSnapshot =
+          await FirebaseFirestore.instance
+              .collection('favorites')
+              .doc(user.uid)
+              .collection('userFavorites')
+              .doc(widget.productId)
+              .get();
 
       if (mounted) {
         setState(() {
@@ -122,9 +122,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
   Future<void> toggleFavorite() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please log in to add favorites')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Please log in to add favorites')));
       return;
     }
 
@@ -152,9 +152,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
         await favRef.set({
           'name': productData?['name'] ?? 'Unknown Product',
           'price': productData?['price']?.toString() ?? '0',
-          'image': productData?['imagePath'] ?? 'lib/assets/Images/placeholder.png',
+          'image':
+              productData?['imagePath'] ?? 'lib/assets/Images/placeholder.png',
           'category': productData?['category'] ?? 'Uncategorized',
-          'description': productData?['description'] ?? 'No description available',
+          'description':
+              productData?['description'] ?? 'No description available',
           'stock': availableStock,
           'addedAt': FieldValue.serverTimestamp(),
         });
@@ -207,7 +209,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
 
     if (quantity > availableStock) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Cannot add more than available stock ($availableStock)')),
+        SnackBar(
+          content: Text(
+            'Cannot add more than available stock ($availableStock)',
+          ),
+        ),
       );
       return;
     }
@@ -245,7 +251,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
         if (prevQuantity + quantity > availableStock) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Cannot add more than available stock ($availableStock)')),
+              SnackBar(
+                content: Text(
+                  'Cannot add more than available stock ($availableStock)',
+                ),
+              ),
             );
           }
           _resetAnimations();
@@ -292,9 +302,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
       print('❌ Error adding to cart: $e');
       _resetAnimations();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add to cart')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to add to cart')));
       }
     }
   }
@@ -318,38 +328,48 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final bgColor = Theme.of(context).scaffoldBackgroundColor;
+    final cardColor = Theme.of(context).cardColor;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    final borderColor = isDark ? Colors.grey.shade700 : Colors.grey.shade200;
+
+    // Add to Cart button animation color based on black mode
+    _colorAnimation = ColorTween(
+      begin:
+          themeNotifier.isBlackMode
+              ? Theme.of(context).colorScheme.secondary
+              : Colors.red.shade400,
+      end: Colors.green.shade500,
+    ).animate(_colorAnimationController);
 
     if (isLoading) {
       return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: bgColor,
         appBar: AppBar(
-          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-          title: Text(
-            "Loading...",
-            style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
-          ),
+          backgroundColor: bgColor,
+          title: Text("Loading...", style: TextStyle(color: textColor)),
         ),
         body: Center(
-          child: CircularProgressIndicator(color: Theme.of(context).primaryColor),
+          child: CircularProgressIndicator(
+            color:
+                themeNotifier.isBlackMode
+                    ? Theme.of(context).colorScheme.secondary
+                    : Colors.red.shade400,
+          ),
         ),
       );
     }
 
     if (productData == null) {
       return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: bgColor,
         appBar: AppBar(
-          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-          title: Text(
-            "Error",
-            style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
-          ),
+          backgroundColor: bgColor,
+          title: Text("Error", style: TextStyle(color: textColor)),
         ),
         body: Center(
-          child: Text(
-            "Product not found",
-            style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
-          ),
+          child: Text("Product not found", style: TextStyle(color: textColor)),
         ),
       );
     }
@@ -358,8 +378,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
     final price = productData!['price']?.toString() ?? '0';
     final imagePath = productData!['imagePath'] ?? '';
     final category = productData!['category'] ?? 'Uncategorized';
-    final description = productData!['description'] ?? 'No description available.';
-    final List<String> images = (productData!['images'] as List<dynamic>?)
+    final description =
+        productData!['description'] ?? 'No description available.';
+    final List<String> images =
+        (productData!['images'] as List<dynamic>?)
             ?.map((e) => e.toString())
             .toList() ??
         [];
@@ -369,25 +391,22 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
     final bool isOutOfStock = availableStock <= 0;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        backgroundColor: bgColor,
         elevation: isDark ? 0 : 2,
-        title: Text(
-          name,
-          style: TextStyle(
-            fontSize: 18,
-            color: Theme.of(context).textTheme.titleLarge?.color,
-          ),
-        ),
-        iconTheme: IconThemeData(color: Theme.of(context).iconTheme.color),
+        title: Text(name, style: TextStyle(fontSize: 18, color: textColor)),
+        iconTheme: IconThemeData(color: textColor),
         actions: [
           IconButton(
             icon: Icon(
               Icons.favorite,
-              color: isFavorite
-                  ? Colors.red
-                  : Theme.of(context).iconTheme.color?.withOpacity(0.5),
+              color:
+                  isFavorite
+                      ? (themeNotifier.isBlackMode
+                          ? Theme.of(context).colorScheme.secondary
+                          : Colors.red)
+                      : textColor?.withOpacity(0.5),
             ),
             onPressed: toggleFavorite,
           ),
@@ -395,7 +414,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
             alignment: Alignment.center,
             children: [
               IconButton(
-                icon: Icon(Icons.shopping_cart),
+                icon: Icon(
+                  Icons.shopping_cart,
+                  color:
+                      themeNotifier.isBlackMode
+                          ? Theme.of(context).colorScheme.secondary
+                          : Colors.red.shade400,
+                ),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -409,7 +434,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
         ],
       ),
       body: RefreshIndicator(
-        color: Theme.of(context).primaryColor,
+        color:
+            themeNotifier.isBlackMode
+                ? Theme.of(context).colorScheme.secondary
+                : Colors.red.shade400,
         onRefresh: fetchProductDetails,
         child: SingleChildScrollView(
           physics: AlwaysScrollableScrollPhysics(),
@@ -425,9 +453,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: isDark
-                            ? [Colors.grey.shade900, Theme.of(context).scaffoldBackgroundColor]
-                            : [Colors.grey.shade200, Colors.white],
+                        colors:
+                            isDark
+                                ? [Colors.grey.shade900, bgColor]
+                                : [Colors.grey.shade200, Colors.white],
                       ),
                     ),
                     child: Hero(
@@ -435,8 +464,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                       child: Image.network(
                         images[selectedImageIndex],
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) =>
-                            Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
+                        errorBuilder:
+                            (_, __, ___) => Icon(
+                              Icons.image_not_supported,
+                              size: 100,
+                              color: Colors.grey,
+                            ),
                       ),
                     ),
                   ),
@@ -445,9 +478,15 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                       top: 20,
                       right: 0,
                       child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 15, vertical: 6),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 15,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: Colors.red,
+                          color:
+                              themeNotifier.isBlackMode
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Colors.red,
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(8),
                             bottomLeft: Radius.circular(8),
@@ -487,24 +526,33 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                           width: 70,
                           decoration: BoxDecoration(
                             border: Border.all(
-                              color: selectedImageIndex == index
-                                  ? Theme.of(context).primaryColor
-                                  : isDark
-                                      ? Colors.grey.shade700
-                                      : Colors.grey.shade300,
+                              color:
+                                  selectedImageIndex == index
+                                      ? (themeNotifier.isBlackMode
+                                          ? Theme.of(
+                                            context,
+                                          ).colorScheme.secondary
+                                          : Colors.red.shade400)
+                                      : borderColor,
                               width: 2,
                             ),
                             borderRadius: BorderRadius.circular(8),
-                            color: Theme.of(context).cardColor,
-                            boxShadow: selectedImageIndex == index && !isDark
-                                ? [
-                                    BoxShadow(
-                                      color: Theme.of(context).primaryColor.withOpacity(0.3),
-                                      blurRadius: 4,
-                                      spreadRadius: 1,
-                                    ),
-                                  ]
-                                : null,
+                            color: cardColor,
+                            boxShadow:
+                                selectedImageIndex == index && !isDark
+                                    ? [
+                                      BoxShadow(
+                                        color: (themeNotifier.isBlackMode
+                                                ? Theme.of(
+                                                  context,
+                                                ).colorScheme.secondary
+                                                : Colors.red.shade400)
+                                            .withOpacity(0.3),
+                                        blurRadius: 4,
+                                        spreadRadius: 1,
+                                      ),
+                                    ]
+                                    : null,
                           ),
                           padding: EdgeInsets.all(4),
                           child: ClipRRect(
@@ -512,8 +560,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                             child: Image.network(
                               images[index],
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  Icon(Icons.image_not_supported, size: 30, color: Colors.grey),
+                              errorBuilder:
+                                  (_, __, ___) => Icon(
+                                    Icons.image_not_supported,
+                                    size: 30,
+                                    color: Colors.grey,
+                                  ),
                             ),
                           ),
                         ),
@@ -524,17 +576,19 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
               Container(
                 margin: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
+                  color: cardColor,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: isDark
-                      ? []
-                      : [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            spreadRadius: 1,
-                          ),
-                        ],
+                  border: Border.all(color: borderColor),
+                  boxShadow:
+                      isDark
+                          ? []
+                          : [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              spreadRadius: 1,
+                            ),
+                          ],
                 ),
                 child: Padding(
                   padding: EdgeInsets.all(20),
@@ -551,21 +605,30 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: Theme.of(context).textTheme.titleLarge?.color,
+                                color: textColor,
                               ),
                             ),
                           ),
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
-                              color: isDark
-                                  ? Colors.green.shade900.withOpacity(0.3)
-                                  : Colors.green.shade50,
+                              color:
+                                  isDark
+                                      ? Colors.green.shade900.withOpacity(0.3)
+                                      : (themeNotifier.isBlackMode
+                                          ? Colors.grey.shade50
+                                          : Colors.green.shade50),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: isDark
-                                    ? Colors.green.shade700
-                                    : Colors.green.shade100,
+                                color:
+                                    isDark
+                                        ? Colors.green.shade700
+                                        : (themeNotifier.isBlackMode
+                                            ? Colors.grey.shade200
+                                            : Colors.green.shade100),
                               ),
                             ),
                             child: Text(
@@ -573,9 +636,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: isDark
-                                    ? Colors.green.shade400
-                                    : Colors.green.shade700,
+                                color:
+                                    isDark
+                                        ? Colors.green.shade400
+                                        : (themeNotifier.isBlackMode
+                                            ? Theme.of(
+                                              context,
+                                            ).colorScheme.secondary
+                                            : Colors.green.shade700),
                               ),
                             ),
                           ),
@@ -583,16 +651,25 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                       ),
                       SizedBox(height: 8),
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
+                          color:
+                              themeNotifier.isBlackMode
+                                  ? Colors.grey.shade50
+                                  : Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           category,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.blue.shade800,
+                            color:
+                                themeNotifier.isBlackMode
+                                    ? Theme.of(context).colorScheme.secondary
+                                    : Colors.blue.shade800,
                           ),
                         ),
                       ),
@@ -603,7 +680,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                             padding: EdgeInsets.all(4),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: isOutOfStock ? Colors.red : Colors.green,
+                              color:
+                                  isOutOfStock
+                                      ? (themeNotifier.isBlackMode
+                                          ? Theme.of(
+                                            context,
+                                          ).colorScheme.secondary
+                                          : Colors.red)
+                                      : Colors.green,
                             ),
                             width: 12,
                             height: 12,
@@ -616,7 +700,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
-                              color: isOutOfStock ? Colors.red : Colors.green,
+                              color:
+                                  isOutOfStock
+                                      ? (themeNotifier.isBlackMode
+                                          ? Theme.of(
+                                            context,
+                                          ).colorScheme.secondary
+                                          : Colors.red)
+                                      : Colors.green,
                             ),
                           ),
                         ],
@@ -631,13 +722,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Theme.of(context).textTheme.titleLarge?.color,
+                                color: textColor,
                               ),
                             ),
                             SizedBox(height: 10),
                             Container(
                               decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
+                                border: Border.all(color: borderColor),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
@@ -648,7 +739,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                                       topLeft: Radius.circular(7),
                                       bottomLeft: Radius.circular(7),
                                     ),
-                                    color: Colors.grey.shade100,
+                                    color:
+                                        isDark
+                                            ? Colors.grey.shade800
+                                            : Colors.grey.shade100,
                                     child: InkWell(
                                       onTap: decrementQuantity,
                                       borderRadius: BorderRadius.only(
@@ -657,17 +751,29 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                                       ),
                                       child: Container(
                                         padding: EdgeInsets.all(12),
-                                        child: Icon(Icons.remove, size: 16),
+                                        child: Icon(
+                                          Icons.remove,
+                                          size: 16,
+                                          color:
+                                              themeNotifier.isBlackMode
+                                                  ? Theme.of(
+                                                    context,
+                                                  ).colorScheme.secondary
+                                                  : textColor,
+                                        ),
                                       ),
                                     ),
                                   ),
                                   Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 16),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
                                     child: Text(
                                       '$quantity',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
+                                        color: textColor,
                                       ),
                                     ),
                                   ),
@@ -676,7 +782,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                                       topRight: Radius.circular(7),
                                       bottomRight: Radius.circular(7),
                                     ),
-                                    color: Colors.grey.shade100,
+                                    color:
+                                        isDark
+                                            ? Colors.grey.shade800
+                                            : Colors.grey.shade100,
                                     child: InkWell(
                                       onTap: incrementQuantity,
                                       borderRadius: BorderRadius.only(
@@ -685,7 +794,16 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                                       ),
                                       child: Container(
                                         padding: EdgeInsets.all(12),
-                                        child: Icon(Icons.add, size: 16),
+                                        child: Icon(
+                                          Icons.add,
+                                          size: 16,
+                                          color:
+                                              themeNotifier.isBlackMode
+                                                  ? Theme.of(
+                                                    context,
+                                                  ).colorScheme.secondary
+                                                  : textColor,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -696,76 +814,99 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                             SizedBox(
                               width: double.infinity,
                               height: 54,
-                              child: isOutOfStock
-                                  ? ElevatedButton(
-                                      onPressed: null,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.greenAccent,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        elevation: 0,
-                                      ),
-                                      child: Text(
-                                        "OUT OF STOCK",
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    )
-                                  : AnimatedBuilder(
-                                      animation: Listenable.merge([
-                                        _colorAnimationController,
-                                        _tickAnimationController
-                                      ]),
-                                      builder: (context, child) {
-                                        return ElevatedButton(
-                                          onPressed: _isAddingToCart ? null : addToCart,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: _colorAnimation.value ??
-                                                Colors.red.shade400,
-                                            foregroundColor: Colors.white,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(10),
+                              child:
+                                  isOutOfStock
+                                      ? ElevatedButton(
+                                        onPressed: null,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor:
+                                              themeNotifier.isBlackMode
+                                                  ? Theme.of(
+                                                    context,
+                                                  ).colorScheme.secondary
+                                                  : Colors.greenAccent,
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
                                             ),
-                                            elevation: 2,
                                           ),
-                                          child: Stack(
-                                            alignment: Alignment.center,
-                                            children: [
-                                              Opacity(
-                                                opacity: 1.0 - _colorAnimationController.value,
-                                                child: Row(
-                                                  mainAxisAlignment: MainAxisAlignment.center,
-                                                  children: [
-                                                    Icon(Icons.shopping_cart, size: 20),
-                                                    SizedBox(width: 8),
-                                                    Text(
-                                                      "ADD TO CART",
-                                                      style: TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
+                                          elevation: 0,
+                                        ),
+                                        child: Text(
+                                          "OUT OF STOCK",
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      )
+                                      : AnimatedBuilder(
+                                        animation: Listenable.merge([
+                                          _colorAnimationController,
+                                          _tickAnimationController,
+                                        ]),
+                                        builder: (context, child) {
+                                          return ElevatedButton(
+                                            onPressed:
+                                                _isAddingToCart
+                                                    ? null
+                                                    : addToCart,
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  _colorAnimation.value,
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
                                               ),
-                                              if (_colorAnimationController.value > 0)
-                                                Transform.scale(
-                                                  scale: _tickAnimation.value,
-                                                  child: Icon(
-                                                    Icons.check,
-                                                    color: Colors.white,
-                                                    size: 30,
+                                              elevation: 2,
+                                            ),
+                                            child: Stack(
+                                              alignment: Alignment.center,
+                                              children: [
+                                                Opacity(
+                                                  opacity:
+                                                      1.0 -
+                                                      _colorAnimationController
+                                                          .value,
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.shopping_cart,
+                                                        size: 20,
+                                                      ),
+                                                      SizedBox(width: 8),
+                                                      Text(
+                                                        "ADD TO CART",
+                                                        style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                    ),
+                                                if (_colorAnimationController
+                                                        .value >
+                                                    0)
+                                                  Transform.scale(
+                                                    scale: _tickAnimation.value,
+                                                    child: Icon(
+                                                      Icons.check,
+                                                      color: Colors.white,
+                                                      size: 30,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
                             ),
                           ],
                         ),
@@ -776,17 +917,19 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
               Container(
                 margin: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
+                  color: cardColor,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: isDark
-                      ? []
-                      : [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            spreadRadius: 1,
-                          ),
-                        ],
+                  border: Border.all(color: borderColor),
+                  boxShadow:
+                      isDark
+                          ? []
+                          : [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              spreadRadius: 1,
+                            ),
+                          ],
                 ),
                 child: Padding(
                   padding: EdgeInsets.all(20),
@@ -798,7 +941,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Theme.of(context).textTheme.titleLarge?.color,
+                          color: textColor,
                         ),
                       ),
                       SizedBox(height: 12),
@@ -807,7 +950,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                         style: TextStyle(
                           fontSize: 15,
                           height: 1.5,
-                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                          color: textColor,
                         ),
                       ),
                     ],
@@ -818,17 +961,19 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                 Container(
                   margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
+                    color: cardColor,
                     borderRadius: BorderRadius.circular(16),
-                    boxShadow: isDark
-                        ? []
-                        : [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              spreadRadius: 1,
-                            ),
-                          ],
+                    border: Border.all(color: borderColor),
+                    boxShadow:
+                        isDark
+                            ? []
+                            : [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                spreadRadius: 1,
+                              ),
+                            ],
                   ),
                   child: Padding(
                     padding: EdgeInsets.all(20),
@@ -840,7 +985,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Theme.of(context).textTheme.titleLarge?.color,
+                            color: textColor,
                           ),
                         ),
                         SizedBox(height: 12),
@@ -849,7 +994,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> with TickerProvid
                           style: TextStyle(
                             fontSize: 15,
                             height: 1.5,
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                            color: textColor,
                           ),
                         ),
                       ],

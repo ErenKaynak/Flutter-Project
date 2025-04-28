@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -44,10 +46,20 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isBlackMode = themeNotifier.isBlackMode;
+    final bgColor = Theme.of(context).scaffoldBackgroundColor;
+    final cardColor = Theme.of(context).cardColor;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    final borderColor = isDark ? Colors.grey.shade700 : Colors.grey.shade200;
+    final accentColor =
+        isBlackMode
+            ? Theme.of(context).colorScheme.secondary
+            : Colors.red.shade700;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).primaryColor,
         elevation: isDark ? 0 : 2,
@@ -66,29 +78,48 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               margin: EdgeInsets.all(16.0),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: isDark
-                      ? [Colors.red.shade900, Colors.grey.shade900]
-                      : [Colors.red.shade300, Colors.white],
+                  colors:
+                      isDark
+                          ? [
+                            isBlackMode
+                                ? Theme.of(context).colorScheme.secondary
+                                : Colors.red.shade900,
+                            Colors.grey.shade900,
+                          ]
+                          : [
+                            isBlackMode
+                                ? Colors.grey.shade50
+                                : Colors.red.shade300,
+                            Colors.white,
+                          ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: isDark
-                    ? []
-                    : [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 5,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
+                boxShadow:
+                    isDark
+                        ? []
+                        : [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 5,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
               ),
               child: Row(
                 children: [
                   Container(
                     padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.red.shade900 : Colors.red.shade300,
+                      color:
+                          isDark
+                              ? (isBlackMode
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Colors.red.shade900)
+                              : (isBlackMode
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Colors.red.shade300),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -129,18 +160,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                color: isDark ? Colors.grey.shade800 : cardColor,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                ),
+                border: Border.all(color: borderColor),
               ),
               child: Text(
                 'Enter your email address and we will send you a password reset link',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Theme.of(context).textTheme.bodyLarge?.color,
-                ),
+                style: TextStyle(fontSize: 16, color: textColor),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -154,9 +180,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    style: TextStyle(
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
+                    style: TextStyle(color: textColor),
                     decoration: InputDecoration(
                       labelText: 'Email Address',
                       hintText: 'Enter your email',
@@ -165,23 +189,18 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         color: Theme.of(context).iconTheme.color,
                       ),
                       filled: true,
-                      fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                      fillColor: isDark ? Colors.grey.shade800 : cardColor,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                        ),
+                        borderSide: BorderSide(color: borderColor),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.red.shade700,
-                          width: 2,
-                        ),
+                        borderSide: BorderSide(color: accentColor, width: 2),
                       ),
                     ),
                   ),
@@ -191,14 +210,25 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     height: 55,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.red.shade700, Colors.red.shade900],
+                        colors:
+                            isBlackMode
+                                ? [
+                                  Theme.of(context).colorScheme.secondary,
+                                  Theme.of(context).colorScheme.secondary,
+                                ]
+                                : [Colors.red.shade700, Colors.red.shade900],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.red.shade200.withOpacity(0.5),
+                          color:
+                              isBlackMode
+                                  ? Theme.of(
+                                    context,
+                                  ).colorScheme.secondary.withOpacity(0.3)
+                                  : Colors.red.shade200.withOpacity(0.5),
                           blurRadius: 8,
                           offset: Offset(0, 4),
                         ),

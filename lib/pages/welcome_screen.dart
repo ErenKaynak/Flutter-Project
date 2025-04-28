@@ -1,12 +1,21 @@
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/register_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
+import 'package:engineering_project/pages/theme_notifier.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isBlackMode = themeNotifier.isBlackMode;
+    final bgColor = Theme.of(context).scaffoldBackgroundColor;
+    final cardColor = Theme.of(context).cardColor;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    final borderColor =
+        isDarkMode ? Colors.grey.shade700 : Colors.grey.shade200;
 
     return Scaffold(
       body: SafeArea(
@@ -19,9 +28,12 @@ class WelcomeScreen extends StatelessWidget {
                     : LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.red.shade50, Colors.white],
+                      colors:
+                          isBlackMode
+                              ? [Colors.grey.shade50, Colors.grey.shade50]
+                              : [Colors.red.shade50, Colors.white],
                     ),
-            color: isDarkMode ? Colors.black : null,
+            color: isDarkMode ? bgColor : null,
           ),
           child: Column(
             children: [
@@ -36,22 +48,27 @@ class WelcomeScreen extends StatelessWidget {
                       Container(
                         height: 180,
                         width: 180,
-                       decoration: BoxDecoration(
+                        decoration: BoxDecoration(
                           color: isDarkMode ? Colors.grey[900] : Colors.white54,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.red.shade100,
+                              color:
+                                  isBlackMode
+                                      ? Theme.of(
+                                        context,
+                                      ).colorScheme.secondary.withOpacity(0.3)
+                                      : Colors.red.shade100,
                               blurRadius: 15,
                               spreadRadius: 5,
-                              )
+                            ),
                           ],
                         ),
                         child: ClipOval(
                           child: Image.asset(
-                            isDarkMode 
-                              ? 'lib/assets/Images/app-icon-dark.png'
-                              : 'lib/assets/Images/app-icon-light.png',
+                            isDarkMode
+                                ? 'lib/assets/Images/app-icon-dark.png'
+                                : 'lib/assets/Images/app-icon-light.png',
                             fit: BoxFit.scaleDown,
                           ),
                         ),
@@ -62,7 +79,10 @@ class WelcomeScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Colors.red.shade700,
+                          color:
+                              isBlackMode
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Colors.red.shade700,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -86,14 +106,14 @@ class WelcomeScreen extends StatelessWidget {
                     vertical: 20,
                   ),
                   decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[900] : Colors.white,
+                    color: isDarkMode ? Colors.grey[900] : cardColor,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
+                        color: borderColor,
                         spreadRadius: 5,
                         blurRadius: 10,
                         offset: const Offset(0, -3),
@@ -113,7 +133,10 @@ class WelcomeScreen extends StatelessWidget {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade400,
+                          backgroundColor:
+                              isBlackMode
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Colors.red.shade400,
                           foregroundColor: Colors.white,
                           minimumSize: const Size.fromHeight(55),
                           shape: RoundedRectangleBorder(
@@ -141,10 +164,16 @@ class WelcomeScreen extends StatelessWidget {
                         },
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(
-                            color: Colors.red.shade400,
+                            color:
+                                isBlackMode
+                                    ? Theme.of(context).colorScheme.secondary
+                                    : Colors.red.shade400,
                             width: 2,
                           ),
-                          foregroundColor: Colors.red.shade400,
+                          foregroundColor:
+                              isBlackMode
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Colors.red.shade400,
                           minimumSize: const Size.fromHeight(55),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

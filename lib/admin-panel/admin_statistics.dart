@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math' show max;
+import 'package:provider/provider.dart';
+import 'package:engineering_project/pages/theme_notifier.dart';
 
 class AdminStatisticsPage extends StatefulWidget {
   const AdminStatisticsPage({super.key});
@@ -52,10 +54,11 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
     final now = DateTime.now();
     final monthsAgo = now.subtract(const Duration(days: 365));
 
-    final ordersSnapshot = await FirebaseFirestore.instance
-        .collection('orders')
-        .where('orderDate', isGreaterThan: monthsAgo)
-        .get();
+    final ordersSnapshot =
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .where('orderDate', isGreaterThan: monthsAgo)
+            .get();
 
     final Map<String, double> sales = {};
     final Map<String, double> stock = {};
@@ -63,16 +66,17 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
     for (var doc in ordersSnapshot.docs) {
       final orderData = doc.data();
       final orderDate = (orderData['orderDate'] as Timestamp).toDate();
-      final month = '${orderDate.year}-${orderDate.month.toString().padLeft(2, '0')}';
+      final month =
+          '${orderDate.year}-${orderDate.month.toString().padLeft(2, '0')}';
       final items = orderData['items'] as List<dynamic>? ?? [];
-      
+
       double monthlyTotal = 0.0;
       double monthlyQuantity = 0.0;
 
       for (var item in items) {
         final price = double.tryParse(item['price'].toString()) ?? 0.0;
         final quantity = item['quantity'] as int? ?? 0;
-        
+
         monthlyTotal += price * quantity;
         monthlyQuantity += quantity;
       }
@@ -93,9 +97,8 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
 
   Future<void> fetchCategorySales() async {
     // First get products to create a map of product IDs to their categories
-    final productsSnapshot = await FirebaseFirestore.instance
-        .collection('products')
-        .get();
+    final productsSnapshot =
+        await FirebaseFirestore.instance.collection('products').get();
 
     final Map<String, Map<String, dynamic>> productsData = {};
     for (var doc in productsSnapshot.docs) {
@@ -104,12 +107,13 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
         'category': data['category'] as String? ?? 'Uncategorized',
         'price': data['price'] ?? 0.0,
       };
-      print('Product ID: ${doc.id}, Category: ${data['category']}, Price: ${data['price']}');
+      print(
+        'Product ID: ${doc.id}, Category: ${data['category']}, Price: ${data['price']}',
+      );
     }
 
-    final ordersSnapshot = await FirebaseFirestore.instance
-        .collection('orders')
-        .get();
+    final ordersSnapshot =
+        await FirebaseFirestore.instance.collection('orders').get();
 
     final Map<String, double> categorySales = {};
 
@@ -130,12 +134,14 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
         final category = productInfo['category'] as String;
         final price = double.tryParse(productInfo['price'].toString()) ?? 0.0;
         final quantity = item['quantity'] as int? ?? 0;
-        
+
         // Sum up sales by category
         final saleAmount = price * quantity;
         categorySales[category] = (categorySales[category] ?? 0.0) + saleAmount;
-        
-        print('Added sale - Category: $category, Amount: $saleAmount, Quantity: $quantity');
+
+        print(
+          'Added sale - Category: $category, Amount: $saleAmount, Quantity: $quantity',
+        );
       }
     }
 
@@ -147,10 +153,9 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
   }
 
   Future<void> calculateTotalProductsSold() async {
-    final ordersSnapshot = await FirebaseFirestore.instance
-        .collection('orders')
-        .get();
-    
+    final ordersSnapshot =
+        await FirebaseFirestore.instance.collection('orders').get();
+
     int totalSold = 0;
     for (var doc in ordersSnapshot.docs) {
       final items = doc.data()['items'] as List<dynamic>? ?? [];
@@ -159,37 +164,41 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
         totalSold += quantity;
       }
     }
-    
+
     print('Total products sold from orders: $totalSold');
-    
+
     setState(() {
       totalProductsSold = totalSold;
     });
   }
 
   Future<void> fetchTopProducts() async {
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection('products')
-        .orderBy('sold', descending: true)
-        .limit(10)
-        .get();
+    final querySnapshot =
+        await FirebaseFirestore.instance
+            .collection('products')
+            .orderBy('sold', descending: true)
+            .limit(10)
+            .get();
 
     setState(() {
-      productDetails = querySnapshot.docs.map((doc) {
-        final data = doc.data();
-        final sold = (data['sold'] ?? 0) as num;
-        print('Product: ${data['name']} - Sold: $sold - Category: ${data['category']}');
-        
-        return {
-          'id': doc.id,
-          'name': data['name'] ?? 'Unnamed Product',
-          'price': data['price']?.toString() ?? '0',
-          'sold': sold,
-          'stock': data['stock'] ?? 0,
-          'image': data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-          'category': data['category'] ?? 'Uncategorized',
-        };
-      }).toList();
+      productDetails =
+          querySnapshot.docs.map((doc) {
+            final data = doc.data();
+            final sold = (data['sold'] ?? 0) as num;
+            print(
+              'Product: ${data['name']} - Sold: $sold - Category: ${data['category']}',
+            );
+
+            return {
+              'id': doc.id,
+              'name': data['name'] ?? 'Unnamed Product',
+              'price': data['price']?.toString() ?? '0',
+              'sold': sold,
+              'stock': data['stock'] ?? 0,
+              'image': data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
+              'category': data['category'] ?? 'Uncategorized',
+            };
+          }).toList();
     });
   }
 
@@ -201,20 +210,26 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
   }
 
   Future<void> fetchTotalOrders() async {
-    final snapshot = await FirebaseFirestore.instance.collection('orders').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('orders').get();
     setState(() {
       totalOrders = snapshot.docs.length;
     });
   }
 
   Widget _buildBarChart() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isBlackMode = themeNotifier.isBlackMode;
     final months = monthlySales.keys.toList()..sort();
-    
+
     if (months.isEmpty) {
       return Center(
         child: Text(
           'No data available for the selected period',
-          style: TextStyle(fontSize: 16),
+          style: TextStyle(
+            fontSize: 16,
+            color: isBlackMode ? Colors.white : null,
+          ),
         ),
       );
     }
@@ -238,7 +253,7 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
                 final label = rodIndex == 0 ? 'Items Sold' : 'Sales';
                 return BarTooltipItem(
                   '$label\n${rodIndex == 0 ? value.toInt() : '₺${value.toStringAsFixed(2)}'}',
-                  const TextStyle(color: Colors.white),
+                  TextStyle(color: isBlackMode ? Colors.black : Colors.white),
                 );
               },
             ),
@@ -249,15 +264,21 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
               sideTitles: SideTitles(
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
-                  if (value < 0 || value >= months.length) return const Text('');
+                  if (value < 0 || value >= months.length)
+                    return const Text('');
                   final month = months[value.toInt()];
                   // Convert numeric month to abbreviated name
-                  final monthName = _getMonthName(int.parse(month.split('-')[1]));
+                  final monthName = _getMonthName(
+                    int.parse(month.split('-')[1]),
+                  );
                   return Padding(
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Text(
                       monthName,
-                      style: const TextStyle(fontSize: 12),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isBlackMode ? Colors.white : null,
+                      ),
                     ),
                   );
                 },
@@ -270,7 +291,10 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
                 getTitlesWidget: (value, meta) {
                   return Text(
                     '₺${value.toInt()}',
-                    style: const TextStyle(fontSize: 12),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isBlackMode ? Colors.white : null,
+                    ),
                   );
                 },
               ),
@@ -282,6 +306,12 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
             show: true,
             drawVerticalLine: false,
             horizontalInterval: maxValue / 5,
+            getDrawingHorizontalLine: (value) {
+              return FlLine(
+                color: isBlackMode ? Colors.grey.shade700 : Colors.grey,
+                strokeWidth: 1,
+              );
+            },
           ),
           borderData: FlBorderData(show: false),
           barGroups: List.generate(
@@ -291,7 +321,10 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
               barRods: [
                 BarChartRodData(
                   toY: monthlyStock[months[index]] ?? 0,
-                  color: Colors.red.withOpacity(0.7),
+                  color:
+                      isBlackMode
+                          ? Colors.grey.shade500
+                          : Colors.red.withOpacity(0.7),
                   width: 12,
                 ),
                 BarChartRodData(
@@ -310,10 +343,20 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
   // Helper method to convert month number to abbreviated name
   String _getMonthName(int month) {
     const monthNames = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
-    
+
     if (month >= 1 && month <= 12) {
       return monthNames[month - 1];
     }
@@ -341,9 +384,7 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
           'Products Sold',
           totalProductsSold.toString(),
           Icons.inventory_2_rounded,
-          LinearGradient(
-            colors: [Colors.blue.shade400, Colors.blue.shade700],
-          ),
+          LinearGradient(colors: [Colors.blue.shade400, Colors.blue.shade700]),
         ),
         _buildStatsCard(
           'Total Users',
@@ -369,198 +410,240 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
     return monthlySales.values.fold(0.0, (sum, value) => sum + value);
   }
 
-  Widget _buildStatsCard(String title, String value, IconData icon, LinearGradient gradient) {
-  return Container(
-    decoration: BoxDecoration(
-      gradient: gradient,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: gradient.colors.last.withOpacity(0.3),
-          blurRadius: 8,
-          offset: Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Stack(
-      children: [
-        Positioned(
-          right: -20,
-          bottom: -20,
-          child: Icon(
-            icon,
-            size: 80, // Reduced from 100
-            color: Colors.white.withOpacity(0.2),
+  Widget _buildStatsCard(
+    String title,
+    String value,
+    IconData icon,
+    LinearGradient gradient,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: gradient.colors.last.withOpacity(0.3),
+            blurRadius: 8,
+            offset: Offset(0, 4),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(12.0), // Reduced from 16
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: Container(
-                  padding: EdgeInsets.all(6), // Reduced from 8
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 20), // Reduced from 24
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13, // Reduced from 14
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Icon(
+              icon,
+              size: 80, // Reduced from 100
+              color: Colors.white.withOpacity(0.2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12.0), // Reduced from 16
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  child: Container(
+                    padding: EdgeInsets.all(6), // Reduced from 8
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
                     ),
+                    child: Icon(
+                      icon,
+                      color: Colors.white,
+                      size: 20,
+                    ), // Reduced from 24
                   ),
-                  SizedBox(height: 2), // Reduced from 4
-                  FittedBox( // Added FittedBox to prevent text overflow
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      value,
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20, // Reduced from 24
-                        fontWeight: FontWeight.bold,
+                        color: Colors.white70,
+                        fontSize: 13, // Reduced from 14
                       ),
                     ),
-                  ),
-                ],
-              ),
-              // The comma was here without any widget following it
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-  Widget _buildSalesChart() {
-  return Container(
-    margin: EdgeInsets.only(top: 24),
-    decoration: BoxDecoration(
-      color: Theme.of(context).cardColor,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.1),
-          blurRadius: 10,
-          offset: Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Padding(
-      padding: EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Text(
-                  'Sales Overview',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: timeFrames.map((frame) {
-                      final isSelected = selectedTimeFrame == frame;
-                      return InkWell(
-                        onTap: () {
-                          setState(() {
-                            selectedTimeFrame = frame;
-                            fetchData();
-                          });
-                        },
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected 
-                                ? Colors.red.shade700
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            frame,
-                            style: TextStyle(
-                              color: isSelected 
-                                  ? Colors.white 
-                                  : Theme.of(context).textTheme.bodyLarge?.color,
-                              fontSize: 14,
-                              fontWeight: isSelected 
-                                  ? FontWeight.bold 
-                                  : FontWeight.normal,
-                            ),
-                          ),
+                    SizedBox(height: 2), // Reduced from 4
+                    FittedBox(
+                      // Added FittedBox to prevent text overflow
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        value,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20, // Reduced from 24
+                          fontWeight: FontWeight.bold,
                         ),
-                      );
-                    }).toList(),
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          SizedBox(height: 20),
-          SizedBox(
-            height: 300,
-            child: _buildBarChart(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSalesChart() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isBlackMode = themeNotifier.isBlackMode;
+
+    return Container(
+      margin: EdgeInsets.only(top: 24),
+      decoration: BoxDecoration(
+        color: isBlackMode ? Colors.black : Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color:
+                isBlackMode
+                    ? Colors.grey.shade900
+                    : Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
         ],
       ),
-    ),
-  );
-}
+      child: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sales Overview',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: isBlackMode ? Colors.white : null,
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color:
+                          isBlackMode
+                              ? Colors.grey.shade800
+                              : Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children:
+                          timeFrames.map((frame) {
+                            final isSelected = selectedTimeFrame == frame;
+                            return InkWell(
+                              onTap: () {
+                                setState(() {
+                                  selectedTimeFrame = frame;
+                                  fetchData();
+                                });
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      isSelected
+                                          ? (isBlackMode
+                                              ? Colors.grey.shade500
+                                              : Colors.red.shade700)
+                                          : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  frame,
+                                  style: TextStyle(
+                                    color:
+                                        isSelected
+                                            ? Colors.white
+                                            : (isBlackMode
+                                                ? Colors.white
+                                                : Theme.of(
+                                                  context,
+                                                ).textTheme.bodyLarge?.color),
+                                    fontSize: 14,
+                                    fontWeight:
+                                        isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 20),
+            SizedBox(height: 300, child: _buildBarChart()),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isBlackMode = themeNotifier.isBlackMode;
+    final isDark =
+        Theme.of(context).brightness == Brightness.dark && !isBlackMode;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor:
+          isBlackMode
+              ? Colors.black
+              : Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text('Admin Dashboard'),
-        backgroundColor: isDark ? Colors.black : Colors.red.shade700,
+        backgroundColor:
+            isBlackMode
+                ? Colors.black
+                : isDark
+                ? Colors.black
+                : Colors.red.shade700,
         elevation: isDark ? 0 : 2,
         foregroundColor: Colors.white,
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator(color: Colors.red))
-          : RefreshIndicator(
-              onRefresh: fetchData,
-              child: SingleChildScrollView(
-                physics: AlwaysScrollableScrollPhysics(),
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildOverviewCards(),
-                      SizedBox(height: 24),
-                      _buildSalesChart(),
-                    ],
+      body:
+          isLoading
+              ? Center(
+                child: CircularProgressIndicator(
+                  color: isBlackMode ? Colors.grey.shade500 : Colors.red,
+                ),
+              )
+              : RefreshIndicator(
+                onRefresh: fetchData,
+                child: SingleChildScrollView(
+                  physics: AlwaysScrollableScrollPhysics(),
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildOverviewCards(),
+                        SizedBox(height: 24),
+                        _buildSalesChart(),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
     );
   }
 }
