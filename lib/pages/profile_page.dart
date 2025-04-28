@@ -407,6 +407,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
     final isBlackMode = themeNotifier.isBlackMode;
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     final isDark = Theme.of(context).brightness == Brightness.dark || isBlackMode;
     final outlineColor = isDark ? Colors.white.withOpacity(0.2) : Colors.red.withOpacity(0.3);
 
@@ -603,6 +604,8 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
 =======
+=======
+>>>>>>> Stashed changes
     final isDark =
         Theme.of(context).brightness == Brightness.dark || isBlackMode;
     final bgColor = Theme.of(context).scaffoldBackgroundColor;
@@ -618,6 +621,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 ? Theme.of(context).colorScheme.secondary
                 : Colors.red.shade300.withOpacity(0.5));
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     return Scaffold(
       appBar: AppBar(
@@ -876,6 +882,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 Navigator.push(
                                   context,
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                                   MaterialPageRoute(builder: (_) => const AdminPage()),
                                 );
                               }, themeNotifier),
@@ -943,6 +950,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                     color: isDark ? Colors.white : Colors.black87,
+=======
+                                  MaterialPageRoute(
+                                    builder: (_) => const AdminPage(),
+>>>>>>> Stashed changes
 =======
                                   MaterialPageRoute(
                                     builder: (_) => const AdminPage(),

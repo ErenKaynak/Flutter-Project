@@ -39,6 +39,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     setState(() => _isLoading = true);
     try {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       final snapshot = await FirebaseFirestore.instance
           .collection('categories')
           .orderBy('order') // Add ordering
@@ -59,6 +60,13 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
 
       print('Firestore snapshot size: ${snapshot.docs.length}');
 
+=======
+      final snapshot =
+          await FirebaseFirestore.instance.collection('categories').get();
+
+      print('Firestore snapshot size: ${snapshot.docs.length}');
+
+>>>>>>> Stashed changes
       final loadedCategories =
           snapshot.docs.map((doc) {
             final data = doc.data();
@@ -70,6 +78,9 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
               'order': data['order'] ?? 999999,
             };
           }).toList();
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
       setState(() {
@@ -78,6 +89,10 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       });
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+      _debugPrintCategories();
+>>>>>>> Stashed changes
 =======
       _debugPrintCategories();
 >>>>>>> Stashed changes
@@ -476,10 +491,13 @@ Future<void> _updateCategory(String categoryId, String newName, File? newImageFi
                                         width: 40,
                                         height: 40,
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                                         errorBuilder: (context, error, stackTrace) {
                                           print('Error loading image: $error');
                                           return Icon(Icons.error);
 =======
+=======
+>>>>>>> Stashed changes
                                         errorBuilder: (
                                           context,
                                           error,
@@ -493,6 +511,9 @@ Future<void> _updateCategory(String categoryId, String newName, File? newImageFi
                                                     ? Colors.white
                                                     : null,
                                           );
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
                                         },
                                       )
@@ -504,6 +525,7 @@ Future<void> _updateCategory(String categoryId, String newName, File? newImageFi
                                       ),
                                   ],
                                 ),
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
                                 title: Text(category['name'] ?? 'Unnamed Category'),
                                 trailing: Row(
@@ -538,6 +560,8 @@ Future<void> _updateCategory(String categoryId, String newName, File? newImageFi
                                     ),
                                   ],
 =======
+=======
+>>>>>>> Stashed changes
                                 title: Text(
                                   category['name'] ?? 'Unnamed Category',
                                   style: TextStyle(
@@ -606,6 +630,9 @@ Future<void> _updateCategory(String categoryId, String newName, File? newImageFi
                                               ],
                                             ),
                                       ),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
                                 ),
                               ),

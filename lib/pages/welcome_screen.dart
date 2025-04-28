@@ -7,6 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 class WelcomeScreen extends StatelessWidget {

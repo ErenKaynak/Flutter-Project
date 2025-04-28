@@ -70,6 +70,9 @@ Future<void> main() async {
       print('Caught zoned error: $error\n$stackTrace');
     },
   );
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 }
 
@@ -86,12 +89,18 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
           themeMode: themeNotifier.themeMode,
 =======
+=======
+>>>>>>> Stashed changes
           themeMode:
               themeNotifier.isBlackMode
                   ? ThemeMode.dark
                   : themeNotifier.themeMode,
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
           home: StreamBuilder<User?>(
             stream: FirebaseAuth.instance.authStateChanges(),
@@ -101,6 +110,7 @@ class MyApp extends StatelessWidget {
                   body: Center(child: CircularProgressIndicator()),
                 );
               }
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 
               if (snapshot.hasData) {
@@ -113,6 +123,8 @@ class MyApp extends StatelessWidget {
         ),
       ),
 =======
+=======
+>>>>>>> Stashed changes
               if (snapshot.hasData) {
                 return const RootScreen();
               }

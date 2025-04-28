@@ -1122,6 +1122,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ),
                           ),
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                           child: Column(
                             children: [
                               _buildPaymentOption(
@@ -1155,6 +1156,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             _buildCreditCardSection(),
                           ],
 
+=======
+
+                          if (_selectedPaymentMethod == 'Credit Card') ...[
+                            const SizedBox(height: 24),
+                            _buildSectionTitle('Credit Cards'),
+                            const SizedBox(height: 8),
+                            _buildCreditCardSection(),
+                          ],
+
+>>>>>>> Stashed changes
                           const SizedBox(height: 24),
                           _buildSectionTitle('Order Summary'),
                           const SizedBox(height: 8),

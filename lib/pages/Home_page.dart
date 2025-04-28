@@ -12,6 +12,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 void main() async {
@@ -74,16 +77,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<void> _loadCategories() async {
     try {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       final snapshot = await FirebaseFirestore.instance
           .collection('categories')
           .orderBy('order') // Add ordering to match admin panel
           .get();
 =======
+=======
+>>>>>>> Stashed changes
       final snapshot =
           await FirebaseFirestore.instance
               .collection('categories')
               .orderBy('name')
               .get();
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
       if (mounted) {
