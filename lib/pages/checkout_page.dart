@@ -365,139 +365,130 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Future<void> _processOrder() async {
     if (_selectedAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a delivery address')),
+        const SnackBar(content: Text('Please select an address')),
       );
       return;
-    }
-
-    if (_selectedPaymentMethod == 'Credit Card') {
-      if (_selectedCard == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select or add a credit card')),
-        );
-        return;
-      }
-
-      if (_isCardExpired(_selectedCard!.expiryDate)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Your selected card is expired, please use another card')),
-        );
-        return;
-      }
     }
 
     setState(() => _isProcessing = true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception('User not logged in');
+      bool paymentSuccess = false;
 
-      final batch = FirebaseFirestore.instance.batch();
-      final orderRef = FirebaseFirestore.instance.collection('orders').doc();
-
-      // Create order data
-      final orderData = {
-        'userId': user.uid,
-        'orderNumber': orderRef.id.substring(0, 8),
-        'items': widget.items.map((item) => item.toMap()).toList(),
-        'subtotal': widget.subtotal,
-        'shippingCost': shippingCost,
-        'discountCode': widget.appliedDiscount?.code,
-        'discountPercentage': widget.appliedDiscount?.discountPercentage ?? 0.0,
-        'discountAmount': widget.appliedDiscount?.calculateDiscount(widget.subtotal) ?? 0.0,
-        'totalAmount': total,  // This includes the discounted amount
-        'total': total,       // Add this as a backup
-        'status': 'Pending',
-        'paymentMethod': _selectedPaymentMethod,
-        'paymentDetails': _selectedPaymentMethod == 'Credit Card'
-            ? {
-                'cardId': _selectedCard?.id,
-                'lastFourDigits': _selectedCard?.cardNumber.substring(_selectedCard!.cardNumber.length - 4),
-              }
-            : null,
-        'shippingAddress': _selectedAddress!['fullAddress'],
-        'addressDetails': _selectedAddress,
-        'timestamp': FieldValue.serverTimestamp(),
-        'createdAt': FieldValue.serverTimestamp(),
-        'customerName':
-            '${_selectedAddress!['firstName']} ${_selectedAddress!['lastName']}',
-        'customerPhone': _selectedAddress!['phone'],
-        'customerEmail': user.email,
-        'trackingNumber': '',
-      };
-
-      // Add order to main orders collection
-      batch.set(orderRef, orderData);
-
-      // Add order to user's orders subcollection
-      final userOrderRef = FirebaseFirestore.instance
-          .collection('users')  // Change to users collection
-          .doc(user.uid)
-          .collection('orders')  // Change to orders subcollection
-          .doc(orderRef.id);
-
-      batch.set(userOrderRef, orderData);
-
-      // Update product stock
-      for (var item in widget.items) {
-        final productRef = FirebaseFirestore.instance
-            .collection('products')
-            .doc(item.id);
-        batch.update(productRef, {
-          'stock': FieldValue.increment(-item.quantity),
-        });
+      if (_selectedPaymentMethod == 'Wallet') {
+        paymentSuccess = await _processWalletPayment(total);
+      } else if (_selectedPaymentMethod == 'Credit Card') {
+        // Your existing credit card payment logic
       }
 
-      if (widget.appliedDiscount != null) {
-        try {
-          final discountRef = FirebaseFirestore.instance
-              .collection('discountCodes')
-              .doc(widget.appliedDiscount!.code.toLowerCase()); // Convert to lowercase
-          
-          // Create the discount code document if it doesn't exist
-          batch.set(discountRef, {
-            'code': widget.appliedDiscount!.code,
-            'discountPercentage': widget.appliedDiscount!.discountPercentage,
-            'usageCount': FieldValue.increment(1),
-            'usageLimit': widget.appliedDiscount!.usageLimit,
-            'expiryDate': widget.appliedDiscount!.expiryDate,
-            'isActive': true,
-            'createdAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true)); // Use merge to update existing document
-        } catch (e) {
-          print('Error updating discount code usage: $e');
+      if (paymentSuccess) {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) throw Exception('User not logged in');
+
+        final batch = FirebaseFirestore.instance.batch();
+        final orderRef = FirebaseFirestore.instance.collection('orders').doc();
+
+        // Create order data
+        final orderData = {
+          'userId': user.uid,
+          'orderNumber': orderRef.id.substring(0, 8),
+          'items': widget.items.map((item) => item.toMap()).toList(),
+          'subtotal': widget.subtotal,
+          'shippingCost': shippingCost,
+          'discountCode': widget.appliedDiscount?.code,
+          'discountPercentage': widget.appliedDiscount?.discountPercentage ?? 0.0,
+          'discountAmount': widget.appliedDiscount?.calculateDiscount(widget.subtotal) ?? 0.0,
+          'totalAmount': total,  // This includes the discounted amount
+          'total': total,       // Add this as a backup
+          'status': 'Pending',
+          'paymentMethod': _selectedPaymentMethod,
+          'paymentDetails': _selectedPaymentMethod == 'Credit Card'
+              ? {
+                  'cardId': _selectedCard?.id,
+                  'lastFourDigits': _selectedCard?.cardNumber.substring(_selectedCard!.cardNumber.length - 4),
+                }
+              : null,
+          'shippingAddress': _selectedAddress!['fullAddress'],
+          'addressDetails': _selectedAddress,
+          'timestamp': FieldValue.serverTimestamp(),
+          'createdAt': FieldValue.serverTimestamp(),
+          'customerName':
+              '${_selectedAddress!['firstName']} ${_selectedAddress!['lastName']}',
+          'customerPhone': _selectedAddress!['phone'],
+          'customerEmail': user.email,
+          'trackingNumber': '',
+        };
+
+        // Add order to main orders collection
+        batch.set(orderRef, orderData);
+
+        // Add order to user's orders subcollection
+        final userOrderRef = FirebaseFirestore.instance
+            .collection('users')  // Change to users collection
+            .doc(user.uid)
+            .collection('orders')  // Change to orders subcollection
+            .doc(orderRef.id);
+
+        batch.set(userOrderRef, orderData);
+
+        // Update product stock
+        for (var item in widget.items) {
+          final productRef = FirebaseFirestore.instance
+              .collection('products')
+              .doc(item.id);
+          batch.update(productRef, {
+            'stock': FieldValue.increment(-item.quantity),
+          });
+        }
+
+        if (widget.appliedDiscount != null) {
+          try {
+            final discountRef = FirebaseFirestore.instance
+                .collection('discountCodes')
+                .doc(widget.appliedDiscount!.code.toLowerCase()); // Convert to lowercase
+            
+            // Create the discount code document if it doesn't exist
+            batch.set(discountRef, {
+              'code': widget.appliedDiscount!.code,
+              'discountPercentage': widget.appliedDiscount!.discountPercentage,
+              'usageCount': FieldValue.increment(1),
+              'usageLimit': widget.appliedDiscount!.usageLimit,
+              'expiryDate': widget.appliedDiscount!.expiryDate,
+              'isActive': true,
+              'createdAt': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true)); // Use merge to update existing document
+          } catch (e) {
+            print('Error updating discount code usage: $e');
+          }
+        }
+
+        // Commit all changes
+        await batch.commit();
+
+        // Clear the cart
+        final cartManager = CartManager();
+        await cartManager.clearCart();
+
+        // Navigate to success page
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (_) => OrderSuccessPage(
+                    orderId: orderRef.id,
+                    totalAmount: total,
+                  ),
+            ),
+          );
         }
       }
-
-      // Commit all changes
-      await batch.commit();
-
-      // Clear the cart
-      final cartManager = CartManager();
-      await cartManager.clearCart();
-
-      // Navigate to success page
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder:
-                (_) => OrderSuccessPage(
-                  orderId: orderRef.id,
-                  totalAmount: total,
-                ),
-          ),
-        );
-      }
     } catch (e) {
-      print('Error processing order: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error processing order: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error processing order: $e')),
+      );
     } finally {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-      }
+      setState(() => _isProcessing = false);
     }
   }
 
@@ -928,6 +919,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ],
                           ),
                         ),
+                        RadioListTile<String>(
+                          title: const Text('Wallet Balance'),
+                          value: 'Wallet',
+                          groupValue: _selectedPaymentMethod,
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedPaymentMethod = value!;
+                            });
+                          },
+                        ),
 
                         if (_selectedPaymentMethod == 'Credit Card') ...[
                           const SizedBox(height: 24),
@@ -1195,5 +1196,48 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ],
       ),
     );
+  }
+
+  Future<bool> _processWalletPayment(double amount) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+
+    try {
+      final walletDoc = await FirebaseFirestore.instance
+          .collection('wallets')
+          .doc(user.uid)
+          .get();
+      
+      final currentBalance = (walletDoc.data()?['balance'] ?? 0.0).toDouble();
+      
+      if (currentBalance < amount) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Insufficient wallet balance')),
+        );
+        return false;
+      }
+
+      // Calculate cashback
+      final cashback = amount * 0.01; // 1% cashback
+
+      // Update wallet balance
+      await FirebaseFirestore.instance.collection('wallets').doc(user.uid).update({
+        'balance': FieldValue.increment(-amount + cashback),
+      });
+
+      // Record transaction
+      await FirebaseFirestore.instance.collection('wallet_transactions').add({
+        'user_id': user.uid,
+        'amount': -amount,
+        'cashback': cashback,
+        'type': 'purchase',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      return true;
+    } catch (e) {
+      print('Error processing wallet payment: $e');
+      return false;
+    }
   }
 }

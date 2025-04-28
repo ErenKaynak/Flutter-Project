@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/register_page.dart';
+import 'package:engineering_project/pages/wallet.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -813,6 +814,16 @@ class _ProfilePageState extends State<ProfilePage> {
                                 MaterialPageRoute(builder: (_) => const OrderHistoryPage()),
                               );
                             }, themeNotifier),
+
+                            buildButton(
+  'My Wallet',
+  Icons.account_balance_wallet,
+  () => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const WalletPage()),
+  ),
+  themeNotifier,
+),
                             
                           ],
                         ),

@@ -63,88 +63,106 @@ class _LoginPageState extends State<LoginPage> {
 
   void signUserIn() async {
     if (!mounted) return;
+    
     setState(() {
       emailError = null;
       passwordError = null;
     });
+    
     if (!_formKey.currentState!.validate()) return;
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
+
     try {
-      UserCredential credential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(
-            email: emailController.text.trim(),
-            password: passwordController.text.trim(),
-          );
-      if (!_mounted) return;
-      User? user = credential.user;
+      // Show loading indicator using mounted context
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          return const Center(child: CircularProgressIndicator());
+        },
+      );
+
+      // Attempt sign in
+      final credential = await FirebaseAuth.  instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      final user = credential.user;
       if (user != null) {
+        // Save user data
         await _saveUserToFirestore(user);
-        if (!_mounted) return;
-        final userDoc =
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .get();
-        String role = userDoc['role'] ?? 'user';
-        if (!_mounted) return;
-        if (context.mounted) Navigator.pop(context);
-        if (!_mounted) return;
+        
+        if (!mounted) return;
+
+        // Get user role
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        
+        final String role = userDoc['role'] ?? 'user';
+
+        if (!mounted) return;
+
+        // Make sure we're still mounted before navigation
         if (context.mounted) {
-          if (role == 'admin') {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const RootScreen()),
-              (Route<dynamic> route) => false,
-            );
-          } else {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const RootScreen()),
-              (Route<dynamic> route) => false,
-            );
-          }
+          // Pop the loading dialog first
+          Navigator.of(context).pop();
+          
+          // Then navigate to the appropriate screen
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const RootScreen(),
+            ),
+            (Route<dynamic> route) => false,
+          );
         }
       }
     } on FirebaseAuthException catch (e) {
-      if (!_mounted) return;
-      if (context.mounted) Navigator.pop(context);
-      if (!_mounted) return;
-      setState(() {
-        switch (e.code) {
-          case 'invalid-credential':
-            emailError = "Email or Password is wrong please try again";
-            break;
-          case 'wrong-password':
-            passwordError = "Incorrect password. Please try again.";
-            break;
-          case 'invalid-email':
-            emailError = "The email address is badly formatted.";
-            break;
-          case 'user-disabled':
-            emailError = "This user account has been disabled.";
-            break;
-          case 'too-many-requests':
-            emailError =
-                "Too many unsuccessful login attempts. Please try again later.";
-            break;
-          case 'missing-password':
-            emailError = "Please Enter A Password.";
-            break;
-          default:
-            emailError = "An error occurred. Please try again.";
-            print("Firebase Auth Error: ${e.code}");
-        }
-      });
+      if (context.mounted) {
+        // Pop the loading dialog
+        Navigator.of(context).pop();
+
+        setState(() {
+          switch (e.code) {
+            case 'invalid-credential':
+              emailError = "Email or Password is wrong please try again";
+              break;
+            case 'wrong-password':
+              passwordError = "Incorrect password. Please try again.";
+              break;
+            case 'invalid-email':
+              emailError = "The email address is badly formatted.";
+              break;
+            case 'user-disabled':
+              emailError = "This user account has been disabled.";
+              break;
+            case 'too-many-requests':
+              emailError =
+                  "Too many unsuccessful login attempts. Please try again later.";
+              break;
+            case 'missing-password':
+              emailError = "Please Enter A Password.";
+              break;
+            default:
+              emailError = "An error occurred. Please try again.";
+              print("Firebase Auth Error: ${e.code}");
+          }
+        });
+      }
     } catch (e) {
-      if (!_mounted) return;
-      if (context.mounted) Navigator.pop(context);
-      if (!_mounted) return;
-      setState(() {
-        emailError = "An unexpected error occurred. Please try again.";
-        print("Unexpected Error: $e");
-      });
+      if (context.mounted) {
+        // Pop the loading dialog
+        Navigator.of(context).pop();
+
+        setState(() {
+          emailError = "An unexpected error occurred. Please try again.";
+          print("Unexpected Error: $e");
+        });
+      }
     }
   }
 
