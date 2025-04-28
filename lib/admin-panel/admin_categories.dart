@@ -35,13 +35,11 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('categories')
-          .get(); // Temporarily remove order to check if data exists
-
-      print('Firestore snapshot size: ${snapshot.docs.length}'); // Debug print
+          .orderBy('order') // Add ordering
+          .get();
 
       final loadedCategories = snapshot.docs.map((doc) {
         final data = doc.data();
-        print('Loading category: ${doc.id} - ${data.toString()}'); // Debug print
         return {
           'id': doc.id,
           'name': data['name'] ?? 'Unnamed Category',
@@ -54,8 +52,6 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
         categories = loadedCategories;
         _isLoading = false;
       });
-
-      _debugPrintCategories(); // Debug print after loading
 
     } catch (e) {
       print('Error loading categories: $e');
@@ -162,9 +158,15 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
             .doc(category['id']);
         
         batch.update(docRef, {'order': i});
+        
+        // Update local state
+        categories[i]['order'] = i;
       }
       
       await batch.commit();
+      
+      // Refresh the categories to ensure order is updated
+      await _loadCategories();
     } catch (e) {
       print('Error updating category order: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -172,6 +174,112 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       );
     }
   }
+
+  Future<void> _editCategory(Map<String, dynamic> category) async {
+  final TextEditingController nameController = TextEditingController(text: category['name']);
+  File? newImageFile;
+
+  await showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: Text('Edit Category'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(labelText: 'Category Name'),
+              ),
+              SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final ImagePicker picker = ImagePicker();
+                        final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+                        if (image != null) {
+                          setState(() {
+                            newImageFile = File(image.path);
+                          });
+                        }
+                      },
+                      icon: Icon(Icons.image),
+                      label: Text('Change Icon'),
+                    ),
+                  ),
+                ],
+              ),
+              if (newImageFile != null)
+                Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text(
+                    'New icon selected',
+                    style: TextStyle(color: Colors.green),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _updateCategory(
+                category['id'],
+                nameController.text,
+                newImageFile,
+              );
+            },
+            child: Text('Save'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Future<void> _updateCategory(String categoryId, String newName, File? newImageFile) async {
+  try {
+    final updates = <String, dynamic>{
+      'name': newName,
+    };
+
+    if (newImageFile != null) {
+      // Upload new image
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('category_icons/${DateTime.now().millisecondsSinceEpoch}.png');
+      
+      await storageRef.putFile(newImageFile);
+      final iconUrl = await storageRef.getDownloadURL();
+      
+      updates['iconPath'] = iconUrl;
+    }
+
+    await FirebaseFirestore.instance
+        .collection('categories')
+        .doc(categoryId)
+        .update(updates);
+
+    await _loadCategories();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Category updated successfully')),
+    );
+  } catch (e) {
+    print('Error updating category: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error updating category')),
+    );
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -304,7 +412,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                                         width: 40,
                                         height: 40,
                                         errorBuilder: (context, error, stackTrace) {
-                                          print('Error loading image: $error'); // Debug print
+                                          print('Error loading image: $error');
                                           return Icon(Icons.error);
                                         },
                                       )
@@ -313,28 +421,37 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                                   ],
                                 ),
                                 title: Text(category['name'] ?? 'Unnamed Category'),
-                                trailing: IconButton(
-                                  icon: Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () => showDialog(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: Text('Delete Category'),
-                                      content: Text('Are you sure you want to delete this category?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context),
-                                          child: Text('Cancel'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            _deleteCategory(category['id']);
-                                          },
-                                          child: Text('Delete', style: TextStyle(color: Colors.red)),
-                                        ),
-                                      ],
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(Icons.edit, color: Colors.blue),
+                                      onPressed: () => _editCategory(category),
                                     ),
-                                  ),
+                                    IconButton(
+                                      icon: Icon(Icons.delete, color: Colors.red),
+                                      onPressed: () => showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: Text('Delete Category'),
+                                          content: Text('Are you sure you want to delete this category?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context),
+                                              child: Text('Cancel'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                                _deleteCategory(category['id']);
+                                              },
+                                              child: Text('Delete', style: TextStyle(color: Colors.red)),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             );

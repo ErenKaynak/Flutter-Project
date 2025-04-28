@@ -1,7 +1,7 @@
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/register_page.dart';
+import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 
 class WelcomeScreen extends StatelessWidget {
   @override
@@ -158,8 +158,26 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      // Continue as guest option (optional)
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => RootScreen(),
+                            ),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey[600],
+                        ),
+                        child: const Text(
+                          "Continue as Guest",
+                          style: TextStyle(
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

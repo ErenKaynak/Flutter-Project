@@ -1,4 +1,5 @@
 import 'package:engineering_project/pages/cart_page.dart' as CartPage;
+import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:engineering_project/pages/search_page.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -6,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:lottie/lottie.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,7 +69,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('categories')
-          .orderBy('name')
+          .orderBy('order') // Add ordering to match admin panel
           .get();
 
       if (mounted) {
@@ -237,7 +237,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         final data = doc.data() as Map<String, dynamic>;
 
         print('Product: ${data['name']}, Image path: ${data['imagePath']}');
-
         String priceString = data['price']?.toString() ?? '0';
 
         loadedProducts.add({
@@ -307,14 +306,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<void> toggleFavorite(Map<String, dynamic> product) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Please log in to add favorites'),
-            duration: Duration(seconds: 2),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.white),
+              const SizedBox(width: 8),
+              const Text('You need to sign in to continue'),
+              const Spacer(),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => LoginPage()),
+                  );
+                },
+                child: const Text('SIGN IN', style: TextStyle(color: Colors.white)),
+              ),
+            ],
           ),
-        );
-      }
+          duration: const Duration(seconds: 3),
+          backgroundColor: Colors.red.shade400,
+        ),
+      );
       return;
     }
 
@@ -421,6 +435,34 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> _addToCart(Map<String, dynamic> product) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.white),
+              const SizedBox(width: 8),
+              const Text('You need to sign in to continue'),
+              const Spacer(),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => LoginPage()),
+                  );
+                },
+                child: const Text('SIGN IN', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+          duration: const Duration(seconds: 3),
+          backgroundColor: Colors.red.shade400,
+        ),
+      );
+      return;
+    }
+
     if (_isAddingToCartMap[product['id']] == true) return;
 
     _isAddingToCartMap[product['id']] = true;
@@ -431,19 +473,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _tickAnimationControllers[product['id']]?.forward();
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Please log in to add items to cart'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-        return;
-      }
-
       final cartRef = FirebaseFirestore.instance
           .collection('cart')
           .doc(user.uid)
@@ -1197,26 +1226,35 @@ Widget _buildCategoryCircle(
                   padding: EdgeInsets.all(10.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween, // Add this
                     children: [
-                      Text(
-                        product["name"],
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                      Expanded(  // Add this
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              product["name"],
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: true,
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              "₺${product["price"]}",
+                              style: TextStyle(
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      SizedBox(height: 4),
-                      Text(
-                        "₺${product["price"]}",
-                        style: TextStyle(
-                          color: Colors.green.shade700,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                      SizedBox(height: 10),
+                      SizedBox(height: 8),
                       SizedBox(
                         width: double.infinity,
                         height: 40,
@@ -1480,7 +1518,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
   }
 }
 
-// CartManager class to handle cart operations
 class CartManager extends ChangeNotifier {
   List<CartItem> _items = [];
   

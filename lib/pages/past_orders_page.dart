@@ -829,26 +829,98 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   }
   
   void _handleReorder(Map<String, dynamic> order) async {
-    // Convert order items to CartItem objects
-    final List<CartItem> items = (order['items'] as List).map((item) => CartItem(
-      id: item['id'] ?? '',
-      name: item['name'] ?? '',
-      price: (double.tryParse(item['price']?.toString() ?? '0') ?? 0.0).toString(),
-      image: item['imagePath'] ?? item['image'] ?? '',
-      quantity: item['quantity'] ?? 1,
-    )).toList();
+    try {
+      // First check stock levels for all items
+      final List<String> outOfStockItems = [];
+      final List<String> insufficientStockItems = [];
+      
+      // Check each item's current stock
+      for (var item in order['items']) {
+        final productDoc = await FirebaseFirestore.instance
+            .collection('products')
+            .doc(item['id'])
+            .get();
+        
+        if (!productDoc.exists) {
+          outOfStockItems.add(item['name']);
+          continue;
+        }
 
-    // Navigate to checkout page with the items
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CheckoutPage(
-          subtotal: (order['total'] ?? 0.0).toDouble(),
-          items: items,
-          appliedDiscount: null, // Reset any previous discounts
+        final currentStock = productDoc.data()?['stock'] ?? 0;
+        final requestedQuantity = item['quantity'] ?? 0;
+
+        if (currentStock <= 0) {
+          outOfStockItems.add(item['name']);
+        } else if (currentStock < requestedQuantity) {
+          insufficientStockItems.add('${item['name']} (Available: $currentStock, Requested: $requestedQuantity)');
+        }
+      }
+
+      // Show error if any items are out of stock or have insufficient stock
+      if (outOfStockItems.isNotEmpty || insufficientStockItems.isNotEmpty) {
+        String errorMessage = '';
+        
+        if (outOfStockItems.isNotEmpty) {
+          errorMessage += 'The following items are out of stock:\n• ${outOfStockItems.join('\n• ')}\n\n';
+        }
+        
+        if (insufficientStockItems.isNotEmpty) {
+          errorMessage += 'Insufficient stock for:\n• ${insufficientStockItems.join('\n• ')}';
+        }
+
+        if (!mounted) return;
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Cannot Reorder'),
+            content: SingleChildScrollView(
+              child: Text(errorMessage),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      // If all stock checks pass, convert order items to CartItem objects
+      final List<CartItem> items = (order['items'] as List).map((item) => CartItem(
+        id: item['id'] ?? '',
+        name: item['name'] ?? '',
+        price: (double.tryParse(item['price']?.toString() ?? '0') ?? 0.0).toString(),
+        image: item['imagePath'] ?? item['image'] ?? '',
+        quantity: item['quantity'] ?? 1,
+      )).toList();
+
+      // Navigate to checkout page with the items
+      if (!mounted) return;
+      
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CheckoutPage(
+            subtotal: (order['total'] ?? 0.0).toDouble(),
+            items: items,
+            appliedDiscount: null,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      print('Error handling reorder: $e');
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error checking product availability. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _handleCancelOrder(Map<String, dynamic> order) async {
