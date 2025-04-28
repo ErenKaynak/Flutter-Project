@@ -5,6 +5,8 @@ import 'package:engineering_project/assets/components/auth_service.dart';
 import 'package:engineering_project/assets/components/square_tile.dart';
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 
 class RegisterPage extends StatefulWidget {
   RegisterPage({super.key});
@@ -32,7 +34,15 @@ class _RegisterPageState extends State<RegisterPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder:
+          (context) => Center(
+            child: CircularProgressIndicator(
+              color:
+                  Provider.of<ThemeNotifier>(context).isBlackMode
+                      ? Theme.of(context).colorScheme.secondary
+                      : Colors.red.shade700,
+            ),
+          ),
     );
 
     try {
@@ -105,7 +115,15 @@ class _RegisterPageState extends State<RegisterPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder:
+          (context) => Center(
+            child: CircularProgressIndicator(
+              color:
+                  Provider.of<ThemeNotifier>(context).isBlackMode
+                      ? Theme.of(context).colorScheme.secondary
+                      : Colors.red.shade700,
+            ),
+          ),
     );
 
     try {
@@ -167,16 +185,33 @@ class _RegisterPageState extends State<RegisterPage> {
     emailController.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
+    nameController.dispose();
+    surnameController.dispose();
+    profileImageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isBlackMode = themeNotifier.isBlackMode;
+    final bgColor = Theme.of(context).scaffoldBackgroundColor;
+    final cardColor = Theme.of(context).cardColor;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    final borderColor = isDark ? Colors.grey.shade700 : Colors.grey.shade200;
+    final accentColor =
+        isBlackMode
+            ? Theme.of(context).colorScheme.secondary
+            : Colors.red.shade500;
+    final iconColor =
+        isBlackMode
+            ? Theme.of(context).colorScheme.secondary
+            : Colors.red.shade700;
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: bgColor,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Form(
@@ -188,34 +223,39 @@ class _RegisterPageState extends State<RegisterPage> {
                 children: [
                   const SizedBox(height: 100),
                   Container(
-                        height: 120,
-                        width: 120,
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.grey[900] : Colors.white54,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.shade100,
-                              blurRadius: 10,
-                              spreadRadius: 3,
-                            ),
-                          ],
+                    height: 120,
+                    width: 120,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey[900] : Colors.white54,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              isBlackMode
+                                  ? Theme.of(
+                                    context,
+                                  ).colorScheme.secondary.withOpacity(0.3)
+                                  : Colors.red.shade100,
+                          blurRadius: 10,
+                          spreadRadius: 3,
                         ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            isDark 
-                              ? 'lib/assets/Images/app-icon-dark.png'
-                              : 'lib/assets/Images/app-icon-light.png',
-                            width: 150,
-                            height: 150,
-                          ),
-                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        isDark
+                            ? 'lib/assets/Images/app-icon-dark.png'
+                            : 'lib/assets/Images/app-icon-light.png',
+                        width: 150,
+                        height: 150,
                       ),
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   Text(
                     'Welcome Sign in Here...',
                     style: TextStyle(
-                      color: colorScheme.onBackground,
+                      color: textColor,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -231,6 +271,8 @@ class _RegisterPageState extends State<RegisterPage> {
                           validatorMsg: 'Enter first name',
                           colorScheme: colorScheme,
                           isDark: isDark,
+                          iconColor: iconColor,
+                          borderColor: borderColor,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -242,6 +284,8 @@ class _RegisterPageState extends State<RegisterPage> {
                           validatorMsg: 'Enter last name',
                           colorScheme: colorScheme,
                           isDark: isDark,
+                          iconColor: iconColor,
+                          borderColor: borderColor,
                         ),
                       ),
                     ],
@@ -254,6 +298,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     validatorMsg: 'Enter a email',
                     colorScheme: colorScheme,
                     isDark: isDark,
+                    iconColor: iconColor,
+                    borderColor: borderColor,
                   ),
                   const SizedBox(height: 10),
                   _buildPasswordField(
@@ -264,6 +310,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     validatorMsg: 'Enter a Password',
                     colorScheme: colorScheme,
                     isDark: isDark,
+                    iconColor: iconColor,
+                    borderColor: borderColor,
                   ),
                   const SizedBox(height: 10),
                   _buildPasswordField(
@@ -275,6 +323,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     colorScheme: colorScheme,
                     isDark: isDark,
                     matchPassword: passwordController.text,
+                    iconColor: iconColor,
+                    borderColor: borderColor,
                   ),
                   const SizedBox(height: 5),
                   if (emailError != null || passwordError != null)
@@ -283,8 +333,11 @@ class _RegisterPageState extends State<RegisterPage> {
                       child: Text(
                         emailError ?? passwordError ?? '',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.red,
+                        style: TextStyle(
+                          color:
+                              isBlackMode
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Colors.red,
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
@@ -296,7 +349,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     children: [
                       Text(
                         'You Have An Account?',
-                        style: TextStyle(color: colorScheme.onBackground),
+                        style: TextStyle(color: textColor),
                       ),
                       const SizedBox(width: 4),
                       GestureDetector(
@@ -311,7 +364,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         child: Text(
                           'Login!',
                           style: TextStyle(
-                            color: Colors.red.shade500,
+                            color: accentColor,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -320,7 +373,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
                   FloatingActionButton(
-                    backgroundColor: Colors.red.shade700,
+                    backgroundColor: iconColor,
                     foregroundColor: colorScheme.onPrimary,
                     onPressed: signUserUp,
                     child: const Icon(Icons.arrow_forward, size: 25),
@@ -329,20 +382,17 @@ class _RegisterPageState extends State<RegisterPage> {
                   Row(
                     children: [
                       Expanded(
-                        child: Divider(
-                          thickness: 1,
-                          color: colorScheme.onSurface.withOpacity(0.3),
-                        ),
+                        child: Divider(thickness: 1, color: borderColor),
                       ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8),
-                        child: Text('Or Log in With'),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          'Or Log in With',
+                          style: TextStyle(color: textColor),
+                        ),
                       ),
                       Expanded(
-                        child: Divider(
-                          thickness: 1,
-                          color: colorScheme.onSurface.withOpacity(0.3),
-                        ),
+                        child: Divider(thickness: 1, color: borderColor),
                       ),
                     ],
                   ),
@@ -372,6 +422,8 @@ class _RegisterPageState extends State<RegisterPage> {
     required String validatorMsg,
     required ColorScheme colorScheme,
     required bool isDark,
+    required Color iconColor,
+    required Color borderColor,
   }) {
     return TextFormField(
       controller: controller,
@@ -380,14 +432,21 @@ class _RegisterPageState extends State<RegisterPage> {
         filled: true,
         hintText: hintText,
         hintStyle: TextStyle(color: colorScheme.onSurface),
-        prefixIcon: Icon(icon, color: colorScheme.onSurface),
+        prefixIcon: Icon(
+          icon,
+          color: isDark ? colorScheme.onSurface : iconColor,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.red.shade700),
+          borderSide: BorderSide(color: iconColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.red.shade700, width: 2),
+          borderSide: BorderSide(color: iconColor, width: 2),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderColor),
         ),
       ),
       style: TextStyle(color: colorScheme.onBackground),
@@ -407,6 +466,8 @@ class _RegisterPageState extends State<RegisterPage> {
     required ColorScheme colorScheme,
     required bool isDark,
     String? matchPassword,
+    required Color iconColor,
+    required Color borderColor,
   }) {
     return TextFormField(
       controller: controller,
@@ -416,18 +477,28 @@ class _RegisterPageState extends State<RegisterPage> {
         filled: true,
         hintText: hintText,
         hintStyle: TextStyle(color: colorScheme.onSurface),
-        prefixIcon: Icon(Icons.lock, color: colorScheme.onSurface),
+        prefixIcon: Icon(
+          Icons.lock,
+          color: isDark ? colorScheme.onSurface : iconColor,
+        ),
         suffixIcon: IconButton(
-          icon: Icon(toggle ? Icons.visibility : Icons.visibility_off),
+          icon: Icon(
+            toggle ? Icons.visibility : Icons.visibility_off,
+            color: isDark ? colorScheme.onSurface : iconColor,
+          ),
           onPressed: onToggle,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.red.shade700),
+          borderSide: BorderSide(color: iconColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.red.shade700, width: 2),
+          borderSide: BorderSide(color: iconColor, width: 2),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderColor),
         ),
       ),
       style: TextStyle(color: colorScheme.onBackground),

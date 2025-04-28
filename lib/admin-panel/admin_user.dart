@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:provider/provider.dart';
+import 'package:engineering_project/pages/theme_notifier.dart';
 
 class AdminUsersPage extends StatefulWidget {
   const AdminUsersPage({super.key});
@@ -16,17 +18,18 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
   Future<List<Map<String, dynamic>>> fetchUsers() async {
     final usersSnapshot = await _firestore.collection('users').get();
-    final users = usersSnapshot.docs.map((doc) {
-      final data = doc.data();
-      return {
-        'uid': doc.id,
-        'email': data['email'] ?? '',
-        'role': data['role'] ?? 'user',
-        'disabled': data['disabled'] ?? false,
-        'disabledAt': data['disabledAt'],
-        'disabledBy': data['disabledBy'],
-      };
-    }).toList();
+    final users =
+        usersSnapshot.docs.map((doc) {
+          final data = doc.data();
+          return {
+            'uid': doc.id,
+            'email': data['email'] ?? '',
+            'role': data['role'] ?? 'user',
+            'disabled': data['disabled'] ?? false,
+            'disabledAt': data['disabledAt'],
+            'disabledBy': data['disabledBy'],
+          };
+        }).toList();
 
     users.sort((a, b) {
       if (a['role'] == b['role']) return 0;
@@ -46,14 +49,15 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
 
         print('Checking admin status for user: ${user.email}');
         print('User data from Firestore: ${userDoc.data()}');
-        
+
         // Check for 'role' field instead of 'isAdmin'
         return userDoc.data()?['role'] == 'admin';
       }
@@ -87,11 +91,12 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       batch.delete(_firestore.collection('favorites').doc(uid));
 
       // Get user's orders
-      final ordersQuery = await _firestore
-          .collection('orders')
-          .where('userId', isEqualTo: uid)
-          .get();
-      
+      final ordersQuery =
+          await _firestore
+              .collection('orders')
+              .where('userId', isEqualTo: uid)
+              .get();
+
       // Add order deletions to batch
       for (var doc in ordersQuery.docs) {
         batch.delete(doc.reference);
@@ -101,21 +106,26 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       await batch.commit();
 
       // Delete from Authentication
-      final adminCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: adminUser.email!,
-        password: 'ADMIN_PASSWORD', // You'll need to handle this securely
-      );
+      final adminCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: adminUser.email!,
+            password: 'ADMIN_PASSWORD', // You'll need to handle this securely
+          );
 
       // Create a new instance for the user to be deleted
-      final userToDelete = FirebaseAuth.instance.app.options.androidClientId != null
-          ? FirebaseAuth.instanceFor(app: FirebaseAuth.instance.app)
-          : FirebaseAuth.instance;
+      final userToDelete =
+          FirebaseAuth.instance.app.options.androidClientId != null
+              ? FirebaseAuth.instanceFor(app: FirebaseAuth.instance.app)
+              : FirebaseAuth.instance;
 
       // Delete the user from Authentication
       await userToDelete.currentUser?.delete();
 
       // Sign back in as admin
-      await FirebaseAuth.instance.signInWithEmailAndPassword(email: adminUser.email!, password: 'ADMIN_PASSWORD');
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: adminUser.email!,
+        password: 'ADMIN_PASSWORD',
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -139,45 +149,67 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   }
 
   // Add this method to handle the disable confirmation dialog
-  Future<void> _showDisableConfirmationDialog(String uid, String email, bool currentlyDisabled) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return showDialog(
+  Future<bool?> _showDisableConfirmationDialog(
+    String uid,
+    String email,
+    bool currentlyDisabled,
+  ) async {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    final isBlackMode = themeNotifier.isBlackMode;
+    final isDark =
+        Theme.of(context).brightness == Brightness.dark && !isBlackMode;
+
+    return showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        title: Text(
-          currentlyDisabled ? 'Enable Account' : 'Disable Account',
-          style: TextStyle(
-            color: Theme.of(context).textTheme.titleLarge?.color,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          currentlyDisabled 
-            ? 'Are you sure you want to enable ${email}\'s account?'
-            : 'Are you sure you want to disable ${email}\'s account?\nThis will prevent the user from logging in.',
-          style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: Theme.of(context).primaryColor),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(
-              currentlyDisabled ? 'Enable' : 'Disable',
+      builder:
+          (context) => AlertDialog(
+            backgroundColor:
+                isBlackMode ? Colors.black : Theme.of(context).cardColor,
+            title: Text(
+              currentlyDisabled ? 'Enable Account' : 'Disable Account',
               style: TextStyle(
-                color: currentlyDisabled ? Colors.green : Colors.red,
+                color:
+                    isBlackMode
+                        ? Colors.white
+                        : Theme.of(context).textTheme.titleLarge?.color,
+                fontWeight: FontWeight.bold,
               ),
             ),
+            content: Text(
+              currentlyDisabled
+                  ? 'Are you sure you want to enable ${email}\'s account?'
+                  : 'Are you sure you want to disable ${email}\'s account?\nThis will prevent the user from logging in.',
+              style: TextStyle(
+                color:
+                    isBlackMode
+                        ? Colors.white
+                        : Theme.of(context).textTheme.bodyLarge?.color,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color:
+                        isBlackMode
+                            ? Colors.white
+                            : Theme.of(context).primaryColor,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(
+                  currentlyDisabled ? 'Enable' : 'Disable',
+                  style: TextStyle(
+                    color: currentlyDisabled ? Colors.green : Colors.red,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -185,7 +217,13 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   Future<void> toggleUserAccount(String uid, String email, bool disable) async {
     try {
       // Show confirmation dialog
-      final confirmed = await _showDisableConfirmationDialog(uid, email, !disable);
+      final confirmed = await _showDisableConfirmationDialog(
+        uid,
+        email,
+        !disable,
+      );
+
+      if (confirmed != true) return;
 
       final isAdmin = await checkAdminStatus();
       if (!isAdmin) {
@@ -234,21 +272,37 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isBlackMode = themeNotifier.isBlackMode;
+    final isDark =
+        Theme.of(context).brightness == Brightness.dark && !isBlackMode;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor:
+          isBlackMode
+              ? Colors.black
+              : Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        backgroundColor:
+            isBlackMode
+                ? Colors.black
+                : isDark
+                ? Colors.black
+                : Colors.red.shade700,
         title: Text(
           'Manage Users',
           style: TextStyle(
-            color: Theme.of(context).textTheme.titleLarge?.color,
+            color:
+                isBlackMode
+                    ? Colors.white
+                    : Theme.of(context).textTheme.titleLarge?.color,
             fontWeight: FontWeight.bold,
           ),
         ),
         elevation: isDark ? 0 : 2,
-        iconTheme: IconThemeData(color: Theme.of(context).iconTheme.color),
+        iconTheme: IconThemeData(
+          color: isBlackMode ? Colors.white : Theme.of(context).iconTheme.color,
+        ),
       ),
       body: Column(
         children: [
@@ -258,29 +312,38 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             margin: EdgeInsets.all(16.0),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: isDark
-                    ? [Colors.red.shade900, Colors.grey.shade900]
-                    : [Colors.red.shade300, Colors.white],
+                colors:
+                    isBlackMode
+                        ? [Colors.grey.shade500, Colors.black]
+                        : isDark
+                        ? [Colors.red.shade900, Colors.grey.shade900]
+                        : [Colors.red.shade300, Colors.white],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(12),
-              boxShadow: isDark
-                  ? []
-                  : [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 5,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
+              boxShadow:
+                  isDark || isBlackMode
+                      ? []
+                      : [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 5,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
             ),
             child: Row(
               children: [
                 Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.red.shade900 : Colors.red.shade300,
+                    color:
+                        isBlackMode
+                            ? Colors.grey.shade500
+                            : isDark
+                            ? Colors.red.shade900
+                            : Colors.red.shade300,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -298,7 +361,12 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                         "User Management",
                         style: TextStyle(
                           fontSize: 16,
-                          color: isDark ? Colors.grey[400] : Colors.black54,
+                          color:
+                              isBlackMode
+                                  ? Colors.grey.shade400
+                                  : isDark
+                                  ? Colors.grey[400]
+                                  : Colors.black54,
                         ),
                       ),
                       FutureBuilder<List<Map<String, dynamic>>>(
@@ -309,7 +377,12 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black87,
+                              color:
+                                  isBlackMode
+                                      ? Colors.white
+                                      : isDark
+                                      ? Colors.white
+                                      : Colors.black87,
                             ),
                           );
                         },
@@ -329,7 +402,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(
                     child: CircularProgressIndicator(
-                      color: Theme.of(context).primaryColor,
+                      color:
+                          isBlackMode
+                              ? Colors.grey.shade500
+                              : Theme.of(context).primaryColor,
                     ),
                   );
                 }
@@ -342,13 +418,21 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                         Icon(
                           Icons.error_outline,
                           size: 60,
-                          color: isDark ? Colors.red.shade400 : Colors.red,
+                          color:
+                              isBlackMode
+                                  ? Colors.grey.shade400
+                                  : (isDark ? Colors.red.shade400 : Colors.red),
                         ),
                         SizedBox(height: 16),
                         Text(
                           'Error: ${snapshot.error}',
                           style: TextStyle(
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                            color:
+                                isBlackMode
+                                    ? Colors.white
+                                    : Theme.of(
+                                      context,
+                                    ).textTheme.bodyLarge?.color,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -365,7 +449,12 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                         Icon(
                           Icons.people_outline,
                           size: 60,
-                          color: isDark ? Colors.grey.shade600 : Colors.grey,
+                          color:
+                              isBlackMode
+                                  ? Colors.grey.shade400
+                                  : (isDark
+                                      ? Colors.grey.shade600
+                                      : Colors.grey),
                         ),
                         SizedBox(height: 16),
                         Text(
@@ -373,7 +462,12 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Theme.of(context).textTheme.titleLarge?.color,
+                            color:
+                                isBlackMode
+                                    ? Colors.white
+                                    : Theme.of(
+                                      context,
+                                    ).textTheme.titleLarge?.color,
                           ),
                         ),
                       ],
@@ -398,40 +492,72 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       background: ClipRRect(
                         borderRadius: BorderRadius.circular(16),
                         child: Container(
-                          color: Colors.red.shade700,
+                          color:
+                              isBlackMode
+                                  ? Colors.grey.shade500
+                                  : Colors.red.shade700,
                           alignment: Alignment.centerRight,
                           padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: const Icon(Icons.delete, color: Colors.white),
+                          child: Icon(Icons.delete, color: Colors.white),
                         ),
                       ),
                       confirmDismiss: (direction) async {
-                        final shouldDelete = await showDialog(
+                        final shouldDelete = await showDialog<bool>(
                           context: context,
-                          builder: (context) => AlertDialog(
-                            backgroundColor: Theme.of(context).cardColor,
-                            title: Text(
-                              'Confirm Delete',
-                              style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
-                            ),
-                            content: Text(
-                              'Are you sure you want to delete this user?',
-                              style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(false),
-                                child: Text('Cancel',
-                                  style: TextStyle(color: Theme.of(context).primaryColor),
+                          builder:
+                              (context) => AlertDialog(
+                                backgroundColor:
+                                    isBlackMode
+                                        ? Colors.black
+                                        : Theme.of(context).cardColor,
+                                title: Text(
+                                  'Confirm Delete',
+                                  style: TextStyle(
+                                    color:
+                                        isBlackMode
+                                            ? Colors.white
+                                            : Theme.of(
+                                              context,
+                                            ).textTheme.titleLarge?.color,
+                                  ),
                                 ),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(true),
-                                child: Text('Delete',
-                                  style: TextStyle(color: Colors.red),
+                                content: Text(
+                                  'Are you sure you want to delete this user?',
+                                  style: TextStyle(
+                                    color:
+                                        isBlackMode
+                                            ? Colors.white
+                                            : Theme.of(
+                                              context,
+                                            ).textTheme.bodyLarge?.color,
+                                  ),
                                 ),
+                                actions: [
+                                  TextButton(
+                                    onPressed:
+                                        () => Navigator.of(context).pop(false),
+                                    child: Text(
+                                      'Cancel',
+                                      style: TextStyle(
+                                        color:
+                                            isBlackMode
+                                                ? Colors.white
+                                                : Theme.of(
+                                                  context,
+                                                ).primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed:
+                                        () => Navigator.of(context).pop(true),
+                                    child: Text(
+                                      'Delete',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
                         );
 
                         if (shouldDelete == true) {
@@ -443,32 +569,69 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       child: Card(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
-                          side: isDark
-                              ? BorderSide(color: Colors.grey.shade800, width: 1)
-                              : BorderSide.none,
+                          side:
+                              isBlackMode
+                                  ? BorderSide(
+                                    color: Colors.grey.shade800,
+                                    width: 1,
+                                  )
+                                  : isDark
+                                  ? BorderSide(
+                                    color: Colors.grey.shade800,
+                                    width: 1,
+                                  )
+                                  : BorderSide.none,
                         ),
                         elevation: isDark ? 1 : 4,
-                        color: Theme.of(context).cardColor,
+                        color:
+                            isBlackMode
+                                ? Colors.black
+                                : Theme.of(context).cardColor,
                         child: ListTile(
                           leading: Icon(
-                            role == 'admin' ? Icons.shield_outlined : Icons.account_circle,
-                            color: role == 'admin'
-                                ? (isDark ? Colors.red.shade400 : Colors.red.shade700)
-                                : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                            role == 'admin'
+                                ? Icons.shield_outlined
+                                : Icons.account_circle,
+                            color:
+                                role == 'admin'
+                                    ? (isBlackMode
+                                        ? Colors.grey.shade500
+                                        : (isDark
+                                            ? Colors.red.shade400
+                                            : Colors.red.shade700))
+                                    : (isBlackMode
+                                        ? Colors.grey.shade400
+                                        : (isDark
+                                            ? Colors.grey.shade400
+                                            : Colors.grey.shade700)),
                           ),
                           title: Text(
                             email,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Theme.of(context).textTheme.titleMedium?.color,
+                              color:
+                                  isBlackMode
+                                      ? Colors.white
+                                      : Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium?.color,
                             ),
                           ),
                           subtitle: Text(
                             'Role: $role',
                             style: TextStyle(
-                              color: role == 'admin'
-                                  ? (isDark ? Colors.red.shade400 : Colors.red.shade700)
-                                  : Theme.of(context).textTheme.bodyMedium?.color,
+                              color:
+                                  role == 'admin'
+                                      ? (isBlackMode
+                                          ? Colors.grey.shade500
+                                          : (isDark
+                                              ? Colors.red.shade400
+                                              : Colors.red.shade700))
+                                      : (isBlackMode
+                                          ? Colors.grey.shade400
+                                          : Theme.of(
+                                            context,
+                                          ).textTheme.bodyMedium?.color),
                             ),
                           ),
                           trailing: Row(
@@ -476,42 +639,68 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                             children: [
                               IconButton(
                                 icon: Icon(
-                                  user['disabled'] == true 
-                                    ? Icons.block 
-                                    : Icons.check_circle_outline,
-                                  color: user['disabled'] == true 
-                                    ? Colors.red 
-                                    : Colors.green,
+                                  user['disabled'] == true
+                                      ? Icons.block
+                                      : Icons.check_circle_outline,
+                                  color:
+                                      user['disabled'] == true
+                                          ? Colors.red
+                                          : Colors.green,
                                 ),
-                                tooltip: user['disabled'] == true 
-                                  ? 'Enable Account' 
-                                  : 'Disable Account',
-                                onPressed: () => toggleUserAccount(
-                                  uid, 
-                                  email, 
-                                  !(user['disabled'] == true)
-                                ),
+                                tooltip:
+                                    user['disabled'] == true
+                                        ? 'Enable Account'
+                                        : 'Disable Account',
+                                onPressed:
+                                    () => toggleUserAccount(
+                                      uid,
+                                      email,
+                                      !(user['disabled'] == true),
+                                    ),
                               ),
                               DropdownButton<String>(
                                 value: role,
-                                dropdownColor: Theme.of(context).cardColor,
+                                dropdownColor:
+                                    isBlackMode
+                                        ? Colors.black
+                                        : Theme.of(context).cardColor,
                                 style: TextStyle(
-                                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                                  color:
+                                      isBlackMode
+                                          ? Colors.white
+                                          : Theme.of(
+                                            context,
+                                          ).textTheme.bodyLarge?.color,
                                 ),
-                                items: ['user', 'admin'].map((r) {
-                                  return DropdownMenuItem(
-                                    value: r,
-                                    child: Text(
-                                      r,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: r == 'admin'
-                                            ? (isDark ? Colors.red.shade400 : Colors.red.shade700)
-                                            : Theme.of(context).textTheme.bodyLarge?.color,
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
+                                items:
+                                    ['user', 'admin'].map((r) {
+                                      return DropdownMenuItem(
+                                        value: r,
+                                        child: Text(
+                                          r,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color:
+                                                r == 'admin'
+                                                    ? (isBlackMode
+                                                        ? Colors.grey.shade500
+                                                        : (isDark
+                                                            ? Colors
+                                                                .red
+                                                                .shade400
+                                                            : Colors
+                                                                .red
+                                                                .shade700))
+                                                    : (isBlackMode
+                                                        ? Colors.white
+                                                        : Theme.of(context)
+                                                            .textTheme
+                                                            .bodyLarge
+                                                            ?.color),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
                                 onChanged: (newRole) {
                                   if (newRole != null && newRole != role) {
                                     updateUserRole(uid, newRole);

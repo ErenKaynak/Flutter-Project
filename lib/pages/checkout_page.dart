@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:engineering_project/pages/cart_page.dart';
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 
 class CheckoutPage extends StatefulWidget {
   final double subtotal;
@@ -108,17 +110,21 @@ class _CheckoutPageState extends State<CheckoutPage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final snapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('cards')
-            .get();
+        final snapshot =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('cards')
+                .get();
 
         setState(() {
-          _savedCards = snapshot.docs
-              .map((doc) => CreditCard.fromMap({...doc.data(), 'id': doc.id}))
-              .toList();
-          
+          _savedCards =
+              snapshot.docs
+                  .map(
+                    (doc) => CreditCard.fromMap({...doc.data(), 'id': doc.id}),
+                  )
+                  .toList();
+
           if (_savedCards.isNotEmpty) {
             _selectedCard = _savedCards.firstWhere(
               (card) => card.isDefault,
@@ -188,131 +194,144 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Future<void> _addNewCard() async {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+
     return showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: const Text(
-          'Add New Card',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: SingleChildScrollView(
-          child: Container(
-            width: double.maxFinite,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _cardNumberController,
-                  decoration: InputDecoration(
-                    labelText: 'Card Number',
-                    hintText: '1234 5678 9012 3456',
-                    prefixIcon: Icon(Icons.credit_card),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  keyboardType: TextInputType.number,
-                  maxLength: 19,
-                  onChanged: (value) {
-                    if (value.length > 0) {
-                      value = value.replaceAll(' ', '');
-                      final buffer = StringBuffer();
-                      for (int i = 0; i < value.length; i++) {
-                        buffer.write(value[i]);
-                        if ((i + 1) % 4 == 0 && i != value.length - 1) {
-                          buffer.write(' ');
-                        }
-                      }
-                      _cardNumberController.value = TextEditingValue(
-                        text: buffer.toString(),
-                        selection: TextSelection.collapsed(offset: buffer.length),
-                      );
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _cardHolderController,
-                  decoration: InputDecoration(
-                    labelText: 'Card Holder Name',
-                    hintText: 'JOHN DOE',
-                    prefixIcon: Icon(Icons.person),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  textCapitalization: TextCapitalization.characters,
-                ),
-                const SizedBox(height: 16),
-                Row(
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: Theme.of(context).cardColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            title: const Text(
+              'Add New Card',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: SingleChildScrollView(
+              child: Container(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _expiryDateController,
-                        decoration: InputDecoration(
-                          labelText: 'Expiry Date',
-                          hintText: 'MM/YY',
-                          prefixIcon: Icon(Icons.date_range),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          errorText: _expiryDateController.text.isNotEmpty && 
-                                     _isCardExpired(_expiryDateController.text)
-                              ? 'Card is expired'
-                              : null,
+                    TextField(
+                      controller: _cardNumberController,
+                      decoration: InputDecoration(
+                        labelText: 'Card Number',
+                        hintText: '1234 5678 9012 3456',
+                        prefixIcon: Icon(Icons.credit_card),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        keyboardType: TextInputType.number,
-                        maxLength: 5,
-                        onChanged: _formatExpiryDate,
                       ),
+                      keyboardType: TextInputType.number,
+                      maxLength: 19,
+                      onChanged: (value) {
+                        if (value.length > 0) {
+                          value = value.replaceAll(' ', '');
+                          final buffer = StringBuffer();
+                          for (int i = 0; i < value.length; i++) {
+                            buffer.write(value[i]);
+                            if ((i + 1) % 4 == 0 && i != value.length - 1) {
+                              buffer.write(' ');
+                            }
+                          }
+                          _cardNumberController.value = TextEditingValue(
+                            text: buffer.toString(),
+                            selection: TextSelection.collapsed(
+                              offset: buffer.length,
+                            ),
+                          );
+                        }
+                      },
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextField(
-                        controller: _cvvController,
-                        decoration: InputDecoration(
-                          labelText: 'CVV',
-                          hintText: '123',
-                          prefixIcon: Icon(Icons.security),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _cardHolderController,
+                      decoration: InputDecoration(
+                        labelText: 'Card Holder Name',
+                        hintText: 'JOHN DOE',
+                        prefixIcon: Icon(Icons.person),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      textCapitalization: TextCapitalization.characters,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _expiryDateController,
+                            decoration: InputDecoration(
+                              labelText: 'Expiry Date',
+                              hintText: 'MM/YY',
+                              prefixIcon: Icon(Icons.date_range),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              errorText:
+                                  _expiryDateController.text.isNotEmpty &&
+                                          _isCardExpired(
+                                            _expiryDateController.text,
+                                          )
+                                      ? 'Card is expired'
+                                      : null,
+                            ),
+                            keyboardType: TextInputType.number,
+                            maxLength: 5,
+                            onChanged: _formatExpiryDate,
                           ),
                         ),
-                        keyboardType: TextInputType.number,
-                        maxLength: 3,
-                        obscureText: true,
-                      ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextField(
+                            controller: _cvvController,
+                            decoration: InputDecoration(
+                              labelText: 'CVV',
+                              hintText: '123',
+                              prefixIcon: Icon(Icons.security),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            keyboardType: TextInputType.number,
+                            maxLength: 3,
+                            obscureText: true,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (_validateCardInputs()) {
-                await _saveCard();
-                Navigator.pop(context);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text('SAVE'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('CANCEL'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (_validateCardInputs()) {
+                    await _saveCard();
+                    Navigator.pop(context);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      themeNotifier.isBlackMode
+                          ? Theme.of(context).colorScheme.secondary
+                          : Colors.red,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('SAVE'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -321,13 +340,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
         _cardHolderController.text.isEmpty ||
         _expiryDateController.text.isEmpty ||
         _cvvController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
       return false;
     }
 
-    if (_isCardExpired(_expiryDateController.text)) {
+    if (_isCardExpired(_cardNumberController.text)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Your card is expired, please try again')),
       );
@@ -340,11 +359,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Future<void> _saveCard() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final cardRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('cards')
-          .doc();
+      final cardRef =
+          FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('cards')
+              .doc();
 
       await cardRef.set({
         'cardNumber': _cardNumberController.text,
@@ -370,11 +390,35 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return;
     }
 
+<<<<<<< Updated upstream
+=======
+    if (_selectedPaymentMethod == 'Credit Card') {
+      if (_selectedCard == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select or add a credit card')),
+        );
+        return;
+      }
+
+      if (_isCardExpired(_selectedCard!.expiryDate)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Your selected card is expired, please use another card',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+>>>>>>> Stashed changes
     setState(() => _isProcessing = true);
 
     try {
       bool paymentSuccess = false;
 
+<<<<<<< Updated upstream
       if (_selectedPaymentMethod == 'Wallet') {
         paymentSuccess = await _processWalletPayment(total);
       } else if (_selectedPaymentMethod == 'Credit Card') {
@@ -483,6 +527,109 @@ class _CheckoutPageState extends State<CheckoutPage> {
           );
         }
       }
+=======
+      final batch = FirebaseFirestore.instance.batch();
+      final orderRef = FirebaseFirestore.instance.collection('orders').doc();
+
+      // Create order data
+      final orderData = {
+        'userId': user.uid,
+        'orderNumber': orderRef.id.substring(0, 8),
+        'items': widget.items.map((item) => item.toMap()).toList(),
+        'subtotal': widget.subtotal,
+        'shippingCost': shippingCost,
+        'discountCode': widget.appliedDiscount?.code,
+        'discountPercentage': widget.appliedDiscount?.discountPercentage ?? 0.0,
+        'discountAmount':
+            widget.appliedDiscount?.calculateDiscount(widget.subtotal) ?? 0.0,
+        'totalAmount': total, // This includes the discounted amount
+        'total': total, // Add this as a backup
+        'status': 'Pending',
+        'paymentMethod': _selectedPaymentMethod,
+        'paymentDetails':
+            _selectedPaymentMethod == 'Credit Card'
+                ? {
+                  'cardId': _selectedCard?.id,
+                  'lastFourDigits': _selectedCard?.cardNumber.substring(
+                    _selectedCard!.cardNumber.length - 4,
+                  ),
+                }
+                : null,
+        'shippingAddress': _selectedAddress!['fullAddress'],
+        'addressDetails': _selectedAddress,
+        'timestamp': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'customerName':
+            '${_selectedAddress!['firstName']} ${_selectedAddress!['lastName']}',
+        'customerPhone': _selectedAddress!['phone'],
+        'customerEmail': user.email,
+        'trackingNumber': '',
+      };
+
+      // Add order to main orders collection
+      batch.set(orderRef, orderData);
+
+      // Add order to user's orders subcollection
+      final userOrderRef = FirebaseFirestore.instance
+          .collection('users') // Change to users collection
+          .doc(user.uid)
+          .collection('orders') // Change to orders subcollection
+          .doc(orderRef.id);
+
+      batch.set(userOrderRef, orderData);
+
+      // Update product stock
+      for (var item in widget.items) {
+        final productRef = FirebaseFirestore.instance
+            .collection('products')
+            .doc(item.id);
+        batch.update(productRef, {
+          'stock': FieldValue.increment(-item.quantity),
+        });
+      }
+
+      if (widget.appliedDiscount != null) {
+        try {
+          final discountRef = FirebaseFirestore.instance
+              .collection('discountCodes')
+              .doc(
+                widget.appliedDiscount!.code.toLowerCase(),
+              ); // Convert to lowercase
+
+          // Create the discount code document if it doesn't exist
+          batch.set(discountRef, {
+            'code': widget.appliedDiscount!.code,
+            'discountPercentage': widget.appliedDiscount!.discountPercentage,
+            'usageCount': FieldValue.increment(1),
+            'usageLimit': widget.appliedDiscount!.usageLimit,
+            'expiryDate': widget.appliedDiscount!.expiryDate,
+            'isActive': true,
+            'createdAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true)); // Use merge to update existing document
+        } catch (e) {
+          print('Error updating discount code usage: $e');
+        }
+      }
+
+      // Commit all changes
+      await batch.commit();
+
+      // Clear the cart
+      final cartManager = CartManager();
+      await cartManager.clearCart();
+
+      // Navigate to success page
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) =>
+                    OrderSuccessPage(orderId: orderRef.id, totalAmount: total),
+          ),
+        );
+      }
+>>>>>>> Stashed changes
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error processing order: $e')),
@@ -501,7 +648,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
       final year = 2000 + int.parse(parts[1]); // Convert YY to 20YY
 
       final now = DateTime.now();
-      final cardExpiry = DateTime(year, month + 1, 0); // Last day of expiry month
+      final cardExpiry = DateTime(
+        year,
+        month + 1,
+        0,
+      ); // Last day of expiry month
 
       return cardExpiry.isBefore(DateTime(now.year, now.month, 1));
     } catch (e) {
@@ -533,6 +684,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Widget _buildAddressSection() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -580,7 +733,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(
-                    color: isSelected ? Colors.red : Colors.grey.shade300,
+                    color:
+                        isSelected
+                            ? (themeNotifier.isBlackMode
+                                ? Theme.of(context).colorScheme.secondary
+                                : Colors.red)
+                            : Colors.grey.shade300,
                     width: isSelected ? 2 : 1,
                   ),
                 ),
@@ -596,7 +754,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         address['addressType'] == 'Home'
                             ? Icons.home
                             : Icons.work,
-                        color: Colors.red,
+                        color:
+                            themeNotifier.isBlackMode
+                                ? Theme.of(context).colorScheme.secondary
+                                : Colors.red,
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -625,6 +786,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Widget _buildCreditCardSection() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -633,10 +796,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           children: [
             const Text(
               'Credit Cards',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             TextButton.icon(
               onPressed: _addNewCard,
@@ -668,29 +828,32 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 background: Container(
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 20),
-                  color: Colors.red,
-                  child: const Icon(
-                    Icons.delete,
-                    color: Colors.white,
-                  ),
+                  color:
+                      themeNotifier.isBlackMode
+                          ? Theme.of(context).colorScheme.secondary
+                          : Colors.red,
+                  child: const Icon(Icons.delete, color: Colors.white),
                 ),
                 confirmDismiss: (direction) async {
                   return await showDialog(
                     context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Delete Card'),
-                      content: const Text('Are you sure you want to delete this card?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text('CANCEL'),
+                    builder:
+                        (context) => AlertDialog(
+                          title: const Text('Delete Card'),
+                          content: const Text(
+                            'Are you sure you want to delete this card?',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('CANCEL'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('DELETE'),
+                            ),
+                          ],
                         ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text('DELETE'),
-                        ),
-                      ],
-                    ),
                   );
                 },
                 onDismissed: (direction) async {
@@ -710,7 +873,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: BorderSide(
-                      color: isSelected ? Colors.red : Colors.grey.shade300,
+                      color:
+                          isSelected
+                              ? (themeNotifier.isBlackMode
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Colors.red)
+                              : Colors.grey.shade300,
                       width: isSelected ? 2 : 1,
                     ),
                   ),
@@ -722,7 +890,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     },
                     title: Row(
                       children: [
-                        const Icon(Icons.credit_card, color: Colors.red),
+                        Icon(
+                          Icons.credit_card,
+                          color:
+                              themeNotifier.isBlackMode
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Colors.red,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           '**** ${card.cardNumber.substring(card.cardNumber.length - 4)}',
@@ -754,7 +928,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   Widget _buildOrderItemsList() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Card(
       elevation: isDark ? 0 : 2,
       color: isDark ? Colors.grey.shade900 : Colors.white,
@@ -768,9 +942,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: widget.items.length,
-        separatorBuilder: (context, index) => Divider(
-          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-        ),
+        separatorBuilder:
+            (context, index) => Divider(
+              color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+            ),
         itemBuilder: (context, index) {
           final item = widget.items[index];
           return Padding(
@@ -796,9 +971,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     children: [
                       Text(
                         item.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -814,9 +987,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 // Total Price
                 Text(
                   '₺${(double.parse(item.price) * item.quantity).toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -829,6 +1000,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -842,70 +1014,114 @@ class _CheckoutPageState extends State<CheckoutPage> {
         backgroundColor: isDark ? Colors.black : Colors.white,
         elevation: 0,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.red))
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  // Order Progress Indicator
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: isDark
-                            ? [Colors.red.shade900, Colors.grey.shade900]
-                            : [Colors.red.shade500, Colors.red.shade100],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: isDark
-                              ? Colors.black12
-                              : Colors.red.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: Offset(0, 4),
+      body:
+          _isLoading
+              ? Center(
+                child: CircularProgressIndicator(
+                  color:
+                      themeNotifier.isBlackMode
+                          ? Theme.of(context).colorScheme.secondary
+                          : Colors.red,
+                ),
+              )
+              : SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Order Progress Indicator
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors:
+                              themeNotifier.isBlackMode
+                                  ? [Colors.grey.shade700, Colors.grey.shade900]
+                                  : (isDark
+                                      ? [
+                                        Colors.red.shade900,
+                                        Colors.grey.shade900,
+                                      ]
+                                      : [
+                                        Colors.red.shade500,
+                                        Colors.red.shade100,
+                                      ]),
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ],
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                themeNotifier.isBlackMode
+                                    ? Colors.grey.withOpacity(0.1)
+                                    : (isDark
+                                        ? Colors.black12
+                                        : Colors.red.withOpacity(0.1)),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildProgressStep(1, 'Address', true),
+                          _buildProgressLine(true),
+                          _buildProgressStep(
+                            2,
+                            'Payment',
+                            _selectedAddress != null,
+                          ),
+                          _buildProgressLine(_selectedAddress != null),
+                          _buildProgressStep(3, 'Confirm', false),
+                        ],
+                      ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildProgressStep(1, 'Address', true),
-                        _buildProgressLine(true),
-                        _buildProgressStep(
-                            2, 'Payment', _selectedAddress != null),
-                        _buildProgressLine(_selectedAddress != null),
-                        _buildProgressStep(3, 'Confirm', false),
-                      ],
-                    ),
-                  ),
 
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Address Section
-                        _buildSectionTitle('Delivery Address'),
-                        const SizedBox(height: 8),
-                        _buildAddressSection(),
-                        const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Address Section
+                          _buildSectionTitle('Delivery Address'),
+                          const SizedBox(height: 8),
+                          _buildAddressSection(),
+                          const SizedBox(height: 24),
 
-                        // Payment Method Section
-                        _buildSectionTitle('Payment Method'),
-                        const SizedBox(height: 8),
-                        Card(
-                          elevation: isDark ? 0 : 2,
-                          color: isDark ? Colors.grey.shade900 : Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                              color: isDark
-                                  ? Colors.grey.shade800
-                                  : Colors.grey.shade200,
+                          // Payment Method Section
+                          _buildSectionTitle('Payment Method'),
+                          const SizedBox(height: 8),
+                          Card(
+                            elevation: isDark ? 0 : 2,
+                            color: isDark ? Colors.grey.shade900 : Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color:
+                                    isDark
+                                        ? Colors.grey.shade800
+                                        : Colors.grey.shade200,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                _buildPaymentOption(
+                                  'Credit Card',
+                                  'Pay with credit card',
+                                ),
+                                Divider(
+                                  color:
+                                      isDark
+                                          ? Colors.grey.shade800
+                                          : Colors.grey.shade200,
+                                ),
+                                _buildPaymentOption(
+                                  'Cash on Delivery',
+                                  'Pay when you receive',
+                                ),
+                              ],
                             ),
                           ),
+<<<<<<< Updated upstream
                           child: Column(
                             children: [
                               _buildPaymentOption(
@@ -929,26 +1145,28 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             });
                           },
                         ),
+=======
+>>>>>>> Stashed changes
 
-                        if (_selectedPaymentMethod == 'Credit Card') ...[
+                          if (_selectedPaymentMethod == 'Credit Card') ...[
+                            const SizedBox(height: 24),
+                            _buildSectionTitle('Credit Cards'),
+                            const SizedBox(height: 8),
+                            _buildCreditCardSection(),
+                          ],
+
                           const SizedBox(height: 24),
-                          _buildSectionTitle('Credit Cards'),
+                          _buildSectionTitle('Order Summary'),
                           const SizedBox(height: 8),
-                          _buildCreditCardSection(),
+                          _buildOrderItemsList(),
+                          const SizedBox(height: 12),
+                          _buildOrderSummaryCard(),
                         ],
-
-                        const SizedBox(height: 24),
-                        _buildSectionTitle('Order Summary'),
-                        const SizedBox(height: 8),
-                        _buildOrderItemsList(),
-                        const SizedBox(height: 12),
-                        _buildOrderSummaryCard(),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -965,30 +1183,34 @@ class _CheckoutPageState extends State<CheckoutPage> {
           child: ElevatedButton(
             onPressed: _isProcessing ? null : _processOrder,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor:
+                  themeNotifier.isBlackMode
+                      ? Theme.of(context).colorScheme.secondary
+                      : Colors.red,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               elevation: 0,
             ),
-            child: _isProcessing
-                ? SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
+            child:
+                _isProcessing
+                    ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                    : Text(
+                      'PLACE ORDER',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  )
-                : Text(
-                    'PLACE ORDER',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
           ),
         ),
       ),
@@ -997,6 +1219,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   Widget _buildProgressStep(int step, String label, bool isActive) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Column(
       children: [
@@ -1005,17 +1228,23 @@ class _CheckoutPageState extends State<CheckoutPage> {
           height: 30,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isActive
-                ? (isDark ? Colors.white : Colors.red)
-                : (isDark ? Colors.grey.shade800 : Colors.grey.shade300),
+            color:
+                isActive
+                    ? (themeNotifier.isBlackMode
+                        ? Theme.of(context).colorScheme.secondary
+                        : (isDark ? Colors.white : Colors.red))
+                    : (isDark ? Colors.grey.shade800 : Colors.grey.shade300),
           ),
           child: Center(
             child: Text(
               '$step',
               style: TextStyle(
-                color: isActive
-                    ? (isDark ? Colors.black : Colors.white)
-                    : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                color:
+                    isActive
+                        ? (isDark ? Colors.black : Colors.white)
+                        : (isDark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1025,9 +1254,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
         Text(
           label,
           style: TextStyle(
-            color: isActive
-                ? (isDark ? Colors.white : Colors.black)
-                : Colors.grey.shade600,
+            color:
+                isActive
+                    ? (isDark ? Colors.white : Colors.black)
+                    : Colors.grey.shade600,
             fontSize: 12,
           ),
         ),
@@ -1037,39 +1267,42 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   Widget _buildProgressLine(bool isActive) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Container(
       width: 40,
       height: 2,
-      color: isActive
-          ? (isDark ? Colors.white : Colors.red)
-          : (isDark ? Colors.grey.shade800 : Colors.grey.shade300),
+      color:
+          isActive
+              ? (themeNotifier.isBlackMode
+                  ? Theme.of(context).colorScheme.secondary
+                  : (isDark ? Colors.white : Colors.red))
+              : (isDark ? Colors.grey.shade800 : Colors.grey.shade300),
     );
   }
 
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-      ),
+      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
     );
   }
 
   Widget _buildPaymentOption(String title, String subtitle) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return RadioListTile<String>(
       value: title,
       groupValue: _selectedPaymentMethod,
       onChanged: (value) {
         setState(() => _selectedPaymentMethod = value!);
       },
-      title: Text(
-        title,
-        style: TextStyle(fontWeight: FontWeight.bold),
-      ),
+      title: Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text(subtitle),
-      activeColor: Colors.red,
+      activeColor:
+          themeNotifier.isBlackMode
+              ? Theme.of(context).colorScheme.secondary
+              : Colors.red,
     );
   }
 
@@ -1091,11 +1324,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.local_shipping,
-                  color: Colors.grey[600],
-                  size: 20,
-                ),
+                Icon(Icons.local_shipping, color: Colors.grey[600], size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1131,7 +1360,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     isDiscount: true,
                   ),
                 _buildSummaryRow('Shipping', shippingCost),
-                Divider(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+                Divider(
+                  color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                ),
                 _buildSummaryRow('Total', total, isTotal: true),
               ],
             ),
@@ -1163,7 +1394,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 style: TextStyle(
                   fontSize: isTotal ? 18 : 16,
                   fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-                  color: isFreeShipping ? Colors.green : (isDiscount ? Colors.green : null),
+                  color:
+                      isFreeShipping
+                          ? Colors.green
+                          : (isDiscount ? Colors.green : null),
                 ),
               ),
               if (isFreeShipping) ...[
@@ -1177,10 +1411,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               if (widget.subtotal < 10000 && label == 'Shipping')
                 Text(
                   'Free over ₺10,000',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               const SizedBox(width: 8),
               Text(
@@ -1188,7 +1419,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 style: TextStyle(
                   fontSize: isTotal ? 18 : 16,
                   fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-                  color: isFreeShipping ? Colors.green : (isDiscount ? Colors.green : null),
+                  color:
+                      isFreeShipping
+                          ? Colors.green
+                          : (isDiscount ? Colors.green : null),
                 ),
               ),
             ],

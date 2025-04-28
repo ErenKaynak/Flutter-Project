@@ -42,4 +42,26 @@ class AppTheme {
       ),
     ),
   );
+
+  static ThemeData blackTheme = ThemeData(
+    brightness: Brightness.dark, // Black mode da dark brightness kullanıyor
+    primaryColor: Colors.grey.shade500, // Kırmızı yerine gri
+    scaffoldBackgroundColor: Colors.black,
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+    ),
+    cardColor: Colors.black,
+    colorScheme: ColorScheme.dark(
+      primary: Colors.grey.shade500, // Kırmızı yerine gri
+      secondary: Colors.grey.shade700, // Secondary için daha koyu gri
+      background: Colors.black,
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.grey.shade500, // Kırmızı yerine gri
+        foregroundColor: Colors.white,
+      ),
+    ),
+  );
 }
