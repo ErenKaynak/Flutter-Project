@@ -10,25 +10,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 
-Future<void> main() async {
-  // Ensure proper zone handling
-  runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    
-    // Make zone errors fatal in debug mode
-    if (kDebugMode) {
-      BindingBase.debugZoneErrorsAreFatal = true;
-    }
-    
-    runApp(const MyApp());
-  }, (error, stack) {
-    debugPrint('Caught error: $error');
-    debugPrint('Stack trace: $stack');
-  });
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {

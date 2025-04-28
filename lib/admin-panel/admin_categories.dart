@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:math';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class CategoryManagementPage extends StatefulWidget {
   @override
@@ -14,6 +15,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   File? _imageFile;
+  XFile? _webImageFile;
   bool _isLoading = false;
   List<Map<String, dynamic>> categories = [];
 
@@ -67,14 +69,24 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
     
     if (image != null) {
-      setState(() {
-        _imageFile = File(image.path);
-      });
+      if (kIsWeb) {
+        // For web, store the XFile directly
+        setState(() {
+          _imageFile = null;
+          _webImageFile = image;
+        });
+      } else {
+        // For mobile platforms
+        setState(() {
+          _imageFile = File(image.path);
+          _webImageFile = null;
+        });
+      }
     }
   }
 
   Future<void> _addCategory() async {
-    if (!_formKey.currentState!.validate() || _imageFile == null) {
+    if (!_formKey.currentState!.validate() || (_imageFile == null && _webImageFile == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please fill all fields and select an icon')),
       );
@@ -84,13 +96,21 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Upload image to Firebase Storage
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('category_icons/${DateTime.now().millisecondsSinceEpoch}.png');
       
-      await storageRef.putFile(_imageFile!);
-      final iconUrl = await storageRef.getDownloadURL();
+      String iconUrl;
+      if (kIsWeb && _webImageFile != null) {
+        // Handle web upload
+        final bytes = await _webImageFile!.readAsBytes();
+        await storageRef.putData(bytes);
+      } else if (_imageFile != null) {
+        // Handle mobile upload
+        await storageRef.putFile(_imageFile!);
+      }
+      
+      iconUrl = await storageRef.getDownloadURL();
 
       // Get the next order number
       final nextOrder = categories.isEmpty 
@@ -109,6 +129,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       _nameController.clear();
       setState(() {
         _imageFile = null;
+        _webImageFile = null;
       });
 
       // Reload categories
@@ -119,9 +140,11 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       );
     } catch (e) {
       print('Error adding category: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding category: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding category: $e')),
+        );
+      }
     }
 
     setState(() => _isLoading = false);
@@ -176,8 +199,10 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   }
 
   Future<void> _editCategory(Map<String, dynamic> category) async {
+  if (!mounted) return;
+
   final TextEditingController nameController = TextEditingController(text: category['name']);
-  File? newImageFile;
+  XFile? pickedFile; // Use XFile instead of File
 
   await showDialog(
     context: context,
@@ -198,12 +223,21 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        final ImagePicker picker = ImagePicker();
-                        final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-                        if (image != null) {
-                          setState(() {
-                            newImageFile = File(image.path);
-                          });
+                        try {
+                          final ImagePicker picker = ImagePicker();
+                          final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+                          if (image != null) {
+                            setState(() {
+                              pickedFile = image;
+                            });
+                          }
+                        } catch (e) {
+                          print('Error picking image: $e');
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error selecting image')),
+                            );
+                          }
                         }
                       },
                       icon: Icon(Icons.image),
@@ -212,7 +246,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                   ),
                 ],
               ),
-              if (newImageFile != null)
+              if (pickedFile != null)
                 Padding(
                   padding: EdgeInsets.only(top: 8),
                   child: Text(
@@ -234,7 +268,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
               await _updateCategory(
                 category['id'],
                 nameController.text,
-                newImageFile,
+                pickedFile,
               );
             },
             child: Text('Save'),
@@ -245,22 +279,35 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   );
 }
 
-Future<void> _updateCategory(String categoryId, String newName, File? newImageFile) async {
+Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFile) async {
+  if (!mounted) return;
+
   try {
     final updates = <String, dynamic>{
       'name': newName,
     };
 
-    if (newImageFile != null) {
-      // Upload new image
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('category_icons/${DateTime.now().millisecondsSinceEpoch}.png');
-      
-      await storageRef.putFile(newImageFile);
-      final iconUrl = await storageRef.getDownloadURL();
-      
-      updates['iconPath'] = iconUrl;
+    if (pickedFile != null) {
+      try {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('category_icons/${DateTime.now().millisecondsSinceEpoch}.png');
+        
+        // Upload bytes for both web and mobile
+        final bytes = await pickedFile.readAsBytes();
+        await storageRef.putData(bytes);
+        final iconUrl = await storageRef.getDownloadURL();
+        
+        updates['iconPath'] = iconUrl;
+      } catch (fileError) {
+        print('Error handling file: $fileError');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error uploading image')),
+          );
+        }
+        return;
+      }
     }
 
     await FirebaseFirestore.instance
@@ -268,16 +315,19 @@ Future<void> _updateCategory(String categoryId, String newName, File? newImageFi
         .doc(categoryId)
         .update(updates);
 
-    await _loadCategories();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Category updated successfully')),
-    );
+    if (mounted) {
+      await _loadCategories();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Category updated successfully')),
+      );
+    }
   } catch (e) {
     print('Error updating category: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error updating category')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating category')),
+      );
+    }
   }
 }
 
@@ -338,7 +388,7 @@ Future<void> _updateCategory(String categoryId, String newName, File? newImageFi
                                   ),
                                 ),
                                 SizedBox(width: 16),
-                                if (_imageFile != null)
+                                if (_imageFile != null || _webImageFile != null)
                                   Expanded(
                                     child: Text(
                                       'Icon selected',

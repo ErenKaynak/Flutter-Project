@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({Key? key}) : super(key: key);
@@ -26,12 +27,13 @@ class _WalletPageState extends State<WalletPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
+    setState(() => _isLoading = true);
+
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('wallet_transactions')
           .where('user_id', isEqualTo: user.uid)
           .orderBy('timestamp', descending: true)
-          .limit(10)
           .get();
 
       setState(() {
@@ -39,15 +41,23 @@ class _WalletPageState extends State<WalletPage> {
           final data = doc.data();
           return {
             'id': doc.id,
-            'amount': data['amount'] ?? 0.0,
+            'amount': (data['amount'] ?? 0.0).toDouble(),
             'type': data['type'] ?? '',
             'timestamp': data['timestamp']?.toDate() ?? DateTime.now(),
-            'cashback': data['cashback'] ?? 0.0,
+            'cashback': (data['cashback'] ?? 0.0).toDouble(),
+            'method': data['method'] ?? '',
+            'status': data['status'] ?? 'completed',
+            'reference': data['reference'],
           };
         }).toList();
+        _isLoading = false;
       });
     } catch (e) {
       print('Error fetching transactions: $e');
+      setState(() {
+        _transactions = [];
+        _isLoading = false;
+      });
     }
   }
 
@@ -84,25 +94,48 @@ class _WalletPageState extends State<WalletPage> {
     if (user == null) return;
 
     try {
-      await FirebaseFirestore.instance.collection('wallets').doc(user.uid).update({
+      // Start a batch write to ensure both operations complete
+      final batch = FirebaseFirestore.instance.batch();
+      
+      // Update wallet balance
+      final walletRef = FirebaseFirestore.instance.collection('wallets').doc(user.uid);
+      batch.update(walletRef, {
         'balance': FieldValue.increment(amount),
         'last_transaction': FieldValue.serverTimestamp(),
       });
 
-      // Record the transaction
-      await FirebaseFirestore.instance.collection('wallet_transactions').add({
+      // Create transaction record
+      final transactionRef = FirebaseFirestore.instance.collection('wallet_transactions').doc();
+      batch.set(transactionRef, {
         'user_id': user.uid,
         'amount': amount,
         'type': 'deposit',
         'timestamp': FieldValue.serverTimestamp(),
+        'method': 'card_deposit',
+        'status': 'completed',
       });
 
+      // Commit both operations
+      await batch.commit();
+
+      // Refresh wallet balance and transactions
       await _fetchWalletBalance();
+      await _fetchTransactions();
+      
       _amountController.clear();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Money added successfully')),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding balance: $e')),
-      );
+      print('Error adding balance: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding balance: $e')),
+        );
+      }
     }
   }
 
@@ -221,34 +254,6 @@ class _WalletPageState extends State<WalletPage> {
                       const SizedBox(height: 24),
 
                       // Add Money Section
-                      Text(
-                        'Add Money',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _amountController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: 'Amount',
-                          prefixText: '₺',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: Colors.red.shade400,
-                            ),
-                          ),
-                        ),
-                      ),
                       const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
@@ -275,67 +280,179 @@ class _WalletPageState extends State<WalletPage> {
 
                       const SizedBox(height: 24),
 
-                      // Recent Transactions
-                      Text(
-                        'Recent Transactions',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 16),
-                      ..._transactions.map((transaction) => Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: transaction['type'] == 'deposit'
-                                    ? Colors.green.withOpacity(0.2)
-                                    : Colors.red.withOpacity(0.2),
-                                child: Icon(
-                                  transaction['type'] == 'deposit'
-                                      ? Icons.add
-                                      : Icons.shopping_bag,
-                                  color: transaction['type'] == 'deposit'
-                                      ? Colors.green
-                                      : Colors.red,
-                                ),
-                              ),
-                              title: Text(
-                                transaction['type'] == 'deposit'
-                                    ? 'Added Money'
-                                    : 'Purchase',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Text(
-                                _formatDate(transaction['timestamp']),
-                                style: TextStyle(color: Colors.grey[600]),
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
+                      // Transactions Section
+                      Container(
+                        width: double.infinity,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    '₺${transaction['amount'].abs().toStringAsFixed(2)}',
+                                    'Transaction History',
+                                    style: Theme.of(context).textTheme.titleLarge,
+                                  ),
+                                  Text(
+                                    '${_transactions.length} transactions',
                                     style: TextStyle(
-                                      color: transaction['type'] == 'deposit'
-                                          ? Colors.green
-                                          : Colors.red,
-                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
                                     ),
                                   ),
-                                  if (transaction['cashback'] != null &&
-                                      transaction['cashback'] > 0)
-                                    Text(
-                                      '+₺${transaction['cashback'].toStringAsFixed(2)} cashback',
-                                      style: TextStyle(
-                                        color: Colors.green,
-                                        fontSize: 12,
-                                      ),
-                                    ),
                                 ],
                               ),
                             ),
-                          )),
+                            const SizedBox(height: 16),
+                            if (_transactions.isEmpty) ...[
+                              Center(
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.receipt_long,
+                                        size: 48,
+                                        color: isDark ? Colors.grey[400] : Colors.grey[500],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No transactions yet',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.grey[400] : Colors.grey[700],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Your transaction history will appear here',
+                                      style: TextStyle(
+                                        color: isDark ? Colors.grey[500] : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ] else ...[
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _transactions.length,
+                                itemBuilder: (context, index) {
+                                  final transaction = _transactions[index];
+                                  final bool isDeposit = transaction['type'] == 'deposit';
+                                  
+                                  return Card(
+                                    elevation: 2,
+                                    margin: EdgeInsets.only(bottom: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: InkWell(
+                                      onTap: () {
+                                        // Show transaction details in a modal bottom sheet
+                                        showModalBottomSheet(
+                                          context: context,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                          ),
+                                          builder: (context) => _buildTransactionDetails(transaction),
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Row(
+                                          children: [
+                                            // Transaction Icon
+                                            Container(
+                                              padding: EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: isDeposit
+                                                    ? Colors.green.withOpacity(0.1)
+                                                    : Colors.red.withOpacity(0.1),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(
+                                                isDeposit ? Icons.add : Icons.shopping_bag,
+                                                color: isDeposit ? Colors.green : Colors.red,
+                                              ),
+                                            ),
+                                            SizedBox(width: 16),
+                                            // Transaction Details
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    isDeposit ? 'Money Added' : (transaction['description'] ?? 'Purchase'),
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: 4),
+                                                  Text(
+                                                    _formatDate(transaction['timestamp']),
+                                                    style: TextStyle(
+                                                      color: Colors.grey[600],
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                  if (transaction['reference'] != null)
+                                                    Text(
+                                                      transaction['reference'],
+                                                      style: TextStyle(
+                                                        color: Colors.grey[600],
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                            // Amount
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              children: [
+                                                Text(
+                                                  '${isDeposit ? '+' : '-'}₺${transaction['amount'].abs().toStringAsFixed(2)}',
+                                                  style: TextStyle(
+                                                    color: isDeposit ? Colors.green : Colors.red,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                                if (transaction['cashback'] != null &&
+                                                    transaction['cashback'] > 0)
+                                                  Text(
+                                                    '+₺${transaction['cashback'].toStringAsFixed(2)} cashback',
+                                                    style: TextStyle(
+                                                      color: Colors.green,
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -346,6 +463,61 @@ class _WalletPageState extends State<WalletPage> {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildTransactionDetails(Map<String, dynamic> transaction) {
+    final bool isDeposit = transaction['type'] == 'deposit';
+    
+    return Container(
+      padding: EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Transaction Details',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          SizedBox(height: 20),
+          _detailRow('Type', isDeposit ? 'Deposit' : 'Purchase'),
+          _detailRow('Amount', '₺${transaction['amount'].abs().toStringAsFixed(2)}'),
+          if (transaction['cashback'] != null && transaction['cashback'] > 0)
+            _detailRow('Cashback', '₺${transaction['cashback'].toStringAsFixed(2)}'),
+          _detailRow('Date', _formatDate(transaction['timestamp'])),
+          _detailRow('Status', transaction['status']?.toUpperCase() ?? 'COMPLETED'),
+          _detailRow('Method', transaction['method']?.replaceAll('_', ' ').toUpperCase() ?? 'WALLET'),
+          if (transaction['reference'] != null)
+            _detailRow('Reference', transaction['reference']),
+          if (transaction['description'] != null)
+            _detailRow('Description', transaction['description']),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -374,6 +546,13 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
   final _expiryController = TextEditingController();
   final _cvvController = TextEditingController();
 
+  String? _cardNumberError;
+  String? _expiryError;
+  String? _cvvError;
+
+  final RegExp _namePattern = RegExp(r'^[a-zA-Z\s]*$');
+  final RegExp _numberPattern = RegExp(r'^\d+$');
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -395,14 +574,22 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
             const SizedBox(height: 20),
             TextField(
               controller: _amountController,
-              keyboardType: TextInputType.number,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
               decoration: InputDecoration(
                 labelText: 'Amount',
                 prefixText: '₺',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                hintText: '0.00',
+                errorText: _validateAmount(_amountController.text),
               ),
+              onChanged: (value) {
+                setState(() {}); // Trigger rebuild to update error message
+              },
             ),
             const SizedBox(height: 20),
             if (!_showAddCard && widget.savedCards.isNotEmpty) ...[
@@ -432,11 +619,36 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
               child: ElevatedButton(
                 onPressed: () {
                   final amount = double.tryParse(_amountController.text);
-                  if (amount != null && amount > 0 && 
-                      (_selectedCard != null || _showAddCard)) {
-                    widget.onAddMoney(amount);
-                    Navigator.pop(context);
+                  if (amount == null || amount <= 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please enter a valid amount')),
+                    );
+                    return;
                   }
+                  
+                  if (_showAddCard) {
+                    // Validate new card inputs
+                    if (_cardNumberError != null || 
+                        _expiryError != null || 
+                        _cvvError != null ||
+                        _cardNumberController.text.isEmpty ||
+                        _cardHolderController.text.isEmpty ||
+                        _expiryController.text.isEmpty ||
+                        _cvvController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please fill all card details correctly')),
+                      );
+                      return;
+                    }
+                  } else if (_selectedCard == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please select a card')),
+                    );
+                    return;
+                  }
+                  
+                  widget.onAddMoney(amount);
+                  Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red.shade400,
@@ -513,18 +725,47 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
         TextField(
           controller: _cardNumberController,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
+          maxLength: 16,
+          onChanged: (value) {
+            setState(() {
+              if (value.length != 16) {
+                _cardNumberError = 'Card number must be 16 digits';
+              } else if (!RegExp(r'^[0-9]{16}$').hasMatch(value)) {
+                _cardNumberError = 'Invalid card number';
+              } else {
+                _cardNumberError = null;
+              }
+            });
+          },
+          decoration: InputDecoration(
             labelText: 'Card Number',
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
+            errorText: _cardNumberError,
+            counterText: '', // Hides the built-in counter
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _cardHolderController,
-          decoration: const InputDecoration(
+          textCapitalization: TextCapitalization.characters,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(_namePattern),
+            TextInputFormatter.withFunction((oldValue, newValue) {
+              // Convert to uppercase
+              return TextEditingValue(
+                text: newValue.text.toUpperCase(),
+                selection: newValue.selection,
+              );
+            }),
+          ],
+          decoration: InputDecoration(
             labelText: 'Card Holder Name',
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
+            errorText: _cardHolderController.text.isEmpty ? null : 
+                      !_namePattern.hasMatch(_cardHolderController.text) ? 
+                      'Only letters allowed' : null,
           ),
+          onChanged: (value) => setState(() {}),
         ),
         const SizedBox(height: 12),
         Row(
@@ -533,9 +774,36 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
               child: TextField(
                 controller: _expiryController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                maxLength: 5,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(4),
+                  _ExpiryDateFormatter(),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    if (value.isEmpty) {
+                      _expiryError = 'Required';
+                    } else if (!RegExp(r'^(0[1-9]|1[0-2])\/([0-9]{2})$').hasMatch(value)) {
+                      _expiryError = 'Use MM/YY format';
+                    } else {
+                      final parts = value.split('/');
+                      final month = int.parse(parts[0]);
+                      final year = int.parse('20${parts[1]}');
+                      final expiry = DateTime(year, month);
+                      if (expiry.isBefore(DateTime.now())) {
+                        _expiryError = 'Card expired';
+                      } else {
+                        _expiryError = null;
+                      }
+                    }
+                  });
+                },
+                decoration: InputDecoration(
                   labelText: 'MM/YY',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  errorText: _expiryError,
+                  counterText: '',
                 ),
               ),
             ),
@@ -544,15 +812,77 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
               child: TextField(
                 controller: _cvvController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                maxLength: 3,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(3),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    if (!_numberPattern.hasMatch(value) || value.length != 3) {
+                      _cvvError = 'Invalid CVV';
+                    } else {
+                      _cvvError = null;
+                    }
+                  });
+                },
+                decoration: InputDecoration(
                   labelText: 'CVV',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  errorText: _cvvError,
+                  counterText: '',
                 ),
               ),
             ),
           ],
         ),
       ],
+    );
+  }
+
+  String? _validateAmount(String value) {
+    if (value.isEmpty) return null;
+    
+    try {
+      final amount = double.parse(value);
+      if (amount <= 0) {
+        return 'Amount must be greater than 0';
+      }
+      if (amount > 10000) {
+        return 'Maximum amount is ₺10,000';
+      }
+    } catch (e) {
+      return 'Invalid amount';
+    }
+    return null;
+  }
+}
+
+class _ExpiryDateFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var text = newValue.text;
+
+    if (newValue.selection.baseOffset == 0) {
+      return newValue;
+    }
+
+    var buffer = StringBuffer();
+    for (int i = 0; i < text.length; i++) {
+      buffer.write(text[i]);
+      var nonZeroIndex = i + 1;
+      if (nonZeroIndex % 2 == 0 && nonZeroIndex != text.length) {
+        buffer.write('/');
+      }
+    }
+
+    var string = buffer.toString();
+    return newValue.copyWith(
+      text: string,
+      selection: TextSelection.collapsed(offset: string.length),
     );
   }
 }

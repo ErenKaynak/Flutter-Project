@@ -38,11 +38,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
   final _expiryDateController = TextEditingController();
   final _cvvController = TextEditingController();
 
+  double _walletBalance = 0.0;
+
   @override
   void initState() {
     super.initState();
     _loadSavedAddresses();
     _loadSavedCards();
+    _fetchWalletBalance(); // Add this line
   }
 
   @override
@@ -129,6 +132,26 @@ class _CheckoutPageState extends State<CheckoutPage> {
       }
     } catch (e) {
       print('Error loading cards: $e');
+    }
+  }
+
+  Future<void> _fetchWalletBalance() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('wallets')
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists) {
+        setState(() {
+          _walletBalance = (doc.data()?['balance'] ?? 0.0).toDouble();
+        });
+      }
+    } catch (e) {
+      print('Error fetching wallet balance: $e');
     }
   }
 
@@ -919,16 +942,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ],
                           ),
                         ),
-                        RadioListTile<String>(
-                          title: const Text('Wallet Balance'),
-                          value: 'Wallet',
-                          groupValue: _selectedPaymentMethod,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedPaymentMethod = value!;
-                            });
-                          },
-                        ),
+                        _buildWalletOption(),
 
                         if (_selectedPaymentMethod == 'Credit Card') ...[
                           const SizedBox(height: 24),
@@ -1073,6 +1087,54 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
+  Widget _buildWalletOption() {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: _selectedPaymentMethod == 'Wallet' 
+              ? Colors.red 
+              : Colors.grey.shade300,
+          width: _selectedPaymentMethod == 'Wallet' ? 2 : 1,
+        ),
+      ),
+      child: RadioListTile<String>(
+        value: 'Wallet',
+        groupValue: _selectedPaymentMethod,
+        onChanged: (value) {
+          setState(() {
+            _selectedPaymentMethod = value!;
+          });
+        },
+        title: Row(
+          children: [
+            Icon(Icons.account_balance_wallet, 
+                 color: _selectedPaymentMethod == 'Wallet' ? Colors.red : Colors.grey),
+            const SizedBox(width: 8),
+            Text(
+              'Wallet Balance',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Available: ₺${_walletBalance.toStringAsFixed(2)}'),
+            if (_walletBalance < total)
+              Text(
+                'Insufficient balance',
+                style: TextStyle(color: Colors.red, fontSize: 12),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildOrderSummaryCard() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final remainingForFree = 10000 - widget.subtotal;
@@ -1203,40 +1265,53 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (user == null) return false;
 
     try {
-      final walletDoc = await FirebaseFirestore.instance
-          .collection('wallets')
-          .doc(user.uid)
-          .get();
+      // Start a batch write
+      final batch = FirebaseFirestore.instance.batch();
+      final walletRef = FirebaseFirestore.instance.collection('wallets').doc(user.uid);
       
-      final currentBalance = (walletDoc.data()?['balance'] ?? 0.0).toDouble();
-      
-      if (currentBalance < amount) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Insufficient wallet balance')),
-        );
-        return false;
-      }
-
       // Calculate cashback
       final cashback = amount * 0.01; // 1% cashback
 
       // Update wallet balance
-      await FirebaseFirestore.instance.collection('wallets').doc(user.uid).update({
+      batch.update(walletRef, {
         'balance': FieldValue.increment(-amount + cashback),
+        'last_transaction': FieldValue.serverTimestamp(),
       });
 
-      // Record transaction
-      await FirebaseFirestore.instance.collection('wallet_transactions').add({
+      // Create transaction record with order reference
+      // Create order reference first
+      final orderRef = FirebaseFirestore.instance.collection('orders').doc();
+      
+      final transactionRef = FirebaseFirestore.instance.collection('wallet_transactions').doc();
+      batch.set(transactionRef, {
         'user_id': user.uid,
-        'amount': -amount,
-        'cashback': cashback,
+        'amount': amount,
         'type': 'purchase',
         'timestamp': FieldValue.serverTimestamp(),
+        'cashback': cashback,
+        'method': 'wallet_payment',
+        'status': 'completed',
+        'reference': 'Order #${orderRef.id.substring(0, 8)}', // Add order reference
+        'order_id': orderRef.id, // Add full order ID
+        'description': 'Payment for Order #${orderRef.id.substring(0, 8)}',
+      });
+
+      // Commit the batch
+      await batch.commit();
+
+      // Update local state
+      setState(() {
+        _walletBalance -= (amount - cashback);
       });
 
       return true;
     } catch (e) {
       print('Error processing wallet payment: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error processing payment: $e')),
+        );
+      }
       return false;
     }
   }
