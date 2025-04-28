@@ -432,46 +432,46 @@ class _CheckoutPageState extends State<CheckoutPage> {
         final batch = FirebaseFirestore.instance.batch();
         final orderRef = FirebaseFirestore.instance.collection('orders').doc();
 
-        // Create order data
-        final orderData = {
-          'userId': user.uid,
-          'orderNumber': orderRef.id.substring(0, 8),
-          'items': widget.items.map((item) => item.toMap()).toList(),
-          'subtotal': widget.subtotal,
-          'shippingCost': shippingCost,
-          'discountCode': widget.appliedDiscount?.code,
-          'discountPercentage': widget.appliedDiscount?.discountPercentage ?? 0.0,
-          'discountAmount': widget.appliedDiscount?.calculateDiscount(widget.subtotal) ?? 0.0,
-          'totalAmount': total,  // This includes the discounted amount
-          'total': total,       // Add this as a backup
-          'status': 'Pending',
-          'paymentMethod': _selectedPaymentMethod,
-          'paymentDetails': _selectedPaymentMethod == 'Credit Card'
-              ? {
-                  'cardId': _selectedCard?.id,
-                  'lastFourDigits': _selectedCard?.cardNumber.substring(_selectedCard!.cardNumber.length - 4),
-                }
-              : null,
-          'shippingAddress': _selectedAddress!['fullAddress'],
-          'addressDetails': _selectedAddress,
-          'timestamp': FieldValue.serverTimestamp(),
-          'createdAt': FieldValue.serverTimestamp(),
-          'customerName':
-              '${_selectedAddress!['firstName']} ${_selectedAddress!['lastName']}',
-          'customerPhone': _selectedAddress!['phone'],
-          'customerEmail': user.email,
-          'trackingNumber': '',
-        };
+      // Create order data
+      final orderData = {
+        'userId': user.uid,
+        'orderNumber': orderRef.id.substring(0, 8),
+        'items': widget.items.map((item) => item.toMap()).toList(),
+        'subtotal': widget.subtotal,
+        'shippingCost': shippingCost,
+        'discountCode': widget.appliedDiscount?.code,
+        'discountPercentage': widget.appliedDiscount?.discountPercentage ?? 0.0,
+        'discountAmount': widget.appliedDiscount?.calculateDiscount(widget.subtotal) ?? 0.0,
+        'totalAmount': total,  // This includes the discounted amount
+        'total': total,       // Add this as a backup
+        'status': 'Pending',
+        'paymentMethod': _selectedPaymentMethod,
+        'paymentDetails': _selectedPaymentMethod == 'Credit Card'
+            ? {
+                'cardId': _selectedCard?.id,
+                'lastFourDigits': _selectedCard?.cardNumber.substring(_selectedCard!.cardNumber.length - 4),
+              }
+            : null,
+        'shippingAddress': _selectedAddress!['fullAddress'],
+        'addressDetails': _selectedAddress,
+        'timestamp': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'customerName':
+            '${_selectedAddress!['firstName']} ${_selectedAddress!['lastName']}',
+        'customerPhone': _selectedAddress!['phone'],
+        'customerEmail': user.email,
+        'trackingNumber': '',
+      };
 
         // Add order to main orders collection
         batch.set(orderRef, orderData);
 
-        // Add order to user's orders subcollection
-        final userOrderRef = FirebaseFirestore.instance
-            .collection('users')  // Change to users collection
-            .doc(user.uid)
-            .collection('orders')  // Change to orders subcollection
-            .doc(orderRef.id);
+      // Add order to user's orders subcollection
+      final userOrderRef = FirebaseFirestore.instance
+          .collection('users')  // Change to users collection
+          .doc(user.uid)
+          .collection('orders')  // Change to orders subcollection
+          .doc(orderRef.id);
 
         batch.set(userOrderRef, orderData);
 
@@ -485,117 +485,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
           });
         }
 
-        if (widget.appliedDiscount != null) {
-          try {
-            final discountRef = FirebaseFirestore.instance
-                .collection('discountCodes')
-                .doc(widget.appliedDiscount!.code.toLowerCase()); // Convert to lowercase
-            
-            // Create the discount code document if it doesn't exist
-            batch.set(discountRef, {
-              'code': widget.appliedDiscount!.code,
-              'discountPercentage': widget.appliedDiscount!.discountPercentage,
-              'usageCount': FieldValue.increment(1),
-              'usageLimit': widget.appliedDiscount!.usageLimit,
-              'expiryDate': widget.appliedDiscount!.expiryDate,
-              'isActive': true,
-              'createdAt': FieldValue.serverTimestamp(),
-            }, SetOptions(merge: true)); // Use merge to update existing document
-          } catch (e) {
-            print('Error updating discount code usage: $e');
-          }
-        }
-
-        // Commit all changes
-        await batch.commit();
-
-        // Clear the cart
-        final cartManager = CartManager();
-        await cartManager.clearCart();
-
-        // Navigate to success page
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (_) => OrderSuccessPage(
-                    orderId: orderRef.id,
-                    totalAmount: total,
-                  ),
-            ),
-          );
-        }
-      }
-=======
-      final batch = FirebaseFirestore.instance.batch();
-      final orderRef = FirebaseFirestore.instance.collection('orders').doc();
-
-      // Create order data
-      final orderData = {
-        'userId': user.uid,
-        'orderNumber': orderRef.id.substring(0, 8),
-        'items': widget.items.map((item) => item.toMap()).toList(),
-        'subtotal': widget.subtotal,
-        'shippingCost': shippingCost,
-        'discountCode': widget.appliedDiscount?.code,
-        'discountPercentage': widget.appliedDiscount?.discountPercentage ?? 0.0,
-        'discountAmount':
-            widget.appliedDiscount?.calculateDiscount(widget.subtotal) ?? 0.0,
-        'totalAmount': total, // This includes the discounted amount
-        'total': total, // Add this as a backup
-        'status': 'Pending',
-        'paymentMethod': _selectedPaymentMethod,
-        'paymentDetails':
-            _selectedPaymentMethod == 'Credit Card'
-                ? {
-                  'cardId': _selectedCard?.id,
-                  'lastFourDigits': _selectedCard?.cardNumber.substring(
-                    _selectedCard!.cardNumber.length - 4,
-                  ),
-                }
-                : null,
-        'shippingAddress': _selectedAddress!['fullAddress'],
-        'addressDetails': _selectedAddress,
-        'timestamp': FieldValue.serverTimestamp(),
-        'createdAt': FieldValue.serverTimestamp(),
-        'customerName':
-            '${_selectedAddress!['firstName']} ${_selectedAddress!['lastName']}',
-        'customerPhone': _selectedAddress!['phone'],
-        'customerEmail': user.email,
-        'trackingNumber': '',
-      };
-
-      // Add order to main orders collection
-      batch.set(orderRef, orderData);
-
-      // Add order to user's orders subcollection
-      final userOrderRef = FirebaseFirestore.instance
-          .collection('users') // Change to users collection
-          .doc(user.uid)
-          .collection('orders') // Change to orders subcollection
-          .doc(orderRef.id);
-
-      batch.set(userOrderRef, orderData);
-
-      // Update product stock
-      for (var item in widget.items) {
-        final productRef = FirebaseFirestore.instance
-            .collection('products')
-            .doc(item.id);
-        batch.update(productRef, {
-          'stock': FieldValue.increment(-item.quantity),
-        });
-      }
-
       if (widget.appliedDiscount != null) {
         try {
           final discountRef = FirebaseFirestore.instance
               .collection('discountCodes')
-              .doc(
-                widget.appliedDiscount!.code.toLowerCase(),
-              ); // Convert to lowercase
-
+              .doc(widget.appliedDiscount!.code.toLowerCase()); // Convert to lowercase
+          
           // Create the discount code document if it doesn't exist
           batch.set(discountRef, {
             'code': widget.appliedDiscount!.code,
@@ -611,12 +506,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
         }
       }
 
-      // Commit all changes
-      await batch.commit();
+        // Commit all changes
+        await batch.commit();
 
-      // Clear the cart
-      final cartManager = CartManager();
-      await cartManager.clearCart();
+        // Clear the cart
+        final cartManager = CartManager();
+        await cartManager.clearCart();
 
       // Navigate to success page
       if (mounted) {
@@ -624,16 +519,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
           context,
           MaterialPageRoute(
             builder:
-                (_) =>
-                    OrderSuccessPage(orderId: orderRef.id, totalAmount: total),
+                (_) => OrderSuccessPage(
+                  orderId: orderRef.id,
+                  totalAmount: total,
+                ),
           ),
         );
       }
->>>>>>> Stashed changes
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error processing order: $e')),
-      );
+      print('Error processing order: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error processing order: $e')));
     } finally {
       setState(() => _isProcessing = false);
     }
@@ -1087,42 +984,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           _buildAddressSection(),
                           const SizedBox(height: 24),
 
-                          // Payment Method Section
-                          _buildSectionTitle('Payment Method'),
-                          const SizedBox(height: 8),
-                          Card(
-                            elevation: isDark ? 0 : 2,
-                            color: isDark ? Colors.grey.shade900 : Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                color:
-                                    isDark
-                                        ? Colors.grey.shade800
-                                        : Colors.grey.shade200,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                _buildPaymentOption(
-                                  'Credit Card',
-                                  'Pay with credit card',
-                                ),
-                                Divider(
-                                  color:
-                                      isDark
-                                          ? Colors.grey.shade800
-                                          : Colors.grey.shade200,
-                                ),
-                                _buildPaymentOption(
-                                  'Cash on Delivery',
-                                  'Pay when you receive',
-                                ),
-                              ],
+                        // Payment Method Section
+                        _buildSectionTitle('Payment Method'),
+                        const SizedBox(height: 8),
+                        Card(
+                          elevation: isDark ? 0 : 2,
+                          color: isDark ? Colors.grey.shade900 : Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: isDark
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade200,
                             ),
                           ),
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
                           child: Column(
                             children: [
                               _buildPaymentOption(
@@ -1136,18 +1011,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ],
                           ),
                         ),
-                        RadioListTile<String>(
-                          title: const Text('Wallet Balance'),
-                          value: 'Wallet',
-                          groupValue: _selectedPaymentMethod,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedPaymentMethod = value!;
-                            });
-                          },
-                        ),
-=======
->>>>>>> Stashed changes
 
                           if (_selectedPaymentMethod == 'Credit Card') ...[
                             const SizedBox(height: 24),
@@ -1156,28 +1019,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             _buildCreditCardSection(),
                           ],
 
-=======
-
-                          if (_selectedPaymentMethod == 'Credit Card') ...[
-                            const SizedBox(height: 24),
-                            _buildSectionTitle('Credit Cards'),
-                            const SizedBox(height: 8),
-                            _buildCreditCardSection(),
-                          ],
-
->>>>>>> Stashed changes
-                          const SizedBox(height: 24),
-                          _buildSectionTitle('Order Summary'),
-                          const SizedBox(height: 8),
-                          _buildOrderItemsList(),
-                          const SizedBox(height: 12),
-                          _buildOrderSummaryCard(),
-                        ],
-                      ),
+                        const SizedBox(height: 24),
+                        _buildSectionTitle('Order Summary'),
+                        const SizedBox(height: 8),
+                        _buildOrderItemsList(),
+                        const SizedBox(height: 12),
+                        _buildOrderSummaryCard(),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+            ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

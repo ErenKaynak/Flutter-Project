@@ -57,23 +57,16 @@ Future<void> main() async {
     FlutterError.presentError(details);
   };
 
-  runZonedGuarded(
-    () {
-      runApp(
-        ChangeNotifierProvider.value(
-          value: themeNotifier,
-          child: const MyApp(),
-        ),
-      );
-    },
-    (error, stackTrace) {
-      print('Caught zoned error: $error\n$stackTrace');
-    },
-  );
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+  runZonedGuarded(() {
+    runApp(
+      ChangeNotifierProvider.value(
+        value: themeNotifier,
+        child: const MyApp(),
+      ),
+    );
+  }, (error, stackTrace) {
+    print('Caught zoned error: $error\n$stackTrace');
+  });
 }
 
 class MyApp extends StatelessWidget {
@@ -88,59 +81,23 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-          themeMode: themeNotifier.themeMode,
-=======
-=======
->>>>>>> Stashed changes
-          themeMode:
-              themeNotifier.isBlackMode
-                  ? ThemeMode.dark
-                  : themeNotifier.themeMode,
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+          themeMode: themeNotifier.themeMode, // <-- Try ThemeMode.light here to test
           home: StreamBuilder<User?>(
-            stream: FirebaseAuth.instance.authStateChanges(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
+  stream: FirebaseAuth.instance.authStateChanges(),
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-              if (snapshot.hasData) {
-                return const RootScreen();
-              }
-              
-              return WelcomeScreen();
-            },
-          ),
-        ),
-      ),
-=======
-=======
->>>>>>> Stashed changes
-              if (snapshot.hasData) {
-                return const RootScreen();
-              }
-              return WelcomeScreen();
-            },
-          ),
-          // BLACK MODE özel durum: Tema verisini override ediyoruz.
-          builder: (context, child) {
-            if (themeNotifier.isBlackMode) {
-              return Theme(
-                data: themeNotifier.blackTheme, // kendi blackTheme
-                child: child!,
-              );
-            }
-            return child!;
-          },
+    if (snapshot.hasData) {
+      return const RootScreen();
+    }
+    
+    return WelcomeScreen(); // ← Keep for mobile
+  },
+),
         );
       },
 >>>>>>> Stashed changes

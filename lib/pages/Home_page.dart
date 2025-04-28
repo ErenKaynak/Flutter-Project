@@ -10,12 +10,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 <<<<<<< Updated upstream
 =======
 import 'package:lottie/lottie.dart';
-import 'package:provider/provider.dart';
-import 'theme_notifier.dart';
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,24 +70,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Future<void> _loadCategories() async {
     try {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
       final snapshot = await FirebaseFirestore.instance
           .collection('categories')
-          .orderBy('order') // Add ordering to match admin panel
+          .orderBy('name')
           .get();
-=======
-=======
->>>>>>> Stashed changes
-      final snapshot =
-          await FirebaseFirestore.instance
-              .collection('categories')
-              .orderBy('name')
-              .get();
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
       if (mounted) {
         setState(() {
@@ -440,33 +420,28 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> _addToCart(Map<String, dynamic> product) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.info_outline, color: Colors.white),
-              const SizedBox(width: 8),
-              const Text('You need to sign in to continue'),
-              const Spacer(),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => LoginPage()),
-                  );
-                },
-                child: const Text('SIGN IN', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-          duration: const Duration(seconds: 3),
-          backgroundColor: Colors.red.shade400,
-        ),
-      );
-      return;
-    }
+    if (_isAddingToCartMap[product['id']] == true) return;
+
+    _isAddingToCartMap[product['id']] = true;
+
+    // Start animations
+    _colorAnimationControllers[product['id']]?.forward();
+    await Future.delayed(Duration(milliseconds: 200));
+    _tickAnimationControllers[product['id']]?.forward();
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Please log in to add items to cart'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
+      }
 
     if (_isAddingToCartMap[product['id']] == true) return;
 

@@ -38,39 +38,19 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   Future<void> _loadCategories() async {
     setState(() => _isLoading = true);
     try {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-      final snapshot = await FirebaseFirestore.instance
-          .collection('categories')
-          .orderBy('order') // Add ordering
-          .get();
-
-      final loadedCategories = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return {
-          'id': doc.id,
-          'name': data['name'] ?? 'Unnamed Category',
-          'iconPath': data['iconPath'] ?? '',
-          'order': data['order'] ?? 999999,
-        };
-      }).toList();
-=======
       final snapshot =
-          await FirebaseFirestore.instance.collection('categories').get();
+          await FirebaseFirestore.instance
+              .collection('categories')
+              .get(); // Temporarily remove order to check if data exists
 
-      print('Firestore snapshot size: ${snapshot.docs.length}');
+      print('Firestore snapshot size: ${snapshot.docs.length}'); // Debug print
 
-=======
-      final snapshot =
-          await FirebaseFirestore.instance.collection('categories').get();
-
-      print('Firestore snapshot size: ${snapshot.docs.length}');
-
->>>>>>> Stashed changes
       final loadedCategories =
           snapshot.docs.map((doc) {
             final data = doc.data();
-            print('Loading category: ${doc.id} - ${data.toString()}');
+            print(
+              'Loading category: ${doc.id} - ${data.toString()}',
+            ); // Debug print
             return {
               'id': doc.id,
               'name': data['name'] ?? 'Unnamed Category',
@@ -78,24 +58,13 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
               'order': data['order'] ?? 999999,
             };
           }).toList();
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
       setState(() {
         categories = loadedCategories;
         _isLoading = false;
       });
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-      _debugPrintCategories();
->>>>>>> Stashed changes
-=======
-      _debugPrintCategories();
->>>>>>> Stashed changes
+      _debugPrintCategories(); // Debug print after loading
     } catch (e) {
       print('Error loading categories: $e');
       setState(() {
@@ -197,13 +166,13 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
             .doc(category['id']);
 
         batch.update(docRef, {'order': i});
-        
+
         // Update local state
         categories[i]['order'] = i;
       }
 
       await batch.commit();
-      
+
       // Refresh the categories to ensure order is updated
       await _loadCategories();
     } catch (e) {
@@ -213,112 +182,6 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       ).showSnackBar(SnackBar(content: Text('Error updating category order')));
     }
   }
-
-  Future<void> _editCategory(Map<String, dynamic> category) async {
-  final TextEditingController nameController = TextEditingController(text: category['name']);
-  File? newImageFile;
-
-  await showDialog(
-    context: context,
-    builder: (context) => StatefulBuilder(
-      builder: (context, setState) => AlertDialog(
-        title: Text('Edit Category'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: 'Category Name'),
-              ),
-              SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        final ImagePicker picker = ImagePicker();
-                        final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-                        if (image != null) {
-                          setState(() {
-                            newImageFile = File(image.path);
-                          });
-                        }
-                      },
-                      icon: Icon(Icons.image),
-                      label: Text('Change Icon'),
-                    ),
-                  ),
-                ],
-              ),
-              if (newImageFile != null)
-                Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: Text(
-                    'New icon selected',
-                    style: TextStyle(color: Colors.green),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _updateCategory(
-                category['id'],
-                nameController.text,
-                newImageFile,
-              );
-            },
-            child: Text('Save'),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-Future<void> _updateCategory(String categoryId, String newName, File? newImageFile) async {
-  try {
-    final updates = <String, dynamic>{
-      'name': newName,
-    };
-
-    if (newImageFile != null) {
-      // Upload new image
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('category_icons/${DateTime.now().millisecondsSinceEpoch}.png');
-      
-      await storageRef.putFile(newImageFile);
-      final iconUrl = await storageRef.getDownloadURL();
-      
-      updates['iconPath'] = iconUrl;
-    }
-
-    await FirebaseFirestore.instance
-        .collection('categories')
-        .doc(categoryId)
-        .update(updates);
-
-    await _loadCategories();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Category updated successfully')),
-    );
-  } catch (e) {
-    print('Error updating category: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error updating category')),
-    );
-  }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -490,31 +353,15 @@ Future<void> _updateCategory(String categoryId, String newName, File? newImageFi
                                         category['iconPath']!,
                                         width: 40,
                                         height: 40,
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                                        errorBuilder: (context, error, stackTrace) {
-                                          print('Error loading image: $error');
-                                          return Icon(Icons.error);
-=======
-=======
->>>>>>> Stashed changes
                                         errorBuilder: (
                                           context,
                                           error,
                                           stackTrace,
                                         ) {
-                                          print('Error loading image: $error');
-                                          return Icon(
-                                            Icons.error,
-                                            color:
-                                                isBlackMode
-                                                    ? Colors.white
-                                                    : null,
-                                          );
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+                                          print(
+                                            'Error loading image: $error',
+                                          ); // Debug print
+                                          return Icon(Icons.error);
                                         },
                                       )
                                     else
@@ -525,48 +372,8 @@ Future<void> _updateCategory(String categoryId, String newName, File? newImageFi
                                       ),
                                   ],
                                 ),
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                                title: Text(category['name'] ?? 'Unnamed Category'),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(Icons.edit, color: Colors.blue),
-                                      onPressed: () => _editCategory(category),
-                                    ),
-                                    IconButton(
-                                      icon: Icon(Icons.delete, color: Colors.red),
-                                      onPressed: () => showDialog(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          title: Text('Delete Category'),
-                                          content: Text('Are you sure you want to delete this category?'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(context),
-                                              child: Text('Cancel'),
-                                            ),
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.pop(context);
-                                                _deleteCategory(category['id']);
-                                              },
-                                              child: Text('Delete', style: TextStyle(color: Colors.red)),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-=======
-=======
->>>>>>> Stashed changes
                                 title: Text(
                                   category['name'] ?? 'Unnamed Category',
-                                  style: TextStyle(
-                                    color: isBlackMode ? Colors.white : null,
-                                  ),
                                 ),
                                 trailing: IconButton(
                                   icon: Icon(Icons.delete, color: Colors.red),
@@ -575,27 +382,9 @@ Future<void> _updateCategory(String categoryId, String newName, File? newImageFi
                                         context: context,
                                         builder:
                                             (context) => AlertDialog(
-                                              backgroundColor:
-                                                  isBlackMode
-                                                      ? Colors.black
-                                                      : null,
-                                              title: Text(
-                                                'Delete Category',
-                                                style: TextStyle(
-                                                  color:
-                                                      isBlackMode
-                                                          ? Colors.white
-                                                          : null,
-                                                ),
-                                              ),
+                                              title: Text('Delete Category'),
                                               content: Text(
                                                 'Are you sure you want to delete this category?',
-                                                style: TextStyle(
-                                                  color:
-                                                      isBlackMode
-                                                          ? Colors.white
-                                                          : null,
-                                                ),
                                               ),
                                               actions: [
                                                 TextButton(
@@ -603,15 +392,7 @@ Future<void> _updateCategory(String categoryId, String newName, File? newImageFi
                                                       () => Navigator.pop(
                                                         context,
                                                       ),
-                                                  child: Text(
-                                                    'Cancel',
-                                                    style: TextStyle(
-                                                      color:
-                                                          isBlackMode
-                                                              ? Colors.white
-                                                              : null,
-                                                    ),
-                                                  ),
+                                                  child: Text('Cancel'),
                                                 ),
                                                 TextButton(
                                                   onPressed: () {
@@ -630,10 +411,6 @@ Future<void> _updateCategory(String categoryId, String newName, File? newImageFi
                                               ],
                                             ),
                                       ),
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
                                 ),
                               ),
                             );
