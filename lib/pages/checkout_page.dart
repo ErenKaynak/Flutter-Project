@@ -385,13 +385,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Future<void> _processOrder() async {
     if (_selectedAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an address')),
+        const SnackBar(content: Text('Please select a delivery address')),
       );
       return;
     }
 
-<<<<<<< Updated upstream
-=======
     if (_selectedPaymentMethod == 'Credit Card') {
       if (_selectedCard == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -402,35 +400,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
       if (_isCardExpired(_selectedCard!.expiryDate)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Your selected card is expired, please use another card',
-            ),
-          ),
+          const SnackBar(content: Text('Your selected card is expired, please use another card')),
         );
         return;
       }
     }
 
->>>>>>> Stashed changes
     setState(() => _isProcessing = true);
 
     try {
-      bool paymentSuccess = false;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('User not logged in');
 
-<<<<<<< Updated upstream
-      if (_selectedPaymentMethod == 'Wallet') {
-        paymentSuccess = await _processWalletPayment(total);
-      } else if (_selectedPaymentMethod == 'Credit Card') {
-        // Your existing credit card payment logic
-      }
-
-      if (paymentSuccess) {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) throw Exception('User not logged in');
-
-        final batch = FirebaseFirestore.instance.batch();
-        final orderRef = FirebaseFirestore.instance.collection('orders').doc();
+      final batch = FirebaseFirestore.instance.batch();
+      final orderRef = FirebaseFirestore.instance.collection('orders').doc();
 
       // Create order data
       final orderData = {
@@ -463,8 +446,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
         'trackingNumber': '',
       };
 
-        // Add order to main orders collection
-        batch.set(orderRef, orderData);
+      // Add order to main orders collection
+      batch.set(orderRef, orderData);
 
       // Add order to user's orders subcollection
       final userOrderRef = FirebaseFirestore.instance
@@ -473,17 +456,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
           .collection('orders')  // Change to orders subcollection
           .doc(orderRef.id);
 
-        batch.set(userOrderRef, orderData);
+      batch.set(userOrderRef, orderData);
 
-        // Update product stock
-        for (var item in widget.items) {
-          final productRef = FirebaseFirestore.instance
-              .collection('products')
-              .doc(item.id);
-          batch.update(productRef, {
-            'stock': FieldValue.increment(-item.quantity),
-          });
-        }
+      // Update product stock
+      for (var item in widget.items) {
+        final productRef = FirebaseFirestore.instance
+            .collection('products')
+            .doc(item.id);
+        batch.update(productRef, {
+          'stock': FieldValue.increment(-item.quantity),
+        });
+      }
 
       if (widget.appliedDiscount != null) {
         try {
@@ -506,12 +489,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
         }
       }
 
-        // Commit all changes
-        await batch.commit();
+      // Commit all changes
+      await batch.commit();
 
-        // Clear the cart
-        final cartManager = CartManager();
-        await cartManager.clearCart();
+      // Clear the cart
+      final cartManager = CartManager();
+      await cartManager.clearCart();
 
       // Navigate to success page
       if (mounted) {
@@ -532,7 +515,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
         context,
       ).showSnackBar(SnackBar(content: Text('Error processing order: $e')));
     } finally {
-      setState(() => _isProcessing = false);
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
     }
   }
 
@@ -1294,48 +1279,5 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ],
       ),
     );
-  }
-
-  Future<bool> _processWalletPayment(double amount) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return false;
-
-    try {
-      final walletDoc = await FirebaseFirestore.instance
-          .collection('wallets')
-          .doc(user.uid)
-          .get();
-      
-      final currentBalance = (walletDoc.data()?['balance'] ?? 0.0).toDouble();
-      
-      if (currentBalance < amount) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Insufficient wallet balance')),
-        );
-        return false;
-      }
-
-      // Calculate cashback
-      final cashback = amount * 0.01; // 1% cashback
-
-      // Update wallet balance
-      await FirebaseFirestore.instance.collection('wallets').doc(user.uid).update({
-        'balance': FieldValue.increment(-amount + cashback),
-      });
-
-      // Record transaction
-      await FirebaseFirestore.instance.collection('wallet_transactions').add({
-        'user_id': user.uid,
-        'amount': -amount,
-        'cashback': cashback,
-        'type': 'purchase',
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      return true;
-    } catch (e) {
-      print('Error processing wallet payment: $e');
-      return false;
-    }
   }
 }

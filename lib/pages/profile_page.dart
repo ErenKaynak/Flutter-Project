@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/register_page.dart';
-import 'package:engineering_project/pages/wallet.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -671,95 +670,90 @@ class _ProfilePageState extends State<ProfilePage> {
                               () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const AdminPage(),
-                                  ),
+                                  MaterialPageRoute(builder: (_) => const AdminPage()),
                                 );
-                              },
-                              themeNotifier,
-                            ),
-                          buildButton('My Addresses', Icons.location_on, () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AddressScreen(),
-                              ),
-                            );
-                          }, themeNotifier),
-                          buildButton('My Orders', Icons.history, () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const OrderHistoryPage(),
-                              ),
-                            );
-                          }, themeNotifier),
-                        ],
+                              }, themeNotifier),
+                            buildButton('My Addresses', Icons.location_on, () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => AddressScreen()),
+                              );
+                            }, themeNotifier),
+                            buildButton('My Orders', Icons.history, () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const OrderHistoryPage()),
+                              );
+                            }, themeNotifier),
+                            
+                          ],
+                        ),
                       ),
-                    ),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    // Theme Settings Section
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.grey.shade900 : Colors.white,
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: outlineColor, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDark ? Colors.black26 : Colors.black12,
-                            blurRadius: 5,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.palette,
-                                color:
-                                    isDark ? Colors.white : Colors.red.shade700,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Appearance',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : Colors.black87,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Divider(
+                      // Theme Settings Section
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey.shade900 : Colors.white,
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(
                             color: outlineColor,
-                            thickness: 1,
-                            height: 32,
+                            width: 2,
                           ),
-                          _buildThemeToggle(
-                            'Dark Mode',
-                            Icons.brightness_6,
-                            isDarkMode,
-                            (_) => themeNotifier.toggleTheme(),
-                            isDark,
-                          ),
-                          if (_showBlackModeToggle)
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark ? Colors.black26 : Colors.black12,
+                              blurRadius: 5,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.palette,
+                                  color: isDark ? Colors.white : Colors.red.shade700,
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Appearance',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Divider(
+                              color: outlineColor,
+                              thickness: 1,
+                              height: 32,
+                            ),
                             _buildThemeToggle(
-                              'Black Mode',
-                              Icons.dark_mode,
-                              isBlackMode,
-                              (val) => themeNotifier.toggleBlackMode(val),
+                              'Dark Mode',
+                              Icons.brightness_6,
+                              isDarkMode,
+                              (_) => themeNotifier.toggleTheme(),
                               isDark,
                             ),
-                        ],
+                            if (_showBlackModeToggle)
+                              _buildThemeToggle(
+                                'Black Mode',
+                                Icons.dark_mode,
+                                isBlackMode,
+                                (val) => themeNotifier.toggleBlackMode(val),
+                                isDark,
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
 
                     const SizedBox(height: 24),
 
