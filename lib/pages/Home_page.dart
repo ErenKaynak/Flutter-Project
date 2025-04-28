@@ -1,46 +1,30 @@
+import 'package:engineering_project/pages/cart_page.dart' as CartPage;
+import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/product-detail-page.dart';
+import 'package:engineering_project/pages/search_page.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:provider/provider.dart';
-import 'package:engineering_project/pages/cart_page.dart' as CartPage;
-import 'package:engineering_project/pages/login_page.dart';
-import 'package:engineering_project/pages/search_page.dart';
+<<<<<<< Updated upstream
+=======
+import 'package:lottie/lottie.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: const HomePage(),
-    );
-  }
-}
-
-// ThemeNotifier for managing theme
-class ThemeNotifier extends ChangeNotifier {
-  bool _isBlackMode = false;
-
-  bool get isBlackMode => _isBlackMode;
-
-  void toggleTheme(bool isBlackMode) {
-    _isBlackMode = isBlackMode;
-    notifyListeners();
+    return MaterialApp(debugShowCheckedModeBanner: false, home: HomePage());
   }
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
-
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -51,12 +35,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   List<Map<String, dynamic>> categories = [];
   bool _isLoading = true;
   List<String> favoriteProductIds = [];
-  final TextEditingController _searchController = TextEditingController();
+  TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
   final CartManager _cartManager = CartManager();
   final Map<String, AnimationController> _animationControllers = {};
   String? _userProfilePicture;
-  String _userName = "Guest";
 
   final Map<String, AnimationController> _colorAnimationControllers = {};
   final Map<String, Animation<Color?>> _colorAnimations = {};
@@ -65,6 +48,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final Map<String, bool> _isAddingToCartMap = {};
 
   bool _isDisposed = false;
+  String _userName = "Guest";
 
   @override
   void initState() {
@@ -80,6 +64,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         });
       }
     });
+
     _loadInitialData();
   }
 
@@ -92,14 +77,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
       if (mounted) {
         setState(() {
-          categories = snapshot.docs.map((doc) {
-            final data = doc.data();
-            return {
-              'id': doc.id,
-              'name': data['name'] ?? 'Unnamed Category',
-              'iconPath': data['iconPath'] ?? '',
-            };
-          }).toList();
+          categories =
+              snapshot.docs.map((doc) {
+                final data = doc.data();
+                return {
+                  'id': doc.id,
+                  'name': data['name'] ?? 'Unnamed Category',
+                  'iconPath': data['iconPath'] ?? '',
+                };
+              }).toList();
         });
       }
     } catch (e) {
@@ -147,7 +133,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     _colorAnimationControllers.forEach((_, controller) => controller.dispose());
     _tickAnimationControllers.forEach((_, controller) => controller.dispose());
-    _animationControllers.forEach((_, controller) => controller.dispose());
 
     super.dispose();
   }
@@ -163,10 +148,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
 
     try {
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
 
       final profileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
 
@@ -206,20 +192,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
       final colorController = AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 300),
+        duration: Duration(milliseconds: 300),
       );
       _colorAnimationControllers[productId] = colorController;
 
       _colorAnimations[productId] = ColorTween(
-        begin: themeNotifier.isBlackMode
-            ? Theme.of(context).colorScheme.secondary
-            : Colors.red.shade400,
+        begin:
+            themeNotifier.isBlackMode
+                ? Theme.of(context).colorScheme.secondary
+                : Colors.red.shade400,
         end: Colors.green.shade500,
       ).animate(colorController);
 
       final tickController = AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 500),
+        duration: Duration(milliseconds: 500),
       );
       _tickAnimationControllers[productId] = tickController;
 
@@ -235,13 +222,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (!mounted) return;
 
     try {
-      final snapshot =
+      final QuerySnapshot snapshot =
           await FirebaseFirestore.instance.collection('products').get();
 
       final List<Map<String, dynamic>> loadedProducts = [];
 
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
+      snapshot.docs.forEach((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+
         print('Product: ${data['name']}, Image path: ${data['imagePath']}');
         String priceString = data['price']?.toString() ?? '0';
 
@@ -254,7 +242,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           'description': data['description'] ?? 'No description available',
           'stock': data['stock'] ?? 0,
         });
-      }
+      });
 
       if (!mounted) return;
 
@@ -280,16 +268,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         return;
       }
 
-      final favoritesSnapshot = await FirebaseFirestore.instance
-          .collection('favorites')
-          .doc(user.uid)
-          .collection('userFavorites')
-          .get();
+      final favoritesSnapshot =
+          await FirebaseFirestore.instance
+              .collection('favorites')
+              .doc(user.uid)
+              .collection('userFavorites')
+              .get();
 
       final List<String> loadedFavorites = [];
-      for (var doc in favoritesSnapshot.docs) {
+      favoritesSnapshot.docs.forEach((doc) {
         loadedFavorites.add(doc.id);
-      }
+      });
 
       if (mounted) {
         setState(() {
@@ -347,7 +336,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             favoriteProductIds.remove(productId);
           });
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Removed from favorites'),
               duration: Duration(seconds: 1),
             ),
@@ -368,7 +357,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             favoriteProductIds.add(productId);
           });
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Added to favorites'),
               duration: Duration(seconds: 1),
             ),
@@ -379,7 +368,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       print('Error toggling favorite: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Failed to update favorites'),
             duration: Duration(seconds: 2),
           ),
@@ -394,11 +383,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           .where(
             (product) =>
                 product["name"].toString().toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ) ||
+                  _searchQuery.toLowerCase(),
+                ) ||
                 product["description"].toString().toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ),
+                  _searchQuery.toLowerCase(),
+                ),
           )
           .toList();
     } else if (_selectedCategory == "All") {
@@ -433,12 +422,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<void> _addToCart(Map<String, dynamic> product) async {
     if (_isAddingToCartMap[product['id']] == true) return;
 
-    setState(() {
-      _isAddingToCartMap[product['id']] = true;
-    });
+    _isAddingToCartMap[product['id']] = true;
 
+    // Start animations
     _colorAnimationControllers[product['id']]?.forward();
-    await Future.delayed(const Duration(milliseconds: 200));
+    await Future.delayed(Duration(milliseconds: 200));
     _tickAnimationControllers[product['id']]?.forward();
 
     try {
@@ -446,16 +434,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (user == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Please log in to add items to cart'),
               duration: Duration(seconds: 2),
             ),
           );
         }
-        _resetAnimations(product['id']);
         return;
       }
 
+    if (_isAddingToCartMap[product['id']] == true) return;
+
+    _isAddingToCartMap[product['id']] = true;
+
+    _colorAnimationControllers[product['id']]?.forward();
+    await Future.delayed(Duration(milliseconds: 200));
+    _tickAnimationControllers[product['id']]?.forward();
+
+    try {
       final cartRef = FirebaseFirestore.instance
           .collection('cart')
           .doc(user.uid)
@@ -481,7 +477,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${product["name"]} added to cart'),
-            duration: const Duration(seconds: 2),
+            duration: Duration(seconds: 2),
             action: SnackBarAction(
               label: 'VIEW CART',
               onPressed: () {
@@ -489,7 +485,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const CartPage.CartPage(),
+                      builder: (context) => CartPage.CartPage(),
                     ),
                   );
                 }
@@ -499,7 +495,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         );
       }
 
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(Duration(seconds: 1));
       if (mounted) {
         _resetAnimations(product['id']);
       }
@@ -510,7 +506,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to add item to cart: $e'),
-            duration: const Duration(seconds: 2),
+            duration: Duration(seconds: 2),
           ),
         );
       }
@@ -546,11 +542,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: isDark ? Colors.black : Colors.white,
-          shape: const RoundedRectangleBorder(
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(15)),
           ),
           elevation: 10,
-          title: SizedBox(
+          title: Container(
             height: 40,
             child: TextField(
               controller: _searchController,
@@ -568,7 +564,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.black),
+                  borderSide: BorderSide(color: Colors.black),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -582,21 +578,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   color: isDark ? Colors.grey[400] : Colors.grey[600],
                   size: 22,
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                contentPadding: EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 16,
+                ),
                 alignLabelWithHint: true,
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(
-                          Icons.clear,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
-                          size: 20,
-                        ),
-                        onPressed: () {
-                          _searchController.clear();
-                        },
-                      )
-                    : null,
+                suffixIcon:
+                    _searchQuery.isNotEmpty
+                        ? IconButton(
+                          icon: Icon(
+                            Icons.clear,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                          },
+                        )
+                        : null,
               ),
             ),
           ),
@@ -605,13 +604,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               alignment: Alignment.center,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.shopping_cart),
+                  icon: Icon(Icons.shopping_cart),
                   onPressed: () {
                     if (mounted) {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const CartPage.CartPage(),
+                          builder: (context) => CartPage.CartPage(),
                         ),
                       );
                     }
@@ -622,18 +621,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     top: 8,
                     right: 8,
                     child: Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: themeNotifier.isBlackMode
-                            ? Theme.of(context).colorScheme.secondary
-                            : Colors.red,
+                        color:
+                            themeNotifier.isBlackMode
+                                ? Theme.of(context).colorScheme.secondary
+                                : Colors.red,
                         shape: BoxShape.circle,
                       ),
-                      constraints:
-                          const BoxConstraints(minWidth: 16, minHeight: 16),
+                      constraints: BoxConstraints(minWidth: 16, minHeight: 16),
                       child: Text(
                         '${_cartManager.itemCount}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -644,116 +643,129 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ),
               ],
             ),
-            const SizedBox(width: 20),
+            SizedBox(width: 20),
           ],
         ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: _loadInitialData,
-                child: CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16.0),
-                            margin: const EdgeInsets.all(10.0),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: themeNotifier.isBlackMode
-                                    ? [
-                                        Theme.of(context).colorScheme.secondary,
-                                        Colors.grey.shade900,
-                                      ]
-                                    : (isDark
-                                        ? [
-                                            Colors.red.shade900,
+        body:
+            _isLoading
+                ? Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                  onRefresh: _loadInitialData,
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(16.0),
+                              margin: EdgeInsets.all(10.0),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors:
+                                      themeNotifier.isBlackMode
+                                          ? [
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.secondary,
                                             Colors.grey.shade900,
                                           ]
-                                        : [
-                                            Colors.red.shade500,
-                                            Colors.red.shade100,
-                                          ]),
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color:
-                                      isDark ? Colors.black26 : Colors.black12,
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 2),
+                                          : (isDark
+                                              ? [
+                                                Colors.red.shade900,
+                                                Colors.grey.shade900,
+                                              ]
+                                              : [
+                                                Colors.red.shade500,
+                                                Colors.red.shade100,
+                                              ]),
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 30,
-                                  backgroundColor: themeNotifier.isBlackMode
-                                      ? Theme.of(context).colorScheme.secondary
-                                      : (isDark
-                                          ? Colors.red.shade700
-                                          : Colors.red.shade300),
-                                  backgroundImage: _userProfilePicture != null &&
-                                          _userProfilePicture!.isNotEmpty
-                                      ? NetworkImage(_userProfilePicture!)
-                                      : null,
-                                  child: _userProfilePicture == null ||
-                                          _userProfilePicture!.isEmpty
-                                      ? const Icon(
-                                          Icons.person,
-                                          size: 36,
-                                          color: Colors.white,
-                                        )
-                                      : null,
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Welcome",
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: isDark
-                                              ? Colors.grey[400]
-                                              : Colors.black54,
-                                        ),
-                                      ),
-                                      Text(
-                                        _userName,
-                                        style: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark
-                                              ? Colors.white
-                                              : Colors.black87,
-                                        ),
-                                      ),
-                                    ],
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        isDark
+                                            ? Colors.black26
+                                            : Colors.black12,
+                                    blurRadius: 5,
+                                    offset: Offset(0, 2),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 30,
+                                    backgroundColor:
+                                        themeNotifier.isBlackMode
+                                            ? Theme.of(
+                                              context,
+                                            ).colorScheme.secondary
+                                            : (isDark
+                                                ? Colors.red.shade700
+                                                : Colors.red.shade300),
+                                    backgroundImage:
+                                        _userProfilePicture != null &&
+                                                _userProfilePicture!.isNotEmpty
+                                            ? NetworkImage(_userProfilePicture!)
+                                            : null,
+                                    child:
+                                        _userProfilePicture == null ||
+                                                _userProfilePicture!.isEmpty
+                                            ? Icon(
+                                              Icons.person,
+                                              size: 36,
+                                              color: Colors.white,
+                                            )
+                                            : null,
+                                  ),
+                                  SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Welcome",
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color:
+                                                isDark
+                                                    ? Colors.grey[400]
+                                                    : Colors.black54,
+                                          ),
+                                        ),
+                                        Text(
+                                          _userName,
+                                          style: TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            color:
+                                                isDark
+                                                    ? Colors.white
+                                                    : Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          _buildBannerSection(),
-                          const SizedBox(height: 10),
-                          _buildCategoriesHeader(),
-                          _buildCategoriesRow(),
-                          _buildProductsHeader(),
-                        ],
+                            _buildBannerSection(),
+                            SizedBox(height: 10),
+                            _buildCategoriesHeader(),
+                            _buildCategoriesRow(),
+                            _buildProductsHeader(),
+                          ],
+                        ),
                       ),
-                    ),
-                    _buildProductsGrid(),
-                  ],
+                      _buildProductsGrid(),
+                    ],
+                  ),
                 ),
-              ),
       ),
     );
   }
@@ -762,20 +774,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10),
+      margin: EdgeInsets.symmetric(horizontal: 10),
       height: 180,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Colors.grey.shade800
-            : Colors.blue.shade100,
+        color:
+            Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade800
+                : Colors.blue.shade100,
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black26
-                : Colors.black12,
+            color:
+                Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black26
+                    : Colors.black12,
             blurRadius: 4,
-            offset: const Offset(0, 2),
+            offset: Offset(0, 2),
           ),
         ],
       ),
@@ -786,26 +800,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: themeNotifier.isBlackMode
-                      ? [
-                          Theme.of(context).colorScheme.secondary,
-                          Colors.black54,
-                        ]
-                      : (Theme.of(context).brightness == Brightness.dark
-                          ? [Colors.red.shade900, Colors.black54]
-                          : [Colors.red.shade500, Colors.red.shade100]),
+                  colors:
+                      themeNotifier.isBlackMode
+                          ? [
+                            Theme.of(context).colorScheme.secondary,
+                            Colors.black54,
+                          ]
+                          : (Theme.of(context).brightness == Brightness.dark
+                              ? [Colors.red.shade900, Colors.black54]
+                              : [Colors.red.shade500, Colors.red.shade100]),
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
+                  Text(
                     'Special Offers',
                     style: TextStyle(
                       fontSize: 24,
@@ -813,30 +828,32 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
+                  SizedBox(height: 8),
+                  Text(
                     'Get up to 20% off on selected products',
                     style: TextStyle(fontSize: 16, color: Colors.white),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {},
+                    child: Text(
+                      'Shop Now',
+                      style: TextStyle(
+                        color:
+                            Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.red,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
                           Theme.of(context).brightness == Brightness.dark
                               ? Colors.grey.shade900
                               : Colors.white,
-                      foregroundColor: themeNotifier.isBlackMode
-                          ? Theme.of(context).colorScheme.secondary
-                          : Colors.red.shade700,
-                    ),
-                    child: Text(
-                      'Shop Now',
-                      style: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white
-                            : Colors.red,
-                      ),
+                      foregroundColor:
+                          themeNotifier.isBlackMode
+                              ? Theme.of(context).colorScheme.secondary
+                              : Colors.red.shade700,
                     ),
                   ),
                 ],
@@ -852,11 +869,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Padding(
-      padding: const EdgeInsets.all(10),
+      padding: EdgeInsets.all(10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
+          Text(
             "Categories",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
@@ -867,17 +884,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 Icon(
                   Icons.sort,
                   size: 20,
-                  color: themeNotifier.isBlackMode
-                      ? Theme.of(context).colorScheme.secondary
-                      : Colors.red.shade700,
+                  color:
+                      themeNotifier.isBlackMode
+                          ? Theme.of(context).colorScheme.secondary
+                          : Colors.red.shade700,
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 Text(
                   "Sort",
                   style: TextStyle(
-                    color: themeNotifier.isBlackMode
-                        ? Theme.of(context).colorScheme.secondary
-                        : Colors.red.shade700,
+                    color:
+                        themeNotifier.isBlackMode
+                            ? Theme.of(context).colorScheme.secondary
+                            : Colors.red.shade700,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -888,71 +907,76 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 switch (value) {
                   case 'price_asc':
                     products.sort(
-                      (a, b) => double.parse(a["price"].toString())
-                          .compareTo(double.parse(b["price"].toString())),
+                      (a, b) => double.parse(
+                        a["price"].toString(),
+                      ).compareTo(double.parse(b["price"].toString())),
                     );
                     break;
                   case 'price_desc':
                     products.sort(
-                      (a, b) => double.parse(b["price"].toString())
-                          .compareTo(double.parse(a["price"].toString())),
+                      (a, b) => double.parse(
+                        b["price"].toString(),
+                      ).compareTo(double.parse(a["price"].toString())),
                     );
                     break;
                   case 'name_asc':
                     products.sort(
-                      (a, b) => a["name"].toString().compareTo(b["name"].toString()),
+                      (a, b) =>
+                          a["name"].toString().compareTo(b["name"].toString()),
                     );
                     break;
                   case 'name_desc':
                     products.sort(
-                      (a, b) => b["name"].toString().compareTo(a["name"].toString()),
+                      (a, b) =>
+                          b["name"].toString().compareTo(a["name"].toString()),
                     );
                     break;
                 }
               });
             },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'price_asc',
-                child: Row(
-                  children: [
-                    Icon(Icons.arrow_upward, size: 20),
-                    SizedBox(width: 8),
-                    Text('Price: Low to High'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'price_desc',
-                child: Row(
-                  children: [
-                    Icon(Icons.arrow_downward, size: 20),
-                    SizedBox(width: 8),
-                    Text('Price: High to Low'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'name_asc',
-                child: Row(
-                  children: [
-                    Icon(Icons.sort_by_alpha, size: 20),
-                    SizedBox(width: 8),
-                    Text('Name: A to Z'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'name_desc',
-                child: Row(
-                  children: [
-                    Icon(Icons.sort_by_alpha, size: 20),
-                    SizedBox(width: 8),
-                    Text('Name: Z to A'),
-                  ],
-                ),
-              ),
-            ],
+            itemBuilder:
+                (BuildContext context) => <PopupMenuEntry<String>>[
+                  PopupMenuItem<String>(
+                    value: 'price_asc',
+                    child: Row(
+                      children: [
+                        Icon(Icons.arrow_upward, size: 20),
+                        SizedBox(width: 8),
+                        Text('Price: Low to High'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'price_desc',
+                    child: Row(
+                      children: [
+                        Icon(Icons.arrow_downward, size: 20),
+                        SizedBox(width: 8),
+                        Text('Price: High to Low'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'name_asc',
+                    child: Row(
+                      children: [
+                        Icon(Icons.sort_by_alpha, size: 20),
+                        SizedBox(width: 8),
+                        Text('Name: A to Z'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'name_desc',
+                    child: Row(
+                      children: [
+                        Icon(Icons.sort_by_alpha, size: 20),
+                        SizedBox(width: 8),
+                        Text('Name: Z to A'),
+                      ],
+                    ),
+                  ),
+                ],
           ),
         ],
       ),
@@ -962,7 +986,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Widget _buildCategoriesRow() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: EdgeInsets.symmetric(horizontal: 10),
       child: Row(
         children: [
           ...categories
@@ -976,7 +1000,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       () => _selectCategory(category['name']),
                       false,
                     ),
-                    const SizedBox(width: 15),
+                    SizedBox(width: 15),
                   ],
                 ),
               )
@@ -1012,79 +1036,88 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             height: 70,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isDark
-                  ? (isSelected
-                      ? (themeNotifier.isBlackMode
-                          ? Theme.of(context).colorScheme.secondary
-                          : Colors.red.shade900)
-                      : Colors.grey.shade800)
-                  : (isSelected ? Colors.red.shade50 : Colors.grey.shade200),
-              border: isSelected
-                  ? Border.all(
-                      color: isDark
+              color:
+                  isDark
+                      ? (isSelected
                           ? (themeNotifier.isBlackMode
                               ? Theme.of(context).colorScheme.secondary
-                              : Colors.red.shade700)
-                          : Colors.red.shade400,
-                      width: 2,
-                    )
-                  : null,
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: isDark
-                            ? (themeNotifier.isBlackMode
-                                ? Theme.of(context)
-                                    .colorScheme
-                                    .secondary
-                                    .withOpacity(0.5)
-                                : Colors.red.shade900.withOpacity(0.5))
-                            : Colors.red.shade300.withOpacity(0.5),
-                        blurRadius: 8,
-                        spreadRadius: 1,
-                      ),
-                    ]
-                  : null,
+                              : Colors.red.shade900)
+                          : Colors.grey.shade800)
+                      : (isSelected
+                          ? Colors.red.shade50
+                          : Colors.grey.shade200),
+              border:
+                  isSelected
+                      ? Border.all(
+                        color:
+                            isDark
+                                ? (themeNotifier.isBlackMode
+                                    ? Theme.of(context).colorScheme.secondary
+                                    : Colors.red.shade700)
+                                : Colors.red.shade400,
+                        width: 2,
+                      )
+                      : null,
+              boxShadow:
+                  isSelected
+                      ? [
+                        BoxShadow(
+                          color:
+                              isDark
+                                  ? (themeNotifier.isBlackMode
+                                      ? Theme.of(
+                                        context,
+                                      ).colorScheme.secondary.withOpacity(0.5)
+                                      : Colors.red.shade900.withOpacity(0.5))
+                                  : Colors.red.shade300.withOpacity(0.5),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                      : null,
             ),
-            padding: const EdgeInsets.all(10),
-            child: isAsset
-                ? Image.asset(
-                    imagePath,
-                    fit: BoxFit.contain,
-                    color: isDark ? Colors.white60 : null,
-                  )
-                : ColorFiltered(
-                    colorFilter: isDark
-                        ? const ColorFilter.mode(
-                            Colors.white70,
-                            BlendMode.srcIn,
-                          )
-                        : const ColorFilter.mode(Colors.black, BlendMode.srcIn),
-                    child: Image.network(
+            padding: EdgeInsets.all(10),
+            child:
+                isAsset
+                    ? Image.asset(
                       imagePath,
                       fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        print('Error loading category image: $error');
-                        return Icon(
-                          Icons.category,
-                          color: isDark ? Colors.white70 : Colors.grey,
-                        );
-                      },
+                      color: isDark ? Colors.white60 : null,
+                    )
+                    : ColorFiltered(
+                      colorFilter:
+                          isDark
+                              ? ColorFilter.mode(
+                                Colors.white70,
+                                BlendMode.srcIn,
+                              )
+                              : ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                      child: Image.network(
+                        imagePath,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          print('Error loading category image: $error');
+                          return Icon(
+                            Icons.category,
+                            color: isDark ? Colors.white70 : Colors.grey,
+                          );
+                        },
+                      ),
                     ),
-                  ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             label,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isDark
-                  ? (isSelected
-                      ? (themeNotifier.isBlackMode
-                          ? Theme.of(context).colorScheme.secondary
-                          : Colors.red.shade400)
-                      : Colors.white70)
-                  : (isSelected ? Colors.red : Colors.black),
+              color:
+                  isDark
+                      ? (isSelected
+                          ? (themeNotifier.isBlackMode
+                              ? Theme.of(context).colorScheme.secondary
+                              : Colors.red.shade400)
+                          : Colors.white70)
+                      : (isSelected ? Colors.red : Colors.black),
             ),
           ),
         ],
@@ -1094,7 +1127,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildProductsHeader() {
     return Padding(
-      padding: const EdgeInsets.all(10),
+      padding: EdgeInsets.all(10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -1104,7 +1137,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 : (_selectedCategory == "All"
                     ? "Best Deals"
                     : _selectedCategory),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           Text(
             "${filteredProducts.length} products",
@@ -1120,17 +1153,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       return SliverToBoxAdapter(
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.only(top: 50),
+            padding: EdgeInsets.only(top: 50),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.search_off, size: 70, color: Colors.grey),
-                const SizedBox(height: 16),
-                const Text(
+                Icon(Icons.search_off, size: 70, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
                   "No products found",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
                   _searchQuery.isNotEmpty
                       ? "Try a different search term"
@@ -1145,44 +1178,41 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
 
     return SliverPadding(
-      padding: const EdgeInsets.all(10),
+      padding: EdgeInsets.all(10),
       sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 10,
           mainAxisSpacing: 15,
           childAspectRatio: 0.6,
         ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final product = filteredProducts[index];
-            final int stock = product["stock"] is int ? product["stock"] : 0;
-            final bool isOutOfStock = stock <= 0;
-            final bool isFavorite = favoriteProductIds.contains(product['id']);
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final product = filteredProducts[index];
+          final int stock = product["stock"] is int ? product["stock"] : 0;
+          final bool isOutOfStock = stock <= 0;
+          final bool isFavorite = favoriteProductIds.contains(product['id']);
 
-            if (!_animationControllers.containsKey(product['id']) &&
-                mounted &&
-                !_isDisposed) {
-              _animationControllers[product['id']] = AnimationController(
-                vsync: this,
-                duration: const Duration(seconds: 2),
-              );
-            }
-
-            final animationController = _animationControllers[product['id']];
-            if (animationController == null) {
-              return Container();
-            }
-
-            return _buildProductCard(
-              product: product,
-              isOutOfStock: isOutOfStock,
-              isFavorite: isFavorite,
-              animationController: animationController,
+          if (!_animationControllers.containsKey(product['id']) &&
+              mounted &&
+              !_isDisposed) {
+            _animationControllers[product['id']] = AnimationController(
+              vsync: this,
+              duration: Duration(seconds: 2),
             );
-          },
-          childCount: filteredProducts.length,
-        ),
+          }
+
+          final animationController = _animationControllers[product['id']];
+          if (animationController == null) {
+            return Container();
+          }
+
+          return _buildProductCard(
+            product: product,
+            isOutOfStock: isOutOfStock,
+            isFavorite: isFavorite,
+            animationController: animationController,
+          );
+        }, childCount: filteredProducts.length),
       ),
     );
   }
@@ -1199,11 +1229,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       onTap: () => _navigateToProductDetail(product),
       child: Card(
         elevation: 3,
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Colors.grey.shade800
-            : Colors.white,
+        color:
+            Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade800
+                : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: SizedBox(
+        child: Container(
           height: double.infinity,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1213,10 +1244,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.grey.shade900
-                        : Colors.grey[200],
-                    borderRadius: const BorderRadius.vertical(
+                    color:
+                        Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade900
+                            : Colors.grey[200],
+                    borderRadius: BorderRadius.vertical(
                       top: Radius.circular(12),
                     ),
                   ),
@@ -1225,43 +1257,44 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     children: [
                       Center(
                         child: ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
+                          borderRadius: BorderRadius.vertical(
                             top: Radius.circular(12),
                           ),
-                          child: (product["image"].startsWith('http') ||
-                                  product["image"].startsWith('https'))
-                              ? Image.network(
-                                  product["image"],
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Image.asset(
-                                      'lib/assets/Images/placeholder.png',
-                                      fit: BoxFit.cover,
-                                    );
-                                  },
-                                )
-                              : Image.asset(
-                                  product["image"],
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(
-                                      Icons.image_not_supported,
-                                      size: 40,
-                                      color: Colors.grey[400],
-                                    );
-                                  },
-                                ),
+                          child:
+                              (product["image"].startsWith('http') ||
+                                      product["image"].startsWith('https'))
+                                  ? Image.network(
+                                    product["image"],
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Image.asset(
+                                        'lib/assets/Images/placeholder.png',
+                                        fit: BoxFit.cover,
+                                      );
+                                    },
+                                  )
+                                  : Image.asset(
+                                    product["image"],
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(
+                                        Icons.image_not_supported,
+                                        size: 40,
+                                        color: Colors.grey[400],
+                                      );
+                                    },
+                                  ),
                         ),
                       ),
                       Positioned(
                         top: 8,
                         right: 8,
                         child: Container(
-                          padding: const EdgeInsets.all(4),
+                          padding: EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.8),
                             shape: BoxShape.circle,
@@ -1272,9 +1305,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               isFavorite
                                   ? Icons.favorite
                                   : Icons.favorite_border,
-                              color: themeNotifier.isBlackMode
-                                  ? Theme.of(context).colorScheme.secondary
-                                  : Colors.red,
+                              color:
+                                  themeNotifier.isBlackMode
+                                      ? Theme.of(context).colorScheme.secondary
+                                      : Colors.red,
                               size: 20,
                             ),
                           ),
@@ -1287,18 +1321,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               Flexible(
                 flex: 2,
                 child: Container(
-                  padding: const EdgeInsets.all(10.0),
+                  padding: EdgeInsets.all(10.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween, // Add this
                     children: [
-                      Expanded(
+                      Expanded(  // Add this
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               product["name"],
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
@@ -1306,7 +1340,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               overflow: TextOverflow.ellipsis,
                               softWrap: true,
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4),
                             Text(
                               "₺${product["price"]}",
                               style: TextStyle(
@@ -1318,7 +1352,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       SizedBox(
                         width: double.infinity,
                         height: 40,
@@ -1329,10 +1363,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           ]),
                           builder: (context, child) {
                             return ElevatedButton(
-                              onPressed: isOutOfStock ||
-                                      _isAddingToCartMap[product['id']] == true
-                                  ? null
-                                  : () => _addToCart(product),
+                              onPressed:
+                                  isOutOfStock ||
+                                          _isAddingToCartMap[product['id']] ==
+                                              true
+                                      ? null
+                                      : () => _addToCart(product),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor:
                                     _colorAnimations[product['id']]?.value,
@@ -1346,7 +1382,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 alignment: Alignment.center,
                                 children: [
                                   Opacity(
-                                    opacity: 1.0 -
+                                    opacity:
+                                        1.0 -
                                         (_colorAnimationControllers[product['id']]
                                                 ?.value ??
                                             0.0),
@@ -1355,10 +1392,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                           MainAxisAlignment.center,
                                       children: [
                                         if (!isOutOfStock)
-                                          const Icon(Icons.shopping_cart,
-                                              size: 16),
-                                        if (!isOutOfStock)
-                                          const SizedBox(width: 8),
+                                          Icon(Icons.shopping_cart, size: 16),
+                                        if (!isOutOfStock) SizedBox(width: 8),
                                         Text(
                                           isOutOfStock
                                               ? "OUT OF STOCK"
@@ -1379,9 +1414,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                       0)
                                     Transform.scale(
                                       scale:
-                                          _tickAnimations[product['id']]?.value ??
-                                              0.0,
-                                      child: const Icon(
+                                          _tickAnimations[product['id']]
+                                              ?.value ??
+                                          0.0,
+                                      child: Icon(
                                         Icons.check,
                                         color: Colors.white,
                                         size: 24,
@@ -1408,7 +1444,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 class FavoritesPage extends StatefulWidget {
   final Function onFavoritesChanged;
 
-  const FavoritesPage({super.key, required this.onFavoritesChanged});
+  FavoritesPage({required this.onFavoritesChanged});
 
   @override
   _FavoritesPageState createState() => _FavoritesPageState();
@@ -1435,14 +1471,15 @@ class _FavoritesPageState extends State<FavoritesPage> {
         return;
       }
 
-      final favoritesSnapshot = await FirebaseFirestore.instance
-          .collection('favorites')
-          .doc(user.uid)
-          .collection('userFavorites')
-          .get();
+      final favoritesSnapshot =
+          await FirebaseFirestore.instance
+              .collection('favorites')
+              .doc(user.uid)
+              .collection('userFavorites')
+              .get();
 
       final List<Map<String, dynamic>> loadedFavorites = [];
-      for (var doc in favoritesSnapshot.docs) {
+      favoritesSnapshot.docs.forEach((doc) {
         final data = doc.data();
         loadedFavorites.add({
           'id': doc.id,
@@ -1453,7 +1490,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
           'description': data['description'] ?? 'No description available',
           'stock': data['stock'] ?? 0,
         });
-      }
+      });
 
       setState(() {
         favorites = loadedFavorites;
@@ -1484,7 +1521,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Removed from favorites'),
           duration: Duration(seconds: 2),
         ),
@@ -1494,7 +1531,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
     } catch (e) {
       print('Error removing from favorites: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Failed to remove from favorites'),
           duration: Duration(seconds: 2),
         ),
@@ -1507,45 +1544,46 @@ class _FavoritesPageState extends State<FavoritesPage> {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Favorites')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : favorites.isEmpty
+      appBar: AppBar(title: Text('My Favorites')),
+      body:
+          _isLoading
+              ? Center(child: CircularProgressIndicator())
+              : favorites.isEmpty
               ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.favorite_border,
-                          size: 70, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      const Text(
-                        "No favorites yet",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.favorite_border, size: 70, color: Colors.grey),
+                    SizedBox(height: 16),
+                    Text(
+                      "No favorites yet",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Items you favorite will appear here",
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                )
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      "Items you favorite will appear here",
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              )
               : ListView.builder(
-                  padding: const EdgeInsets.all(10),
-                  itemCount: favorites.length,
-                  itemBuilder: (context, index) {
-                    final product = favorites[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: ListTile(
-                        leading: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: (product["image"].startsWith('http') ||
-                                  product["image"].startsWith('https'))
-                              ? Image.network(
+                padding: EdgeInsets.all(10),
+                itemCount: favorites.length,
+                itemBuilder: (context, index) {
+                  final product = favorites[index];
+                  return Card(
+                    margin: EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child:
+                            (product["image"].startsWith('http') ||
+                                    product["image"].startsWith('https'))
+                                ? Image.network(
                                   product["image"],
                                   width: 50,
                                   height: 50,
@@ -1559,46 +1597,49 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                     );
                                   },
                                 )
-                              : Image.asset(
+                                : Image.asset(
                                   product["image"],
                                   width: 50,
                                   height: 50,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(
+                                    return Icon(
                                       Icons.image_not_supported,
                                       size: 30,
                                     );
                                   },
                                 ),
-                        ),
-                        title: Text(
-                          product["name"],
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text("₺${product["price"]}"),
-                        trailing: IconButton(
-                          icon: Icon(
-                            Icons.favorite,
-                            color: themeNotifier.isBlackMode
-                                ? Theme.of(context).colorScheme.secondary
-                                : Colors.red,
-                          ),
-                          onPressed: () => removeFromFavorites(product["id"]),
-                        ),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  ProductDetailPage(productId: product["id"]),
-                            ),
-                          );
-                        },
                       ),
-                    );
-                  },
-                ),
+                      title: Text(
+                        product["name"],
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                        // Updated line
+                      ),
+                      subtitle: Text("₺${product["price"]}"),
+                      trailing: IconButton(
+                        icon: Icon(
+                          Icons.favorite,
+                          color:
+                              themeNotifier.isBlackMode
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Colors.red,
+                        ),
+                        onPressed: () => removeFromFavorites(product["id"]),
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) =>
+                                    ProductDetailPage(productId: product["id"]),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
     );
   }
 }
@@ -1646,22 +1687,25 @@ class CartManager extends ChangeNotifier {
     if (user == null) return;
 
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('cart')
-          .doc(user.uid)
-          .collection('userCart')
-          .get();
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('cart')
+              .doc(user.uid)
+              .collection('userCart')
+              .get();
 
-      _items = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return CartItem(
-          id: doc.id,
-          name: data['name'] ?? 'Unknown Product',
-          price: double.tryParse(data['price']?.toString() ?? '0') ?? 0.0,
-          imagePath: data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-          quantity: data['quantity'] ?? 1,
-        );
-      }).toList();
+      _items =
+          snapshot.docs.map((doc) {
+            final data = doc.data();
+            return CartItem(
+              id: doc.id,
+              name: data['name'] ?? 'Unknown Product',
+              price: double.tryParse(data['price']?.toString() ?? '0') ?? 0.0,
+              imagePath:
+                  data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
+              quantity: data['quantity'] ?? 1,
+            );
+          }).toList();
 
       notifyListeners();
     } catch (e) {

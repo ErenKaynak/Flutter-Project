@@ -1,9 +1,10 @@
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/register_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
-import 'package:engineering_project/pages/theme_notifier.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+<<<<<<< Updated upstream
+=======
+import 'package:lottie/lottie.dart';
 
 class WelcomeScreen extends StatelessWidget {
   @override

@@ -946,6 +946,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   }
 
   void _handleReorder(Map<String, dynamic> order) async {
+<<<<<<< Updated upstream
     try {
       // First check stock levels for all items
       final List<String> outOfStockItems = [];
@@ -1038,6 +1039,36 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         ),
       );
     }
+=======
+    // Convert order items to CartItem objects
+    final List<CartItem> items =
+        (order['items'] as List)
+            .map(
+              (item) => CartItem(
+                id: item['id'] ?? '',
+                name: item['name'] ?? '',
+                price:
+                    (double.tryParse(item['price']?.toString() ?? '0') ?? 0.0)
+                        .toString(),
+                image: item['imagePath'] ?? item['image'] ?? '',
+                quantity: item['quantity'] ?? 1,
+              ),
+            )
+            .toList();
+
+    // Navigate to checkout page with the items
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => CheckoutPage(
+              subtotal: (order['total'] ?? 0.0).toDouble(),
+              items: items,
+              appliedDiscount: null, // Reset any previous discounts
+            ),
+      ),
+    );
+>>>>>>> Stashed changes
   }
 
   void _handleCancelOrder(Map<String, dynamic> order) async {
