@@ -49,7 +49,7 @@ class _ProfilePageState extends State<ProfilePage> {
         _tapCount = 0; // Reset the counter
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Black Mode toggle enabled!'),
+            content: Text('Special Mode toggle enabled!'),
             duration: Duration(seconds: 2),
           ),
         );
@@ -928,7 +928,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                           if (_showBlackModeToggle)
                             _buildThemeToggle(
-                              'Black Mode',
+                              'Special Mode',
                               Icons.dark_mode,
                               isBlackMode,
                               (val) => themeNotifier.toggleBlackMode(val),
