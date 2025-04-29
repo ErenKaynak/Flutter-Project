@@ -932,17 +932,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           child: Column(
                             children: [
                               _buildPaymentOption(
-                                  'Credit Card', 'Pay with credit card'),
-                              Divider(
-                                  color: isDark
-                                      ? Colors.grey.shade800
-                                      : Colors.grey.shade200),
-                              _buildPaymentOption('Cash on Delivery',
-                                  'Pay when you receive'),
+                                'Credit Card', 
+                                'Pay with credit card'
+                              ),
+                              Divider(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+                              _buildWalletOption(),
                             ],
                           ),
                         ),
-                        _buildWalletOption(),
 
                         if (_selectedPaymentMethod == 'Credit Card') ...[
                           const SizedBox(height: 24),
@@ -1088,50 +1085,44 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Widget _buildWalletOption() {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: _selectedPaymentMethod == 'Wallet' 
-              ? Colors.red 
-              : Colors.grey.shade300,
-          width: _selectedPaymentMethod == 'Wallet' ? 2 : 1,
-        ),
-      ),
-      child: RadioListTile<String>(
-        value: 'Wallet',
-        groupValue: _selectedPaymentMethod,
-        onChanged: (value) {
-          setState(() {
-            _selectedPaymentMethod = value!;
-          });
-        },
-        title: Row(
-          children: [
-            Icon(Icons.account_balance_wallet, 
-                 color: _selectedPaymentMethod == 'Wallet' ? Colors.red : Colors.grey),
-            const SizedBox(width: 8),
-            Text(
-              'Wallet Balance',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+    return RadioListTile<String>(
+      value: 'Wallet',
+      groupValue: _selectedPaymentMethod,
+      onChanged: _walletBalance >= total 
+        ? (value) {
+            setState(() => _selectedPaymentMethod = value!);
+          }
+        : null,
+      title: Row(
+        children: [
+          Icon(
+            Icons.account_balance_wallet,
+            color: _walletBalance >= total 
+              ? (_selectedPaymentMethod == 'Wallet' ? Colors.red : Colors.grey)
+              : Colors.grey.shade400,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Pay with Wallet',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: _walletBalance >= total ? null : Colors.grey.shade400,
             ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Available: ₺${_walletBalance.toStringAsFixed(2)}'),
-            if (_walletBalance < total)
-              Text(
-                'Insufficient balance',
-                style: TextStyle(color: Colors.red, fontSize: 12),
-              ),
-          ],
-        ),
+          ),
+        ],
       ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Available Balance: ₺${_walletBalance.toStringAsFixed(2)}'),
+          if (_walletBalance < total)
+            Text(
+              'Insufficient balance',
+              style: TextStyle(color: Colors.red, fontSize: 12),
+            ),
+        ],
+      ),
+      activeColor: Colors.red,
     );
   }
 

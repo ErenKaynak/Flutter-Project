@@ -617,7 +617,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   final amount = double.tryParse(_amountController.text);
                   if (amount == null || amount <= 0) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -640,6 +640,9 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                       );
                       return;
                     }
+                    
+                    // Save the new card first
+                    await _saveNewCard();
                   } else if (_selectedCard == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Please select a card')),
@@ -739,9 +742,12 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
           },
           decoration: InputDecoration(
             labelText: 'Card Number',
-            border: const OutlineInputBorder(),
+            prefixIcon: Icon(Icons.credit_card),
+            border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
             errorText: _cardNumberError,
-            counterText: '', // Hides the built-in counter
+            counterText: '',
           ),
         ),
         const SizedBox(height: 12),
@@ -751,7 +757,6 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
           inputFormatters: [
             FilteringTextInputFormatter.allow(_namePattern),
             TextInputFormatter.withFunction((oldValue, newValue) {
-              // Convert to uppercase
               return TextEditingValue(
                 text: newValue.text.toUpperCase(),
                 selection: newValue.selection,
@@ -760,7 +765,10 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
           ],
           decoration: InputDecoration(
             labelText: 'Card Holder Name',
-            border: const OutlineInputBorder(),
+            prefixIcon: Icon(Icons.person),
+            border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
             errorText: _cardHolderController.text.isEmpty ? null : 
                       !_namePattern.hasMatch(_cardHolderController.text) ? 
                       'Only letters allowed' : null,
@@ -801,7 +809,10 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                 },
                 decoration: InputDecoration(
                   labelText: 'MM/YY',
-                  border: const OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.calendar_today),
+                  border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                   errorText: _expiryError,
                   counterText: '',
                 ),
@@ -813,6 +824,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                 controller: _cvvController,
                 keyboardType: TextInputType.number,
                 maxLength: 3,
+                obscureText: true,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(3),
@@ -828,7 +840,10 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                 },
                 decoration: InputDecoration(
                   labelText: 'CVV',
-                  border: const OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.security),
+                  border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                   errorText: _cvvError,
                   counterText: '',
                 ),
@@ -855,6 +870,46 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
       return 'Invalid amount';
     }
     return null;
+  }
+
+  Future<void> _saveNewCard() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final cardRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('cards')
+          .doc();
+
+      await cardRef.set({
+        'cardNumber': _cardNumberController.text,
+        'cardHolder': _cardHolderController.text.toUpperCase(),
+        'expiryDate': _expiryController.text,
+        'cvv': _cvvController.text,
+        'isDefault': widget.savedCards.isEmpty,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // Clear form
+      _cardNumberController.clear();
+      _cardHolderController.clear();
+      _expiryController.clear();
+      _cvvController.clear();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Card saved successfully')),
+      );
+
+      setState(() {
+        _showAddCard = false;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving card: $e')),
+      );
+    }
   }
 }
 
