@@ -89,7 +89,10 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
         code: _codeController.text.trim(),
         discountPercentage: double.parse(_discountPercentageController.text),
         expiryDate: _hasExpiry ? _selectedExpiryDate : null,
-        applicableCategories: _selectedCategories.isEmpty ? null : _selectedCategories,
+        // If no categories are selected or "All" is selected, set to null for all products
+        applicableCategories: _selectedCategories.isEmpty || _selectedCategories.contains("All") 
+            ? null 
+            : _selectedCategories,
         usageLimit: _usageLimitController.text.isEmpty 
             ? 0 
             : int.parse(_usageLimitController.text),
@@ -361,9 +364,14 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
               onSelected: (selected) {
                 setState(() {
                   if (category == "All") {
-                    _selectedCategories = selected ? _allCategories.sublist(1) : [];
+                    if (selected) {
+                      // If "All" is selected, clear other selections
+                      _selectedCategories = [];
+                    }
                   } else {
                     if (selected) {
+                      // If a specific category is selected, remove "All" if it was selected
+                      _selectedCategories.remove("All");
                       _selectedCategories.add(category);
                     } else {
                       _selectedCategories.remove(category);
@@ -730,19 +738,20 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final code = _discountCodes[index];
-            final isValid = code.isValid();
-            final bool isExpired = code.expiryDate != null && 
-                code.expiryDate!.isBefore(DateTime.now());
-            final bool isLimitReached = code.usageLimit > 0 && 
-                code.usageCount >= code.usageLimit;
             
-            Color statusColor = isValid ? Colors.green : Colors.red;
-            String statusText = isValid ? 'Active' : 'Inactive';
+            // Simplified status check logic
+            String statusText;
+            Color statusColor;
             
-            if (isExpired) {
+            if (code.expiryDate != null && code.expiryDate!.isBefore(DateTime.now())) {
               statusText = 'Expired';
-            } else if (isLimitReached) {
+              statusColor = Colors.red;
+            } else if (code.usageLimit > 0 && code.usageCount >= code.usageLimit) {
               statusText = 'Limit Reached';
+              statusColor = Colors.orange;
+            } else {
+              statusText = 'Active';
+              statusColor = Colors.green;
             }
             
             return Card(
@@ -785,7 +794,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
-                      color: isValid ? Colors.white : Colors.grey,
+                      color: Theme.of(context).textTheme.titleLarge?.color,
                     ),
                   ),
                   subtitle: Row(

@@ -50,7 +50,7 @@ class DiscountCode {
     final now = DateTime.now();
     
     // Check expiration
-    if (expiryDate != null && now.isAfter(expiryDate!)) {
+    if (expiryDate != null && expiryDate!.isBefore(now)) {
       return false;
     }
     
@@ -60,6 +60,18 @@ class DiscountCode {
     }
     
     return true;
+  }
+
+  String getStatus() {
+    if (expiryDate != null && expiryDate!.isBefore(DateTime.now())) {
+      return 'Expired';
+    }
+    
+    if (usageLimit > 0 && usageCount >= usageLimit) {
+      return 'Limit Reached';
+    }
+    
+    return 'Active';
   }
 
   bool isApplicableToCategory(String category) {
