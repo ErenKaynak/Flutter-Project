@@ -191,7 +191,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
       setState(() {
         switch (e.code) {
-          case 'email-already-in-use':
+          case 'email-already-in-use':  
             emailError = "Account already exists";
             break;
           case 'invalid-email':
