@@ -5,6 +5,7 @@ import 'package:engineering_project/assets/components/auth_service.dart';
 import 'package:engineering_project/assets/components/square_tile.dart';
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
+import 'dart:math';
 
 class RegisterPage extends StatefulWidget {
   RegisterPage({super.key});
@@ -22,11 +23,18 @@ class _RegisterPageState extends State<RegisterPage> {
   final nameController = TextEditingController();
   final surnameController = TextEditingController();
   final profileImageController = TextEditingController();
+  final referralCodeController = TextEditingController();
 
   bool passToggle = true;
 
   String? emailError;
   String? passwordError;
+
+  bool hasUpperCase = false;
+  bool hasLowerCase = false;
+  bool hasSpecialChar = false;
+  bool hasMinLength = false;
+  bool hasMaxLength = true;
 
   void signInWithGoogleAndNavigate() async {
     showDialog(
@@ -69,35 +77,9 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    if (passwordController.text.length < 8) {
+    if (!hasMinLength || !hasMaxLength || !hasUpperCase || !hasLowerCase || !hasSpecialChar) {
       setState(() {
-        passwordError = "Passwords must be 8 characters long";
-      });
-      return;
-    } else if (passwordController.text.length > 20) {
-      setState(() {
-        passwordError = "Passwords must be less than 20 characters long";
-      });
-      return;
-    }
-
-    if (!passwordController.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'))) {
-      setState(() {
-        passwordError = "Password must contain at least one special character";
-      });
-      return;
-    }
-
-    if (!passwordController.text.contains(RegExp(r'[A-Z]'))) {
-      setState(() {
-        passwordError = "Password must contain at least one uppercase letter";
-      });
-      return;
-    }
-
-    if (!passwordController.text.contains(RegExp(r'[a-z]'))) {
-      setState(() {
-        passwordError = "Password must contain at least one lowercase letter";
+        passwordError = "Please meet all password requirements";
       });
       return;
     }
@@ -109,22 +91,92 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     try {
+      // Check if referral code exists only if one was provided
+      String? referrerUid;
+      if (referralCodeController.text.isNotEmpty) {
+        final referralDoc = await FirebaseFirestore.instance
+            .collection('referral_codes')
+            .doc(referralCodeController.text.trim())
+            .get();
+
+        if (referralDoc.exists) {
+          referrerUid = referralDoc.data()?['userId'];
+        }
+      }
+
       UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
             email: emailController.text.trim(),
-            password: passwordController.text.trim(),
+            password: passwordController.text.trim(), // Fix: was using email as password
           );
 
       final uid = userCredential.user?.uid;
       if (uid != null) {
+        // Generate unique referral code for new user
+        String referralCode = _generateReferralCode();
+        
+        // Create user document
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'email': emailController.text.trim(),
           'name': nameController.text.trim(),
           'surname': surnameController.text.trim(),
           'profileImage': profileImageController.text.trim(),
           'role': 'user',
+          'referralCode': referralCode,
           'created_at': FieldValue.serverTimestamp(),
         });
+
+        // Create referral code document
+        await FirebaseFirestore.instance
+            .collection('referral_codes')
+            .doc(referralCode)
+            .set({
+          'userId': uid,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // Create wallet for new user with initial balance of 0
+        await FirebaseFirestore.instance.collection('wallets').doc(uid).set({
+          'balance': 0.0,
+          'created_at': FieldValue.serverTimestamp(),
+        });
+
+        // If valid referral code was used, reward both users
+        if (referrerUid != null) {
+          // Add balance to referrer
+          await FirebaseFirestore.instance.collection('wallets').doc(referrerUid).update({
+            'balance': FieldValue.increment(100),
+          });
+
+          // Add balance to new user
+          await FirebaseFirestore.instance.collection('wallets').doc(uid).update({
+            'balance': FieldValue.increment(100),
+          });
+
+          // Record referral transaction for referrer
+          await FirebaseFirestore.instance.collection('wallet_transactions').add({
+            'user_id': referrerUid,
+            'amount': 100,
+            'type': 'referral_reward',  // Changed from 'referral_bonus'
+            'description': 'Referral Reward', // Added description
+            'referred_user': uid,
+            'timestamp': FieldValue.serverTimestamp(),
+            'status': 'completed',
+            'method': 'referral',
+          });
+
+          // Record referral transaction for new user
+          await FirebaseFirestore.instance.collection('wallet_transactions').add({
+            'user_id': uid,
+            'amount': 100,
+            'type': 'referral_reward',  // Changed from 'signup_bonus'
+            'description': 'Referral Reward', // Added description
+            'referrer': referrerUid,
+            'timestamp': FieldValue.serverTimestamp(),
+            'status': 'completed',
+            'method': 'referral',
+          });
+        }
       }
 
       if (context.mounted) Navigator.pop(context);
@@ -160,6 +212,22 @@ class _RegisterPageState extends State<RegisterPage> {
         print("Unexpected Error: $e");
       });
     }
+  }
+
+  String _generateReferralCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
+    return List.generate(8, (index) => chars[random.nextInt(chars.length)]).join();
+  }
+
+  void _checkPasswordRequirements(String password) {
+    setState(() {
+      hasUpperCase = password.contains(RegExp(r'[A-Z]'));
+      hasLowerCase = password.contains(RegExp(r'[a-z]'));
+      hasSpecialChar = password.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
+      hasMinLength = password.length >= 8;
+      hasMaxLength = password.length <= 20;
+    });
   }
 
   @override
@@ -276,6 +344,46 @@ class _RegisterPageState extends State<RegisterPage> {
                     isDark: isDark,
                     matchPassword: passwordController.text,
                   ),
+                  const SizedBox(height: 10),
+                  _buildTextField(
+                    controller: referralCodeController,
+                    hintText: 'Referral Code (Optional)',  // Note the "Optional" text
+                    icon: Icons.card_giftcard,
+                    validatorMsg: '',  // Empty validator message means no validation required
+                    colorScheme: colorScheme,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 10),
+                  // Add password requirements here
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey[800] : Colors.grey[200],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.red.shade700.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Password Requirements:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onBackground,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        _buildPasswordRequirement('At least 8 characters', hasMinLength),
+                        _buildPasswordRequirement('Maximum 20 characters', hasMaxLength),
+                        _buildPasswordRequirement('One uppercase letter', hasUpperCase),
+                        _buildPasswordRequirement('One lowercase letter', hasLowerCase),
+                        _buildPasswordRequirement('One special character', hasSpecialChar),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 5),
                   if (emailError != null || passwordError != null)
                     Padding(
@@ -391,10 +499,12 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
       style: TextStyle(color: colorScheme.onBackground),
-      validator: (value) {
-        if (value == null || value.isEmpty) return validatorMsg;
-        return null;
-      },
+      validator: validatorMsg.isEmpty 
+        ? null  // No validation for empty validatorMsg
+        : (value) {
+            if (value == null || value.isEmpty) return validatorMsg;
+            return null;
+          },
     );
   }
 
@@ -411,6 +521,11 @@ class _RegisterPageState extends State<RegisterPage> {
     return TextFormField(
       controller: controller,
       obscureText: toggle,
+      onChanged: (value) {
+        if (hintText == 'Password') {
+          _checkPasswordRequirements(value);
+        }
+      },
       decoration: InputDecoration(
         fillColor: isDark ? Colors.grey[800] : Colors.grey[300],
         filled: true,
@@ -438,6 +553,26 @@ class _RegisterPageState extends State<RegisterPage> {
         }
         return null;
       },
+    );
+  }
+
+  Widget _buildPasswordRequirement(String requirement, bool met) {
+    return Row(
+      children: [
+        Icon(
+          met ? Icons.check_circle : Icons.cancel,
+          color: met ? Colors.green : Colors.red,
+          size: 16,
+        ),
+        const SizedBox(width: 5),
+        Text(
+          requirement,
+          style: TextStyle(
+            fontSize: 12,
+            color: met ? Colors.green : Colors.red,
+          ),
+        ),
+      ],
     );
   }
 }

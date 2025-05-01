@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -29,6 +30,7 @@ class _ProfilePageState extends State<ProfilePage> {
   String? role;
   bool isLoading = true;
   bool isUploading = false;
+  String? referralCode;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -62,26 +64,27 @@ class _ProfilePageState extends State<ProfilePage> {
     if (uid == null) return;
 
     try {
-      final userDoc = FirebaseFirestore.instance.collection('users').doc(uid);
-      final docSnapshot = await userDoc.get();
+      // Get user document
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+      
+      // Get referral code document
+      final referralDoc = await FirebaseFirestore.instance
+          .collection('referral_codes')
+          .where('userId', isEqualTo: uid)
+          .get();
 
-      if (!docSnapshot.exists) {
-        await userDoc.set({
-          'name': '',
-          'surname': '',
-          'profileImageUrl': '',
-          'role': 'user',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      }
-
-      final data = (await userDoc.get()).data();
-      if (data != null) {
+      if (userDoc.exists) {
+        final data = userDoc.data();
         setState(() {
-          name = data['name'] ?? '';
-          surname = data['surname'] ?? '';
-          imageUrl = data['profileImageUrl'] ?? '';
-          role = data['role'] ?? '';
+          name = data?['name'] ?? '';
+          surname = data?['surname'] ?? '';
+          imageUrl = data?['profileImageUrl'] ?? '';
+          role = data?['role'] ?? '';
+          // Get referral code from user document
+          referralCode = data?['referralCode'] ?? '';
           isLoading = false;
         });
       }
@@ -940,6 +943,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
                     const SizedBox(height: 24),
 
+                    // Referral Code Section
+                    _buildReferralCode(),
+
+                    const SizedBox(height: 24),
+
                     // Logout Button
                     Container(
                       width: double.infinity,
@@ -1020,6 +1028,60 @@ class _ProfilePageState extends State<ProfilePage> {
             value: value,
             onChanged: onChanged,
             activeColor: Colors.red.shade700,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReferralCode() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withOpacity(0.2)
+              : Colors.red.withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Your Referral Code',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                referralCode ?? 'Loading...',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.copy),
+                onPressed: () {
+                  if (referralCode != null) {
+                    Clipboard.setData(ClipboardData(text: referralCode!));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Referral code copied to clipboard')),
+                    );
+                  }
+                },
+              ),
+            ],
           ),
         ],
       ),
