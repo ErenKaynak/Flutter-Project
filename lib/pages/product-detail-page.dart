@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:engineering_project/pages/cart_page.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final String productId;
@@ -23,8 +24,6 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   int availableStock = 0;
   bool isFavorite = false;
 
-  // Yeni eklenen değişkenler
-  int _rating = 0;
   double? averageRating;
   int totalRatings = 0;
 
@@ -33,8 +32,6 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   late AnimationController _tickAnimationController;
   late Animation<double> _tickAnimation;
   bool _isAddingToCart = false;
-
-  final TextEditingController _commentController = TextEditingController();
 
   @override
   void initState() {
@@ -70,7 +67,6 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   void dispose() {
     _colorAnimationController.dispose();
     _tickAnimationController.dispose();
-    _commentController.dispose();
     super.dispose();
   }
 
@@ -345,108 +341,6 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Failed to add to cart')));
-      }
-    }
-  }
-
-  Future<void> submitComment() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Please log in to add a comment')));
-      return;
-    }
-
-    final commentText = _commentController.text.trim();
-    if (commentText.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Comment cannot be empty')));
-      return;
-    }
-
-    try {
-      // Add the new comment
-      final commentsRef = FirebaseFirestore.instance
-          .collection('comments')
-          .doc(widget.productId)
-          .collection('userComments');
-      final commentRef = commentsRef.doc();
-      await commentRef.set({
-        'userId': user.uid,
-        'userName': user.displayName ?? 'User',
-        'comment': commentText,
-        'rating': _rating,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      print('DEBUG: Comment added for product ${widget.productId}');
-
-      // Update products collection
-      final productRef = FirebaseFirestore.instance
-          .collection('products')
-          .doc(widget.productId);
-      await FirebaseFirestore.instance.runTransaction((transaction) async {
-        final snapshot = await transaction.get(productRef);
-        if (!snapshot.exists) {
-          print('DEBUG: Product document does not exist');
-          return;
-        }
-
-        final data = snapshot.data() as Map<String, dynamic>;
-        final currentAvg = (data['averageRating'] ?? 0.0) as double;
-        final currentCount = (data['ratingCount'] ?? 0) as int;
-        print(
-          'DEBUG: Current ratingCount: $currentCount, averageRating: $currentAvg',
-        );
-
-        // Fetch all comments to count total comments and calculate average rating
-        final allCommentsSnapshot = await commentsRef.get();
-        final ratings =
-            allCommentsSnapshot.docs
-                .map((doc) => (doc.data()['rating'] ?? 0) as int)
-                .where((r) => r > 0)
-                .toList();
-
-        int newCount = allCommentsSnapshot.docs.length; // Count all comments
-        double newAvg = currentAvg;
-
-        if (_rating > 0 && ratings.isNotEmpty) {
-          final total = ratings.reduce((a, b) => a + b);
-          newAvg = total / ratings.length;
-        }
-
-        print('DEBUG: New ratingCount: $newCount, new averageRating: $newAvg');
-
-        transaction.update(productRef, {
-          'averageRating':
-              _rating > 0
-                  ? double.parse(newAvg.toStringAsFixed(1))
-                  : currentAvg,
-          'ratingCount': newCount,
-        });
-      });
-      print('DEBUG: Transaction completed for product ${widget.productId}');
-
-      if (mounted) {
-        _commentController.clear();
-        setState(() {
-          _rating = 0;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Comment added successfully'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-        await fetchProductDetails();
-      }
-    } catch (e) {
-      print('Error adding comment: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to add comment')));
       }
     }
   }
@@ -871,7 +765,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                             SizedBox(height: 10),
                             Container(
                               decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
+                                border: Border.all(
+                                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
@@ -882,7 +778,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                       topLeft: Radius.circular(7),
                                       bottomLeft: Radius.circular(7),
                                     ),
-                                    color: Colors.grey.shade100,
+                                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
                                     child: InkWell(
                                       onTap: decrementQuantity,
                                       borderRadius: BorderRadius.only(
@@ -891,19 +787,23 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                       ),
                                       child: Container(
                                         padding: EdgeInsets.all(12),
-                                        child: Icon(Icons.remove, size: 16),
+                                        child: Icon(
+                                          Icons.remove, 
+                                          size: 16,
+                                          color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                                        ),
                                       ),
                                     ),
                                   ),
                                   Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                    ),
+                                    padding: EdgeInsets.symmetric(horizontal: 16),
+                                    color: isDark ? Colors.grey.shade900 : Colors.white,
                                     child: Text(
                                       '$quantity',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
                                       ),
                                     ),
                                   ),
@@ -912,7 +812,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                       topRight: Radius.circular(7),
                                       bottomRight: Radius.circular(7),
                                     ),
-                                    color: Colors.grey.shade100,
+                                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
                                     child: InkWell(
                                       onTap: incrementQuantity,
                                       borderRadius: BorderRadius.only(
@@ -921,7 +821,11 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                       ),
                                       child: Container(
                                         padding: EdgeInsets.all(12),
-                                        child: Icon(Icons.add, size: 16),
+                                        child: Icon(
+                                          Icons.add, 
+                                          size: 16,
+                                          color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -1114,107 +1018,6 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     ),
                   ),
                 ),
-              // Yorum gönderme kutusu
-              Container(
-                margin: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow:
-                      isDark
-                          ? []
-                          : [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              spreadRadius: 1,
-                            ),
-                          ],
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Yorum Yap",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).textTheme.titleLarge?.color,
-                        ),
-                      ),
-                      SizedBox(height: 12),
-                      Text(
-                        "Ürünü puanlayın ve deneyiminizi paylaşın:",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      Row(
-                        children: List.generate(5, (index) {
-                          return IconButton(
-                            icon: Icon(
-                              index < _rating ? Icons.star : Icons.star_border,
-                              color: Colors.amber,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _rating = index + 1;
-                              });
-                            },
-                          );
-                        }),
-                      ),
-                      SizedBox(height: 12),
-                      TextField(
-                        controller: _commentController,
-                        decoration: InputDecoration(
-                          hintText: "Yorumunuzu buraya yazın...",
-                          hintStyle: TextStyle(color: Colors.grey.shade600),
-                          filled: true,
-                          fillColor:
-                              isDark
-                                  ? Colors.grey.shade800
-                                  : Colors.grey.shade100,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                        ),
-                        maxLines: 4,
-                      ),
-                      SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: ElevatedButton.icon(
-                          onPressed: submitComment,
-                          icon: Icon(Icons.send, size: 18),
-                          label: Text("Gönder"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // Updated comments container
               Container(
                 margin: EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -1320,14 +1123,6 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                       color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
                                     ),
                                   ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Be the first to review this product',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: isDark ? Colors.grey.shade600 : Colors.grey.shade500,
-                                    ),
-                                  ),
                                 ],
                               ),
                             ),
@@ -1346,18 +1141,17 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                           ),
                           itemBuilder: (context, index) {
                             final comment = comments[index].data() as Map<String, dynamic>;
-                            final userId = comment['userId'] as String?;
-                            
                             return FutureBuilder<DocumentSnapshot>(
                               future: FirebaseFirestore.instance
                                   .collection('users')
-                                  .doc(userId)
+                                  .doc(comment['userId'])
                                   .get(),
                               builder: (context, userSnapshot) {
                                 final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
-                                final profileImageUrl = userData?['profileImageUrl'] as String?;
-                                final userName = userData?['name'] ?? comment['userName'] ?? 'Anonymous';
-                                final rating = comment['rating'] ?? 0;
+                                final String fullName = userData != null 
+                                    ? "${userData['name'] ?? ''} ${userData['surname'] ?? ''}"
+                                    : 'Anonymous';
+                                final String profilePicUrl = userData?['profileImageUrl'] ?? '';
                                 
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1365,14 +1159,17 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                     Row(
                                       children: [
                                         CircleAvatar(
-                                          radius: 20,
-                                          backgroundImage: profileImageUrl != null 
-                                              ? NetworkImage(profileImageUrl)
-                                              : null,
+                                          radius: 24,
                                           backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                                          child: profileImageUrl == null
-                                              ? Icon(Icons.person,
-                                                  color: isDark ? Colors.grey.shade600 : Colors.grey.shade400)
+                                          backgroundImage: (profilePicUrl.isNotEmpty && profilePicUrl != "null") 
+                                              ? NetworkImage(profilePicUrl)
+                                              : null,
+                                          child: (profilePicUrl.isEmpty || profilePicUrl == "null")
+                                              ? Icon(
+                                                  Icons.person,
+                                                  color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+                                                  size: 28,
+                                                )
                                               : null,
                                         ),
                                         SizedBox(width: 12),
@@ -1381,10 +1178,11 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                userName,
+                                                fullName,
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 16,
+                                                  color: Theme.of(context).textTheme.titleMedium?.color,
                                                 ),
                                               ),
                                               SizedBox(height: 4),
@@ -1393,8 +1191,10 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                   ...List.generate(5, (index) => Padding(
                                                     padding: EdgeInsets.only(right: 2),
                                                     child: Icon(
-                                                      index < rating ? Icons.star : Icons.star_border,
-                                                      size: 14,
+                                                      index < (comment['rating'] ?? 0) 
+                                                          ? Icons.star 
+                                                          : Icons.star_border,
+                                                      size: 16,
                                                       color: Colors.amber,
                                                     ),
                                                   )),
@@ -1403,7 +1203,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                     _formatTimestamp(comment['timestamp'] as Timestamp?),
                                                     style: TextStyle(
                                                       fontSize: 12,
-                                                      color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                                                      color: isDark 
+                                                          ? Colors.grey.shade500 
+                                                          : Colors.grey.shade600,
                                                     ),
                                                   ),
                                                 ],
@@ -1443,8 +1245,4 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       ),
     );
   }
-}
-
-extension on TextEditingController {
-  void dispose() {}
 }

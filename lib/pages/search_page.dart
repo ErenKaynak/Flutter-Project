@@ -19,6 +19,11 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
   bool _isLoading = true;
   List<Map<String, dynamic>> favoriteProducts = [];
   final Map<String, AnimationController> _animationControllers = {};
+  final Map<String, AnimationController> _colorAnimationControllers = {};
+  final Map<String, Animation<Color?>> _colorAnimations = {};
+  final Map<String, AnimationController> _tickAnimationControllers = {};
+  final Map<String, Animation<double>> _tickAnimations = {};
+  final Map<String, bool> _isAddingToCartMap = {};
 
   @override
   void initState() {
@@ -28,25 +33,41 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
 
   @override
   void dispose() {
-    _animationControllers.forEach((_, controller) {
-      controller.dispose();
-    });
-    _animationControllers.clear();
+    _colorAnimationControllers.forEach((_, controller) => controller.dispose());
+    _tickAnimationControllers.forEach((_, controller) => controller.dispose());
     super.dispose();
   }
 
   void _initializeAnimationControllers() {
-    _animationControllers.forEach((_, controller) {
-      controller.dispose();
-    });
-    _animationControllers.clear();
+    _colorAnimationControllers.forEach((_, controller) => controller.dispose());
+    _tickAnimationControllers.forEach((_, controller) => controller.dispose());
+    _colorAnimationControllers.clear();
+    _colorAnimations.clear();
+    _tickAnimationControllers.clear();
+    _tickAnimations.clear();
+    _isAddingToCartMap.clear();
 
     for (var product in favoriteProducts) {
-      final controller = AnimationController(
+      final productId = product['id'];
+      final colorController = AnimationController(
         vsync: this,
-        duration: Duration(seconds: 2),
+        duration: Duration(milliseconds: 300),
       );
-      _animationControllers[product['id']] = controller;
+      _colorAnimationControllers[productId] = colorController;
+      _colorAnimations[productId] = ColorTween(
+        begin: Colors.red.shade400,
+        end: Colors.green.shade500,
+      ).animate(colorController);
+
+      final tickController = AnimationController(
+        vsync: this,
+        duration: Duration(milliseconds: 500),
+      );
+      _tickAnimationControllers[productId] = tickController;
+      _tickAnimations[productId] = Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(parent: tickController, curve: Curves.elasticOut),
+      );
+      _isAddingToCartMap[productId] = false;
     }
   }
 
@@ -90,7 +111,6 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
         favoriteProducts = loadedFavorites;
         _isLoading = false;
       });
-      
       _initializeAnimationControllers();
     } catch (error) {
       print('Error fetching favorites: $error');
@@ -326,7 +346,21 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
         duration: Duration(seconds: 2),
       );
     }
-    
+    if (!_colorAnimationControllers.containsKey(product['id'])) {
+      _colorAnimationControllers[product['id']] = AnimationController(
+        vsync: this,
+        duration: Duration(milliseconds: 300),
+      );
+      _colorAnimations[product['id']] = ColorTween(begin: Colors.red.shade400, end: Colors.green.shade500).animate(_colorAnimationControllers[product['id']]!);
+    }
+    if (!_tickAnimationControllers.containsKey(product['id'])) {
+      _tickAnimationControllers[product['id']] = AnimationController(
+        vsync: this,
+        duration: Duration(milliseconds: 300),
+      );
+      _tickAnimations[product['id']] = Tween<double>(begin: 0.0, end: 1.0).animate(_tickAnimationControllers[product['id']]!);
+    }
+
     final animationController = _animationControllers[product['id']]!;
 
     return GestureDetector(
@@ -441,7 +475,7 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      SizedBox(height: 1),
+                      SizedBox(height: 4),
                       Text(
                         "₺${product["price"]}",
                         style: TextStyle(
@@ -450,43 +484,67 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
                           fontSize: 15,
                         ),
                       ),
-                      SizedBox(height: 1),
+                      SizedBox(height: 15),
                       SizedBox(
-  width: double.infinity,
-  height: 40, // Set a fixed height for the entire row
-  child: isOutOfStock
-      ? Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.red.shade50,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.red.shade200),
-          ),
-          child: Center(
-            child: Text(
-              "Out of Stock",
-              style: TextStyle(
-                color: Colors.red.shade700,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        )
-      : GestureDetector(
-                onTap: () => addToCart(product),
-                child: Lottie.asset(
-                    'lib/assets/button-test/3.json',
-                    controller: animationController,
-                    fit: BoxFit.cover,
-                    width: 200,
-                    height: 50,
-                    repeat: false,
-                    ),
-              ),
-          
-        ),
-
+                        width: double.infinity,
+                        height: 36, // Reduced from 40 to match homepage
+                        child: AnimatedBuilder(
+                          animation: Listenable.merge([
+                            _colorAnimationControllers[product['id']]!,
+                            _tickAnimationControllers[product['id']]!,
+                          ]),
+                          builder: (context, child) {
+                            return ElevatedButton(
+                              onPressed: isOutOfStock ? null : () => addToCart(product),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _colorAnimations[product['id']]?.value ?? Colors.red.shade400,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                elevation: 2,
+                                padding: EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Opacity(
+                                    opacity: 1.0 - (_colorAnimationControllers[product['id']]?.value ?? 0.0),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.shopping_cart_outlined,
+                                          size: 16,
+                                        ),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          isOutOfStock ? "OUT OF STOCK" : "ADD TO CART",
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if ((_colorAnimationControllers[product['id']]?.value ?? 0.0) > 0)
+                                    Transform.scale(
+                                      scale: _tickAnimations[product['id']]?.value ?? 0.0,
+                                      child: Icon(
+                                        Icons.check,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     ],
                   ),
                 ),

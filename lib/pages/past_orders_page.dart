@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:engineering_project/assets/components/cart_manager.dart' hide CartItem;
+import 'package:engineering_project/pages/product-detail-page.dart';
 
 class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({Key? key}) : super(key: key);
@@ -909,6 +910,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     final String itemPrice = itemData["price"]?.toString() ?? '0';
     final int itemQuantity = itemData["quantity"] is int ? itemData["quantity"] : 1;
     final String itemName = itemData["name"] ?? 'Unknown Product';
+    final String productId = itemData["id"] ?? '';
     
     return Container(
       padding: const EdgeInsets.only(bottom: 12),
@@ -920,71 +922,94 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           ),
         ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: () {
+          if (productId.isNotEmpty) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProductDetailPage(productId: productId),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Product is no longer available'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: _buildProductImage(imagePath),
+              ),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: _buildProductImage(imagePath),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    itemName,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      decoration: TextDecoration.underline,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Qty: $itemQuantity × ₺$itemPrice',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Item Total: ₺${(double.tryParse(itemPrice) ?? 0) * itemQuantity}',
+                    style: TextStyle(
+                      color: Colors.green[700], 
+                      fontSize: 13, 
+                      fontWeight: FontWeight.w500
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  itemName,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Qty: $itemQuantity × ₺$itemPrice',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Item Total: ₺${(double.tryParse(itemPrice) ?? 0) * itemQuantity}',
-                  style: TextStyle(color: Colors.green[700], fontSize: 13, fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
-          FutureBuilder<bool>(
-            future: _hasUserReviewedProduct(item['id'] ?? ''),
-            builder: (context, snapshot) {
-              final bool hasReviewed = snapshot.data ?? false;
-              final bool canReview = status == 'Delivered' && !hasReviewed;
+            FutureBuilder<bool>(
+              future: _hasUserReviewedProduct(productId),
+              builder: (context, snapshot) {
+                final bool hasReviewed = snapshot.data ?? false;
+                final bool canReview = status == 'Delivered' && !hasReviewed;
 
-              return IconButton(
-                icon: Icon(
-                  hasReviewed ? Icons.rate_review : Icons.star_border,
-                  color: canReview ? Colors.amber : Colors.grey,
-                ),
-                onPressed: canReview
-                    ? () => _showRatingDialog(
-                        item['id'] ?? '',
-                        item['name'] ?? 'Product',
-                      )
-                    : null,
-                tooltip: hasReviewed 
-                    ? 'Already reviewed'
-                    : status != 'Delivered'
-                        ? 'Can review after delivery'
-                        : 'Rate this product',
-              );
-            },
-          ),
-        ],
+                return IconButton(
+                  icon: Icon(
+                    hasReviewed ? Icons.rate_review : Icons.star_border,
+                    color: canReview ? Colors.amber : Colors.grey,
+                  ),
+                  onPressed: canReview
+                      ? () => _showRatingDialog(productId, itemName)
+                      : null,
+                  tooltip: hasReviewed 
+                      ? 'Already reviewed'
+                      : status != 'Delivered'
+                          ? 'Can review after delivery'
+                          : 'Rate this product',
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -994,29 +1019,52 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       return Image.network(
         imagePath,
         fit: BoxFit.cover,
-        cacheWidth: 120,  // Add this line
-        cacheHeight: 120, // Add this line
+        width: 60,
+        height: 60,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                  : null,
+              strokeWidth: 2,
+            ),
+          );
+        },
         errorBuilder: (context, error, stackTrace) {
+          print('Error loading image: $error');
           return _buildFallbackImage();
         },
       );
     } else {
+      // Handle local assets
+      if (imagePath.startsWith('lib/')) {
+        imagePath = imagePath.replaceFirst('lib/', '');
+      }
       return Image.asset(
         imagePath,
         fit: BoxFit.cover,
-        cacheWidth: 120,  // Add this line
-        cacheHeight: 120, // Add this line
+        width: 60,
+        height: 60,
         errorBuilder: (context, error, stackTrace) {
+          print('Error loading asset image: $error');
           return _buildFallbackImage();
         },
       );
     }
   }
-  
+
   Widget _buildFallbackImage() {
-    return Center(
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Icon(
-        Icons.image_not_supported,
+        Icons.image_not_supported_outlined,
         size: 24,
         color: Colors.grey[400],
       ),

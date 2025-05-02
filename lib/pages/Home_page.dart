@@ -601,13 +601,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             SizedBox(width: 20),
           ],
         ),
-        body:
-            _isLoading
-                ? Center(child: CircularProgressIndicator())
-                : RefreshIndicator(
-                  onRefresh: _loadInitialData,
-                  child: CustomScrollView(
-                    slivers: [
+        body: _isLoading
+            ? Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _loadInitialData,
+                child: CustomScrollView(
+                  slivers: [
+                    if (_searchQuery.isEmpty) ...[
                       SliverToBoxAdapter(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -707,14 +707,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             SizedBox(height: 10),
                             _buildCategoriesHeader(),
                             _buildCategoriesRow(),
-                            _buildProductsHeader(),
                           ],
                         ),
                       ),
-                      _buildProductsGrid(),
                     ],
-                  ),
+                    SliverToBoxAdapter(
+                      child: _buildProductsHeader(),
+                    ),
+                    _buildProductsGrid(),
+                  ],
                 ),
+              ),
       ),
     );
   }
