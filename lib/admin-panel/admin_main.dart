@@ -37,6 +37,7 @@ class _AdminPageState extends State<AdminPage> {
       itemBuilder: (context, index) {
         final product = products[index].data() as Map<String, dynamic>;
         final int stock = product['stock'] ?? 0;
+        final String productId = products[index].id;
 
         return ListTile(
           dense: true,
@@ -54,8 +55,56 @@ class _AdminPageState extends State<AdminPage> {
               color: stock == 0 ? Colors.red : null,
             ),
           ),
+          onTap: () => _showUpdateStockDialog(context, productId, product['name'], stock),
         );
       },
+    );
+  }
+
+  void _showUpdateStockDialog(BuildContext context, String productId, String productName, int currentStock) {
+    final TextEditingController stockController = TextEditingController(text: currentStock.toString());
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Update Stock for $productName'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: stockController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'New Stock Amount',
+                hintText: 'Enter new stock amount',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newStock = int.tryParse(stockController.text);
+              if (newStock != null && newStock >= 0) {
+                await FirebaseFirestore.instance
+                    .collection('products')
+                    .doc(productId)
+                    .update({'stock': newStock});
+                Navigator.pop(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a valid number')),
+                );
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
     );
   }
 
