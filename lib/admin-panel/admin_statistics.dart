@@ -1,243 +1,310 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:math' show max;
+import 'package:intl/intl.dart';
 
 class AdminStatisticsPage extends StatefulWidget {
-  const AdminStatisticsPage({super.key});
+  const AdminStatisticsPage({Key? key}) : super(key: key);
 
   @override
-  State<AdminStatisticsPage> createState() => _AdminStatisticsPageState();
+  _AdminStatisticsPageState createState() => _AdminStatisticsPageState();
 }
 
 class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
-  bool showMonthly = true;
-  Map<String, double> data = {};
-  Map<String, double> monthlySales = {};
-  Map<String, double> monthlyStock = {};
-  List<Map<String, dynamic>> productDetails = [];
   bool isLoading = true;
-  int totalProductsSold = 0;
-
-  // Add new state variables
+  String selectedTimeFrame = 'Monthly';
+  List<String> timeFrames = ['Weekly', 'Monthly', 'Yearly'];
+  
+  // Statistics data
+  double totalRevenue = 0;
+  int totalProducts = 0;
   int totalUsers = 0;
   int totalOrders = 0;
-  List<String> timeFrames = ['Weekly', 'Monthly', 'Yearly'];
-  String selectedTimeFrame = 'Monthly';
+  
+  // Chart data
+  Map<String, double> revenueData = {};
+  Map<String, int> productData = {};
 
   @override
   void initState() {
     super.initState();
-    fetchData();
+    fetchStatistics();
   }
 
-  Future<void> fetchData() async {
+  Future<void> fetchStatistics() async {
     setState(() => isLoading = true);
+    
     try {
-      await Future.wait([
-        fetchMonthlySales(),
-        fetchCategorySales(),
-        fetchTopProducts(),
-        calculateTotalProductsSold(),
-        fetchTotalUsers(),
-        fetchTotalOrders(),
-      ]);
-    } catch (e) {
-      print('Error fetching data: $e');
-    }
-    setState(() => isLoading = false);
-  }
+      final DateTime now = DateTime.now();
+      final DateTime startDate = getStartDate(now);
 
-  Future<void> fetchMonthlySales() async {
-    final now = DateTime.now();
-    final monthsAgo = now.subtract(const Duration(days: 365));
-
-    final ordersSnapshot = await FirebaseFirestore.instance
-        .collection('orders')
-        .where('orderDate', isGreaterThan: monthsAgo)
-        .get();
-
-    final Map<String, double> sales = {};
-    final Map<String, double> stock = {};
-
-    for (var doc in ordersSnapshot.docs) {
-      final orderData = doc.data();
-      final orderDate = (orderData['orderDate'] as Timestamp).toDate();
-      final month = '${orderDate.year}-${orderDate.month.toString().padLeft(2, '0')}';
-      final items = orderData['items'] as List<dynamic>? ?? [];
+      // First, get ALL orders for total statistics
+      final allOrdersSnapshot = await FirebaseFirestore.instance
+          .collection('orders')
+          .get();
       
-      double monthlyTotal = 0.0;
-      double monthlyQuantity = 0.0;
-
-      for (var item in items) {
-        final price = double.tryParse(item['price'].toString()) ?? 0.0;
-        final quantity = item['quantity'] as int? ?? 0;
-        
-        monthlyTotal += price * quantity;
-        monthlyQuantity += quantity;
-      }
-
-      sales[month] = (sales[month] ?? 0.0) + monthlyTotal;
-      stock[month] = (stock[month] ?? 0.0) + monthlyQuantity;
-    }
-
-    setState(() {
-      monthlySales = Map<String, double>.from(sales);
-      monthlyStock = Map<String, double>.from(stock);
-      data = showMonthly ? sales : data;
-    });
-
-    print('Monthly Sales: $monthlySales');
-    print('Monthly Stock: $monthlyStock');
-  }
-
-  Future<void> fetchCategorySales() async {
-    // First get products to create a map of product IDs to their categories
-    final productsSnapshot = await FirebaseFirestore.instance
-        .collection('products')
-        .get();
-
-    final Map<String, Map<String, dynamic>> productsData = {};
-    for (var doc in productsSnapshot.docs) {
-      final data = doc.data();
-      productsData[doc.id] = {
-        'category': data['category'] as String? ?? 'Uncategorized',
-        'price': data['price'] ?? 0.0,
-      };
-      print('Product ID: ${doc.id}, Category: ${data['category']}, Price: ${data['price']}');
-    }
-
-    final ordersSnapshot = await FirebaseFirestore.instance
-        .collection('orders')
-        .get();
-
-    final Map<String, double> categorySales = {};
-
-    for (var doc in ordersSnapshot.docs) {
-      final orderData = doc.data();
-      final items = orderData['items'] as List<dynamic>? ?? [];
-
-      for (var item in items) {
-        final productId = item['productId'] as String?;
-        if (productId == null) continue;
-
-        final productInfo = productsData[productId];
-        if (productInfo == null) {
-          print('Warning: No product info found for ID: $productId');
-          continue;
-        }
-
-        final category = productInfo['category'] as String;
-        final price = double.tryParse(productInfo['price'].toString()) ?? 0.0;
-        final quantity = item['quantity'] as int? ?? 0;
-        
-        // Sum up sales by category
-        final saleAmount = price * quantity;
-        categorySales[category] = (categorySales[category] ?? 0.0) + saleAmount;
-        
-        print('Added sale - Category: $category, Amount: $saleAmount, Quantity: $quantity');
-      }
-    }
-
-    setState(() {
-      data = Map<String, double>.from(categorySales);
-    });
-
-    print('Final Category Sales: $data');
-  }
-
-  Future<void> calculateTotalProductsSold() async {
-    final ordersSnapshot = await FirebaseFirestore.instance
-        .collection('orders')
-        .get();
-    
-    int totalSold = 0;
-    for (var doc in ordersSnapshot.docs) {
-      final items = doc.data()['items'] as List<dynamic>? ?? [];
-      for (var item in items) {
-        final quantity = item['quantity'] as int? ?? 0;
-        totalSold += quantity;
-      }
-    }
-    
-    print('Total products sold from orders: $totalSold');
-    
-    setState(() {
-      totalProductsSold = totalSold;
-    });
-  }
-
-  Future<void> fetchTopProducts() async {
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection('products')
-        .orderBy('sold', descending: true)
-        .limit(10)
-        .get();
-
-    setState(() {
-      productDetails = querySnapshot.docs.map((doc) {
+      // Calculate total products from ALL orders
+      int totalProductCount = 0;
+      double totalRevenueAmount = 0;
+      
+      // Process all orders for total counts
+      for (var doc in allOrdersSnapshot.docs) {
         final data = doc.data();
-        final sold = (data['sold'] ?? 0) as num;
-        print('Product: ${data['name']} - Sold: $sold - Category: ${data['category']}');
+        final items = data['items'] as List<dynamic>? ?? [];
         
-        return {
-          'id': doc.id,
-          'name': data['name'] ?? 'Unnamed Product',
-          'price': data['price']?.toString() ?? '0',
-          'sold': sold,
-          'stock': data['stock'] ?? 0,
-          'image': data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-          'category': data['category'] ?? 'Uncategorized',
-        };
-      }).toList();
-    });
-  }
+        for (var item in items) {
+          try {
+            final quantity = (item['quantity'] as num? ?? 0).toInt();
+            final price = double.parse((item['price'] ?? '0').toString());
+            
+            totalProductCount += quantity;
+            totalRevenueAmount += price * quantity;
+          } catch (e) {
+            print('Error processing total item: $e');
+            continue;
+          }
+        }
+      }
 
-  Future<void> fetchTotalUsers() async {
-    final snapshot = await FirebaseFirestore.instance.collection('users').get();
-    setState(() {
-      totalUsers = snapshot.docs.length;
-    });
-  }
+      // Get filtered orders for the period chart
+      final filteredOrdersSnapshot = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('orderDate', isGreaterThanOrEqualTo: startDate)
+          .orderBy('orderDate', descending: true)
+          .get();
 
-  Future<void> fetchTotalOrders() async {
-    final snapshot = await FirebaseFirestore.instance.collection('orders').get();
-    setState(() {
-      totalOrders = snapshot.docs.length;
-    });
-  }
+      Map<String, double> periodRevenue = {};
+      Map<String, int> periodProducts = {};
 
-  Widget _buildBarChart() {
-    final months = monthlySales.keys.toList()..sort();
-    
-    if (months.isEmpty) {
-      return Center(
-        child: Text(
-          'No data available for the selected period',
-          style: TextStyle(fontSize: 16),
-        ),
-      );
+      // Process filtered orders for the chart
+      for (var doc in filteredOrdersSnapshot.docs) {
+        final data = doc.data();
+        final Timestamp? orderDateStamp = data['orderDate'] as Timestamp?;
+        
+        if (orderDateStamp == null) continue;
+
+        final orderDate = orderDateStamp.toDate();
+        final items = data['items'] as List<dynamic>? ?? [];
+        String periodKey = getPeriodKey(orderDate);
+        
+        for (var item in items) {
+          try {
+            final quantity = (item['quantity'] as num? ?? 0).toInt();
+            final price = double.parse((item['price'] ?? '0').toString());
+            
+            periodRevenue[periodKey] = (periodRevenue[periodKey] ?? 0) + (price * quantity);
+            periodProducts[periodKey] = (periodProducts[periodKey] ?? 0) + quantity;
+          } catch (e) {
+            print('Error processing period item: $e');
+            continue;
+          }
+        }
+      }
+
+      // Fetch users count
+      final usersSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .get();
+
+      print('Debug Statistics:');
+      print('Total Products Sold: $totalProductCount');
+      print('Total Revenue: $totalRevenueAmount');
+      print('Total Orders: ${allOrdersSnapshot.size}');
+      print('Period Products: $periodProducts');
+
+      setState(() {
+        totalRevenue = totalRevenueAmount;
+        totalProducts = totalProductCount; // This should now show the correct total
+        totalOrders = allOrdersSnapshot.size;
+        totalUsers = usersSnapshot.size;
+        revenueData = Map<String, double>.from(periodRevenue);
+        productData = Map<String, int>.from(periodProducts);
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching statistics: $e');
+      setState(() => isLoading = false);
     }
+  }
 
-    final maxValue = [
-      monthlyStock.values.fold(0.0, (a, b) => max(a, b)),
-      monthlySales.values.fold(0.0, (a, b) => max(a, b)),
-    ].reduce(max);
+  DateTime getStartDate(DateTime now) {
+    switch (selectedTimeFrame) {
+      case 'Weekly':
+        return now.subtract(const Duration(days: 7));
+      case 'Monthly':
+        return now.subtract(const Duration(days: 30));
+      case 'Yearly':
+        return now.subtract(const Duration(days: 365));
+      default:
+        return now.subtract(const Duration(days: 30));
+    }
+  }
 
-    return AspectRatio(
-      aspectRatio: 1.7,
+  String getPeriodKey(DateTime date) {
+    switch (selectedTimeFrame) {
+      case 'Weekly':
+        return DateFormat('MM/dd').format(date);
+      case 'Monthly':
+        return DateFormat('MM/dd').format(date);
+      case 'Yearly':
+        return DateFormat('MMM').format(date);
+      default:
+        return DateFormat('MM/dd').format(date);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Admin Statistics'),
+        backgroundColor: Colors.red[700],
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: fetchStatistics,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTimeFrameSelector(),
+                    const SizedBox(height: 20),
+                    _buildStatisticsCards(),
+                    const SizedBox(height: 20),
+                    _buildChart(),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildTimeFrameSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: timeFrames.map((frame) {
+        final isSelected = frame == selectedTimeFrame;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: ChoiceChip(
+            label: Text(frame),
+            selected: isSelected,
+            onSelected: (selected) {
+              if (selected) {
+                setState(() => selectedTimeFrame = frame);
+                fetchStatistics();
+              }
+            },
+            selectedColor: Colors.red[700],
+            labelStyle: TextStyle(
+              color: isSelected ? Colors.white : Colors.black,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildStatisticsCards() {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      children: [
+        _buildStatCard(
+          'Total Revenue',
+          '₺${totalRevenue.toStringAsFixed(2)}',
+          Icons.monetization_on,
+          Colors.green,
+        ),
+        _buildStatCard(
+          'Products Sold',
+          totalProducts.toString(),
+          Icons.inventory,
+          Colors.blue,
+        ),
+        _buildStatCard(
+          'Total Users',
+          totalUsers.toString(),
+          Icons.people,
+          Colors.orange,
+        ),
+        _buildStatCard(
+          'Total Orders',
+          totalOrders.toString(),
+          Icons.shopping_cart,
+          Colors.purple,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 32),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChart() {
+    return Container(
+      height: 300,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 2,
+            blurRadius: 5,
+          ),
+        ],
+      ),
       child: BarChart(
         BarChartData(
           alignment: BarChartAlignment.spaceAround,
-          maxY: maxValue * 1.2,
+          maxY: revenueData.values.isEmpty ? 100 : 
+                revenueData.values.reduce((a, b) => a > b ? a : b) * 1.2,
           barTouchData: BarTouchData(
             touchTooltipData: BarTouchTooltipData(
+              //tooltipBackground: Colors.blueGrey,
               getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                final month = months[group.x.toInt()];
-                final value = rod.toY;
-                final label = rodIndex == 0 ? 'Items Sold' : 'Sales';
                 return BarTooltipItem(
-                  '$label\n${rodIndex == 0 ? value.toInt() : '₺${value.toStringAsFixed(2)}'}',
+                  '₺${rod.toY.toStringAsFixed(2)}\n'
+                  '${productData.values.elementAt(groupIndex)} products',
                   const TextStyle(color: Colors.white),
                 );
               },
@@ -249,318 +316,38 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
               sideTitles: SideTitles(
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
-                  if (value < 0 || value >= months.length) return const Text('');
-                  final month = months[value.toInt()];
-                  // Convert numeric month to abbreviated name
-                  final monthName = _getMonthName(int.parse(month.split('-')[1]));
+                  if (value < 0 || value >= revenueData.length) {
+                    return const SizedBox();
+                  }
                   return Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
+                    padding: const EdgeInsets.only(top: 8),
                     child: Text(
-                      monthName,
+                      revenueData.keys.elementAt(value.toInt()),
                       style: const TextStyle(fontSize: 12),
                     ),
                   );
                 },
               ),
             ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 40,
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    '₺${value.toInt()}',
-                    style: const TextStyle(fontSize: 12),
-                  );
-                },
-              ),
-            ),
-            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval: maxValue / 5,
           ),
           borderData: FlBorderData(show: false),
-          barGroups: List.generate(
-            months.length,
-            (index) => BarChartGroupData(
-              x: index,
+          barGroups: revenueData.entries.map((entry) {
+            return BarChartGroupData(
+              x: revenueData.keys.toList().indexOf(entry.key),
               barRods: [
                 BarChartRodData(
-                  toY: monthlyStock[months[index]] ?? 0,
-                  color: Colors.red.withOpacity(0.7),
-                  width: 12,
-                ),
-                BarChartRodData(
-                  toY: monthlySales[months[index]] ?? 0,
-                  color: Colors.green.withOpacity(0.7),
-                  width: 12,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Helper method to convert month number to abbreviated name
-  String _getMonthName(int month) {
-    const monthNames = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    
-    if (month >= 1 && month <= 12) {
-      return monthNames[month - 1];
-    }
-    return '';
-  }
-
-  Widget _buildOverviewCards() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      childAspectRatio: 1.8, // Increased from 1.5 to give more height
-      children: [
-        _buildStatsCard(
-          'Total Sales',
-          '₺${_calculateTotalSales().toStringAsFixed(2)}',
-          Icons.attach_money_rounded,
-          LinearGradient(
-            colors: [Colors.green.shade400, Colors.green.shade700],
-          ),
-        ),
-        _buildStatsCard(
-          'Products Sold',
-          totalProductsSold.toString(),
-          Icons.inventory_2_rounded,
-          LinearGradient(
-            colors: [Colors.blue.shade400, Colors.blue.shade700],
-          ),
-        ),
-        _buildStatsCard(
-          'Total Users',
-          totalUsers.toString(),
-          Icons.people_rounded,
-          LinearGradient(
-            colors: [Colors.orange.shade400, Colors.orange.shade700],
-          ),
-        ),
-        _buildStatsCard(
-          'Total Orders',
-          totalOrders.toString(),
-          Icons.shopping_bag_rounded,
-          LinearGradient(
-            colors: [Colors.purple.shade400, Colors.purple.shade700],
-          ),
-        ),
-      ],
-    );
-  }
-
-  double _calculateTotalSales() {
-    return monthlySales.values.fold(0.0, (sum, value) => sum + value);
-  }
-
-  Widget _buildStatsCard(String title, String value, IconData icon, LinearGradient gradient) {
-  return Container(
-    decoration: BoxDecoration(
-      gradient: gradient,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: gradient.colors.last.withOpacity(0.3),
-          blurRadius: 8,
-          offset: Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Stack(
-      children: [
-        Positioned(
-          right: -20,
-          bottom: -20,
-          child: Icon(
-            icon,
-            size: 80, // Reduced from 100
-            color: Colors.white.withOpacity(0.2),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(12.0), // Reduced from 16
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: Container(
-                  padding: EdgeInsets.all(6), // Reduced from 8
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 20), // Reduced from 24
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13, // Reduced from 14
-                    ),
-                  ),
-                  SizedBox(height: 2), // Reduced from 4
-                  FittedBox( // Added FittedBox to prevent text overflow
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      value,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20, // Reduced from 24
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              // The comma was here without any widget following it
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-  Widget _buildSalesChart() {
-  return Container(
-    margin: EdgeInsets.only(top: 24),
-    decoration: BoxDecoration(
-      color: Theme.of(context).cardColor,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.1),
-          blurRadius: 10,
-          offset: Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Padding(
-      padding: EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Text(
-                  'Sales Overview',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: timeFrames.map((frame) {
-                      final isSelected = selectedTimeFrame == frame;
-                      return InkWell(
-                        onTap: () {
-                          setState(() {
-                            selectedTimeFrame = frame;
-                            fetchData();
-                          });
-                        },
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected 
-                                ? Colors.red.shade700
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            frame,
-                            style: TextStyle(
-                              color: isSelected 
-                                  ? Colors.white 
-                                  : Theme.of(context).textTheme.bodyLarge?.color,
-                              fontSize: 14,
-                              fontWeight: isSelected 
-                                  ? FontWeight.bold 
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                  toY: entry.value,
+                  color: Colors.red[700],
+                  width: 20,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(4),
                   ),
                 ),
               ],
-            ),
-          ),
-          SizedBox(height: 20),
-          SizedBox(
-            height: 300,
-            child: _buildBarChart(),
-          ),
-        ],
+            );
+          }).toList(),
+        ),
       ),
-    ),
-  );
-}
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text('Admin Dashboard'),
-        backgroundColor: isDark ? Colors.black : Colors.red.shade700,
-        elevation: isDark ? 0 : 2,
-        foregroundColor: Colors.white,
-      ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator(color: Colors.red))
-          : RefreshIndicator(
-              onRefresh: fetchData,
-              child: SingleChildScrollView(
-                physics: AlwaysScrollableScrollPhysics(),
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildOverviewCards(),
-                      SizedBox(height: 24),
-                      _buildSalesChart(),
-                    ],
-                  ),
-                ),
-              ),
-            ),
     );
   }
 }
