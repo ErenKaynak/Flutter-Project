@@ -393,6 +393,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return;
     }
 
+    if (_selectedPaymentMethod == 'Credit Card' && _selectedCard == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a credit card')),
+      );
+      return;
+    }
+
     setState(() => _isProcessing = true);
 
     try {
@@ -401,7 +408,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       if (_selectedPaymentMethod == 'Wallet') {
         paymentSuccess = await _processWalletPayment(total);
       } else if (_selectedPaymentMethod == 'Credit Card') {
-        // Your existing credit card payment logic
+        paymentSuccess = await _processCreditCardPayment(total);
       }
 
       if (paymentSuccess) {
@@ -468,18 +475,27 @@ class _CheckoutPageState extends State<CheckoutPage> {
           try {
             final discountRef = FirebaseFirestore.instance
                 .collection('discountCodes')
-                .doc(widget.appliedDiscount!.code.toLowerCase()); // Convert to lowercase
+                .doc(widget.appliedDiscount!.id); // Use the discount code's ID instead of code
             
-            // Create the discount code document if it doesn't exist
-            batch.set(discountRef, {
-              'code': widget.appliedDiscount!.code,
-              'discountPercentage': widget.appliedDiscount!.discountPercentage,
+            // Update the usage count
+            batch.update(discountRef, {
               'usageCount': FieldValue.increment(1),
-              'usageLimit': widget.appliedDiscount!.usageLimit,
-              'expiryDate': widget.appliedDiscount!.expiryDate,
-              'isActive': true,
-              'createdAt': FieldValue.serverTimestamp(),
-            }, SetOptions(merge: true)); // Use merge to update existing document
+            });
+
+            // Add usage record to track who used the code
+            final usageRef = FirebaseFirestore.instance
+                .collection('discountCodes')
+                .doc(widget.appliedDiscount!.id)
+                .collection('usage')
+                .doc();
+                
+            batch.set(usageRef, {
+              'userId': user.uid,
+              'orderId': orderRef.id,
+              'usedAt': FieldValue.serverTimestamp(),
+              'discountAmount': widget.appliedDiscount!.calculateDiscount(widget.subtotal),
+            });
+
           } catch (e) {
             print('Error updating discount code usage: $e');
           }
@@ -512,6 +528,38 @@ class _CheckoutPageState extends State<CheckoutPage> {
       );
     } finally {
       setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<bool> _processCreditCardPayment(double amount) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || _selectedCard == null) return false;
+
+    try {
+      // Simulate payment processing
+      await Future.delayed(Duration(seconds: 2));
+
+      // Create transaction record
+      await FirebaseFirestore.instance.collection('transactions').add({
+        'userId': user.uid,
+        'amount': amount,
+        'paymentMethod': 'Credit Card',
+        'cardLastFour': _selectedCard!.cardNumber.substring(_selectedCard!.cardNumber.length - 4),
+        'cardId': _selectedCard!.id,
+        'status': 'completed',
+        'timestamp': FieldValue.serverTimestamp(),
+        'type': 'purchase',
+      });
+
+      return true;
+    } catch (e) {
+      print('Error processing credit card payment: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error processing credit card payment: $e')),
+        );
+      }
+      return false;
     }
   }
 

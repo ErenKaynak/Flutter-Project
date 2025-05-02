@@ -35,6 +35,20 @@ class DiscountCode {
     );
   }
 
+  factory DiscountCode.fromMap(Map<String, dynamic> map, String id) {
+    return DiscountCode(
+      id: id,
+      code: map['code'] ?? '',
+      discountPercentage: (map['discountPercentage'] ?? 0).toDouble(),
+      expiryDate: map['expiryDate'] != null ? (map['expiryDate'] as Timestamp).toDate() : null,
+      applicableCategories: map['applicableCategories'] != null 
+          ? List<String>.from(map['applicableCategories']) 
+          : null,
+      usageLimit: map['usageLimit'] ?? 0,
+      usageCount: map['usageCount'] ?? 0,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'code': code,

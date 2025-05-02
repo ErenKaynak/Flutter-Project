@@ -14,6 +14,8 @@ class CategoryManagementPage extends StatefulWidget {
 class _CategoryManagementPageState extends State<CategoryManagementPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _imageUrlController = TextEditingController();
+  bool _useImageUrl = false;
   File? _imageFile;
   XFile? _webImageFile;
   bool _isLoading = false;
@@ -86,9 +88,16 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   }
 
   Future<void> _addCategory() async {
-    if (!_formKey.currentState!.validate() || (_imageFile == null && _webImageFile == null)) {
+    if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill all fields and select an icon')),
+        SnackBar(content: Text('Please fill all required fields')),
+      );
+      return;
+    }
+
+    if (!_useImageUrl && _imageFile == null && _webImageFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please select an image or provide an image URL')),
       );
       return;
     }
@@ -96,21 +105,26 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     setState(() => _isLoading = true);
 
     try {
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('category_icons/${DateTime.now().millisecondsSinceEpoch}.png');
-      
       String iconUrl;
-      if (kIsWeb && _webImageFile != null) {
-        // Handle web upload
-        final bytes = await _webImageFile!.readAsBytes();
-        await storageRef.putData(bytes);
-      } else if (_imageFile != null) {
-        // Handle mobile upload
-        await storageRef.putFile(_imageFile!);
-      }
       
-      iconUrl = await storageRef.getDownloadURL();
+      if (_useImageUrl) {
+        // Use the provided URL directly
+        iconUrl = _imageUrlController.text;
+      } else {
+        // Handle file upload as before
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('category_icons/${DateTime.now().millisecondsSinceEpoch}.png');
+        
+        if (kIsWeb && _webImageFile != null) {
+          final bytes = await _webImageFile!.readAsBytes();
+          await storageRef.putData(bytes);
+        } else if (_imageFile != null) {
+          await storageRef.putFile(_imageFile!);
+        }
+        
+        iconUrl = await storageRef.getDownloadURL();
+      }
 
       // Get the next order number
       final nextOrder = categories.isEmpty 
@@ -127,12 +141,13 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
 
       // Reset form
       _nameController.clear();
+      _imageUrlController.clear();
       setState(() {
         _imageFile = null;
         _webImageFile = null;
+        _useImageUrl = false;
       });
 
-      // Reload categories
       await _loadCategories();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -202,7 +217,9 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   if (!mounted) return;
 
   final TextEditingController nameController = TextEditingController(text: category['name']);
-  XFile? pickedFile; // Use XFile instead of File
+  final TextEditingController iconUrlController = TextEditingController();
+  XFile? pickedFile;
+  bool useImageUrl = false;
 
   await showDialog(
     context: context,
@@ -218,34 +235,55 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                 decoration: InputDecoration(labelText: 'Category Name'),
               ),
               SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        try {
-                          final ImagePicker picker = ImagePicker();
-                          final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-                          if (image != null) {
-                            setState(() {
-                              pickedFile = image;
-                            });
-                          }
-                        } catch (e) {
-                          print('Error picking image: $e');
-                          if (mounted) {
+              SwitchListTile(
+                title: Text('Use Image URL'),
+                value: useImageUrl,
+                onChanged: (value) {
+                  setState(() {
+                    useImageUrl = value;
+                    if (value) {
+                      pickedFile = null;
+                    } else {
+                      iconUrlController.clear();
+                    }
+                  });
+                },
+              ),
+              if (useImageUrl)
+                TextField(
+                  controller: iconUrlController,
+                  decoration: InputDecoration(
+                    labelText: 'Image URL',
+                    border: OutlineInputBorder(),
+                  ),
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          try {
+                            final ImagePicker picker = ImagePicker();
+                            final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+                            if (image != null) {
+                              setState(() {
+                                pickedFile = image;
+                              });
+                            }
+                          } catch (e) {
+                            print('Error picking image: $e');
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('Error selecting image')),
                             );
                           }
-                        }
-                      },
-                      icon: Icon(Icons.image),
-                      label: Text('Change Icon'),
+                        },
+                        icon: Icon(Icons.image),
+                        label: Text('Change Icon'),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
               if (pickedFile != null)
                 Padding(
                   padding: EdgeInsets.only(top: 8),
@@ -269,6 +307,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                 category['id'],
                 nameController.text,
                 pickedFile,
+                useImageUrl ? iconUrlController.text : null,
               );
             },
             child: Text('Save'),
@@ -279,7 +318,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   );
 }
 
-Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFile) async {
+Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFile, String? imageUrl) async {
   if (!mounted) return;
 
   try {
@@ -287,7 +326,10 @@ Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFil
       'name': newName,
     };
 
-    if (pickedFile != null) {
+    if (imageUrl != null) {
+      // Use provided URL directly
+      updates['iconPath'] = imageUrl;
+    } else if (pickedFile != null) {
       try {
         final storageRef = FirebaseStorage.instance
             .ref()
@@ -379,24 +421,68 @@ Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFil
                             SizedBox(height: 16),
                             Row(
                               children: [
-                                ElevatedButton.icon(
-                                  onPressed: _pickImage,
-                                  icon: Icon(Icons.image),
-                                  label: Text('Select Icon'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red.shade700,
+                                Expanded(
+                                  child: SwitchListTile(
+                                    title: Text('Use Image URL'),
+                                    value: _useImageUrl,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _useImageUrl = value;
+                                        if (value) {
+                                          _imageFile = null;
+                                          _webImageFile = null;
+                                        } else {
+                                          _imageUrlController.clear();
+                                        }
+                                      });
+                                    },
                                   ),
                                 ),
-                                SizedBox(width: 16),
-                                if (_imageFile != null || _webImageFile != null)
-                                  Expanded(
-                                    child: Text(
-                                      'Icon selected',
-                                      style: TextStyle(color: Colors.green),
-                                    ),
-                                  ),
                               ],
                             ),
+                            if (_useImageUrl)
+                              Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: TextFormField(
+                                  controller: _imageUrlController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Image URL',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  validator: (value) {
+                                    if (_useImageUrl) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter an image URL';
+                                      }
+                                      if (!Uri.tryParse(value)!.isAbsolute) {
+                                        return 'Please enter a valid URL';
+                                      }
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              )
+                            else
+                              Row(
+                                children: [
+                                  ElevatedButton.icon(
+                                    onPressed: _pickImage,
+                                    icon: Icon(Icons.image),
+                                    label: Text('Select Icon'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red.shade700,
+                                    ),
+                                  ),
+                                  SizedBox(width: 16),
+                                  if (_imageFile != null || _webImageFile != null)
+                                    Expanded(
+                                      child: Text(
+                                        'Icon selected',
+                                        style: TextStyle(color: Colors.green),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             SizedBox(height: 16),
                             ElevatedButton(
                               onPressed: _addCategory,

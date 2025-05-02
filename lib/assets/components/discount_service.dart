@@ -75,40 +75,13 @@ class DiscountService {
   
   Future<List<DiscountCode>> getAllDiscountCodes() async {
     try {
-      final querySnapshot = await FirebaseFirestore.instance
+      final snapshot = await FirebaseFirestore.instance
           .collection('discountCodes')
-          .orderBy('code')  // Add ordering to ensure consistent results
           .get();
 
-      final List<DiscountCode> uniqueCodes = [];
-      final Set<String> processedCodes = {}; // Track processed codes
-      
-      for (var doc in querySnapshot.docs) {
-        final code = DiscountCode.fromFirestore(doc);
-        
-        // Only add if we haven't processed this code yet
-        if (!processedCodes.contains(code.code)) {
-          uniqueCodes.add(code);
-          processedCodes.add(code.code);
-        }
-      }
-
-      // Sort the codes by status: Active first, then Limit Reached, then Expired
-      uniqueCodes.sort((a, b) {
-        // Helper function to get status priority
-        int getStatusPriority(DiscountCode code) {
-          if (code.expiryDate != null && code.expiryDate!.isBefore(DateTime.now())) {
-            return 3; // Expired
-          } else if (code.usageLimit > 0 && code.usageCount >= code.usageLimit) {
-            return 2; // Limit Reached
-          }
-          return 1; // Active
-        }
-
-        return getStatusPriority(a).compareTo(getStatusPriority(b));
-      });
-
-      return uniqueCodes;
+      return snapshot.docs.map((doc) => 
+        DiscountCode.fromMap(doc.data(), doc.id)  // Pass the document ID
+      ).toList();
     } catch (e) {
       print('Error getting discount codes: $e');
       return [];

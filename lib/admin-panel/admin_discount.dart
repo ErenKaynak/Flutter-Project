@@ -25,7 +25,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
   
   DateTime? _selectedExpiryDate;
   bool _hasExpiry = false;
-  final List<String> _allCategories = ["All", "GPU's", "Motherboards", "CPU's", "RAM's"];
+  List<String> _allCategories = ["All"];  // Initialize with just "All"
   List<String> _selectedCategories = [];
   bool _isCreatingCode = false;
 
@@ -57,18 +57,28 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
   }
 
   Future<void> _fetchCategories() async {
-    // This would fetch all product categories from Firestore
-    // For now, we're using a hardcoded list
     try {
       final categoriesSnapshot = await FirebaseFirestore.instance
           .collection('categories')
           .get();
       
+      // Create a Set to store unique category names
+      final Set<String> uniqueCategories = {"All"};  // Start with "All"
+      
+      // Add fetched categories to the Set
       if (categoriesSnapshot.docs.isNotEmpty) {
-        _allCategories.addAll(categoriesSnapshot.docs
-            .map((doc) => doc.data()['name'] as String)
-            .toList());
+        uniqueCategories.addAll(
+          categoriesSnapshot.docs
+              .map((doc) => doc.data()['name'] as String)
+              .where((name) => name != null && name.isNotEmpty)
+        );
       }
+      
+      // Update _allCategories with the unique categories
+      setState(() {
+        _allCategories = uniqueCategories.toList();
+      });
+      
     } catch (e) {
       print('Error fetching categories: $e');
     }

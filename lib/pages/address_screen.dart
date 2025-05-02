@@ -90,7 +90,7 @@ class _AddressScreenState extends State<AddressScreen> {
             'My Addresses',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          backgroundColor: bgColor,
+          backgroundColor: Colors.red.shade100,
           elevation: 0,
         ),
         backgroundColor: bgColor,
