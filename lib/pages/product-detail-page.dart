@@ -1214,145 +1214,226 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                   ),
                 ),
               ),
-              // Yorumlar bölümü
+              // Updated comments container
               Container(
                 margin: EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow:
-                      isDark
-                          ? []
-                          : [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              spreadRadius: 1,
-                            ),
-                          ],
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Comments",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).textTheme.titleLarge?.color,
+                  boxShadow: isDark 
+                    ? [] 
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          spreadRadius: 1,
                         ),
-                      ),
-                      SizedBox(height: 12),
-                      StreamBuilder<QuerySnapshot>(
-                        stream:
-                            FirebaseFirestore.instance
-                                .collection('comments')
-                                .doc(widget.productId)
-                                .collection('userComments')
-                                .orderBy('timestamp', descending: true)
-                                .snapshots(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return Center(child: CircularProgressIndicator());
-                          }
-                          if (snapshot.hasError) {
-                            return Text(
-                              'Error loading comments',
-                              style: TextStyle(color: Colors.red),
-                            );
-                          }
-                          final comments = snapshot.data?.docs ?? [];
-                          if (comments.isEmpty) {
-                            return Center(
-                              child: Text(
-                                'No comments yet',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color:
-                                      Theme.of(
-                                        context,
-                                      ).textTheme.bodyLarge?.color,
+                      ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Customer Reviews",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).textTheme.titleLarge?.color,
+                            ),
+                          ),
+                          if (averageRating != null)
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.amber.shade900.withOpacity(0.2) : Colors.amber.shade50,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isDark ? Colors.amber.shade700 : Colors.amber.shade200,
                                 ),
                               ),
-                            );
-                          }
-                          return ListView.separated(
-                            shrinkWrap: true,
-                            physics: NeverScrollableScrollPhysics(),
-                            itemCount: comments.length,
-                            separatorBuilder:
-                                (context, index) => Divider(height: 16),
-                            itemBuilder: (context, index) {
-                              final comment =
-                                  comments[index].data()
-                                      as Map<String, dynamic>;
-                              final userName = comment['userName'] ?? 'User';
-                              final commentText = comment['comment'] ?? '';
-                              final timestamp =
-                                  comment['timestamp'] as Timestamp?;
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Row(
                                 children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        userName,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color:
-                                              Theme.of(
-                                                context,
-                                              ).textTheme.titleLarge?.color,
-                                        ),
-                                      ),
-                                      Text(
-                                        _formatTimestamp(timestamp),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                      ),
-                                    ],
+                                  Icon(Icons.star, size: 16, color: Colors.amber),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    averageRating!.toStringAsFixed(1),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.amber.shade400 : Colors.amber.shade900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('comments')
+                          .doc(widget.productId)
+                          .collection('userComments')
+                          .orderBy('timestamp', descending: true)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20),
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        }
+                        
+                        if (snapshot.hasError) {
+                          return Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Center(
+                              child: Text('Could not load reviews'),
+                            ),
+                          );
+                        }
+
+                        final comments = snapshot.data?.docs ?? [];
+                        
+                        if (comments.isEmpty) {
+                          return Padding(
+                            padding: EdgeInsets.all(30),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.rate_review_outlined,
+                                    size: 48,
+                                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade400,
+                                  ),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'No reviews yet',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                                    ),
                                   ),
                                   SizedBox(height: 8),
                                   Text(
-                                    commentText,
+                                    'Be the first to review this product',
                                     style: TextStyle(
-                                      fontSize: 15,
-                                      height: 1.5,
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).textTheme.bodyLarge?.color,
+                                      fontSize: 14,
+                                      color: isDark ? Colors.grey.shade600 : Colors.grey.shade500,
                                     ),
                                   ),
-                                  SizedBox(height: 6),
-                                  if ((comment['rating'] ?? 0) > 0)
-                                    Row(
-                                      children: List.generate(5, (index) {
-                                        return Icon(
-                                          index < (comment['rating'] ?? 0)
-                                              ? Icons.star
-                                              : Icons.star_border,
-                                          color: Colors.amber,
-                                          size: 18,
-                                        );
-                                      }),
-                                    ),
                                 ],
-                              );
-                            },
+                              ),
+                            ),
                           );
-                        },
-                      ),
-                    ],
-                  ),
+                        }
+
+                        return ListView.separated(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          padding: EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: comments.length,
+                          separatorBuilder: (context, index) => Divider(
+                            height: 40,
+                            thickness: 1,
+                            color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                          ),
+                          itemBuilder: (context, index) {
+                            final comment = comments[index].data() as Map<String, dynamic>;
+                            final userId = comment['userId'] as String?;
+                            
+                            return FutureBuilder<DocumentSnapshot>(
+                              future: FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(userId)
+                                  .get(),
+                              builder: (context, userSnapshot) {
+                                final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
+                                final profileImageUrl = userData?['profileImageUrl'] as String?;
+                                final userName = userData?['name'] ?? comment['userName'] ?? 'Anonymous';
+                                final rating = comment['rating'] ?? 0;
+                                
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 20,
+                                          backgroundImage: profileImageUrl != null 
+                                              ? NetworkImage(profileImageUrl)
+                                              : null,
+                                          backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                                          child: profileImageUrl == null
+                                              ? Icon(Icons.person,
+                                                  color: isDark ? Colors.grey.shade600 : Colors.grey.shade400)
+                                              : null,
+                                        ),
+                                        SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                userName,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                              SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  ...List.generate(5, (index) => Padding(
+                                                    padding: EdgeInsets.only(right: 2),
+                                                    child: Icon(
+                                                      index < rating ? Icons.star : Icons.star_border,
+                                                      size: 14,
+                                                      color: Colors.amber,
+                                                    ),
+                                                  )),
+                                                  SizedBox(width: 8),
+                                                  Text(
+                                                    _formatTimestamp(comment['timestamp'] as Timestamp?),
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (comment['comment']?.isNotEmpty ?? false) ...[
+                                      SizedBox(height: 12),
+                                      Text(
+                                        comment['comment'] ?? '',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          height: 1.5,
+                                          color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    SizedBox(height: 20),
+                  ],
                 ),
               ),
               SizedBox(height: 30),

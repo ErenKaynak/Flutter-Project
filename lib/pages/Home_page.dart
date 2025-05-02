@@ -1258,10 +1258,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            SizedBox(height: 2),
+                            SizedBox(height: 6),
                             Flexible(
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
                                   ...List.generate(5, (index) {
                                     double rating =
@@ -1292,7 +1292,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           ],
                         ),
                       ),
-                      SizedBox(height: 6), // Reduced from 8
                       SizedBox(
                         width: double.infinity,
                         height: 36, // Reduced from 40
@@ -1331,18 +1330,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                         (_colorAnimationControllers[product['id']]
                                                 ?.value ??
                                             0.0),
-                                    child: Text(
-                                      isOutOfStock
-                                          ? "OUT OF STOCK"
-                                          : "ADD TO CART",
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                      ), // Reduced from 12/14
-                                      maxLines: 1,
-                                      overflow:
-                                          TextOverflow
-                                              .ellipsis, // Changed from visible
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.shopping_cart_outlined,
+                                          size: 16,
+                                        ),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          isOutOfStock
+                                              ? "OUT OF STOCK"
+                                              : "ADD TO CART",
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ), // Reduced from 12/14
+                                          maxLines: 1,
+                                          overflow:
+                                              TextOverflow.ellipsis, // Changed from visible
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   if ((_colorAnimationControllers[product['id']]

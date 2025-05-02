@@ -212,6 +212,176 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     });
   }
 
+  Future<bool> _hasUserReviewedProduct(String productId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+
+    final comments = await FirebaseFirestore.instance
+        .collection('comments')
+        .doc(productId)
+        .collection('userComments')
+        .where('userId', isEqualTo: user.uid)
+        .get();
+
+    return comments.docs.isNotEmpty;
+  }
+
+  Future<void> _showRatingDialog(String productId, String productName) async {
+    // Check if user has already reviewed
+    final hasReviewed = await _hasUserReviewedProduct(productId);
+    if (hasReviewed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('You have already reviewed this product'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    int selectedRating = 0;
+    String comment = '';
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+          title: Text('Rate $productName'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  return IconButton(
+                    icon: Icon(
+                      index < selectedRating ? Icons.star : Icons.star_border,
+                      color: Colors.amber,
+                      size: 32,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        selectedRating = index + 1;
+                      });
+                    },
+                    splashRadius: 24,
+                    tooltip: '${index + 1} stars',
+                  );
+                }),
+              ),
+              Text(
+                _getRatingText(selectedRating),
+                style: TextStyle(
+                  color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                  fontSize: 14,
+                ),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Write your review (optional)',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  filled: true,
+                  fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                ),
+                onChanged: (value) => comment = value,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: selectedRating == 0 ? null : () async {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user != null) {
+                  try {
+                    await FirebaseFirestore.instance
+                        .collection('comments')
+                        .doc(productId)
+                        .collection('userComments')
+                        .add({
+                      'userId': user.uid,
+                      'userName': user.displayName ?? 'User',
+                      'rating': selectedRating,
+                      'comment': comment,
+                      'timestamp': FieldValue.serverTimestamp(),
+                    });
+
+                    final commentsRef = FirebaseFirestore.instance
+                        .collection('comments')
+                        .doc(productId)
+                        .collection('userComments');
+                        
+                    final commentsSnapshot = await commentsRef.get();
+                    final ratings = commentsSnapshot.docs
+                        .map((doc) => doc.data()['rating'] as int)
+                        .where((r) => r > 0)
+                        .toList();
+
+                    if (ratings.isNotEmpty) {
+                      final avgRating = ratings.reduce((a, b) => a + b) / ratings.length;
+                      await FirebaseFirestore.instance
+                          .collection('products')
+                          .doc(productId)
+                          .update({
+                        'averageRating': double.parse(avgRating.toStringAsFixed(1)),
+                        'ratingCount': ratings.length,
+                      });
+                    }
+
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Thank you for your review!')),
+                    );
+                  } catch (e) {
+                    print('Error submitting review: $e');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to submit review')),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.grey,
+              ),
+              child: Text('Submit'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getRatingText(int rating) {
+    switch (rating) {
+      case 0:
+        return 'Select your rating';
+      case 1:
+        return 'Poor';
+      case 2:
+        return 'Fair';
+      case 3:
+        return 'Good';
+      case 4:
+        return 'Very Good';
+      case 5:
+        return 'Excellent';
+      default:
+        return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -598,7 +768,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
-                  ...order['items'].map<Widget>((item) => _buildOrderItem(item)).toList(),
+                  ...order['items'].map<Widget>((item) => _buildOrderItem(item, status: order['status'])).toList(),
                   const Divider(height: 32),
                   if (order['trackingNumber'] != null && order['trackingNumber'].isNotEmpty) ...[
                     const Text(
@@ -731,7 +901,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     );
   }
 
-  Widget _buildOrderItem(dynamic item) {
+  Widget _buildOrderItem(dynamic item, {required String status}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     final Map<String, dynamic> itemData = item is Map ? item as Map<String, dynamic> : {};
@@ -788,6 +958,31 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 ),
               ],
             ),
+          ),
+          FutureBuilder<bool>(
+            future: _hasUserReviewedProduct(item['id'] ?? ''),
+            builder: (context, snapshot) {
+              final bool hasReviewed = snapshot.data ?? false;
+              final bool canReview = status == 'Delivered' && !hasReviewed;
+
+              return IconButton(
+                icon: Icon(
+                  hasReviewed ? Icons.rate_review : Icons.star_border,
+                  color: canReview ? Colors.amber : Colors.grey,
+                ),
+                onPressed: canReview
+                    ? () => _showRatingDialog(
+                        item['id'] ?? '',
+                        item['name'] ?? 'Product',
+                      )
+                    : null,
+                tooltip: hasReviewed 
+                    ? 'Already reviewed'
+                    : status != 'Delivered'
+                        ? 'Can review after delivery'
+                        : 'Rate this product',
+              );
+            },
           ),
         ],
       ),

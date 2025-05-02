@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
@@ -65,36 +67,59 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
 
     try {
       final bytes = kIsWeb ? _webImage! : await _image!.readAsBytes();
-      final base64Image = base64Encode(bytes);
+      
+      if (bytes.length > 10 * 1024 * 1024) {
+        throw Exception('Image size exceeds 10MB limit');
+      }
 
-      final response = await http.post(
-        Uri.parse('https://api.imgur.com/3/image'),
-        headers: {
-          'Authorization': 'Client-ID $clientId',
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: {
-          'image': base64Image,
-          'type': 'base64',
+      final base64Image = base64Encode(bytes);
+      print('Attempting to upload image...');
+      print('Image size: ${bytes.length} bytes');
+
+      // Use form data instead of JSON
+      var request = http.MultipartRequest('POST', Uri.parse('https://api.imgur.com/3/image'));
+      
+      // Add headers
+      request.headers.addAll({
+        'Authorization': 'Client-ID $clientId',
+      });
+
+      // Add form fields
+      request.fields['image'] = base64Image;
+      request.fields['type'] = 'base64';
+
+      // Send the request
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('Upload request timed out');
         },
       );
 
+      // Get the response
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['success'] == true) {
+          setState(() {
+            _uploadedImageUrl = responseData['data']['link'];
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Image uploaded successfully!')),
+          );
+          return;
+        }
+        throw Exception(responseData['data']['error'] ?? 'Unknown error occurred');
+      }
+
+      // Handle specific error cases
       String errorMessage;
       switch (response.statusCode) {
-        case 200:
-          final responseData = json.decode(response.body);
-          if (responseData['success'] == true) {
-            setState(() {
-              _uploadedImageUrl = responseData['data']['link'];
-              _isLoading = false;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Image uploaded successfully!')),
-            );
-            return;
-          }
-          errorMessage = responseData['data']['error'] ?? 'Unknown error occurred';
-          break;
         case 429:
           errorMessage = 'Rate limit exceeded. Please wait a few minutes and try again.';
           break;
@@ -107,15 +132,29 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
         case 403:
           errorMessage = 'Forbidden. Please check your API access.';
           break;
+        case 413:
+          errorMessage = 'Image is too large. Please choose a smaller image.';
+          break;
         default:
           errorMessage = 'Upload failed with status code: ${response.statusCode}';
       }
       throw Exception(errorMessage);
+    } on SocketException catch (e) {
+      print('Network error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Network error. Please check your internet connection.')),
+      );
+    } on TimeoutException {
+      print('Request timed out');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Upload timed out. Please try again.')),
+      );
     } catch (e) {
+      print('Upload error: $e');
       setState(() {
         _isLoading = false;
       });
-      
+
       if (e.toString().contains('429') && _retryCount < _maxRetries) {
         _retryCount++;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -125,8 +164,8 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
           return _uploadImage();
         }
       }
-      
-      _retryCount = 0; // Reset retry count
+
+      _retryCount = 0;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceAll('Exception: ', '')),
@@ -139,7 +178,10 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
           ),
         ),
       );
-      print('Upload error: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
