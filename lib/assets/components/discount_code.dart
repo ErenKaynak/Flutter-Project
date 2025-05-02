@@ -8,6 +8,7 @@ class DiscountCode {
   final List<String>? applicableCategories; // null means applicable to all products
   final int usageLimit; // maximum number of times the code can be used
   final int usageCount; // number of times the code has been used
+  final bool isActive; // Add this field
 
   DiscountCode({
     required this.id,
@@ -17,6 +18,7 @@ class DiscountCode {
     this.applicableCategories,
     this.usageLimit = 0, // 0 means unlimited
     this.usageCount = 0,
+    this.isActive = true, // Default to true
   });
 
   factory DiscountCode.fromFirestore(DocumentSnapshot doc) {
@@ -32,6 +34,7 @@ class DiscountCode {
           : null,
       usageLimit: data['usageLimit'] ?? 0,
       usageCount: data['usageCount'] ?? 0,
+      isActive: data['isActive'] ?? true,
     );
   }
 
@@ -46,6 +49,7 @@ class DiscountCode {
           : null,
       usageLimit: map['usageLimit'] ?? 0,
       usageCount: map['usageCount'] ?? 0,
+      isActive: map['isActive'] ?? true,
     );
   }
 
@@ -57,10 +61,13 @@ class DiscountCode {
       'applicableCategories': applicableCategories,
       'usageLimit': usageLimit,
       'usageCount': usageCount,
+      'isActive': isActive,
     };
   }
 
   bool isValid() {
+    if (!isActive) return false;
+    
     final now = DateTime.now();
     
     // Check expiration
@@ -77,6 +84,10 @@ class DiscountCode {
   }
 
   String getStatus() {
+    if (!isActive) {
+      return 'Inactive';
+    }
+
     if (expiryDate != null && expiryDate!.isBefore(DateTime.now())) {
       return 'Expired';
     }

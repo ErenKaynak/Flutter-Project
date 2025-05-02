@@ -1,6 +1,7 @@
 import 'package:engineering_project/admin-panel/admin_categories.dart';
 import 'package:engineering_project/admin-panel/admin_discount.dart';
 import 'package:engineering_project/admin-panel/admin_order_management.dart';
+import 'package:engineering_project/admin-panel/admin_photoUploader.dart';
 import 'package:engineering_project/admin-panel/admin_products.dart';
 import 'package:engineering_project/admin-panel/admin_user.dart';
 import 'package:engineering_project/admin-panel/admin_statistics.dart';
@@ -292,13 +293,13 @@ class _AdminPageState extends State<AdminPage> {
                 showModalBottomSheet(
                   context: context,
                   builder: (context) => Container(
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ListTile(
-                          leading: Icon(Icons.category),
-                          title: Text('Category Management'),
+                          leading: const Icon(Icons.category),
+                          title: const Text('Category Management'),
                           onTap: () {
                             Navigator.pop(context);
                             Navigator.push(
@@ -309,7 +310,19 @@ class _AdminPageState extends State<AdminPage> {
                             );
                           },
                         ),
-                        // Add more settings options here
+                        ListTile(
+                          leading: const Icon(Icons.add_photo_alternate_outlined),
+                          title: const Text('Photo Uploader'),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PhotoUploaderPage(),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),

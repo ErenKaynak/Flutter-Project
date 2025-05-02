@@ -21,6 +21,8 @@ class DiscountService {
       // Check if code is expired
       if (discountCode.expiryDate != null && 
           discountCode.expiryDate!.isBefore(DateTime.now())) {
+        // Deactivate the expired code
+        await deactivateExpiredCode(discountCode.id);
         return null;
       }
       
@@ -106,6 +108,7 @@ class DiscountService {
       await docRef.set({
         ...discountCode.toMap(),
         'id': docRef.id,
+        'isActive': true, // Add active status
         'createdAt': FieldValue.serverTimestamp(),
       });
       
@@ -127,6 +130,17 @@ class DiscountService {
     } catch (e) {
       print('Error deleting discount code: $e');
       return false;
+    }
+  }
+
+  Future<void> deactivateExpiredCode(String codeId) async {
+    try {
+      await _firestore
+          .collection('discountCodes')
+          .doc(codeId)
+          .update({'isActive': false});
+    } catch (e) {
+      print('Error deactivating expired code: $e');
     }
   }
 }

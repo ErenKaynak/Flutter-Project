@@ -433,7 +433,7 @@ class _CartPageState extends State<CartPage> {
       });
     } finally {
       setState(() {
-        _isApplyingDiscount = false;
+        _isApplyingDiscount = false ;
       });
     }
   }
@@ -714,7 +714,7 @@ class _CartPageState extends State<CartPage> {
                             padding: const EdgeInsets.only(right: 20),
                             color: Colors.red,
                             child: const Icon(
-                              Icons.delete,
+                              Icons.delete_outline_outlined,
                               color: Colors.white,
                             ),
                           ),
@@ -785,17 +785,22 @@ class _CartPageState extends State<CartPage> {
                                         icon: CircleAvatar(
                                           radius: 14,
                                           backgroundColor: Colors.red.shade100,
-                                          child: const Icon(
-                                            Icons.remove,
+                                          child: Icon(
+                                            item.quantity == 1
+                                                ? Icons.delete_outline_outlined
+                                                : Icons.remove,
                                             size: 16,
                                             color: Colors.red,
                                           ),
                                         ),
-                                        onPressed:
-                                            () => _cartManager.updateQuantity(
-                                              item.id,
-                                              -1,
-                                            ),
+                                        onPressed: () {
+                                          if (item.quantity == 1) {
+                                            _cartManager.removeItem(item.id);
+                                          } else {
+                                            _cartManager.updateQuantity(
+                                                item.id, -1);
+                                          }
+                                        },
                                       ),
                                       Text(
                                         '${item.quantity}',
@@ -811,11 +816,8 @@ class _CartPageState extends State<CartPage> {
                                             color: Colors.red,
                                           ),
                                         ),
-                                        onPressed:
-                                            () => _cartManager.updateQuantity(
-                                              item.id,
-                                              1,
-                                            ),
+                                        onPressed: () => _cartManager
+                                            .updateQuantity(item.id, 1),
                                       ),
                                     ],
                                   ),
