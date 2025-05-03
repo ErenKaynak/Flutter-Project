@@ -1295,86 +1295,89 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           ],
                         ),
                       ),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 36, // Reduced from 40
-                        child: AnimatedBuilder(
-                          animation: Listenable.merge([
-                            _colorAnimationControllers[product['id']]!,
-                            _tickAnimationControllers[product['id']]!,
-                          ]),
-                          builder: (context, child) {
-                            return ElevatedButton(
-                              onPressed:
-                                  isOutOfStock ||
-                                          _isAddingToCartMap[product['id']] ==
-                                              true
-                                      ? null
-                                      : () => _addToCart(product),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    _colorAnimations[product['id']]?.value ??
-                                    Colors.red.shade400,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                elevation: 2,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                ), // Added padding
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Opacity(
-                                    opacity:
-                                        1.0 -
-                                        (_colorAnimationControllers[product['id']]
-                                                ?.value ??
-                                            0.0),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.shopping_cart_outlined,
-                                          size: 16,
-                                        ),
-                                        SizedBox(width: 4),
-                                        Text(
-                                          isOutOfStock
-                                              ? "OUT OF STOCK"
-                                              : "ADD TO CART",
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                          ), // Reduced from 12/14
-                                          maxLines: 1,
-                                          overflow:
-                                              TextOverflow.ellipsis, // Changed from visible
-                                        ),
-                                      ],
-                                    ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 36, // Reduced from 40
+                          child: AnimatedBuilder(
+                            animation: Listenable.merge([
+                              _colorAnimationControllers[product['id']]!,
+                              _tickAnimationControllers[product['id']]!,
+                            ]),
+                            builder: (context, child) {
+                              return ElevatedButton(
+                                onPressed:
+                                    isOutOfStock ||
+                                            _isAddingToCartMap[product['id']] ==
+                                                true
+                                        ? null
+                                        : () => _addToCart(product),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      _colorAnimations[product['id']]?.value ??
+                                      Colors.red.shade400,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                  if ((_colorAnimationControllers[product['id']]
-                                              ?.value ??
-                                          0.0) >
-                                      0)
-                                    Transform.scale(
-                                      scale:
-                                          _tickAnimations[product['id']]
-                                              ?.value ??
-                                          0.0,
-                                      child: Icon(
-                                        Icons.check,
-                                        color: Colors.white,
-                                        size: 24,
+                                  elevation: 2,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ), // Added padding
+                                ),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Opacity(
+                                      opacity:
+                                          1.0 -
+                                          (_colorAnimationControllers[product['id']]
+                                                  ?.value ??
+                                              0.0),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.shopping_cart_outlined,
+                                            size: 16,
+                                          ),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            isOutOfStock
+                                                ? "OUT OF STOCK"
+                                                : "ADD TO CART",
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ), // Reduced from 12/14
+                                            maxLines: 1,
+                                            overflow:
+                                                TextOverflow.ellipsis, // Changed from visible
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                ],
-                              ),
-                            );
-                          },
+                                    if ((_colorAnimationControllers[product['id']]
+                                                ?.value ??
+                                            0.0) >
+                                        0)
+                                      Transform.scale(
+                                        scale:
+                                            _tickAnimations[product['id']]
+                                                ?.value ??
+                                            0.0,
+                                        child: Icon(
+                                          Icons.check,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ],

@@ -13,11 +13,16 @@ import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(const MyApp());
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    runApp(const MyApp());
+  } catch (e, stackTrace) {
+    debugPrint('Error during initialization: $e');
+    debugPrint(stackTrace.toString());
+  }
 }
 
 class MyApp extends StatelessWidget {
