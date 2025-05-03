@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:engineering_project/assets/AI/ai_chat_screen.dart';
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/register_page.dart';
 import 'package:engineering_project/pages/wallet.dart';
@@ -984,6 +985,17 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
               ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AIChatScreen()),
+          );
+        },
+        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+        child: const Icon(Icons.assistant),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
 
