@@ -12,6 +12,8 @@ import 'package:provider/provider.dart';
 import 'package:engineering_project/providers/cart_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:math';
+import 'package:url_launcher/url_launcher.dart';
 
 class AIChatScreen extends StatefulWidget {
   const AIChatScreen({Key? key}) : super(key: key);
@@ -20,338 +22,430 @@ class AIChatScreen extends StatefulWidget {
   State<AIChatScreen> createState() => _AIChatScreenState();
 }
 
-class _AIChatScreenState extends State<AIChatScreen> {
+class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final List<ChatMessage> _messages = [];
   bool _isTyping = false;
   DateTime? _lastRequestTime;
+  String? _userProfileImage;
+
+  AnimationController? _typingAnimation;
+
+  final List<String> _conversationStarters = [
+    'I need assistance',
+    'Recommend me the cheapest PC build',
+    'Looking for a gaming PC build',
+    'Help me choose a CPU',
+  ];
 
   // OpenRouter Configuration
-  static const String _openRouterApiKey = APIConfig.openAIApiKey; // Replace with your key
+  static const String _openRouterApiKey = APIConfig.openAIApiKey2; // Replace with your key
   static const String _openRouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
 
   @override
   void initState() {
     super.initState();
+    _typingAnimation = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..repeat();
     _testFirebaseConnection();
+    _loadUserProfile();
+  }
+
+  @override
+  void dispose() {
+    _typingAnimation?.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUserProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final userData = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        
+        if (userData.exists) {
+          setState(() {
+            _userProfileImage = userData.data()?['profileImageUrl'];
+          });
+        }
+      } catch (e) {
+        print('Error loading user profile: $e');
+      }
+    }
+  }
+
+  Future<void> _launchWhatsApp() async {
+    final Uri whatsappUrl = Uri.parse('http://wa.me/+905469549755');
+    if (!await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch WhatsApp')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Chat'),
-        backgroundColor: Theme.of(context).primaryColor,
+        title: const Text('AI Assistant'),
+        backgroundColor: isDark ? Colors.black : Theme.of(context).primaryColor,
+        elevation: 0,
       ),
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              reverse: true,
-              itemBuilder: (context, index) {
-                final message = _messages[_messages.length - 1 - index];
-                return _buildMessage(message);
-              },
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? Colors.black : Colors.grey[50],
+              ),
+              child: _messages.isEmpty
+                  ? _buildConversationStarters() // Show starters when no messages
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _messages.length,
+                      reverse: true,
+                      itemBuilder: (context, index) {
+                        final message = _messages[_messages.length - 1 - index];
+                        return _buildMessage(message);
+                      },
+                    ),
             ),
           ),
-          if (_isTyping)
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(width: 8),
-                  Text("AI is thinking..."),
-                ],
+          if (_isTyping) _buildTypingIndicator(),
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey.shade900 : Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  offset: Offset(0, -2),
+                  blurRadius: 4,
+                  color: Colors.black.withOpacity(0.1),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        decoration: InputDecoration(
+                          hintText: 'Ask me anything...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: isDark ? Colors.grey.shade800 : Colors.grey[100],
+                          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        ),
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                        onSubmitted: _handleSubmitted,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.red.shade900 : Colors.red.shade400,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.send, color: Colors.white),
+                        onPressed: () => _handleSubmitted(_messageController.text),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          _buildInputArea(),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildConversationStarters() {
+    return Center(
+      child: Container(
+        constraints: BoxConstraints(maxWidth: 400),
+        padding: EdgeInsets.all(24),
+        margin: EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade800.withOpacity(0.7)
+              : Colors.white.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.smart_toy_outlined,
+              size: 48,
+              color: Theme.of(context).primaryColor,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'How can I help you today?',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black87,
+              ),
+            ),
+            SizedBox(height: 24),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12,
+              runSpacing: 12,
+              children: _conversationStarters.map((starter) {
+                return ElevatedButton(
+                  onPressed: () {
+                    if (starter == 'I need assistance') {
+                      _launchWhatsApp();
+                    } else {
+                      _messageController.text = starter;
+                      _handleSubmitted(starter);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: Text(
+                    starter,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade100,
+            child: Icon(Icons.smart_toy, 
+              color: isDark ? Colors.white70 : Colors.red.shade400
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                _buildDot(1),
+                _buildDot(2),
+                _buildDot(3),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDot(int index) {
+    return AnimatedBuilder(
+      animation: _typingAnimation!,
+      builder: (context, child) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        double opacity = sin((_typingAnimation!.value * pi * 2) - (index * pi / 2));
+        opacity = opacity.clamp(0.3, 1.0);
+        
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: (isDark ? Colors.white : Colors.red.shade400)
+              .withOpacity(opacity),
+            shape: BoxShape.circle,
+          ),
+        );
+      },
     );
   }
 
   Widget _buildMessage(ChatMessage message) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
         crossAxisAlignment: message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          // Message bubble
           Row(
             mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!message.isUser) const CircleAvatar(child: Icon(Icons.smart_toy)),
+              if (!message.isUser) 
+                CircleAvatar(
+                  backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade100,
+                  child: Icon(Icons.smart_toy, 
+                    color: isDark ? Colors.white70 : Colors.red.shade400
+                  ),
+                ),
               const SizedBox(width: 8),
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: message.isUser ? Colors.blue : Colors.grey[200],
-                    borderRadius: BorderRadius.circular(20),
+                    color: message.isUser 
+                      ? (isDark ? Colors.red.shade900 : Colors.red.shade400)
+                      : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(message.isUser ? 20 : 0),
+                      topRight: Radius.circular(message.isUser ? 0 : 20),
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
                   ),
                   child: Text(
                     message.text,
                     style: TextStyle(
-                      color: message.isUser ? Colors.white : Colors.black,
+                      color: message.isUser 
+                        ? Colors.white 
+                        : (isDark ? Colors.white70 : Colors.black87),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              if (message.isUser) const CircleAvatar(child: Icon(Icons.person)),
+              if (message.isUser)
+                CircleAvatar(
+                  backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade100,
+                  backgroundImage: _userProfileImage != null 
+                    ? NetworkImage(_userProfileImage!) 
+                    : null,
+                  child: _userProfileImage == null ? Icon(
+                    Icons.person,
+                    color: isDark ? Colors.white70 : Colors.red.shade400,
+                  ) : null,
+                ),
             ],
           ),
           
-          // Only show recommendations and prompt for AI messages
-          if (!message.isUser && message.recommendedProducts != null && message.recommendedProducts!.isNotEmpty)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Text(
-                    'Recommended Components:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+          // Product recommendations section
+          if (!message.isUser && message.recommendedProducts != null)
+            Container(
+              height: 200,
+              margin: EdgeInsets.only(top: 16),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: message.recommendedProducts!.length,
+                itemBuilder: (context, index) {
+                  final product = message.recommendedProducts![index];
+                  return Card(
+                    margin: EdgeInsets.only(right: 16),
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProductDetailPage(
+                              productId: product.id,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: 160,
+                        padding: EdgeInsets.all(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (product.imageUrl.isNotEmpty)
+                              Expanded(
+                                child: Hero(
+                                  tag: 'product-${product.id}',
+                                  child: Image.network(
+                                    product.imageUrl,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            SizedBox(height: 8),
+                            Text(
+                              product.name,
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '\$${product.price.toStringAsFixed(2)}',
+                              style: TextStyle(color: Colors.green),
+                            ),
+                            TextButton(
+                              onPressed: () => _addToCart(product),
+                              child: Text('Add to Cart'),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 320,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: message.recommendedProducts!.length,
-                    itemBuilder: (context, index) {
-                      final product = message.recommendedProducts![index];
-                      return GestureDetector(
-                        onTap: () {
-                          if (!product.id.startsWith('empty_')) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => ProductDetailPage(
-                                  productId: product.id,
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        child: Card(
-                          margin: const EdgeInsets.all(8),
-                          elevation: 4,
-                          child: Container(
-                            width: 220,
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (product.id.startsWith('empty_'))
-                                  // Show placeholder for empty category
-                                  Container(
-                                    height: 120,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[200],
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.inventory_2_outlined, size: 40, color: Colors.grey[400]),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Not Available',
-                                          style: TextStyle(color: Colors.grey[600]),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                else
-                                  // Show normal product image
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (context) => ProductDetailPage(
-                                              productId: product.id,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      child: Hero(
-                                        tag: 'product_${product.id}',
-                                        child: Image.network(
-                                          product.imageUrl,
-                                          height: 120,
-                                          width: double.infinity,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) =>
-                                              Container(
-                                                height: 120,
-                                                color: Colors.grey[200],
-                                                child: const Icon(Icons.error),
-                                              ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).primaryColor.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    product.category,
-                                    style: TextStyle(
-                                      color: Theme.of(context).primaryColor,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  product.name,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: product.id.startsWith('empty_') ? Colors.grey : Colors.black,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const Spacer(),
-                                if (!product.id.startsWith('empty_'))
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '\$${product.price.toStringAsFixed(2)}',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.green,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton.icon(
-                                          onPressed: () => _addToCart(product),
-                                          style: ElevatedButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(vertical: 8),
-                                          ),
-                                          icon: const Icon(Icons.add_shopping_cart, size: 18),
-                                          label: const Text('Add to Cart'),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Do you want me to add the recommended build to your cart?',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          ElevatedButton(
-                            onPressed: () => _addAllToCart(message.recommendedProducts!),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 12,
-                              ),
-                            ),
-                            child: const Text('Yes, add all'),
-                          ),
-                          const SizedBox(width: 12),
-                          TextButton(
-                            onPressed: () {}, // Do nothing on no
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 12,
-                              ),
-                            ),
-                            child: const Text('No, thanks'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInputArea() {
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        boxShadow: [
-          BoxShadow(
-            offset: const Offset(0, -2),
-            blurRadius: 4,
-            color: Colors.black.withOpacity(0.1),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: const InputDecoration(
-                hintText: 'Type your message...',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.all(16),
+                  );
+                },
               ),
-              onSubmitted: _handleSubmitted,
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.send),
-            onPressed: () => _handleSubmitted(_messageController.text),
-          ),
+            SizedBox(height: 8),
+          if (!message.isUser && message.recommendedProducts != null && message.recommendedProducts!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: ElevatedButton.icon(
+                onPressed: () => _showAddToCartDialog(message.recommendedProducts!),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                icon: Icon(Icons.shopping_cart),
+                label: Text('Add All Recommended Products to Cart'),
+              ),
+            ),
         ],
       ),
     );
@@ -701,6 +795,60 @@ class _AIChatScreenState extends State<AIChatScreen> {
     } catch (e) {
       print('Firebase connection test failed: $e');
     }
+  }
+
+  // Add this method to show the confirmation dialog
+  void _showAddToCartDialog(List<Product> products) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).brightness == Brightness.dark 
+              ? Colors.grey.shade900 
+              : Colors.white,
+          title: Text(
+            'Add to Cart',
+            style: TextStyle(
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.white 
+                  : Colors.black87,
+            ),
+          ),
+          content: Text(
+            'Do you want to add all recommended products to your cart?',
+            style: TextStyle(
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.white70 
+                  : Colors.black87,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'No',
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark 
+                      ? Colors.white70 
+                      : Colors.grey.shade700,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _addAllToCart(products);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Yes'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 

@@ -993,9 +993,9 @@ class _ProfilePageState extends State<ProfilePage> {
           );
         },
         backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
-        child: const Icon(Icons.assistant),
+        child: const Icon(Icons.smart_toy_outlined),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 

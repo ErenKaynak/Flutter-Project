@@ -33,6 +33,7 @@ class MyApp extends StatelessWidget {
       ],
       child: Consumer<ThemeNotifier>(
         builder: (context, themeNotifier, _) => MaterialApp(
+          debugShowCheckedModeBanner: false,
           title: 'Engineering Project',
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
