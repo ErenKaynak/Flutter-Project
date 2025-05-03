@@ -318,7 +318,7 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
           crossAxisCount: 2,
           crossAxisSpacing: 10,
           mainAxisSpacing: 15,
-          childAspectRatio: 0.65,
+          childAspectRatio: 0.75, // Increased from 0.65 to give more vertical space
         ),
         itemCount: favoriteProducts.length,
         itemBuilder: (context, index) {
@@ -368,189 +368,187 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
       child: Card(
         elevation: 3,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Container(
-          height: double.infinity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Flexible(
-                flex: 3,
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(12),
-                          ),
-                          child: (product["image"].startsWith('http') ||
-                                  product["image"].startsWith('https'))
-                              ? Image.network(
-                                  product["image"],
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Image.asset(
-                                      'lib/assets/Images/placeholder.png',
-                                      fit: BoxFit.cover,
-                                    );
-                                  },
-                                  loadingBuilder:
-                                      (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Center(
-                                      child: CircularProgressIndicator(
-                                        value: loadingProgress
-                                                    .expectedTotalBytes !=
-                                                null
-                                            ? loadingProgress
-                                                    .cumulativeBytesLoaded /
-                                                loadingProgress
-                                                    .expectedTotalBytes!
-                                            : null,
-                                      ),
-                                    );
-                                  },
-                                )
-                              : Image.asset(
-                                  product["image"],
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(
-                                      Icons.image_not_supported,
-                                      size: 40,
-                                      color: Colors.grey[400],
-                                    );
-                                  },
-                                ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.8),
-                            shape: BoxShape.circle,
-                          ),
-                          child: GestureDetector(
-                            onTap: () => removeFromFavorites(product['id']),
-                            child: Icon(
-                              Icons.favorite,
-                              color: Colors.red,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Flexible(
+              flex: 4, // Adjusted flex ratio
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(12),
                   ),
                 ),
-              ),
-              Flexible(
-                flex: 2,
-                child: Container(
-                  padding: EdgeInsets.all(10.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product["name"],
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(12),
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        "₺${product["price"]}",
-                        style: TextStyle(
-                          color: Colors.green.shade700,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                      SizedBox(height: 15),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 36, // Reduced from 40 to match homepage
-                        child: AnimatedBuilder(
-                          animation: Listenable.merge([
-                            _colorAnimationControllers[product['id']]!,
-                            _tickAnimationControllers[product['id']]!,
-                          ]),
-                          builder: (context, child) {
-                            return ElevatedButton(
-                              onPressed: isOutOfStock ? null : () => addToCart(product),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _colorAnimations[product['id']]?.value ?? Colors.red.shade400,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                elevation: 2,
-                                padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: (product["image"].startsWith('http') ||
+                                product["image"].startsWith('https'))
+                            ? Image.network(
+                                product["image"],
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Image.asset(
+                                    'lib/assets/Images/placeholder.png',
+                                    fit: BoxFit.cover,
+                                  );
+                                },
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      value: loadingProgress
+                                                  .expectedTotalBytes !=
+                                              null
+                                          ? loadingProgress
+                                                  .cumulativeBytesLoaded /
+                                              loadingProgress
+                                                  .expectedTotalBytes!
+                                          : null,
+                                    ),
+                                  );
+                                },
+                              )
+                            : Image.asset(
+                                product["image"],
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Icon(
+                                    Icons.image_not_supported,
+                                    size: 40,
+                                    color: Colors.grey[400],
+                                  );
+                                },
                               ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Opacity(
-                                    opacity: 1.0 - (_colorAnimationControllers[product['id']]?.value ?? 0.0),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.shopping_cart_outlined,
-                                          size: 16,
+                      ),
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.8),
+                          shape: BoxShape.circle,
+                        ),
+                        child: GestureDetector(
+                          onTap: () => removeFromFavorites(product['id']),
+                          child: Icon(
+                            Icons.favorite,
+                            color: Colors.red,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Flexible(
+              flex: 3, // Adjusted flex ratio
+              child: Container(
+                padding: EdgeInsets.all(8), // Reduced padding
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min, // Add this
+                  children: [
+                    Text(
+                      product["name"],
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13, // Slightly reduced font size
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 2), // Reduced spacing
+                    Text(
+                      "₺${product["price"]}",
+                      style: TextStyle(
+                        color: Colors.green.shade700,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Spacer(flex: 1), // Add flexible space
+                    SizedBox(
+                      width: double.infinity,
+                      height: 32, // Slightly reduced button height
+                      child: AnimatedBuilder(
+                        animation: Listenable.merge([
+                          _colorAnimationControllers[product['id']]!,
+                          _tickAnimationControllers[product['id']]!,
+                        ]),
+                        builder: (context, child) {
+                          return ElevatedButton(
+                            onPressed: isOutOfStock ? null : () => addToCart(product),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _colorAnimations[product['id']]?.value ?? Colors.red.shade400,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              elevation: 2,
+                              padding: EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Opacity(
+                                  opacity: 1.0 - (_colorAnimationControllers[product['id']]?.value ?? 0.0),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.shopping_cart_outlined,
+                                        size: 16,
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        isOutOfStock ? "OUT OF STOCK" : "ADD TO CART",
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                        SizedBox(width: 4),
-                                        Text(
-                                          isOutOfStock ? "OUT OF STOCK" : "ADD TO CART",
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if ((_colorAnimationControllers[product['id']]?.value ?? 0.0) > 0)
+                                  Transform.scale(
+                                    scale: _tickAnimations[product['id']]?.value ?? 0.0,
+                                    child: Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                      size: 24,
                                     ),
                                   ),
-                                  if ((_colorAnimationControllers[product['id']]?.value ?? 0.0) > 0)
-                                    Transform.scale(
-                                      scale: _tickAnimations[product['id']]?.value ?? 0.0,
-                                      child: Icon(
-                                        Icons.check,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -985,15 +985,45 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
               ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AIChatScreen()),
-          );
-        },
-        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
-        child: const Icon(Icons.smart_toy_outlined),
+      floatingActionButton: Container(
+        height: 70,
+        width: 70,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark 
+                ? [Colors.red.shade900, Colors.red.shade800]
+                : [Colors.red.shade500, Colors.red.shade400],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AIChatScreen()),
+            );
+          },
+          elevation: 0, // Remove default elevation
+          backgroundColor: Colors.transparent, // Make FAB background transparent
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Image.asset(
+              'lib/assets/Images/Mascot/mascot-head.png',
+              width: 120,
+              height: 120,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );

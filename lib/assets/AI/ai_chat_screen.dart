@@ -35,11 +35,10 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     'I need assistance',
     'Recommend me the cheapest PC build',
     'Looking for a gaming PC build',
-    'Help me choose a CPU',
   ];
 
   // OpenRouter Configuration
-  static const String _openRouterApiKey = APIConfig.openAIApiKey2; // Replace with your key
+  static const String _openRouterApiKey = APIConfig.openAIApiKey; // Replace with your key
   static const String _openRouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
 
   @override
@@ -160,7 +159,7 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
                     SizedBox(width: 8),
                     Container(
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.red.shade900 : Colors.red.shade400,
+                        color: isDark ? Colors.red.shade900 : Colors.red.shade700,
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
@@ -200,10 +199,10 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.smart_toy_outlined,
-              size: 48,
-              color: Theme.of(context).primaryColor,
+            Image.asset(
+              'lib/assets/Images/Mascot/mascot-wave.png',
+              width: 120,
+              height: 120,
             ),
             SizedBox(height: 16),
             Text(
@@ -261,8 +260,8 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
         children: [
           CircleAvatar(
             backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade100,
-            child: Icon(Icons.smart_toy, 
-              color: isDark ? Colors.white70 : Colors.red.shade400
+            child: Image.asset(
+              'lib/assets/Images/Mascot/mascot-default.png',
             ),
           ),
           const SizedBox(width: 12),
@@ -322,8 +321,10 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
               if (!message.isUser) 
                 CircleAvatar(
                   backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade100,
-                  child: Icon(Icons.smart_toy, 
-                    color: isDark ? Colors.white70 : Colors.red.shade400
+                  child: Image.asset(
+                    'lib/assets/Images/Mascot/mascot-crossedarms.png',
+                    width: 37,
+                    height: 37,
                   ),
                 ),
               const SizedBox(width: 8),
@@ -492,12 +493,17 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     try {
       final List<Product> recommendations = await _getProductRecommendations(message);
       
-      final systemPrompt = '''You are a computer hardware expert helping customers choose PC components.
-      For each recommended component, provide TWO specific sentences:
-      1. First sentence should explain the key features and specifications
-      2. Second sentence should explain why it's a good choice for the user's needs
-      
-      FORMAT YOUR RESPONSE LIKE THIS:
+      final systemPrompt = '''You are a specialized computer hardware AI assistant. You can ONLY help with:
+      1. Computer component recommendations
+      2. PC building advice
+      3. Hardware compatibility questions
+      4. Component specifications
+      5. PC part comparisons
+
+      If the user's question is NOT related to computer hardware, respond ONLY with:
+      "I apologize, but I can only assist with computer hardware related questions. Please ask me about PC components, building a PC, or hardware recommendations."
+
+      When providing recommendations, follow this format:
       Here's a recommended build based on your requirements:
 
       CPU: [Product Name]
@@ -529,7 +535,8 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
       - [Benefits sentence explaining why it fits user's needs]
 
       Summary: These components work well together because: [Brief compatibility explanation]
-      ''';
+
+      Remember: DO NOT answer any questions unrelated to computer hardware.''';
 
       final response = await http.post(
         Uri.parse(_openRouterUrl),
