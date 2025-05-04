@@ -19,6 +19,10 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Add this when you have the key
+  // NotificationService.configure('YOUR_FCM_KEY');
+  
   await NotificationService.init();
   runApp(const MyApp());
 }

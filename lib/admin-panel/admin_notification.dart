@@ -61,6 +61,45 @@ class _NotificationManagementPageState extends State<NotificationManagementPage>
 
   @override
   Widget build(BuildContext context) {
+    if (!NotificationService.isConfigured) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Send Notifications'),
+        ),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.notifications_off,
+                      size: 48,
+                      color: Colors.grey,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Notifications are not configured',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Please contact the administrator to enable notifications.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Send Notifications'),
