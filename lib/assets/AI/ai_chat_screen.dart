@@ -22,7 +22,8 @@ class AIChatScreen extends StatefulWidget {
   State<AIChatScreen> createState() => _AIChatScreenState();
 }
 
-class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderStateMixin {
+class _AIChatScreenState extends State<AIChatScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final List<ChatMessage> _messages = [];
   bool _isTyping = false;
@@ -50,7 +51,9 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     APIConfig.ApiKey2,
     APIConfig.ApiKey3,
     APIConfig.ApiKey4,
+    APIConfig.ApiKey5,
   ];
+
   int _currentApiKeyIndex = 0;
 
   // Add this method to get next API key
@@ -60,8 +63,10 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
   }
 
   // OpenRouter Configuration
-  static const String _openRouterApiKey = APIConfig.ApiKey4; // Replace with your key
-  static const String _openRouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
+  static const String _openRouterApiKey =
+      APIConfig.ApiKey4; // Replace with your key
+  static const String _openRouterUrl =
+      'https://openrouter.ai/api/v1/chat/completions';
 
   @override
   void initState() {
@@ -83,12 +88,13 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
         .doc('ai_settings')
         .snapshots()
         .listen((doc) {
-      if (mounted) {
-        setState(() {
-          _isAIEnabled = doc.exists ? (doc.data()?['isEnabled'] ?? true) : true;
+          if (mounted) {
+            setState(() {
+              _isAIEnabled =
+                  doc.exists ? (doc.data()?['isEnabled'] ?? true) : true;
+            });
+          }
         });
-      }
-    });
   }
 
   @override
@@ -102,11 +108,12 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
-        final userData = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-        
+        final userData =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+
         if (userData.exists) {
           setState(() {
             _userProfileImage = userData.data()?['profileImageUrl'];
@@ -120,11 +127,12 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
 
   Future<void> _checkAIAvailability() async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('settings')
-          .doc('ai_settings')
-          .get();
-      
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('settings')
+              .doc('ai_settings')
+              .get();
+
       if (mounted) {
         setState(() {
           _isAIEnabled = doc.exists ? (doc.data()?['isEnabled'] ?? true) : true;
@@ -149,7 +157,7 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Assistant Tommy'),
@@ -163,17 +171,19 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
               decoration: BoxDecoration(
                 color: isDark ? Colors.black : Colors.grey[50],
               ),
-              child: _messages.isEmpty
-                  ? _buildConversationStarters() // Show starters when no messages
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _messages.length,
-                      reverse: true,
-                      itemBuilder: (context, index) {
-                        final message = _messages[_messages.length - 1 - index];
-                        return _buildMessage(message);
-                      },
-                    ),
+              child:
+                  _messages.isEmpty
+                      ? _buildConversationStarters() // Show starters when no messages
+                      : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _messages.length,
+                        reverse: true,
+                        itemBuilder: (context, index) {
+                          final message =
+                              _messages[_messages.length - 1 - index];
+                          return _buildMessage(message);
+                        },
+                      ),
             ),
           ),
           if (_isTyping) _buildTypingIndicator(),
@@ -203,8 +213,12 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
                             borderSide: BorderSide.none,
                           ),
                           filled: true,
-                          fillColor: isDark ? Colors.grey.shade800 : Colors.grey[100],
-                          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          fillColor:
+                              isDark ? Colors.grey.shade800 : Colors.grey[100],
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
                         ),
                         style: TextStyle(
                           color: isDark ? Colors.white : Colors.black87,
@@ -215,12 +229,14 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
                     SizedBox(width: 8),
                     Container(
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.red.shade900 : Colors.red.shade700,
+                        color:
+                            isDark ? Colors.red.shade900 : Colors.red.shade700,
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
                         icon: Icon(Icons.send, color: Colors.white),
-                        onPressed: () => _handleSubmitted(_messageController.text),
+                        onPressed:
+                            () => _handleSubmitted(_messageController.text),
                       ),
                     ),
                   ],
@@ -240,9 +256,10 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
         padding: EdgeInsets.all(24),
         margin: EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.grey.shade800.withOpacity(0.7)
-              : Colors.white.withOpacity(0.9),
+          color:
+              Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade800.withOpacity(0.7)
+                  : Colors.white.withOpacity(0.9),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
@@ -266,9 +283,10 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black87,
+                color:
+                    Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black87,
               ),
             ),
             SizedBox(height: 24),
@@ -276,31 +294,35 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
               alignment: WrapAlignment.center,
               spacing: 12,
               runSpacing: 12,
-              children: _conversationStarters.map((starter) {
-                return ElevatedButton(
-                  onPressed: () {
-                    if (starter == 'I need assistance') {
-                      _launchWhatsApp();
-                    } else {
-                      _messageController.text = starter;
-                      _handleSubmitted(starter);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: Text(
-                    starter,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16),
-                  ),
-                );
-              }).toList(),
+              children:
+                  _conversationStarters.map((starter) {
+                    return ElevatedButton(
+                      onPressed: () {
+                        if (starter == 'I need assistance') {
+                          _launchWhatsApp();
+                        } else {
+                          _messageController.text = starter;
+                          _handleSubmitted(starter);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: Text(
+                        starter,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    );
+                  }).toList(),
             ),
           ],
         ),
@@ -316,9 +338,7 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
         children: [
           CircleAvatar(
             backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade100,
-            child: Image.asset(
-              'lib/assets/Images/Mascot/mascot-default.png',
-            ),
+            child: Image.asset('lib/assets/Images/Mascot/mascot-default.png'),
           ),
           const SizedBox(width: 12),
           Container(
@@ -327,13 +347,7 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
               color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Row(
-              children: [
-                _buildDot(1),
-                _buildDot(2),
-                _buildDot(3),
-              ],
-            ),
+            child: Row(children: [_buildDot(1), _buildDot(2), _buildDot(3)]),
           ),
         ],
       ),
@@ -345,16 +359,19 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
       animation: _typingAnimation!,
       builder: (context, child) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
-        double opacity = sin((_typingAnimation!.value * pi * 2) - (index * pi / 2));
+        double opacity = sin(
+          (_typingAnimation!.value * pi * 2) - (index * pi / 2),
+        );
         opacity = opacity.clamp(0.3, 1.0);
-        
+
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 2),
           width: 8,
           height: 8,
           decoration: BoxDecoration(
-            color: (isDark ? Colors.white : Colors.red.shade400)
-              .withOpacity(opacity),
+            color: (isDark ? Colors.white : Colors.red.shade400).withOpacity(
+              opacity,
+            ),
             shape: BoxShape.circle,
           ),
         );
@@ -364,19 +381,24 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
 
   Widget _buildMessage(ChatMessage message) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
-        crossAxisAlignment: message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment:
+            message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment:
+                message.isUser
+                    ? MainAxisAlignment.end
+                    : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!message.isUser) 
+              if (!message.isUser)
                 CircleAvatar(
-                  backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade100,
+                  backgroundColor:
+                      isDark ? Colors.red.shade900 : Colors.red.shade100,
                   child: Image.asset(
                     'lib/assets/Images/Mascot/mascot-crossedarms.png',
                     width: 37,
@@ -388,9 +410,14 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
                 child: Container(
                   padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: message.isUser 
-                      ? (isDark ? Colors.red.shade900 : Colors.red.shade400)
-                      : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
+                    color:
+                        message.isUser
+                            ? (isDark
+                                ? Colors.red.shade900
+                                : Colors.red.shade400)
+                            : (isDark
+                                ? Colors.grey.shade800
+                                : Colors.grey.shade100),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(message.isUser ? 20 : 0),
                       topRight: Radius.circular(message.isUser ? 0 : 20),
@@ -401,9 +428,10 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
                   child: Text(
                     message.text,
                     style: TextStyle(
-                      color: message.isUser 
-                        ? Colors.white 
-                        : (isDark ? Colors.white70 : Colors.black87),
+                      color:
+                          message.isUser
+                              ? Colors.white
+                              : (isDark ? Colors.white70 : Colors.black87),
                     ),
                   ),
                 ),
@@ -411,18 +439,24 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
               const SizedBox(width: 8),
               if (message.isUser)
                 CircleAvatar(
-                  backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade100,
-                  backgroundImage: _userProfileImage != null 
-                    ? NetworkImage(_userProfileImage!) 
-                    : null,
-                  child: _userProfileImage == null ? Icon(
-                    Icons.person,
-                    color: isDark ? Colors.white70 : Colors.red.shade400,
-                  ) : null,
+                  backgroundColor:
+                      isDark ? Colors.red.shade900 : Colors.red.shade100,
+                  backgroundImage:
+                      _userProfileImage != null
+                          ? NetworkImage(_userProfileImage!)
+                          : null,
+                  child:
+                      _userProfileImage == null
+                          ? Icon(
+                            Icons.person,
+                            color:
+                                isDark ? Colors.white70 : Colors.red.shade400,
+                          )
+                          : null,
                 ),
             ],
           ),
-          
+
           // Product recommendations section
           if (!message.isUser && message.recommendedProducts != null)
             Container(
@@ -440,9 +474,9 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ProductDetailPage(
-                              productId: product.id,
-                            ),
+                            builder:
+                                (context) =>
+                                    ProductDetailPage(productId: product.id),
                           ),
                         );
                       },
@@ -485,12 +519,15 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
                 },
               ),
             ),
-            SizedBox(height: 8),
-          if (!message.isUser && message.recommendedProducts != null && message.recommendedProducts!.isNotEmpty)
+          SizedBox(height: 8),
+          if (!message.isUser &&
+              message.recommendedProducts != null &&
+              message.recommendedProducts!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: ElevatedButton.icon(
-                onPressed: () => _showAddToCartDialog(message.recommendedProducts!),
+                onPressed:
+                    () => _showAddToCartDialog(message.recommendedProducts!),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,
@@ -520,15 +557,18 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     try {
       final (response, recommendations) = await _getAIResponse(text);
       print('Got ${recommendations.length} recommendations'); // Debug print
-      
+
       if (mounted) {
         setState(() {
           _isTyping = false;
-          _messages.add(ChatMessage(
-            text: response,
-            isUser: false,
-            recommendedProducts: recommendations.isNotEmpty ? recommendations : null,
-          ));
+          _messages.add(
+            ChatMessage(
+              text: response,
+              isUser: false,
+              recommendedProducts:
+                  recommendations.isNotEmpty ? recommendations : null,
+            ),
+          );
         });
       }
     } catch (e) {
@@ -547,13 +587,18 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
 
   Future<(String, List<Product>)> _getAIResponse(String message) async {
     if (!_isAIEnabled) {
-      return Future.value(('I\'m currently on vacation!! Try to talk to me later :P', <Product>[]));
+      return Future.value((
+        'I\'m currently on vacation!! Try to talk to me later :P',
+        <Product>[],
+      ));
     }
 
     for (int attempt = 0; attempt < _apiKeys.length; attempt++) {
       try {
-        final List<Product> recommendations = await _getProductRecommendations(message);
-        
+        final List<Product> recommendations = await _getProductRecommendations(
+          message,
+        );
+
         final response = await http.post(
           Uri.parse(_openRouterUrl),
           headers: {
@@ -566,20 +611,28 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
             'model': 'openai/gpt-3.5-turbo',
             'messages': [
               {'role': 'system', 'content': systemPrompt},
-              {'role': 'user', 'content': message}
+              {'role': 'user', 'content': message},
             ],
           }),
         );
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
-          String aiResponse = data['choices'][0]['message']['content'] as String;
+          String aiResponse =
+              data['choices'][0]['message']['content'] as String;
           return (aiResponse, recommendations);
         } else if (response.statusCode == 401) {
-          print('API key ${_currentApiKeyIndex + 1} failed, trying next key...');
+          print(
+            'API key ${_currentApiKeyIndex + 1} failed, trying next key...',
+          );
           _getNextApiKey();
           if (attempt == _apiKeys.length - 1) {
-            return (APIConfig.fallbackResponses[Random().nextInt(APIConfig.fallbackResponses.length)], <Product>[]);
+            return (
+              APIConfig.fallbackResponses[Random().nextInt(
+                APIConfig.fallbackResponses.length,
+              )],
+              <Product>[],
+            );
           }
           continue;
         } else {
@@ -588,12 +641,20 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
       } catch (e) {
         print('Error with API key ${_currentApiKeyIndex + 1}: $e');
         if (attempt == _apiKeys.length - 1) {
-          return (APIConfig.fallbackResponses[Random().nextInt(APIConfig.fallbackResponses.length)], <Product>[]);
+          return (
+            APIConfig.fallbackResponses[Random().nextInt(
+              APIConfig.fallbackResponses.length,
+            )],
+            <Product>[],
+          );
         }
         _getNextApiKey();
       }
     }
-    return ('I apologize, but I\'m currently unavailable. Please try again later.', <Product>[]);
+    return (
+      'I apologize, but I\'m currently unavailable. Please try again later.',
+      <Product>[],
+    );
   }
 
   void _addToCart(Product product) async {
@@ -629,19 +690,17 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
           action: SnackBarAction(
             label: 'VIEW CART',
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const CartPage(),
-                ),
-              );
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (context) => const CartPage()));
             },
           ),
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding to cart: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error adding to cart: $e')));
     }
   }
 
@@ -684,9 +743,7 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
               label: 'VIEW CART',
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const CartPage(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const CartPage()),
                 );
               },
             ),
@@ -707,15 +764,20 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
       final List<Product> recommendations = [];
       final lowercaseMessage = message.toLowerCase();
-      
+
       // Define preferences based on message
       final bool preferIntel = lowercaseMessage.contains('intel');
-      final bool preferAMD = lowercaseMessage.contains('amd') || lowercaseMessage.contains('ryzen');
-      final bool isGaming = lowercaseMessage.contains('gaming') || lowercaseMessage.contains('game');
-      
+      final bool preferAMD =
+          lowercaseMessage.contains('amd') ||
+          lowercaseMessage.contains('ryzen');
+      final bool isGaming =
+          lowercaseMessage.contains('gaming') ||
+          lowercaseMessage.contains('game');
+
       // Get all products first
-      final QuerySnapshot allProducts = await firestore.collection('products').get();
-      
+      final QuerySnapshot allProducts =
+          await firestore.collection('products').get();
+
       // Group products by category
       Map<String, List<DocumentSnapshot>> productsByCategory = {};
       for (var doc in allProducts.docs) {
@@ -728,69 +790,93 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
       if (productsByCategory.containsKey('CPU\'s')) {
         var cpus = productsByCategory['CPU\'s']!;
         DocumentSnapshot? selectedCPU;
-        
+
         if (preferIntel) {
           selectedCPU = cpus.firstWhere(
-            (doc) => (doc.data() as Map<String, dynamic>)['name'].toString().toLowerCase().contains('intel'),
-            orElse: () => cpus.first
+            (doc) => (doc.data() as Map<String, dynamic>)['name']
+                .toString()
+                .toLowerCase()
+                .contains('intel'),
+            orElse: () => cpus.first,
           );
         } else if (preferAMD) {
           selectedCPU = cpus.firstWhere(
-            (doc) => (doc.data() as Map<String, dynamic>)['name'].toString().toLowerCase().contains('amd'),
-            orElse: () => cpus.first
+            (doc) => (doc.data() as Map<String, dynamic>)['name']
+                .toString()
+                .toLowerCase()
+                .contains('amd'),
+            orElse: () => cpus.first,
           );
         } else {
           selectedCPU = cpus.first;
         }
 
         final cpuData = selectedCPU.data() as Map<String, dynamic>;
-        recommendations.add(Product(
-          id: selectedCPU.id,
-          name: cpuData['name'] ?? '',
-          category: cpuData['category'] ?? '',
-          price: (cpuData['price'] is int) 
-              ? (cpuData['price'] as int).toDouble() 
-              : (cpuData['price'] ?? 0).toDouble(),
-          description: cpuData['description'] ?? '',
-          imageUrl: cpuData['imagePath'] ?? '',
-        ));
+        recommendations.add(
+          Product(
+            id: selectedCPU.id,
+            name: cpuData['name'] ?? '',
+            category: cpuData['category'] ?? '',
+            price:
+                (cpuData['price'] is int)
+                    ? (cpuData['price'] as int).toDouble()
+                    : (cpuData['price'] ?? 0).toDouble(),
+            description: cpuData['description'] ?? '',
+            imageUrl: cpuData['imagePath'] ?? '',
+          ),
+        );
       }
 
       // Process other categories
-      final categoriesToProcess = ['Motherboards', 'RAM\'s', 'GPU\'s', 'Storage', 'PSU', 'Case'];
-      
+      final categoriesToProcess = [
+        'Motherboards',
+        'RAM\'s',
+        'GPU\'s',
+        'Storage',
+        'PSU',
+        'Case',
+      ];
+
       for (final category in categoriesToProcess) {
         if (productsByCategory.containsKey(category)) {
           var products = productsByCategory[category]!;
           if (products.isNotEmpty) {
             // Sort by rating if available
             products.sort((a, b) {
-              final ratingA = (a.data() as Map<String, dynamic>)['averageRating'] ?? 0.0;
-              final ratingB = (b.data() as Map<String, dynamic>)['averageRating'] ?? 0.0;
+              final ratingA =
+                  (a.data() as Map<String, dynamic>)['averageRating'] ?? 0.0;
+              final ratingB =
+                  (b.data() as Map<String, dynamic>)['averageRating'] ?? 0.0;
               return (ratingB as num).compareTo(ratingA as num);
             });
 
             final doc = products.first;
             final data = doc.data() as Map<String, dynamic>;
-            recommendations.add(Product(
-              id: doc.id,
-              name: data['name'] ?? '',
-              category: data['category'] ?? '',
-              price: (data['price'] is int) 
-                  ? (data['price'] as int).toDouble() 
-                  : (data['price'] ?? 0).toDouble(),
-              description: data['description'] ?? '',
-              imageUrl: data['imagePath'] ?? '',
-            ));
+            recommendations.add(
+              Product(
+                id: doc.id,
+                name: data['name'] ?? '',
+                category: data['category'] ?? '',
+                price:
+                    (data['price'] is int)
+                        ? (data['price'] as int).toDouble()
+                        : (data['price'] ?? 0).toDouble(),
+                description: data['description'] ?? '',
+                imageUrl: data['imagePath'] ?? '',
+              ),
+            );
           } else {
-            recommendations.add(Product(
-              id: 'empty_${category.toLowerCase()}',
-              name: 'No Available Product',
-              category: category,
-              price: 0,
-              description: 'There is not any available product in this category',
-              imageUrl: '',
-            ));
+            recommendations.add(
+              Product(
+                id: 'empty_${category.toLowerCase()}',
+                name: 'No Available Product',
+                category: category,
+                price: 0,
+                description:
+                    'There is not any available product in this category',
+                imageUrl: '',
+              ),
+            );
           }
         }
       }
@@ -810,8 +896,11 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
   Future<void> _testFirebaseConnection() async {
     try {
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
-      final QuerySnapshot snapshot = await firestore.collection('products').limit(1).get();
-      print('Firebase connection test: ${snapshot.docs.length} documents found');
+      final QuerySnapshot snapshot =
+          await firestore.collection('products').limit(1).get();
+      print(
+        'Firebase connection test: ${snapshot.docs.length} documents found',
+      );
       if (snapshot.docs.isNotEmpty) {
         print('Sample document data: ${snapshot.docs.first.data()}');
       }
@@ -826,23 +915,26 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Theme.of(context).brightness == Brightness.dark 
-              ? Colors.grey.shade900 
-              : Colors.white,
+          backgroundColor:
+              Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade900
+                  : Colors.white,
           title: Text(
             'Add to Cart',
             style: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark 
-                  ? Colors.white 
-                  : Colors.black87,
+              color:
+                  Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black87,
             ),
           ),
           content: Text(
             'Do you want to add all recommended products to your cart?',
             style: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark 
-                  ? Colors.white70 
-                  : Colors.black87,
+              color:
+                  Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white70
+                      : Colors.black87,
             ),
           ),
           actions: [
@@ -851,9 +943,10 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
               child: Text(
                 'No',
                 style: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark 
-                      ? Colors.white70 
-                      : Colors.grey.shade700,
+                  color:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white70
+                          : Colors.grey.shade700,
                 ),
               ),
             ),
@@ -881,8 +974,8 @@ class ChatMessage {
   final List<Product>? recommendedProducts;
 
   ChatMessage({
-    required this.text, 
-    required this.isUser, 
+    required this.text,
+    required this.isUser,
     this.recommendedProducts,
   });
 }

@@ -9,6 +9,8 @@ class APIConfig {
   static const String ApiKey4 =
       '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';
   // Add fallback responses for when API is unavailable
+  static const String ApiKey5 =
+      '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';
   static const List<String> fallbackResponses = [
     'I apologize, but I\'m currently unavailable. Please try again later.',
     'Our system is experiencing high demand. Please try again in a few minutes.',

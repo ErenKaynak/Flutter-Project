@@ -10,12 +10,32 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'theme_notifier.dart';
 import 'address_screen.dart';
 import 'past_orders_page.dart';
 import 'welcome_screen.dart';
 import '../admin-panel/admin_main.dart';
+
+// SpecialColorTheme enum
+enum SpecialColorTheme { blue, orange, yellow, green, purple }
+
+// getThemeColor function
+Color getThemeColor(SpecialColorTheme theme) {
+  switch (theme) {
+    case SpecialColorTheme.blue:
+      return Colors.blue;
+    case SpecialColorTheme.orange:
+      return Colors.orange;
+    case SpecialColorTheme.yellow:
+      return Colors.yellow;
+    case SpecialColorTheme.green:
+      return Colors.green;
+    case SpecialColorTheme.purple:
+      return Colors.purple;
+  }
+}
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -36,26 +56,58 @@ class _ProfilePageState extends State<ProfilePage> {
 
   final ImagePicker _picker = ImagePicker();
 
+  // Special Mode toggle variables
   int _tapCount = 0;
-  bool _showBlackModeToggle = false;
+  bool _showSpecialModeToggle = false;
+
+  // Color picker variables
+  bool isColorPickerVisible = false;
+  SpecialColorTheme? _selectedTheme;
 
   @override
   void initState() {
     super.initState();
     _checkAISettings();
     fetchProfileData();
+    _loadSelectedTheme(); // Load persisted theme
+  }
+
+  // Load selected theme from SharedPreferences
+  Future<void> _loadSelectedTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final themeString = prefs.getString('selectedTheme');
+    if (themeString != null) {
+      setState(() {
+        _selectedTheme = SpecialColorTheme.values.firstWhere(
+          (e) => e.toString() == 'SpecialColorTheme.$themeString',
+          orElse: () => SpecialColorTheme.blue,
+        );
+      });
+    }
+  }
+
+  // Save selected theme to SharedPreferences
+  Future<void> _saveSelectedTheme(SpecialColorTheme? theme) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (theme != null) {
+      await prefs.setString('selectedTheme', theme.toString().split('.').last);
+    } else {
+      await prefs.remove('selectedTheme');
+    }
   }
 
   Future<void> _checkAISettings() async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('settings')
-          .doc('ai_settings')
-          .get();
-      
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('settings')
+              .doc('ai_settings')
+              .get();
+
       if (mounted) {
         setState(() {
-          _showFloatingButton = doc.exists && (doc.data()?['showFloatingButton'] ?? true);
+          _showFloatingButton =
+              doc.exists && (doc.data()?['showFloatingButton'] ?? true);
         });
       }
     } catch (e) {
@@ -71,20 +123,23 @@ class _ProfilePageState extends State<ProfilePage> {
         .doc('ai_settings')
         .snapshots()
         .listen((doc) {
-      if (mounted) {
-        setState(() {
-          _showFloatingButton = doc.exists && (doc.data()?['showFloatingButton'] ?? true);
+          if (mounted) {
+            setState(() {
+              _showFloatingButton =
+                  doc.exists && (doc.data()?['showFloatingButton'] ?? true);
+            });
+          }
         });
-      }
-    });
   }
 
   void _handleProfileTitleTap() {
     setState(() {
       _tapCount++;
       if (_tapCount >= 3) {
-        _showBlackModeToggle = true;
-        _tapCount = 0; // Reset the counter
+        _showSpecialModeToggle = true;
+        isColorPickerVisible =
+            _selectedTheme != null; // Show color picker if theme is selected
+        _tapCount = 0;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Special Mode toggle enabled!'),
@@ -100,17 +155,14 @@ class _ProfilePageState extends State<ProfilePage> {
     if (uid == null) return;
 
     try {
-      // Get user document
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
-      
-      // Get referral code document
-      final referralDoc = await FirebaseFirestore.instance
-          .collection('referral_codes')
-          .where('userId', isEqualTo: uid)
-          .get();
+      final userDoc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+      final referralDoc =
+          await FirebaseFirestore.instance
+              .collection('referral_codes')
+              .where('userId', isEqualTo: uid)
+              .get();
 
       if (userDoc.exists) {
         final data = userDoc.data();
@@ -119,7 +171,6 @@ class _ProfilePageState extends State<ProfilePage> {
           surname = data?['surname'] ?? '';
           imageUrl = data?['profileImageUrl'] ?? '';
           role = data?['role'] ?? '';
-          // Get referral code from user document
           referralCode = data?['referralCode'] ?? '';
           isLoading = false;
         });
@@ -174,7 +225,6 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (e) {
       print('Error uploading image from URL: $e');
       setState(() => isUploading = false);
-      // You might want to show an error message to the user here
     }
   }
 
@@ -198,12 +248,10 @@ class _ProfilePageState extends State<ProfilePage> {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return;
 
-      // Update Firestore
       await FirebaseFirestore.instance.collection('users').doc(uid).update({
         'profileImageUrl': '',
       });
 
-      // Try to delete the image from Storage if it exists
       try {
         final ref = FirebaseStorage.instance.ref().child(
           'profile_images/$uid.jpg',
@@ -211,7 +259,6 @@ class _ProfilePageState extends State<ProfilePage> {
         await ref.delete();
       } catch (e) {
         print('Error deleting image from storage: $e');
-        // Continue even if storage deletion fails
       }
 
       setState(() {
@@ -438,11 +485,25 @@ class _ProfilePageState extends State<ProfilePage> {
     final outlineColor =
         isDark ? Colors.white.withOpacity(0.2) : Colors.red.withOpacity(0.3);
 
+    // Apply light mode when Special Mode is on, unless a special theme is selected
+    final backgroundColor =
+        _selectedTheme != null
+            ? getThemeColor(_selectedTheme!).withOpacity(0.1)
+            : isDark
+            ? Colors.black
+            : Colors.grey[100];
+    final appBarColor =
+        _selectedTheme != null
+            ? getThemeColor(_selectedTheme!)
+            : isDark
+            ? Colors.black
+            : Colors.white;
+
     if (user == null) {
       return Scaffold(
-        backgroundColor: isDark ? Colors.black : Colors.grey[100],
+        backgroundColor: backgroundColor,
         appBar: AppBar(
-          backgroundColor: isDark ? Colors.black : Colors.white,
+          backgroundColor: appBarColor,
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(15)),
           ),
@@ -461,7 +522,6 @@ class _ProfilePageState extends State<ProfilePage> {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                // Profile Header Card
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -540,8 +600,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Authentication Options
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -647,7 +705,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: isDark ? Colors.black : Colors.white,
+        backgroundColor: appBarColor,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(15)),
         ),
@@ -673,7 +731,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
-      backgroundColor: isDark ? Colors.black : Colors.grey[100],
+      backgroundColor: backgroundColor,
       body:
           isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -683,7 +741,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    // Profile Header Card - Centered avatar and text
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
@@ -822,10 +879,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
-                    // Profile Options Section
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -867,7 +921,6 @@ class _ProfilePageState extends State<ProfilePage> {
                             thickness: 1,
                             height: 32,
                           ),
-
                           if (role == 'admin')
                             buildButton(
                               'Admin Panel',
@@ -898,7 +951,6 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             );
                           }, themeNotifier),
-
                           buildButton(
                             'My Wallet',
                             Icons.account_balance_wallet,
@@ -913,10 +965,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
-                    // Theme Settings Section
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -965,26 +1014,65 @@ class _ProfilePageState extends State<ProfilePage> {
                             (_) => themeNotifier.toggleTheme(),
                             isDark,
                           ),
-                          if (_showBlackModeToggle)
+                          if (_showSpecialModeToggle)
                             _buildThemeToggle(
                               'Special Mode',
-                              Icons.dark_mode,
-                              isBlackMode,
-                              (val) => themeNotifier.toggleBlackMode(val),
+                              Icons.color_lens,
+                              isColorPickerVisible,
+                              (val) {
+                                setState(() {
+                                  isColorPickerVisible = val;
+                                  if (!val) {
+                                    _selectedTheme =
+                                        null; // Clear selected theme
+                                    _saveSelectedTheme(null);
+                                  }
+                                });
+                              },
                               isDark,
+                            ),
+                          if (isColorPickerVisible)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 16.0),
+                              child: Wrap(
+                                spacing: 16,
+                                children:
+                                    SpecialColorTheme.values.map((theme) {
+                                      final color = getThemeColor(theme);
+                                      return GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedTheme = theme;
+                                            _showSpecialModeToggle =
+                                                false; // Hide Special Mode toggle
+                                            isColorPickerVisible =
+                                                false; // Hide color picker
+                                          });
+                                          _saveSelectedTheme(
+                                            theme,
+                                          ); // Save theme
+                                        },
+                                        child: CircleAvatar(
+                                          backgroundColor: color,
+                                          radius: 24,
+                                          child:
+                                              _selectedTheme == theme
+                                                  ? const Icon(
+                                                    Icons.check,
+                                                    color: Colors.white,
+                                                  )
+                                                  : null,
+                                        ),
+                                      );
+                                    }).toList(),
+                              ),
                             ),
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
-                    // Referral Code Section
                     _buildReferralCode(),
-
                     const SizedBox(height: 24),
-
-                    // Logout Button
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1020,46 +1108,52 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
               ),
-      floatingActionButton: _showFloatingButton ? Container(
-        height: 70,
-        width: 70,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark 
-                ? [Colors.red.shade900, Colors.red.shade800]
-                : [Colors.red.shade500, Colors.red.shade400],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AIChatScreen()),
-            );
-          },
-          elevation: 0, // Remove default elevation
-          backgroundColor: Colors.transparent, // Make FAB background transparent
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Image.asset(
-              'lib/assets/Images/Mascot/mascot-head.png',
-              width: 120,
-              height: 120,
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-      ) : null,
+      floatingActionButton:
+          _showFloatingButton
+              ? Container(
+                height: 70,
+                width: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors:
+                        isDark
+                            ? [Colors.red.shade900, Colors.red.shade800]
+                            : [Colors.red.shade500, Colors.red.shade400],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: FloatingActionButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AIChatScreen(),
+                      ),
+                    );
+                  },
+                  elevation: 0,
+                  backgroundColor: Colors.transparent,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Image.asset(
+                      'lib/assets/Images/Mascot/mascot-head.png',
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              )
+              : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
@@ -1119,9 +1213,10 @@ class _ProfilePageState extends State<ProfilePage> {
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withOpacity(0.2)
-              : Colors.red.withOpacity(0.3),
+          color:
+              Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withOpacity(0.2)
+                  : Colors.red.withOpacity(0.3),
         ),
       ),
       child: Column(
@@ -1153,7 +1248,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   if (referralCode != null) {
                     Clipboard.setData(ClipboardData(text: referralCode!));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Referral code copied to clipboard')),
+                      const SnackBar(
+                        content: Text('Referral code copied to clipboard'),
+                      ),
                     );
                   }
                 },
