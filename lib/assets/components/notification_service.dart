@@ -7,25 +7,36 @@ import 'dart:convert';
 
 class NotificationService {
   static final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  static const String _serverKey = 'YOUR_FCM_SERVER_KEY'; // Get this from Firebase Console
+  static String? _serverKey; // Make it nullable
+
+  static bool get isConfigured => _serverKey != null;
 
   // Initialize notifications
   static Future<void> init() async {
-    // Request permission
-    await _fcm.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    try {
+      // Request permission
+      await _fcm.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
 
-    // Get FCM token
-    String? token = await _fcm.getToken();
-    if (token != null) {
-      await saveTokenToFirestore(token);
+      // Get FCM token
+      String? token = await _fcm.getToken();
+      if (token != null) {
+        await saveTokenToFirestore(token);
+      }
+
+      // Listen to token refresh
+      _fcm.onTokenRefresh.listen(saveTokenToFirestore);
+    } catch (e) {
+      print('Notification initialization error: $e');
+      // Continue without notifications if there's an error
     }
+  }
 
-    // Listen to token refresh
-    _fcm.onTokenRefresh.listen(saveTokenToFirestore);
+  static void configure(String serverKey) {
+    _serverKey = serverKey;
   }
 
   // Save FCM token to Firestore
@@ -46,6 +57,11 @@ class NotificationService {
     required String title,
     required String message,
   }) async {
+    if (_serverKey == null) {
+      print('FCM not configured: Notifications are disabled');
+      return false;
+    }
+
     try {
       final response = await http.post(
         Uri.parse('https://fcm.googleapis.com/fcm/send'),
@@ -89,6 +105,11 @@ class NotificationService {
     required String title,
     required String message,
   }) async {
+    if (_serverKey == null) {
+      print('FCM not configured: Notifications are disabled');
+      return false;
+    }
+
     try {
       final response = await http.post(
         Uri.parse('https://fcm.googleapis.com/fcm/send'),
