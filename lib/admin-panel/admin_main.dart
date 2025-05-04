@@ -109,6 +109,86 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
+  void _showAISettingsDialog(BuildContext context) {
+    bool isAIEnabled = true;
+    bool isFloatingButtonVisible = true; // Changed default to true
+
+    FirebaseFirestore.instance
+        .collection('settings')
+        .doc('ai_settings')
+        .get()
+        .then((doc) {
+      if (doc.exists) {
+        isAIEnabled = doc.data()?['isEnabled'] ?? true;
+        isFloatingButtonVisible = doc.data()?['showFloatingButton'] ?? false;
+      }
+      
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                title: const Text('Assistant Tommy\'s Settings'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SwitchListTile(
+                      title: const Text('Enable Assistant Tommy'),
+                      subtitle: Text(
+                        isAIEnabled 
+                            ? 'Tommy is currently available' 
+                            : 'Tommy is currently disabled'
+                      ),
+                      value: isAIEnabled,
+                      onChanged: (bool value) {
+                        setState(() => isAIEnabled = value);
+                        _updateAISettings(isEnabled: value);
+                      },
+                    ),
+                    SwitchListTile(
+                      title: const Text('Hide Tommy'),
+                      subtitle: Text(
+                        isFloatingButtonVisible 
+                            ? 'All Eyes On Tommy !' 
+                            : 'Tommy is hiding in the closet !'
+                      ),
+                      value: !isFloatingButtonVisible,
+                      onChanged: (bool value) {
+                        setState(() => isFloatingButtonVisible = !value);
+                        _updateAISettings(showFloatingButton: !value);
+                      },
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    });
+  }
+
+  void _updateAISettings({bool? isEnabled, bool? showFloatingButton}) {
+    final updateData = <String, dynamic>{
+      'lastUpdated': FieldValue.serverTimestamp(),
+    };
+    
+    if (isEnabled != null) updateData['isEnabled'] = isEnabled;
+    if (showFloatingButton != null) updateData['showFloatingButton'] = showFloatingButton;
+
+    FirebaseFirestore.instance
+        .collection('settings')
+        .doc('ai_settings')
+        .set(updateData, SetOptions(merge: true));
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -286,6 +366,20 @@ class _AdminPageState extends State<AdminPage> {
             const SizedBox(height: 10),
 
             _buildAdminCard(
+              icon: Image.asset(
+                'lib/assets/Images/Mascot/mascot-head.png',
+                width: 24,
+                height: 24,
+                fit: BoxFit.contain,
+              ),
+              title: "Assistant Tommy's Settings",
+              subtitle: "Configure Tommy's availability",
+              onTap: () => _showAISettingsDialog(context),
+            ),
+
+            const SizedBox(height: 10),
+
+            _buildAdminCard(
               icon: Icons.settings,
               title: "App Settings",
               subtitle: "Configure application settings",
@@ -336,7 +430,7 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   Widget _buildAdminCard({
-    required IconData icon,
+    required dynamic icon, // Changed from IconData to dynamic
     required String title,
     required String subtitle,
     required VoidCallback onTap,
@@ -361,10 +455,12 @@ class _AdminPageState extends State<AdminPage> {
             color: isDark ? Colors.red.shade900.withOpacity(0.2) : Colors.red.shade50,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            color: isDark ? Colors.red.shade400 : Colors.red.shade700,
-          ),
+          child: icon is IconData 
+              ? Icon(
+                  icon,
+                  color: isDark ? Colors.red.shade400 : Colors.red.shade700,
+                )
+              : icon, // Use the widget directly if it's not IconData
         ),
         title: Text(
           title,

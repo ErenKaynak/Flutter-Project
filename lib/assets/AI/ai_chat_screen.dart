@@ -28,6 +28,7 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
   bool _isTyping = false;
   DateTime? _lastRequestTime;
   String? _userProfileImage;
+  bool _isAIEnabled = true;
 
   AnimationController? _typingAnimation;
 
@@ -37,8 +38,29 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     'Looking for a gaming PC build',
   ];
 
+  final String systemPrompt = '''
+  You are a knowledgeable PC hardware assistant. Help users with PC builds and hardware recommendations.
+  Keep responses concise and focus on suggesting compatible hardware components.
+  When asked about PC builds, consider the user's budget and intended use (gaming, work, etc.).
+  ''';
+
+  // Add these variables at the top with other declarations
+  final List<String> _apiKeys = [
+    APIConfig.ApiKey,
+    APIConfig.ApiKey2,
+    APIConfig.ApiKey3,
+    APIConfig.ApiKey4,
+  ];
+  int _currentApiKeyIndex = 0;
+
+  // Add this method to get next API key
+  String _getNextApiKey() {
+    _currentApiKeyIndex = (_currentApiKeyIndex + 1) % _apiKeys.length;
+    return _apiKeys[_currentApiKeyIndex];
+  }
+
   // OpenRouter Configuration
-  static const String _openRouterApiKey = APIConfig.openAIApiKey; // Replace with your key
+  static const String _openRouterApiKey = APIConfig.ApiKey4; // Replace with your key
   static const String _openRouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
 
   @override
@@ -50,6 +72,23 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     )..repeat();
     _testFirebaseConnection();
     _loadUserProfile();
+    _checkAIAvailability();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    FirebaseFirestore.instance
+        .collection('settings')
+        .doc('ai_settings')
+        .snapshots()
+        .listen((doc) {
+      if (mounted) {
+        setState(() {
+          _isAIEnabled = doc.exists ? (doc.data()?['isEnabled'] ?? true) : true;
+        });
+      }
+    });
   }
 
   @override
@@ -79,6 +118,23 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     }
   }
 
+  Future<void> _checkAIAvailability() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('settings')
+          .doc('ai_settings')
+          .get();
+      
+      if (mounted) {
+        setState(() {
+          _isAIEnabled = doc.exists ? (doc.data()?['isEnabled'] ?? true) : true;
+        });
+      }
+    } catch (e) {
+      print('Error checking AI availability: $e');
+    }
+  }
+
   Future<void> _launchWhatsApp() async {
     final Uri whatsappUrl = Uri.parse('http://wa.me/+905469549755');
     if (!await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication)) {
@@ -96,7 +152,7 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Assistant'),
+        title: const Text('Assistant Tommy'),
         backgroundColor: isDark ? Colors.black : Theme.of(context).primaryColor,
         elevation: 0,
       ),
@@ -490,94 +546,54 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
   }
 
   Future<(String, List<Product>)> _getAIResponse(String message) async {
-    try {
-      final List<Product> recommendations = await _getProductRecommendations(message);
-      
-      final systemPrompt = '''You are a specialized computer hardware AI assistant. You can ONLY help with:
-      1. Computer component recommendations
-      2. PC building advice
-      3. Hardware compatibility questions
-      4. Component specifications
-      5. PC part comparisons
-
-      If the user's question is NOT related to computer hardware, respond ONLY with:
-      "I apologize, but I can only assist with computer hardware related questions. Please ask me about PC components, building a PC, or hardware recommendations."
-
-      When providing recommendations, follow this format:
-      Here's a recommended build based on your requirements:
-
-      CPU: [Product Name]
-      - [Feature sentence about specs and capabilities]
-      - [Benefits sentence explaining why it fits user's needs]
-
-      Motherboard: [Product Name]
-      - [Feature sentence about specs and capabilities]
-      - [Benefits sentence explaining why it fits user's needs]
-
-      RAM: [Product Name]
-      - [Feature sentence about specs and capabilities]
-      - [Benefits sentence explaining why it fits user's needs]
-
-      GPU: [Product Name]
-      - [Feature sentence about specs and capabilities]
-      - [Benefits sentence explaining why it fits user's needs]
-
-      Storage: [Product Name]
-      - [Feature sentence about specs and capabilities]
-      - [Benefits sentence explaining why it fits user's needs]
-
-      Power Supply: [Product Name]
-      - [Feature sentence about specs and capabilities]
-      - [Benefits sentence explaining why it fits user's needs]
-
-      Case: [Product Name]
-      - [Feature sentence about specs and capabilities]
-      - [Benefits sentence explaining why it fits user's needs]
-
-      Summary: These components work well together because: [Brief compatibility explanation]
-
-      Remember: DO NOT answer any questions unrelated to computer hardware.''';
-
-      final response = await http.post(
-        Uri.parse(_openRouterUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_openRouterApiKey',
-          'HTTP-Referer': 'https://your-app-domain.com',
-          'X-Title': 'Your App Name',
-        },
-        body: jsonEncode({
-          'model': 'openai/gpt-3.5-turbo',
-          'messages': [
-            {
-              'role': 'system',
-              'content': systemPrompt,
-            },
-            {
-              'role': 'user',
-              'content': message,
-            }
-          ],
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        String aiResponse = data['choices'][0]['message']['content'] as String;
-        
-        // Only return recommendations if we have both AI response and products
-        if (recommendations.isEmpty) {
-          return ('I apologize, but I couldn\'t find any product recommendations matching your request.', <Product>[]);
-        }
-        
-        return (aiResponse, recommendations);
-      } else {
-        throw Exception('Error ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Exception in _getAIResponse: $e');
-      return ('I apologize, but I encountered an error while processing your request.', <Product>[]);
+    if (!_isAIEnabled) {
+      return Future.value(('I\'m currently on vacation!! Try to talk to me later :P', <Product>[]));
     }
+
+    for (int attempt = 0; attempt < _apiKeys.length; attempt++) {
+      try {
+        final List<Product> recommendations = await _getProductRecommendations(message);
+        
+        final response = await http.post(
+          Uri.parse(_openRouterUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ${_apiKeys[_currentApiKeyIndex]}',
+            'HTTP-Referer': 'https://your-app-domain.com',
+            'X-Title': 'Your App Name',
+          },
+          body: jsonEncode({
+            'model': 'openai/gpt-3.5-turbo',
+            'messages': [
+              {'role': 'system', 'content': systemPrompt},
+              {'role': 'user', 'content': message}
+            ],
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          String aiResponse = data['choices'][0]['message']['content'] as String;
+          return (aiResponse, recommendations);
+        } else if (response.statusCode == 401) {
+          print('API key ${_currentApiKeyIndex + 1} failed, trying next key...');
+          _getNextApiKey();
+          if (attempt == _apiKeys.length - 1) {
+            return (APIConfig.fallbackResponses[Random().nextInt(APIConfig.fallbackResponses.length)], <Product>[]);
+          }
+          continue;
+        } else {
+          throw Exception('Error ${response.statusCode}');
+        }
+      } catch (e) {
+        print('Error with API key ${_currentApiKeyIndex + 1}: $e');
+        if (attempt == _apiKeys.length - 1) {
+          return (APIConfig.fallbackResponses[Random().nextInt(APIConfig.fallbackResponses.length)], <Product>[]);
+        }
+        _getNextApiKey();
+      }
+    }
+    return ('I apologize, but I\'m currently unavailable. Please try again later.', <Product>[]);
   }
 
   void _addToCart(Product product) async {

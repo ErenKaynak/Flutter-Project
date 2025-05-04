@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PhotoUploaderPage extends StatefulWidget {
   const PhotoUploaderPage({super.key});
@@ -24,6 +26,15 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
 
   int _retryCount = 0;
   static const int _maxRetries = 3;
+
+  final List<Map<String, String>> _uploadHistory = [];
+  ScrollController _historyScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUploadHistory();
+  }
 
   Future<bool> _wait(int seconds) async {
     try {
@@ -55,6 +66,27 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
           _uploadedImageUrl = null;
         });
       }
+    }
+  }
+
+  Future<void> _loadUploadHistory() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('imageUploadHistory')
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      setState(() {
+        _uploadHistory.clear();
+        for (var doc in snapshot.docs) {
+          _uploadHistory.add({
+            'url': doc.data()['url'],
+            'timestamp': doc.data()['timestamp'].toDate().toString(),
+          });
+        }
+      });
+    } catch (e) {
+      print('Error loading upload history: $e');
     }
   }
 
@@ -105,9 +137,24 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         if (responseData['success'] == true) {
+          final imageUrl = responseData['data']['link'];
+          
+          // Save to Firestore
+          await FirebaseFirestore.instance
+              .collection('imageUploadHistory')
+              .add({
+            'url': imageUrl,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+
           setState(() {
-            _uploadedImageUrl = responseData['data']['link'];
+            _uploadedImageUrl = imageUrl;
             _isLoading = false;
+            // Add to history
+            _uploadHistory.insert(0, {
+              'url': imageUrl,
+              'timestamp': DateTime.now().toString(),
+            });
           });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Image uploaded successfully!')),
@@ -185,12 +232,51 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
     }
   }
 
+  Future<void> _clearHistory() async {
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final snapshots = await FirebaseFirestore.instance
+          .collection('imageUploadHistory')
+          .get();
+      
+      for (var doc in snapshots.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      await batch.commit();
+      
+      setState(() => _uploadHistory.clear());
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Upload history cleared'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error clearing history'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _removeImage() {
     setState(() {
       _image = null;
       _webImage = null;
       _uploadedImageUrl = null;
     });
+  }
+
+  @override
+  void dispose() {
+    _historyScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -413,12 +499,133 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
                           color: isDark ? Colors.grey.shade900 : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: SelectableText(
-                          _uploadedImageUrl!,
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 14,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: SelectableText(
+                                _uploadedImageUrl!,
+                                style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                Icons.copy,
+                                color: isDark ? Colors.white70 : Colors.grey.shade700,
+                              ),
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: _uploadedImageUrl!));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('URL copied to clipboard'),
+                                    behavior: SnackBarBehavior.floating,
+                                    duration: Duration(seconds: 2),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
+            // Upload History Card
+            if (_uploadHistory.isNotEmpty) ...[
+              SizedBox(height: 24),
+              Card(
+                elevation: isDark ? 1 : 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                color: isDark ? Colors.grey.shade800 : Colors.white,
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Upload History",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
+                          TextButton.icon(
+                            icon: Icon(Icons.delete_sweep),
+                            label: Text("Clear"),
+                            onPressed: _uploadHistory.isEmpty ? null : _clearHistory,
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+                      Container(
+                        height: 200, // Fixed height for history section
+                        child: ListView.builder(
+                          controller: _historyScrollController,
+                          itemCount: _uploadHistory.length,
+                          itemBuilder: (context, index) {
+                            final item = _uploadHistory[index];
+                            return Card(
+                              color: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+                              margin: EdgeInsets.only(bottom: 8),
+                              child: InkWell(
+                                onTap: () {
+                                  Clipboard.setData(ClipboardData(text: item['url']!));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Row(
+                                        children: [
+                                          Icon(Icons.check_circle, color: Colors.white),
+                                          SizedBox(width: 8),
+                                          Text('Link copied to clipboard'),
+                                        ],
+                                      ),
+                                      behavior: SnackBarBehavior.floating,
+                                      duration: Duration(seconds: 2),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                },
+                                child: ListTile(
+                                  leading: Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      image: DecorationImage(
+                                        image: NetworkImage(item['url']!),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  title: Text(
+                                    item['url']!,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontFamily: 'monospace',
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  subtitle: Text(
+                                    'Uploaded: ${DateTime.parse(item['timestamp']!).toLocal().toString().split('.')[0]}',
+                                    style: TextStyle(fontSize: 11),
+                                  ),
+                                  trailing: Icon(Icons.copy, size: 20, color: isDark ? Colors.white54 : Colors.grey.shade600),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],

@@ -32,6 +32,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool isLoading = true;
   bool isUploading = false;
   String? referralCode;
+  bool _showFloatingButton = true;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -41,7 +42,41 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
+    _checkAISettings();
     fetchProfileData();
+  }
+
+  Future<void> _checkAISettings() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('settings')
+          .doc('ai_settings')
+          .get();
+      
+      if (mounted) {
+        setState(() {
+          _showFloatingButton = doc.exists && (doc.data()?['showFloatingButton'] ?? true);
+        });
+      }
+    } catch (e) {
+      print('Error checking AI settings: $e');
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    FirebaseFirestore.instance
+        .collection('settings')
+        .doc('ai_settings')
+        .snapshots()
+        .listen((doc) {
+      if (mounted) {
+        setState(() {
+          _showFloatingButton = doc.exists && (doc.data()?['showFloatingButton'] ?? true);
+        });
+      }
+    });
   }
 
   void _handleProfileTitleTap() {
@@ -985,7 +1020,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
               ),
-      floatingActionButton: Container(
+      floatingActionButton: _showFloatingButton ? Container(
         height: 70,
         width: 70,
         decoration: BoxDecoration(
@@ -1024,7 +1059,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
         ),
-      ),
+      ) : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
