@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:engineering_project/assets/components/notification_service.dart';
 import 'package:engineering_project/assets/components/theme_data.dart';
 import 'package:engineering_project/firebase_options.dart';
 import 'package:engineering_project/pages/root_page.dart';
@@ -18,6 +19,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await NotificationService.init();
   runApp(const MyApp());
 }
 

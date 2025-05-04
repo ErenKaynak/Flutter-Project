@@ -1,5 +1,6 @@
 import 'package:engineering_project/admin-panel/admin_categories.dart';
 import 'package:engineering_project/admin-panel/admin_discount.dart';
+import 'package:engineering_project/admin-panel/admin_notification.dart';
 import 'package:engineering_project/admin-panel/admin_order_management.dart';
 import 'package:engineering_project/admin-panel/admin_photoUploader.dart';
 import 'package:engineering_project/admin-panel/admin_products.dart';
@@ -413,6 +414,19 @@ class _AdminPageState extends State<AdminPage> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const PhotoUploaderPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.notifications),
+                          title: const Text('Send Notifications'),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const NotificationManagementPage(),
                               ),
                             );
                           },
