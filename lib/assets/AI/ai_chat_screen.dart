@@ -45,26 +45,9 @@ class _AIChatScreenState extends State<AIChatScreen>
   When asked about PC builds, consider the user's budget and intended use (gaming, work, etc.).
   ''';
 
-  // Add these variables at the top with other declarations
-  final List<String> _apiKeys = [
-    APIConfig.ApiKey,
-    APIConfig.ApiKey2,
-    APIConfig.ApiKey3,
-    APIConfig.ApiKey4,
-    APIConfig.ApiKey5,
-  ];
-
-  int _currentApiKeyIndex = 0;
-
-  // Add this method to get next API key
-  String _getNextApiKey() {
-    _currentApiKeyIndex = (_currentApiKeyIndex + 1) % _apiKeys.length;
-    return _apiKeys[_currentApiKeyIndex];
-  }
-
   // OpenRouter Configuration
   static const String _openRouterApiKey =
-      APIConfig.ApiKey4; // Replace with your key
+      APIConfig.ApiKey; // Replace with your key
   static const String _openRouterUrl =
       'https://openrouter.ai/api/v1/chat/completions';
 
@@ -593,68 +576,44 @@ class _AIChatScreenState extends State<AIChatScreen>
       ));
     }
 
-    for (int attempt = 0; attempt < _apiKeys.length; attempt++) {
-      try {
-        final List<Product> recommendations = await _getProductRecommendations(
-          message,
-        );
+    try {
+      final List<Product> recommendations = await _getProductRecommendations(message);
 
-        final response = await http.post(
-          Uri.parse(_openRouterUrl),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${_apiKeys[_currentApiKeyIndex]}',
-            'HTTP-Referer': 'https://your-app-domain.com',
-            'X-Title': 'Your App Name',
-          },
-          body: jsonEncode({
-            'model': 'openai/gpt-3.5-turbo',
-            'messages': [
-              {'role': 'system', 'content': systemPrompt},
-              {'role': 'user', 'content': message},
-            ],
-          }),
-        );
+      final response = await http.post(
+        Uri.parse(APIConfig.openRouterUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${APIConfig.ApiKey}',
+          'HTTP-Referer': 'http://localhost',
+          'X-Title': 'AI Chat Assistant',
+        },
+        body: jsonEncode({
+          'model': 'openai/gpt-3.5-turbo',
+          'messages': [
+            {'role': 'system', 'content': systemPrompt},
+            {'role': 'user', 'content': message},
+          ]
+        }),
+      );
 
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          String aiResponse =
-              data['choices'][0]['message']['content'] as String;
-          return (aiResponse, recommendations);
-        } else if (response.statusCode == 401) {
-          print(
-            'API key ${_currentApiKeyIndex + 1} failed, trying next key...',
-          );
-          _getNextApiKey();
-          if (attempt == _apiKeys.length - 1) {
-            return (
-              APIConfig.fallbackResponses[Random().nextInt(
-                APIConfig.fallbackResponses.length,
-              )],
-              <Product>[],
-            );
-          }
-          continue;
-        } else {
-          throw Exception('Error ${response.statusCode}');
-        }
-      } catch (e) {
-        print('Error with API key ${_currentApiKeyIndex + 1}: $e');
-        if (attempt == _apiKeys.length - 1) {
-          return (
-            APIConfig.fallbackResponses[Random().nextInt(
-              APIConfig.fallbackResponses.length,
-            )],
-            <Product>[],
-          );
-        }
-        _getNextApiKey();
+      if (response.statusCode != 200) {
+        print('API error ${response.statusCode}: ${response.body}');
+        throw Exception('API request failed');
       }
+
+      final data = jsonDecode(response.body);
+      return (data['choices'][0]['message']['content'] as String, recommendations);
+
+    } catch (e, stackTrace) {
+      print('Error in API request: $e');
+      print('Stack trace: $stackTrace');
+      
+      // Return fallback response with recommendations
+      return (
+        APIConfig.fallbackResponses[Random().nextInt(APIConfig.fallbackResponses.length)],
+        await _getProductRecommendations(message),
+      );
     }
-    return (
-      'I apologize, but I\'m currently unavailable. Please try again later.',
-      <Product>[],
-    );
   }
 
   void _addToCart(Product product) async {
@@ -763,132 +722,57 @@ class _AIChatScreenState extends State<AIChatScreen>
     try {
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
       final List<Product> recommendations = [];
-      final lowercaseMessage = message.toLowerCase();
-
-      // Define preferences based on message
-      final bool preferIntel = lowercaseMessage.contains('intel');
-      final bool preferAMD =
-          lowercaseMessage.contains('amd') ||
-          lowercaseMessage.contains('ryzen');
-      final bool isGaming =
-          lowercaseMessage.contains('gaming') ||
-          lowercaseMessage.contains('game');
-
-      // Get all products first
-      final QuerySnapshot allProducts =
-          await firestore.collection('products').get();
-
-      // Group products by category
+      
+      // Add logging
+      print('Starting product recommendations search');
+      
+      final QuerySnapshot allProducts = await firestore.collection('products').get();
+      print('Found ${allProducts.docs.length} total products');
+  
+      // Group products by category with error handling
       Map<String, List<DocumentSnapshot>> productsByCategory = {};
       for (var doc in allProducts.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final category = data['category'] as String;
-        productsByCategory.putIfAbsent(category, () => []).add(doc);
-      }
-
-      // Process CPU category first with preference
-      if (productsByCategory.containsKey('CPU\'s')) {
-        var cpus = productsByCategory['CPU\'s']!;
-        DocumentSnapshot? selectedCPU;
-
-        if (preferIntel) {
-          selectedCPU = cpus.firstWhere(
-            (doc) => (doc.data() as Map<String, dynamic>)['name']
-                .toString()
-                .toLowerCase()
-                .contains('intel'),
-            orElse: () => cpus.first,
-          );
-        } else if (preferAMD) {
-          selectedCPU = cpus.firstWhere(
-            (doc) => (doc.data() as Map<String, dynamic>)['name']
-                .toString()
-                .toLowerCase()
-                .contains('amd'),
-            orElse: () => cpus.first,
-          );
-        } else {
-          selectedCPU = cpus.first;
+        try {
+          final data = doc.data() as Map<String, dynamic>;
+          final category = data['category'] as String? ?? 'Unknown';
+          productsByCategory.putIfAbsent(category, () => []).add(doc);
+        } catch (e) {
+          print('Error processing product document: $e');
+          continue;
         }
-
-        final cpuData = selectedCPU.data() as Map<String, dynamic>;
-        recommendations.add(
-          Product(
-            id: selectedCPU.id,
-            name: cpuData['name'] ?? '',
-            category: cpuData['category'] ?? '',
-            price:
-                (cpuData['price'] is int)
-                    ? (cpuData['price'] as int).toDouble()
-                    : (cpuData['price'] ?? 0).toDouble(),
-            description: cpuData['description'] ?? '',
-            imageUrl: cpuData['imagePath'] ?? '',
-          ),
-        );
       }
-
-      // Process other categories
-      final categoriesToProcess = [
-        'Motherboards',
-        'RAM\'s',
-        'GPU\'s',
-        'Storage',
-        'PSU',
-        'Case',
-      ];
-
+  
+      // Process categories with better error handling
+      final categoriesToProcess = ['CPU\'s', 'Motherboards', 'RAM\'s', 'GPU\'s', 'Storage', 'PSU', 'Case'];
+      
       for (final category in categoriesToProcess) {
-        if (productsByCategory.containsKey(category)) {
-          var products = productsByCategory[category]!;
-          if (products.isNotEmpty) {
-            // Sort by rating if available
-            products.sort((a, b) {
-              final ratingA =
-                  (a.data() as Map<String, dynamic>)['averageRating'] ?? 0.0;
-              final ratingB =
-                  (b.data() as Map<String, dynamic>)['averageRating'] ?? 0.0;
-              return (ratingB as num).compareTo(ratingA as num);
-            });
-
-            final doc = products.first;
-            final data = doc.data() as Map<String, dynamic>;
-            recommendations.add(
-              Product(
+        try {
+          if (productsByCategory.containsKey(category)) {
+            var products = productsByCategory[category]!;
+            if (products.isNotEmpty) {
+              final doc = products.first;
+              final data = doc.data() as Map<String, dynamic>;
+              recommendations.add(Product(
                 id: doc.id,
-                name: data['name'] ?? '',
-                category: data['category'] ?? '',
-                price:
-                    (data['price'] is int)
-                        ? (data['price'] as int).toDouble()
-                        : (data['price'] ?? 0).toDouble(),
+                name: data['name'] ?? 'Unknown Product',
+                category: category,
+                price: (data['price'] is num) ? (data['price'] as num).toDouble() : 0.0,
                 description: data['description'] ?? '',
                 imageUrl: data['imagePath'] ?? '',
-              ),
-            );
-          } else {
-            recommendations.add(
-              Product(
-                id: 'empty_${category.toLowerCase()}',
-                name: 'No Available Product',
-                category: category,
-                price: 0,
-                description:
-                    'There is not any available product in this category',
-                imageUrl: '',
-              ),
-            );
+              ));
+            }
           }
+        } catch (e) {
+          print('Error processing category $category: $e');
+          continue;
         }
       }
-
-      print('Final recommendations count: ${recommendations.length}');
-      recommendations.forEach((product) {
-        print('Recommending: ${product.name} (${product.category})');
-      });
-
+  
+      print('Successfully found ${recommendations.length} recommendations');
       return recommendations;
-    } catch (e) {
-      print('Error fetching products from Firestore: $e');
+    } catch (e, stackTrace) {
+      print('Error in _getProductRecommendations: $e');
+      print('Stack trace: $stackTrace');
       return [];
     }
   }
