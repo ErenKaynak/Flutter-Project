@@ -274,7 +274,12 @@ class _RootScreenState extends State<RootScreen> {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16.0),
-            color: isDark ? Colors.grey[900] : Colors.white,
+            color:
+                _selectedTheme != null
+                    ? getThemeColor(_selectedTheme!).shade100
+                    : isDark
+                    ? Colors.grey[900]
+                    : Colors.white,
             boxShadow:
                 isDark
                     ? []
@@ -287,10 +292,14 @@ class _RootScreenState extends State<RootScreen> {
                     ],
           ),
           child: NavigationBar(
-            indicatorColor: isDark ? Colors.grey[800]! : Colors.white,
+            indicatorColor:
+                _selectedTheme != null
+                    ? getThemeColor(_selectedTheme!).shade200
+                    : isDark
+                    ? Colors.grey[800]!
+                    : Colors.white,
             height: kBottomNavigationBarHeight,
             selectedIndex: currentScreen,
-            backgroundColor: Colors.transparent,
             elevation: 0,
             labelPadding: EdgeInsets.zero,
             onDestinationSelected: (value) {

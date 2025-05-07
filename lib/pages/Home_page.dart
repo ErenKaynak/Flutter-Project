@@ -541,10 +541,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: isDark ? Colors.black : Colors.white,
+          backgroundColor:
+              _selectedTheme != null
+                  ? getThemeColor(_selectedTheme!)
+                  : isDark
+                  ? Colors.black
+                  : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(15)),
           ),
@@ -610,7 +616,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               alignment: Alignment.center,
               children: [
                 IconButton(
-                  icon: Icon(Icons.shopping_cart),
+                  icon: Icon(
+                    Icons.shopping_cart,
+                    color:
+                        isDark
+                            ? Colors.white
+                            : (_selectedTheme != null
+                                ? getThemeColor(_selectedTheme!)
+                                : Colors.grey[800]),
+                  ),
                   onPressed: () {
                     if (mounted) {
                       Navigator.push(
@@ -1265,261 +1279,247 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ? Colors.grey.shade800
                 : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Container(
-          height: double.infinity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Flexible(
-                flex: 3,
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color:
-                        Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey.shade900
-                            : Colors.grey[200],
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Flexible(
+              flex: 3,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade900
+                          : Colors.grey[200],
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(12),
+                        ),
+                        child:
+                            (product["image"].startsWith('http') ||
+                                    product["image"].startsWith('https'))
+                                ? Image.network(
+                                  product["image"],
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder:
+                                      (context, error, stackTrace) =>
+                                          Image.asset(
+                                            'lib/assets/Images/placeholder.png',
+                                            fit: BoxFit.cover,
+                                          ),
+                                )
+                                : Image.asset(
+                                  product["image"],
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder:
+                                      (context, error, stackTrace) => Icon(
+                                        Icons.image_not_supported,
+                                        size: 40,
+                                        color: Colors.grey[400],
+                                      ),
+                                ),
+                      ),
                     ),
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(12),
-                          ),
-                          child:
-                              (product["image"].startsWith('http') ||
-                                      product["image"].startsWith('https'))
-                                  ? Image.network(
-                                    product["image"],
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                    errorBuilder:
-                                        (
-                                          context,
-                                          error,
-                                          stackTrace,
-                                        ) => Image.asset(
-                                          'lib/assets/Images/placeholder.png',
-                                          fit: BoxFit.cover,
-                                        ),
-                                  )
-                                  : Image.asset(
-                                    product["image"],
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                    errorBuilder:
-                                        (context, error, stackTrace) => Icon(
-                                          Icons.image_not_supported,
-                                          size: 40,
-                                          color: Colors.grey[400],
-                                        ),
-                                  ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.8),
+                          shape: BoxShape.circle,
                         ),
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.8),
-                            shape: BoxShape.circle,
-                          ),
-                          child: GestureDetector(
-                            onTap: () => toggleFavorite(product),
-                            child: Icon(
-                              isFavorite
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
-                              color:
-                                  _selectedTheme != null
-                                      ? getThemeColor(_selectedTheme!)
-                                      : Colors.red,
-                              size: 20,
-                            ),
+                        child: GestureDetector(
+                          onTap: () => toggleFavorite(product),
+                          child: Icon(
+                            isFavorite ? Icons.favorite : Icons.favorite_border,
+                            color:
+                                _selectedTheme != null
+                                    ? getThemeColor(_selectedTheme!)
+                                    : Colors.red,
+                            size: 20,
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              Flexible(
-                flex: 2,
-                child: Container(
-                  padding: EdgeInsets.all(8.0), // Reduced padding from 10.0
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                product["name"],
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ), // Reduced from 14
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                softWrap: true,
+            ),
+            Flexible(
+              flex: 2,
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              product["name"],
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: true,
                             ),
-                            SizedBox(height: 4),
-                            Flexible(
-                              child: Text(
-                                "₺${product["price"]}",
-                                style: TextStyle(
-                                  color: Colors.green.shade700,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ), // Reduced from 15
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: 4),
+                          Flexible(
+                            child: Text(
+                              "₺${product["price"]}",
+                              style: TextStyle(
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            SizedBox(height: 6),
-                            Flexible(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: [
-                                  ...List.generate(5, (index) {
-                                    double rating =
-                                        product["averageRating"] ?? 0.0;
-                                    return Icon(
-                                      index < rating.floor()
-                                          ? Icons.star
-                                          : (index < rating
-                                              ? Icons.star_half
-                                              : Icons.star_border),
-                                      color: Colors.yellow.shade700,
-                                      size: 16, // Reduced from 14
-                                    );
-                                  }),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    '(${product["ratingCount"] ?? 0})',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                    ), // Reduced from 12
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: 6),
+                          Flexible(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                ...List.generate(5, (index) {
+                                  double rating =
+                                      product["averageRating"] ?? 0.0;
+                                  return Icon(
+                                    index < rating.floor()
+                                        ? Icons.star
+                                        : (index < rating
+                                            ? Icons.star_half
+                                            : Icons.star_border),
+                                    color: Colors.yellow.shade700,
+                                    size: 16,
+                                  );
+                                }),
+                                SizedBox(width: 4),
+                                Text(
+                                  '(${product["ratingCount"] ?? 0})',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
                                   ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 36, // Reduced from 40
-                          child: AnimatedBuilder(
-                            animation: Listenable.merge([
-                              _colorAnimationControllers[product['id']]!,
-                              _tickAnimationControllers[product['id']]!,
-                            ]),
-                            builder: (context, child) {
-                              return ElevatedButton(
-                                onPressed:
-                                    isOutOfStock ||
-                                            _isAddingToCartMap[product['id']] ==
-                                                true
-                                        ? null
-                                        : () => _addToCart(product),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      _colorAnimations[product['id']]?.value ??
-                                      (_selectedTheme != null
-                                          ? getThemeColor(
-                                            _selectedTheme!,
-                                          ).shade400
-                                          : Colors.red.shade400),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  elevation: 2,
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                  ), // Added padding
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Opacity(
-                                      opacity:
-                                          1.0 -
-                                          (_colorAnimationControllers[product['id']]
-                                                  ?.value ??
-                                              0.0),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.shopping_cart_outlined,
-                                            size: 16,
-                                            color: Colors.white,
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 36,
+                        child: AnimatedBuilder(
+                          animation: Listenable.merge([
+                            _colorAnimationControllers[product['id']]!,
+                            _tickAnimationControllers[product['id']]!,
+                          ]),
+                          builder: (context, child) {
+                            return ElevatedButton(
+                              onPressed:
+                                  isOutOfStock ||
+                                          _isAddingToCartMap[product['id']] ==
+                                              true
+                                      ? null
+                                      : () => _addToCart(product),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    _colorAnimations[product['id']]?.value ??
+                                    (_selectedTheme != null
+                                        ? getThemeColor(
+                                          _selectedTheme!,
+                                        ).shade400
+                                        : Colors.red.shade400),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                elevation: 2,
+                                padding: EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Opacity(
+                                    opacity:
+                                        1.0 -
+                                        (_colorAnimationControllers[product['id']]
+                                                ?.value ??
+                                            0.0),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.shopping_cart_outlined,
+                                          size: 16,
+                                          color: Colors.white,
+                                        ),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          isOutOfStock
+                                              ? "OUT OF STOCK"
+                                              : "ADD TO CART",
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            isOutOfStock
-                                                ? "OUT OF STOCK"
-                                                : "ADD TO CART",
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                            ), // Reduced from 12/14
-                                            maxLines: 1,
-                                            overflow:
-                                                TextOverflow
-                                                    .ellipsis, // Changed from visible
-                                          ),
-                                        ],
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if ((_colorAnimationControllers[product['id']]
+                                              ?.value ??
+                                          0.0) >
+                                      0)
+                                    Transform.scale(
+                                      scale:
+                                          _tickAnimations[product['id']]
+                                              ?.value ??
+                                          0.0,
+                                      child: Icon(
+                                        Icons.check,
+                                        color: Colors.white,
+                                        size: 24,
                                       ),
                                     ),
-                                    if ((_colorAnimationControllers[product['id']]
-                                                ?.value ??
-                                            0.0) >
-                                        0)
-                                      Transform.scale(
-                                        scale:
-                                            _tickAnimations[product['id']]
-                                                ?.value ??
-                                            0.0,
-                                        child: Icon(
-                                          Icons.check,
-                                          color: Colors.white,
-                                          size: 24,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1536,6 +1536,7 @@ class FavoritesPage extends StatefulWidget {
 class _FavoritesPageState extends State<FavoritesPage> {
   List<Map<String, dynamic>> favorites = [];
   bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();

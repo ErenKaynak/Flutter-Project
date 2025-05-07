@@ -260,29 +260,42 @@ class _FavoritesPageState extends State<FavoritesPage>
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            "My Favorites",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          actions: [
-            if (!_isLoading && favoriteProducts.isNotEmpty)
-              IconButton(
-                icon: Icon(Icons.refresh),
-                onPressed: fetchFavorites,
-                tooltip: 'Refresh',
-              ),
-          ],
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor:
+            _selectedTheme != null
+                ? getThemeColor(_selectedTheme!)
+                : isDark
+                ? Theme.of(context).appBarTheme.backgroundColor
+                : Colors.red.shade700,
+        title: Text(
+          "My Favorites",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        body:
-            _isLoading
-                ? Center(child: CircularProgressIndicator())
-                : favoriteProducts.isEmpty
-                ? _buildEmptyFavorites()
-                : _buildFavoritesList(),
+        iconTheme: IconThemeData(
+          color: Colors.white,
+        ), // Makes back button white
+        actions: [
+          if (!_isLoading && favoriteProducts.isNotEmpty)
+            IconButton(
+              icon: Icon(
+                Icons.refresh,
+                color: Colors.white, // Makes refresh icon white
+              ),
+              onPressed: fetchFavorites,
+              tooltip: 'Refresh',
+            ),
+        ],
+        elevation: 0, // Removes shadow
       ),
+      body:
+          _isLoading
+              ? Center(child: CircularProgressIndicator())
+              : favoriteProducts.isEmpty
+              ? _buildEmptyFavorites()
+              : _buildFavoritesList(),
     );
   }
 
@@ -291,7 +304,14 @@ class _FavoritesPageState extends State<FavoritesPage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.favorite_border, size: 80, color: Colors.grey[400]),
+          Icon(
+            Icons.favorite_border,
+            size: 80,
+            color:
+                _selectedTheme != null
+                    ? getThemeColor(_selectedTheme!)
+                    : Colors.red,
+          ),
           SizedBox(height: 1),
           Text(
             "No favorites yet",
@@ -372,7 +392,10 @@ class _FavoritesPageState extends State<FavoritesPage>
         duration: Duration(milliseconds: 300),
       );
       _colorAnimations[product['id']] = ColorTween(
-        begin: Colors.red.shade400,
+        begin:
+            _selectedTheme != null
+                ? getThemeColor(_selectedTheme!).shade400
+                : Colors.red.shade400,
         end: Colors.green.shade500,
       ).animate(_colorAnimationControllers[product['id']]!);
     }

@@ -8,6 +8,28 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// SpecialColorTheme enum
+enum SpecialColorTheme { blue, orange, yellow, green, purple }
+
+// getThemeColor function
+MaterialColor getThemeColor(SpecialColorTheme theme) {
+  switch (theme) {
+    case SpecialColorTheme.blue:
+      return Colors.blue;
+    case SpecialColorTheme.orange:
+      return Colors.orange;
+    case SpecialColorTheme.yellow:
+      return Colors.yellow;
+    case SpecialColorTheme.green:
+      return Colors.green;
+    case SpecialColorTheme.purple:
+      return Colors.purple;
+    default:
+      return Colors.blue;
+  }
+}
 
 class CartItem {
   final String id;
@@ -301,7 +323,6 @@ class OrderSuccessPage extends StatelessWidget {
   }
 }
 
-// CartPage class tanımı ve state’inin başlangıcı bir sonraki mesajda.
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
 
@@ -319,11 +340,26 @@ class _CartPageState extends State<CartPage> {
   DiscountCode? _appliedDiscount;
   bool _isApplyingDiscount = false;
   String? _discountError;
+  SpecialColorTheme? _selectedTheme;
 
   @override
   void initState() {
     super.initState();
+    _loadSelectedTheme();
     _checkLoginAndLoadCart();
+  }
+
+  Future<void> _loadSelectedTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final themeString = prefs.getString('selectedTheme');
+    if (themeString != null) {
+      setState(() {
+        _selectedTheme = SpecialColorTheme.values.firstWhere(
+          (e) => e.toString() == 'SpecialColorTheme.$themeString',
+          orElse: () => SpecialColorTheme.blue,
+        );
+      });
+    }
   }
 
   Future<void> _checkLoginAndLoadCart() async {
@@ -433,7 +469,7 @@ class _CartPageState extends State<CartPage> {
       });
     } finally {
       setState(() {
-        _isApplyingDiscount = false ;
+        _isApplyingDiscount = false;
       });
     }
   }
@@ -447,17 +483,18 @@ class _CartPageState extends State<CartPage> {
   }
 
   void _proceedToCheckout() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => CheckoutPage(
-        subtotal: _cartManager.totalPrice,
-        appliedDiscount: _appliedDiscount,
-        items: _cartManager.items,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => CheckoutPage(
+              subtotal: _cartManager.totalPrice,
+              appliedDiscount: _appliedDiscount,
+              items: _cartManager.items,
+            ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   double get _discountedTotal {
     final originalTotal = _cartManager.totalPrice;
@@ -588,7 +625,12 @@ class _CartPageState extends State<CartPage> {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: theme.appBarTheme.backgroundColor,
+          backgroundColor:
+              _selectedTheme != null
+                  ? getThemeColor(_selectedTheme!)
+                  : Theme.of(context).brightness == Brightness.light
+                  ? Colors.red.shade700
+                  : Theme.of(context).appBarTheme.backgroundColor,
           title: Text('Your Cart', style: theme.appBarTheme.titleTextStyle),
           leading: BackButton(color: theme.iconTheme.color),
         ),
@@ -600,7 +642,12 @@ class _CartPageState extends State<CartPage> {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: theme.appBarTheme.backgroundColor,
+          backgroundColor:
+              _selectedTheme != null
+                  ? getThemeColor(_selectedTheme!)
+                  : Theme.of(context).brightness == Brightness.light
+                  ? Colors.red.shade700
+                  : Theme.of(context).appBarTheme.backgroundColor,
           title: Text('Your Cart', style: theme.appBarTheme.titleTextStyle),
           leading: BackButton(color: theme.iconTheme.color),
         ),
@@ -637,13 +684,21 @@ class _CartPageState extends State<CartPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: theme.appBarTheme.backgroundColor,
-        title: Text('Your Cart', style: theme.appBarTheme.titleTextStyle),
-        leading: BackButton(color: theme.iconTheme.color),
+        backgroundColor:
+            _selectedTheme != null
+                ? getThemeColor(_selectedTheme!)
+                : Theme.of(context).brightness == Brightness.light
+                ? Colors.red.shade700
+                : Theme.of(context).appBarTheme.backgroundColor,
+        title: Text('Your Cart', style: TextStyle(color: Colors.white)),
+        leading: BackButton(color: Colors.white), // Changed to white
         actions: [
           if (cartItems.isNotEmpty)
             IconButton(
-              icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+              icon: Icon(
+                Icons.delete_outline,
+                color: Colors.white,
+              ), // Changed to white
               onPressed: () {
                 showDialog(
                   context: context,
@@ -684,7 +739,10 @@ class _CartPageState extends State<CartPage> {
                     Icon(
                       Icons.shopping_cart_outlined,
                       size: 80,
-                      color: Colors.red,
+                      color:
+                          _selectedTheme != null
+                              ? getThemeColor(_selectedTheme!)
+                              : Colors.red, // Update to use special theme color
                     ),
                     const SizedBox(height: 20),
                     Text(
@@ -798,7 +856,9 @@ class _CartPageState extends State<CartPage> {
                                             _cartManager.removeItem(item.id);
                                           } else {
                                             _cartManager.updateQuantity(
-                                                item.id, -1);
+                                              item.id,
+                                              -1,
+                                            );
                                           }
                                         },
                                       ),
@@ -816,8 +876,11 @@ class _CartPageState extends State<CartPage> {
                                             color: Colors.red,
                                           ),
                                         ),
-                                        onPressed: () => _cartManager
-                                            .updateQuantity(item.id, 1),
+                                        onPressed:
+                                            () => _cartManager.updateQuantity(
+                                              item.id,
+                                              1,
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -829,7 +892,6 @@ class _CartPageState extends State<CartPage> {
                       },
                     ),
                   ),
-                  // Devamında: kupon alanı + ödeme özeti
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -926,7 +988,7 @@ class _CartPageState extends State<CartPage> {
                                       Text(
                                         '${_appliedDiscount!.discountPercentage}% off',
                                         style: TextStyle(
-                                          color: Colors.green.shade800, 
+                                          color: Colors.green.shade800,
                                         ),
                                       ),
                                     ],
@@ -947,8 +1009,6 @@ class _CartPageState extends State<CartPage> {
                       ],
                     ),
                   ),
-
-                  // Ödeme özeti ve buton
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
