@@ -22,7 +22,7 @@ import '../admin-panel/admin_main.dart';
 enum SpecialColorTheme { blue, orange, yellow, green, purple }
 
 // getThemeColor function
-Color getThemeColor(SpecialColorTheme theme) {
+MaterialColor getThemeColor(SpecialColorTheme theme) {
   switch (theme) {
     case SpecialColorTheme.blue:
       return Colors.blue;
@@ -34,6 +34,8 @@ Color getThemeColor(SpecialColorTheme theme) {
       return Colors.green;
     case SpecialColorTheme.purple:
       return Colors.purple;
+    default:
+      return Colors.blue;
   }
 }
 
@@ -370,13 +372,21 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 if (imageUrl != null && imageUrl!.isNotEmpty)
                   ListTile(
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.delete_outline,
-                      color: Colors.red,
+                      color:
+                          _selectedTheme != null
+                              ? getThemeColor(_selectedTheme!)
+                              : Colors.red,
                     ),
-                    title: const Text(
+                    title: Text(
                       'Remove Photo',
-                      style: TextStyle(color: Colors.red),
+                      style: TextStyle(
+                        color:
+                            _selectedTheme != null
+                                ? getThemeColor(_selectedTheme!)
+                                : Colors.red,
+                      ),
                     ),
                     onTap: () {
                       Navigator.pop(context);
@@ -434,9 +444,16 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final color = isBlack ? Colors.black : Theme.of(context).cardColor;
     final textColor = isBlack ? Colors.white : null;
-    final iconColor = isBlack ? Colors.white : Colors.red.shade700;
+    final iconColor =
+        _selectedTheme != null
+            ? getThemeColor(_selectedTheme!)
+            : Colors.red.shade700;
     final borderColor =
-        isDark ? Colors.white.withOpacity(0.2) : Colors.red.withOpacity(0.3);
+        isDark
+            ? Colors.white.withOpacity(0.2)
+            : _selectedTheme != null
+            ? getThemeColor(_selectedTheme!).withOpacity(0.3)
+            : Colors.red.withOpacity(0.3);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -483,7 +500,11 @@ class _ProfilePageState extends State<ProfilePage> {
     final isDark =
         Theme.of(context).brightness == Brightness.dark || isBlackMode;
     final outlineColor =
-        isDark ? Colors.white.withOpacity(0.2) : Colors.red.withOpacity(0.3);
+        isDark
+            ? Colors.white.withOpacity(0.2)
+            : _selectedTheme != null
+            ? getThemeColor(_selectedTheme!).withOpacity(0.3)
+            : Colors.red.withOpacity(0.3);
 
     // Apply light mode when Special Mode is on, unless a special theme is selected
     final backgroundColor =
@@ -532,8 +553,22 @@ class _ProfilePageState extends State<ProfilePage> {
                     gradient: LinearGradient(
                       colors:
                           isDark
-                              ? [Colors.red.shade900, Colors.grey.shade900]
-                              : [Colors.red.shade500, Colors.red.shade100],
+                              ? [
+                                _selectedTheme != null
+                                    ? getThemeColor(_selectedTheme!).shade900
+                                    : Colors.red.shade900,
+                                _selectedTheme != null
+                                    ? getThemeColor(_selectedTheme!).shade900
+                                    : Colors.grey.shade900,
+                              ]
+                              : [
+                                _selectedTheme != null
+                                    ? getThemeColor(_selectedTheme!).shade500
+                                    : Colors.red.shade500,
+                                _selectedTheme != null
+                                    ? getThemeColor(_selectedTheme!).shade100
+                                    : Colors.red.shade100,
+                              ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -620,7 +655,10 @@ class _ProfilePageState extends State<ProfilePage> {
                         children: [
                           Icon(
                             Icons.lock_outline,
-                            color: isDark ? Colors.white : Colors.red.shade700,
+                            color:
+                                _selectedTheme != null
+                                    ? getThemeColor(_selectedTheme!)
+                                    : Colors.red.shade700,
                             size: 22,
                           ),
                           const SizedBox(width: 8),
@@ -647,8 +685,12 @@ class _ProfilePageState extends State<ProfilePage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               isDark
-                                  ? Colors.red.shade900
-                                  : Colors.red.shade400,
+                                  ? (_selectedTheme != null
+                                      ? getThemeColor(_selectedTheme!).shade900
+                                      : Colors.red.shade900)
+                                  : (_selectedTheme != null
+                                      ? getThemeColor(_selectedTheme!).shade400
+                                      : Colors.red.shade400),
                           foregroundColor: Colors.white,
                           minimumSize: const Size.fromHeight(50),
                           shape: RoundedRectangleBorder(
@@ -676,7 +718,10 @@ class _ProfilePageState extends State<ProfilePage> {
                         },
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(
-                            color: Colors.red.shade400,
+                            color:
+                                _selectedTheme != null
+                                    ? getThemeColor(_selectedTheme!).shade400
+                                    : Colors.red.shade400,
                             width: 2,
                           ),
                           minimumSize: const Size.fromHeight(50),
@@ -689,7 +734,10 @@ class _ProfilePageState extends State<ProfilePage> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.red.shade400,
+                            color:
+                                _selectedTheme != null
+                                    ? getThemeColor(_selectedTheme!).shade400
+                                    : Colors.red.shade400,
                           ),
                         ),
                       ),
@@ -751,8 +799,30 @@ class _ProfilePageState extends State<ProfilePage> {
                         gradient: LinearGradient(
                           colors:
                               isDark
-                                  ? [Colors.red.shade900, Colors.grey.shade900]
-                                  : [Colors.red.shade500, Colors.red.shade100],
+                                  ? [
+                                    _selectedTheme != null
+                                        ? getThemeColor(
+                                          _selectedTheme!,
+                                        ).shade900
+                                        : Colors.red.shade900,
+                                    _selectedTheme != null
+                                        ? getThemeColor(
+                                          _selectedTheme!,
+                                        ).shade900
+                                        : Colors.grey.shade900,
+                                  ]
+                                  : [
+                                    _selectedTheme != null
+                                        ? getThemeColor(
+                                          _selectedTheme!,
+                                        ).shade500
+                                        : Colors.red.shade500,
+                                    _selectedTheme != null
+                                        ? getThemeColor(
+                                          _selectedTheme!,
+                                        ).shade100
+                                        : Colors.red.shade100,
+                                  ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -807,6 +877,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                     color:
                                         isDark
                                             ? Colors.white
+                                            : _selectedTheme != null
+                                            ? getThemeColor(_selectedTheme!)
                                             : Colors.red.shade700,
                                     shape: BoxShape.circle,
                                     border: Border.all(
@@ -902,7 +974,9 @@ class _ProfilePageState extends State<ProfilePage> {
                               Icon(
                                 Icons.settings,
                                 color:
-                                    isDark ? Colors.white : Colors.red.shade700,
+                                    _selectedTheme != null
+                                        ? getThemeColor(_selectedTheme!)
+                                        : Colors.red.shade700,
                                 size: 22,
                               ),
                               const SizedBox(width: 8),
@@ -988,7 +1062,9 @@ class _ProfilePageState extends State<ProfilePage> {
                               Icon(
                                 Icons.palette,
                                 color:
-                                    isDark ? Colors.white : Colors.red.shade700,
+                                    _selectedTheme != null
+                                        ? getThemeColor(_selectedTheme!)
+                                        : Colors.red.shade700,
                                 size: 22,
                               ),
                               const SizedBox(width: 8),
@@ -1087,8 +1163,12 @@ class _ProfilePageState extends State<ProfilePage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               isDark
-                                  ? Colors.red.shade900
-                                  : Colors.red.shade700,
+                                  ? (_selectedTheme != null
+                                      ? getThemeColor(_selectedTheme!).shade900
+                                      : Colors.red.shade900)
+                                  : (_selectedTheme != null
+                                      ? getThemeColor(_selectedTheme!).shade700
+                                      : Colors.red.shade700),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.all(16),
                           shape: RoundedRectangleBorder(
@@ -1120,8 +1200,22 @@ class _ProfilePageState extends State<ProfilePage> {
                     end: Alignment.bottomRight,
                     colors:
                         isDark
-                            ? [Colors.red.shade900, Colors.red.shade800]
-                            : [Colors.red.shade500, Colors.red.shade400],
+                            ? [
+                              _selectedTheme != null
+                                  ? getThemeColor(_selectedTheme!).shade900
+                                  : Colors.red.shade900,
+                              _selectedTheme != null
+                                  ? getThemeColor(_selectedTheme!).shade800
+                                  : Colors.red.shade800,
+                            ]
+                            : [
+                              _selectedTheme != null
+                                  ? getThemeColor(_selectedTheme!).shade500
+                                  : Colors.red.shade500,
+                              _selectedTheme != null
+                                  ? getThemeColor(_selectedTheme!).shade400
+                                  : Colors.red.shade400,
+                            ],
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -1173,7 +1267,9 @@ class _ProfilePageState extends State<ProfilePage> {
           color:
               isDark
                   ? Colors.white.withOpacity(0.1)
-                  : Colors.red.withOpacity(0.1),
+                  : (_selectedTheme != null
+                      ? getThemeColor(_selectedTheme!).withOpacity(0.1)
+                      : Colors.red.withOpacity(0.1)),
           width: 1,
         ),
       ),
@@ -1184,7 +1280,13 @@ class _ProfilePageState extends State<ProfilePage> {
           Row(
             children: [
               const SizedBox(width: 12),
-              Icon(icon, color: isDark ? Colors.white : Colors.red.shade700),
+              Icon(
+                icon,
+                color:
+                    _selectedTheme != null
+                        ? getThemeColor(_selectedTheme!)
+                        : Colors.red.shade700,
+              ),
               const SizedBox(width: 12),
               Text(
                 label,
@@ -1198,7 +1300,10 @@ class _ProfilePageState extends State<ProfilePage> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: Colors.red.shade700,
+            activeColor:
+                _selectedTheme != null
+                    ? getThemeColor(_selectedTheme!).shade700
+                    : Colors.red.shade700,
           ),
         ],
       ),
@@ -1216,7 +1321,9 @@ class _ProfilePageState extends State<ProfilePage> {
           color:
               Theme.of(context).brightness == Brightness.dark
                   ? Colors.white.withOpacity(0.2)
-                  : Colors.red.withOpacity(0.3),
+                  : (_selectedTheme != null
+                      ? getThemeColor(_selectedTheme!).withOpacity(0.3)
+                      : Colors.red.withOpacity(0.3)),
         ),
       ),
       child: Column(

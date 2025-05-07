@@ -7,6 +7,27 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+
+enum SpecialColorTheme { blue, orange, yellow, green, purple }
+
+MaterialColor getThemeColor(SpecialColorTheme theme) {
+  switch (theme) {
+    case SpecialColorTheme.blue:
+      return Colors.blue;
+    case SpecialColorTheme.orange:
+      return Colors.orange;
+    case SpecialColorTheme.yellow:
+      return Colors.yellow;
+    case SpecialColorTheme.green:
+      return Colors.green;
+    case SpecialColorTheme.purple:
+      return Colors.purple;
+    default:
+      return Colors.blue;
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +66,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   bool _isDisposed = false;
   String _userName = "Guest";
 
+  // Add these variables
+  SpecialColorTheme? _selectedTheme;
+  bool isColorPickerVisible = false;
+
   @override
   void initState() {
     super.initState();
@@ -60,6 +85,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       }
     });
     _loadInitialData();
+    _loadSelectedTheme(); // Add this line
+  }
+
+  // Add this method
+  Future<void> _loadSelectedTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final themeString = prefs.getString('selectedTheme');
+    if (themeString != null) {
+      setState(() {
+        _selectedTheme = SpecialColorTheme.values.firstWhere(
+          (e) => e.toString() == 'SpecialColorTheme.$themeString',
+          orElse: () => SpecialColorTheme.blue,
+        );
+      });
+    }
   }
 
   Future<void> _loadCategories() async {
@@ -177,7 +217,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       );
       _colorAnimationControllers[productId] = colorController;
       _colorAnimations[productId] = ColorTween(
-        begin: Colors.red.shade400,
+        begin:
+            _selectedTheme != null
+                ? getThemeColor(_selectedTheme!).shade400
+                : Colors.red.shade400,
         end: Colors.green.shade500,
       ).animate(colorController);
       final tickController = AnimationController(
@@ -520,7 +563,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 filled: true,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+                  borderSide: BorderSide(
+                    color:
+                        _selectedTheme != null
+                            ? getThemeColor(_selectedTheme!).withOpacity(0.5)
+                            : Colors.red.withOpacity(0.5),
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -581,7 +629,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     child: Container(
                       padding: EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: Colors.red,
+                        color:
+                            _selectedTheme != null
+                                ? getThemeColor(_selectedTheme!)
+                                : Colors.red,
                         shape: BoxShape.circle,
                       ),
                       constraints: BoxConstraints(minWidth: 16, minHeight: 16),
@@ -601,123 +652,149 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             SizedBox(width: 20),
           ],
         ),
-        body: _isLoading
-            ? Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: _loadInitialData,
-                child: CustomScrollView(
-                  slivers: [
-                    if (_searchQuery.isEmpty) ...[
-                      SliverToBoxAdapter(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(16.0),
-                              margin: EdgeInsets.all(10.0),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors:
-                                      Theme.of(context).brightness ==
-                                              Brightness.dark
-                                          ? [
-                                            Colors.red.shade900,
-                                            Colors.grey.shade900,
-                                          ]
-                                          : [
-                                            Colors.red.shade500,
-                                            Colors.red.shade100,
-                                          ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color:
+        body:
+            _isLoading
+                ? Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                  onRefresh: _loadInitialData,
+                  child: CustomScrollView(
+                    slivers: [
+                      if (_searchQuery.isEmpty) ...[
+                        SliverToBoxAdapter(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(16.0),
+                                margin: EdgeInsets.all(10.0),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors:
                                         Theme.of(context).brightness ==
                                                 Brightness.dark
-                                            ? Colors.black26
-                                            : Colors.black12,
-                                    blurRadius: 5,
-                                    offset: Offset(0, 2),
+                                            ? [
+                                              _selectedTheme != null
+                                                  ? getThemeColor(
+                                                    _selectedTheme!,
+                                                  ).shade900
+                                                  : Colors.red.shade900,
+                                              Colors.black54,
+                                            ]
+                                            : [
+                                              _selectedTheme != null
+                                                  ? getThemeColor(
+                                                    _selectedTheme!,
+                                                  ).shade500
+                                                  : Colors.red.shade500,
+                                              _selectedTheme != null
+                                                  ? getThemeColor(
+                                                    _selectedTheme!,
+                                                  ).shade100
+                                                  : Colors.red.shade100,
+                                            ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                   ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 30,
-                                    backgroundColor:
-                                        Theme.of(context).brightness ==
-                                                Brightness.dark
-                                            ? Colors.red.shade700
-                                            : Colors.red.shade300,
-                                    backgroundImage:
-                                        _userProfilePicture != null &&
-                                                _userProfilePicture!.isNotEmpty
-                                            ? NetworkImage(_userProfilePicture!)
-                                            : null,
-                                    child:
-                                        _userProfilePicture == null ||
-                                                _userProfilePicture!.isEmpty
-                                            ? Icon(
-                                              Icons.person,
-                                              size: 36,
-                                              color: Colors.white,
-                                            )
-                                            : null,
-                                  ),
-                                  SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "Welcome",
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color:
-                                                Theme.of(context).brightness ==
-                                                        Brightness.dark
-                                                    ? Colors.grey[400]
-                                                    : Colors.black54,
-                                          ),
-                                        ),
-                                        Text(
-                                          _userName,
-                                          style: TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.bold,
-                                            color:
-                                                Theme.of(context).brightness ==
-                                                        Brightness.dark
-                                                    ? Colors.white
-                                                    : Colors.black87,
-                                          ),
-                                        ),
-                                      ],
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          Theme.of(context).brightness ==
+                                                  Brightness.dark
+                                              ? Colors.black26
+                                              : Colors.black12,
+                                      blurRadius: 5,
+                                      offset: Offset(0, 2),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 30,
+                                      backgroundColor:
+                                          Theme.of(context).brightness ==
+                                                  Brightness.dark
+                                              ? (_selectedTheme != null
+                                                  ? getThemeColor(
+                                                    _selectedTheme!,
+                                                  ).shade700
+                                                  : Colors.red.shade700)
+                                              : (_selectedTheme != null
+                                                  ? getThemeColor(
+                                                    _selectedTheme!,
+                                                  ).shade300
+                                                  : Colors.red.shade300),
+                                      backgroundImage:
+                                          _userProfilePicture != null &&
+                                                  _userProfilePicture!
+                                                      .isNotEmpty
+                                              ? NetworkImage(
+                                                _userProfilePicture!,
+                                              )
+                                              : null,
+                                      child:
+                                          _userProfilePicture == null ||
+                                                  _userProfilePicture!.isEmpty
+                                              ? Icon(
+                                                Icons.person,
+                                                size: 36,
+                                                color: Colors.white,
+                                              )
+                                              : null,
+                                    ),
+                                    SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "Welcome",
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color:
+                                                  Theme.of(
+                                                            context,
+                                                          ).brightness ==
+                                                          Brightness.dark
+                                                      ? Colors.grey[400]
+                                                      : Colors.black54,
+                                            ),
+                                          ),
+                                          Text(
+                                            _userName,
+                                            style: TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold,
+                                              color:
+                                                  Theme.of(
+                                                            context,
+                                                          ).brightness ==
+                                                          Brightness.dark
+                                                      ? Colors.white
+                                                      : Colors.black87,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            _buildBannerSection(),
-                            SizedBox(height: 10),
-                            _buildCategoriesHeader(),
-                            _buildCategoriesRow(),
-                          ],
+                              _buildBannerSection(),
+                              SizedBox(height: 10),
+                              _buildCategoriesHeader(),
+                              _buildCategoriesRow(),
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
+                      SliverToBoxAdapter(child: _buildProductsHeader()),
+                      _buildProductsGrid(),
                     ],
-                    SliverToBoxAdapter(
-                      child: _buildProductsHeader(),
-                    ),
-                    _buildProductsGrid(),
-                  ],
+                  ),
                 ),
-              ),
       ),
     );
   }
@@ -752,8 +829,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 gradient: LinearGradient(
                   colors:
                       Theme.of(context).brightness == Brightness.dark
-                          ? [Colors.red.shade900, Colors.black54]
-                          : [Colors.red.shade500, Colors.red.shade100],
+                          ? [
+                            _selectedTheme != null
+                                ? getThemeColor(_selectedTheme!).shade900
+                                : Colors.red.shade900,
+                            Colors.black54,
+                          ]
+                          : [
+                            _selectedTheme != null
+                                ? getThemeColor(_selectedTheme!).shade500
+                                : Colors.red.shade500,
+                            _selectedTheme != null
+                                ? getThemeColor(_selectedTheme!).shade100
+                                : Colors.red.shade100,
+                          ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -785,9 +874,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       'Shop Now',
                       style: TextStyle(
                         color:
-                            Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : Colors.red,
+                            _selectedTheme != null
+                                ? getThemeColor(_selectedTheme!)
+                                : (Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.white
+                                    : Colors.red),
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
@@ -821,12 +913,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             icon: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.sort, size: 20, color: Colors.red.shade700),
+                Icon(
+                  Icons.sort,
+                  size: 20,
+                  color:
+                      _selectedTheme != null
+                          ? getThemeColor(_selectedTheme!)
+                          : Colors.red.shade700,
+                ),
                 SizedBox(width: 4),
                 Text(
                   "Sort",
                   style: TextStyle(
-                    color: Colors.red.shade700,
+                    color:
+                        _selectedTheme != null
+                            ? getThemeColor(_selectedTheme!)
+                            : Colors.red.shade700,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -965,16 +1067,26 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               color:
                   isDark
                       ? (isSelected
-                          ? Colors.red.shade900
+                          ? (_selectedTheme != null
+                              ? getThemeColor(_selectedTheme!).shade900
+                              : Colors.red.shade900)
                           : Colors.grey.shade800)
                       : (isSelected
-                          ? Colors.red.shade50
+                          ? (_selectedTheme != null
+                              ? getThemeColor(_selectedTheme!).shade50
+                              : Colors.red.shade50)
                           : Colors.grey.shade200),
               border:
                   isSelected
                       ? Border.all(
                         color:
-                            isDark ? Colors.red.shade700 : Colors.red.shade400,
+                            isDark
+                                ? (_selectedTheme != null
+                                    ? getThemeColor(_selectedTheme!).shade700
+                                    : Colors.red.shade700)
+                                : (_selectedTheme != null
+                                    ? getThemeColor(_selectedTheme!).shade400
+                                    : Colors.red.shade400),
                         width: 2,
                       )
                       : null,
@@ -983,9 +1095,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       ? [
                         BoxShadow(
                           color:
-                              isDark
-                                  ? Colors.red.shade900.withOpacity(0.5)
-                                  : Colors.red.shade300.withOpacity(0.5),
+                              _selectedTheme != null
+                                  ? getThemeColor(
+                                    _selectedTheme!,
+                                  ).withOpacity(0.5)
+                                  : (isDark
+                                      ? Colors.red.shade900.withOpacity(0.5)
+                                      : Colors.red.shade300.withOpacity(0.5)),
                           blurRadius: 8,
                           spreadRadius: 1,
                         ),
@@ -1028,8 +1144,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               color:
                   isDark
-                      ? (isSelected ? Colors.red.shade400 : Colors.white70)
-                      : (isSelected ? Colors.red : Colors.black),
+                      ? (isSelected
+                          ? (_selectedTheme != null
+                              ? getThemeColor(_selectedTheme!).shade400
+                              : Colors.red.shade400)
+                          : Colors.white70)
+                      : (isSelected
+                          ? (_selectedTheme != null
+                              ? getThemeColor(_selectedTheme!)
+                              : Colors.red)
+                          : Colors.black),
             ),
           ),
         ],
@@ -1214,7 +1338,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               isFavorite
                                   ? Icons.favorite
                                   : Icons.favorite_border,
-                              color: Colors.red,
+                              color:
+                                  _selectedTheme != null
+                                      ? getThemeColor(_selectedTheme!)
+                                      : Colors.red,
                               size: 20,
                             ),
                           ),
@@ -1316,7 +1443,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor:
                                       _colorAnimations[product['id']]?.value ??
-                                      Colors.red.shade400,
+                                      (_selectedTheme != null
+                                          ? getThemeColor(
+                                            _selectedTheme!,
+                                          ).shade400
+                                          : Colors.red.shade400),
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
@@ -1336,11 +1467,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                                   ?.value ??
                                               0.0),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Icon(
                                             Icons.shopping_cart_outlined,
                                             size: 16,
+                                            color: Colors.white,
                                           ),
                                           SizedBox(width: 4),
                                           Text(
@@ -1353,7 +1486,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                             ), // Reduced from 12/14
                                             maxLines: 1,
                                             overflow:
-                                                TextOverflow.ellipsis, // Changed from visible
+                                                TextOverflow
+                                                    .ellipsis, // Changed from visible
                                           ),
                                         ],
                                       ),

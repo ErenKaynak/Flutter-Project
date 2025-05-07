@@ -5,6 +5,7 @@ import 'profile_page.dart';
 import 'search_page.dart' as FavoritesPage;
 import 'home_page.dart' as HomePage;
 import 'package:engineering_project/assets/components/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Import or create an admin page
 class AdminPage extends StatefulWidget {
@@ -46,14 +47,21 @@ class _AdminPageState extends State<AdminPage> {
                 elevation: isDark ? 1 : 2,
                 color: Theme.of(context).cardColor,
                 child: ListTile(
-                  leading: Icon(Icons.people, color: Theme.of(context).primaryColor),
+                  leading: Icon(
+                    Icons.people,
+                    color: Theme.of(context).primaryColor,
+                  ),
                   title: Text(
                     "User Management",
-                    style: TextStyle(color: Theme.of(context).textTheme.titleMedium?.color),
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.titleMedium?.color,
+                    ),
                   ),
                   subtitle: Text(
                     "View and manage users",
-                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
                   ),
                   trailing: Icon(
                     Icons.arrow_forward_ios,
@@ -72,14 +80,21 @@ class _AdminPageState extends State<AdminPage> {
                 elevation: isDark ? 1 : 2,
                 color: Theme.of(context).cardColor,
                 child: ListTile(
-                  leading: Icon(Icons.inventory_2, color: Theme.of(context).primaryColor),
+                  leading: Icon(
+                    Icons.inventory_2,
+                    color: Theme.of(context).primaryColor,
+                  ),
                   title: Text(
                     "Product Management",
-                    style: TextStyle(color: Theme.of(context).textTheme.titleMedium?.color),
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.titleMedium?.color,
+                    ),
                   ),
                   subtitle: Text(
                     "Add, edit or remove products",
-                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
                   ),
                   trailing: Icon(
                     Icons.arrow_forward_ios,
@@ -104,11 +119,15 @@ class _AdminPageState extends State<AdminPage> {
                   ),
                   title: Text(
                     "Order Management",
-                    style: TextStyle(color: Theme.of(context).textTheme.titleMedium?.color),
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.titleMedium?.color,
+                    ),
                   ),
                   subtitle: Text(
                     "View and process orders",
-                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
                   ),
                   trailing: Icon(
                     Icons.arrow_forward_ios,
@@ -134,6 +153,8 @@ class RootScreen extends StatefulWidget {
   State<RootScreen> createState() => _RootScreenState();
 }
 
+enum SpecialColorTheme { blue, orange, yellow, green, purple }
+
 class _RootScreenState extends State<RootScreen> {
   late PageController controller;
   int currentScreen = 0;
@@ -146,12 +167,14 @@ class _RootScreenState extends State<RootScreen> {
   bool isAdmin = false;
   bool isLoading = true;
   bool _mounted = true;
+  SpecialColorTheme? _selectedTheme;
 
   @override
   void initState() {
     super.initState();
     controller = PageController(initialPage: currentScreen);
     checkAdminStatus();
+    _loadSelectedTheme();
   }
 
   @override
@@ -195,6 +218,36 @@ class _RootScreenState extends State<RootScreen> {
     }
   }
 
+  Future<void> _loadSelectedTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final themeString = prefs.getString('selectedTheme');
+    if (themeString != null) {
+      setState(() {
+        _selectedTheme = SpecialColorTheme.values.firstWhere(
+          (e) => e.toString() == 'SpecialColorTheme.$themeString',
+          orElse: () => SpecialColorTheme.blue,
+        );
+      });
+    }
+  }
+
+  MaterialColor getThemeColor(SpecialColorTheme theme) {
+    switch (theme) {
+      case SpecialColorTheme.blue:
+        return Colors.blue;
+      case SpecialColorTheme.orange:
+        return Colors.orange;
+      case SpecialColorTheme.yellow:
+        return Colors.yellow;
+      case SpecialColorTheme.green:
+        return Colors.green;
+      case SpecialColorTheme.purple:
+        return Colors.purple;
+      default:
+        return Colors.blue;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -222,20 +275,19 @@ class _RootScreenState extends State<RootScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16.0),
             color: isDark ? Colors.grey[900] : Colors.white,
-            boxShadow: isDark
-                ? []
-                : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
+            boxShadow:
+                isDark
+                    ? []
+                    : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
           ),
           child: NavigationBar(
-            indicatorColor: isDark 
-                ? Colors.grey[800]!
-                : Colors.white,
+            indicatorColor: isDark ? Colors.grey[800]! : Colors.white,
             height: kBottomNavigationBarHeight,
             selectedIndex: currentScreen,
             backgroundColor: Colors.transparent,
@@ -249,11 +301,27 @@ class _RootScreenState extends State<RootScreen> {
             },
             destinations: [
               _buildNavigationDestination(Icons.home_outlined, 'Home', 0),
-              _buildNavigationDestination(Icons.favorite_border_outlined, 'Favorites', 1),
-              _buildNavigationDestination(Icons.shopping_bag_outlined, 'Cart', 2),
-              _buildNavigationDestination(Icons.person_outline_rounded, 'Profile', 3),
+              _buildNavigationDestination(
+                Icons.favorite_border_outlined,
+                'Favorites',
+                1,
+              ),
+              _buildNavigationDestination(
+                Icons.shopping_bag_outlined,
+                'Cart',
+                2,
+              ),
+              _buildNavigationDestination(
+                Icons.person_outline_rounded,
+                'Profile',
+                3,
+              ),
               if (isAdmin)
-                _buildNavigationDestination(Icons.admin_panel_settings_outlined, 'Admin', 4),
+                _buildNavigationDestination(
+                  Icons.admin_panel_settings_outlined,
+                  'Admin',
+                  4,
+                ),
             ],
           ),
         ),
@@ -261,16 +329,25 @@ class _RootScreenState extends State<RootScreen> {
     );
   }
 
-  NavigationDestination _buildNavigationDestination(IconData icon, String label, int index) {
+  NavigationDestination _buildNavigationDestination(
+    IconData icon,
+    String label,
+    int index,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSelected = currentScreen == index;
-    
+    final themeColor =
+        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+
     return NavigationDestination(
       icon: Icon(
         icon,
-        color: isSelected
-            ? Theme.of(context).primaryColor
-            : isDark
+        color:
+            isSelected
+                ? (_selectedTheme != null
+                    ? themeColor
+                    : Theme.of(context).primaryColor)
+                : isDark
                 ? Colors.grey[400]
                 : Colors.black54,
         size: 30,

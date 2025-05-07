@@ -5,6 +5,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:engineering_project/pages/cart_page.dart';
 import 'package:lottie/lottie.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+enum SpecialColorTheme { blue, orange, yellow, green, purple }
 
 class FavoritesPage extends StatefulWidget {
   final Function? onFavoritesChanged;
@@ -15,7 +18,9 @@ class FavoritesPage extends StatefulWidget {
   _FavoritesPageState createState() => _FavoritesPageState();
 }
 
-class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateMixin {
+class _FavoritesPageState extends State<FavoritesPage>
+    with TickerProviderStateMixin {
+  SpecialColorTheme? _selectedTheme;
   bool _isLoading = true;
   List<Map<String, dynamic>> favoriteProducts = [];
   final Map<String, AnimationController> _animationControllers = {};
@@ -28,6 +33,7 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
   @override
   void initState() {
     super.initState();
+    _loadSelectedTheme();
     fetchFavorites();
   }
 
@@ -55,7 +61,10 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
       );
       _colorAnimationControllers[productId] = colorController;
       _colorAnimations[productId] = ColorTween(
-        begin: Colors.red.shade400,
+        begin:
+            _selectedTheme != null
+                ? getThemeColor(_selectedTheme!).shade400
+                : Colors.red.shade400,
         end: Colors.green.shade500,
       ).animate(colorController);
 
@@ -86,12 +95,13 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
         return;
       }
 
-      final favoritesSnapshot = await FirebaseFirestore.instance
-          .collection('favorites')
-          .doc(user.uid)
-          .collection('userFavorites')
-          .orderBy('addedAt', descending: true)
-          .get();
+      final favoritesSnapshot =
+          await FirebaseFirestore.instance
+              .collection('favorites')
+              .doc(user.uid)
+              .collection('userFavorites')
+              .orderBy('addedAt', descending: true)
+              .get();
 
       final List<Map<String, dynamic>> loadedFavorites = [];
       favoritesSnapshot.docs.forEach((doc) {
@@ -190,9 +200,7 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
       if (docSnapshot.exists) {
         final currentQuantity = docSnapshot.data()?['quantity'] ?? 1;
         final newQuantity = (currentQuantity + 1).clamp(1, 10);
-        await cartRef.update({
-          'quantity': newQuantity,
-        });
+        await cartRef.update({'quantity': newQuantity});
       } else {
         await cartRef.set({
           'name': product['name'],
@@ -237,6 +245,19 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
     );
   }
 
+  Future<void> _loadSelectedTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final themeString = prefs.getString('selectedTheme');
+    if (themeString != null) {
+      setState(() {
+        _selectedTheme = SpecialColorTheme.values.firstWhere(
+          (e) => e.toString() == 'SpecialColorTheme.$themeString',
+          orElse: () => SpecialColorTheme.blue,
+        );
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -255,9 +276,10 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
               ),
           ],
         ),
-        body: _isLoading
-            ? Center(child: CircularProgressIndicator())
-            : favoriteProducts.isEmpty
+        body:
+            _isLoading
+                ? Center(child: CircularProgressIndicator())
+                : favoriteProducts.isEmpty
                 ? _buildEmptyFavorites()
                 : _buildFavoritesList(),
       ),
@@ -269,11 +291,7 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.favorite_border,
-            size: 80,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.favorite_border, size: 80, color: Colors.grey[400]),
           SizedBox(height: 1),
           Text(
             "No favorites yet",
@@ -286,22 +304,23 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
           SizedBox(height: 1),
           Text(
             "Items you mark as favorite will appear here",
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 16),
           ),
           SizedBox(height: 1),
           ElevatedButton(
-            onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const RootScreen()),
-              ),
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RootScreen()),
+                ),
             child: Text("Explore Products"),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               foregroundColor: Colors.white,
-              backgroundColor: Colors.red.shade700,
+              backgroundColor:
+                  _selectedTheme != null
+                      ? getThemeColor(_selectedTheme!)
+                      : Colors.red.shade700,
             ),
           ),
         ],
@@ -318,7 +337,8 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
           crossAxisCount: 2,
           crossAxisSpacing: 10,
           mainAxisSpacing: 15,
-          childAspectRatio: 0.75, // Increased from 0.65 to give more vertical space
+          childAspectRatio:
+              0.75, // Increased from 0.65 to give more vertical space
         ),
         itemCount: favoriteProducts.length,
         itemBuilder: (context, index) {
@@ -351,14 +371,20 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
         vsync: this,
         duration: Duration(milliseconds: 300),
       );
-      _colorAnimations[product['id']] = ColorTween(begin: Colors.red.shade400, end: Colors.green.shade500).animate(_colorAnimationControllers[product['id']]!);
+      _colorAnimations[product['id']] = ColorTween(
+        begin: Colors.red.shade400,
+        end: Colors.green.shade500,
+      ).animate(_colorAnimationControllers[product['id']]!);
     }
     if (!_tickAnimationControllers.containsKey(product['id'])) {
       _tickAnimationControllers[product['id']] = AnimationController(
         vsync: this,
         duration: Duration(milliseconds: 300),
       );
-      _tickAnimations[product['id']] = Tween<double>(begin: 0.0, end: 1.0).animate(_tickAnimationControllers[product['id']]!);
+      _tickAnimations[product['id']] = Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(_tickAnimationControllers[product['id']]!);
     }
 
     final animationController = _animationControllers[product['id']]!;
@@ -377,9 +403,7 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(12),
-                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                 ),
                 child: Stack(
                   fit: StackFit.expand,
@@ -389,49 +413,54 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
                         borderRadius: BorderRadius.vertical(
                           top: Radius.circular(12),
                         ),
-                        child: (product["image"].startsWith('http') ||
-                                product["image"].startsWith('https'))
-                            ? Image.network(
-                                product["image"],
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Image.asset(
-                                    'lib/assets/Images/placeholder.png',
-                                    fit: BoxFit.cover,
-                                  );
-                                },
-                                loadingBuilder:
-                                    (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Center(
-                                    child: CircularProgressIndicator(
-                                      value: loadingProgress
-                                                  .expectedTotalBytes !=
-                                              null
-                                          ? loadingProgress
-                                                  .cumulativeBytesLoaded /
-                                              loadingProgress
-                                                  .expectedTotalBytes!
-                                          : null,
-                                    ),
-                                  );
-                                },
-                              )
-                            : Image.asset(
-                                product["image"],
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Icon(
-                                    Icons.image_not_supported,
-                                    size: 40,
-                                    color: Colors.grey[400],
-                                  );
-                                },
-                              ),
+                        child:
+                            (product["image"].startsWith('http') ||
+                                    product["image"].startsWith('https'))
+                                ? Image.network(
+                                  product["image"],
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Image.asset(
+                                      'lib/assets/Images/placeholder.png',
+                                      fit: BoxFit.cover,
+                                    );
+                                  },
+                                  loadingBuilder: (
+                                    context,
+                                    child,
+                                    loadingProgress,
+                                  ) {
+                                    if (loadingProgress == null) return child;
+                                    return Center(
+                                      child: CircularProgressIndicator(
+                                        value:
+                                            loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                        .cumulativeBytesLoaded /
+                                                    loadingProgress
+                                                        .expectedTotalBytes!
+                                                : null,
+                                      ),
+                                    );
+                                  },
+                                )
+                                : Image.asset(
+                                  product["image"],
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.image_not_supported,
+                                      size: 40,
+                                      color: Colors.grey[400],
+                                    );
+                                  },
+                                ),
                       ),
                     ),
                     Positioned(
@@ -447,7 +476,10 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
                           onTap: () => removeFromFavorites(product['id']),
                           child: Icon(
                             Icons.favorite,
-                            color: Colors.red,
+                            color:
+                                _selectedTheme != null
+                                    ? getThemeColor(_selectedTheme!)
+                                    : Colors.red,
                             size: 20,
                           ),
                         ),
@@ -494,9 +526,14 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
                         ]),
                         builder: (context, child) {
                           return ElevatedButton(
-                            onPressed: isOutOfStock ? null : () => addToCart(product),
+                            onPressed:
+                                isOutOfStock ? null : () => addToCart(product),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: _colorAnimations[product['id']]?.value ?? Colors.red.shade400,
+                              backgroundColor:
+                                  _colorAnimations[product['id']]?.value ??
+                                  (_selectedTheme != null
+                                      ? getThemeColor(_selectedTheme!).shade400
+                                      : Colors.red.shade400),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -508,7 +545,11 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
                               alignment: Alignment.center,
                               children: [
                                 Opacity(
-                                  opacity: 1.0 - (_colorAnimationControllers[product['id']]?.value ?? 0.0),
+                                  opacity:
+                                      1.0 -
+                                      (_colorAnimationControllers[product['id']]
+                                              ?.value ??
+                                          0.0),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
@@ -518,7 +559,9 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
                                       ),
                                       SizedBox(width: 4),
                                       Text(
-                                        isOutOfStock ? "OUT OF STOCK" : "ADD TO CART",
+                                        isOutOfStock
+                                            ? "OUT OF STOCK"
+                                            : "ADD TO CART",
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
@@ -529,9 +572,14 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
                                     ],
                                   ),
                                 ),
-                                if ((_colorAnimationControllers[product['id']]?.value ?? 0.0) > 0)
+                                if ((_colorAnimationControllers[product['id']]
+                                            ?.value ??
+                                        0.0) >
+                                    0)
                                   Transform.scale(
-                                    scale: _tickAnimations[product['id']]?.value ?? 0.0,
+                                    scale:
+                                        _tickAnimations[product['id']]?.value ??
+                                        0.0,
                                     child: Icon(
                                       Icons.check,
                                       color: Colors.white,
@@ -552,5 +600,22 @@ class _FavoritesPageState extends State<FavoritesPage> with TickerProviderStateM
         ),
       ),
     );
+  }
+}
+
+MaterialColor getThemeColor(SpecialColorTheme theme) {
+  switch (theme) {
+    case SpecialColorTheme.blue:
+      return Colors.blue;
+    case SpecialColorTheme.orange:
+      return Colors.orange;
+    case SpecialColorTheme.yellow:
+      return Colors.yellow;
+    case SpecialColorTheme.green:
+      return Colors.green;
+    case SpecialColorTheme.purple:
+      return Colors.purple;
+    default:
+      return Colors.blue;
   }
 }

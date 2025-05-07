@@ -14,6 +14,22 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+enum SpecialColorTheme { red, blue, green }
+
+MaterialColor getThemeColor(SpecialColorTheme theme) {
+  switch (theme) {
+    case SpecialColorTheme.red:
+      return Colors.red;
+    case SpecialColorTheme.blue:
+      return Colors.blue;
+    case SpecialColorTheme.green:
+      return Colors.green;
+    default:
+      return Colors.red;
+  }
+}
 
 class AIChatScreen extends StatefulWidget {
   const AIChatScreen({Key? key}) : super(key: key);
@@ -51,6 +67,9 @@ class _AIChatScreenState extends State<AIChatScreen>
   static const String _openRouterUrl =
       'https://openrouter.ai/api/v1/chat/completions';
 
+  // Mevcut değişkenlerin yanına ekleyin
+  SpecialColorTheme? _selectedTheme;
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +80,7 @@ class _AIChatScreenState extends State<AIChatScreen>
     _testFirebaseConnection();
     _loadUserProfile();
     _checkAIAvailability();
+    _loadSelectedTheme(); // Tema yüklemesini ekleyin
   }
 
   @override
@@ -137,14 +157,35 @@ class _AIChatScreenState extends State<AIChatScreen>
     }
   }
 
+  // Tema yükleme fonksiyonunu ekleyin
+  Future<void> _loadSelectedTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final themeString = prefs.getString('selectedTheme');
+    if (themeString != null) {
+      setState(() {
+        _selectedTheme = SpecialColorTheme.values.firstWhere(
+          (e) => e.toString() == 'SpecialColorTheme.$themeString',
+          orElse: () => SpecialColorTheme.blue,
+        );
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeColor =
+        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Assistant Tommy'),
-        backgroundColor: isDark ? Colors.black : Theme.of(context).primaryColor,
+        backgroundColor:
+            isDark
+                ? Colors.black
+                : (_selectedTheme != null
+                    ? getThemeColor(_selectedTheme!)
+                    : Theme.of(context).primaryColor),
         elevation: 0,
       ),
       body: Column(
@@ -213,7 +254,7 @@ class _AIChatScreenState extends State<AIChatScreen>
                     Container(
                       decoration: BoxDecoration(
                         color:
-                            isDark ? Colors.red.shade900 : Colors.red.shade700,
+                            isDark ? themeColor.shade900 : themeColor.shade700,
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
@@ -233,6 +274,10 @@ class _AIChatScreenState extends State<AIChatScreen>
   }
 
   Widget _buildConversationStarters() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeColor =
+        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+
     return Center(
       child: Container(
         constraints: BoxConstraints(maxWidth: 400),
@@ -240,7 +285,7 @@ class _AIChatScreenState extends State<AIChatScreen>
         margin: EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color:
-              Theme.of(context).brightness == Brightness.dark
+              isDark
                   ? Colors.grey.shade800.withOpacity(0.7)
                   : Colors.white.withOpacity(0.9),
           borderRadius: BorderRadius.circular(24),
@@ -266,10 +311,7 @@ class _AIChatScreenState extends State<AIChatScreen>
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color:
-                    Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black87,
+                color: isDark ? Colors.white : Colors.black87,
               ),
             ),
             SizedBox(height: 24),
@@ -289,7 +331,8 @@ class _AIChatScreenState extends State<AIChatScreen>
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
+                        backgroundColor:
+                            isDark ? themeColor.shade700 : themeColor.shade400,
                         foregroundColor: Colors.white,
                         padding: EdgeInsets.symmetric(
                           horizontal: 24,
@@ -315,12 +358,15 @@ class _AIChatScreenState extends State<AIChatScreen>
 
   Widget _buildTypingIndicator() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeColor =
+        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade100,
+            backgroundColor: isDark ? themeColor.shade900 : themeColor.shade100,
             child: Image.asset('lib/assets/Images/Mascot/mascot-default.png'),
           ),
           const SizedBox(width: 12),
@@ -364,6 +410,8 @@ class _AIChatScreenState extends State<AIChatScreen>
 
   Widget _buildMessage(ChatMessage message) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeColor =
+        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -381,7 +429,7 @@ class _AIChatScreenState extends State<AIChatScreen>
               if (!message.isUser)
                 CircleAvatar(
                   backgroundColor:
-                      isDark ? Colors.red.shade900 : Colors.red.shade100,
+                      isDark ? themeColor.shade900 : themeColor.shade100,
                   child: Image.asset(
                     'lib/assets/Images/Mascot/mascot-crossedarms.png',
                     width: 37,
@@ -396,8 +444,8 @@ class _AIChatScreenState extends State<AIChatScreen>
                     color:
                         message.isUser
                             ? (isDark
-                                ? Colors.red.shade900
-                                : Colors.red.shade400)
+                                ? themeColor.shade900
+                                : themeColor.shade400)
                             : (isDark
                                 ? Colors.grey.shade800
                                 : Colors.grey.shade100),
@@ -423,7 +471,7 @@ class _AIChatScreenState extends State<AIChatScreen>
               if (message.isUser)
                 CircleAvatar(
                   backgroundColor:
-                      isDark ? Colors.red.shade900 : Colors.red.shade100,
+                      isDark ? themeColor.shade900 : themeColor.shade100,
                   backgroundImage:
                       _userProfileImage != null
                           ? NetworkImage(_userProfileImage!)
@@ -433,7 +481,7 @@ class _AIChatScreenState extends State<AIChatScreen>
                           ? Icon(
                             Icons.person,
                             color:
-                                isDark ? Colors.white70 : Colors.red.shade400,
+                                isDark ? Colors.white70 : themeColor.shade400,
                           )
                           : null,
                 ),
@@ -490,8 +538,15 @@ class _AIChatScreenState extends State<AIChatScreen>
                               '\$${product.price.toStringAsFixed(2)}',
                               style: TextStyle(color: Colors.green),
                             ),
+                            // Update the TextButton in product card
                             TextButton(
                               onPressed: () => _addToCart(product),
+                              style: TextButton.styleFrom(
+                                foregroundColor:
+                                    _selectedTheme != null
+                                        ? getThemeColor(_selectedTheme!)
+                                        : Colors.red,
+                              ),
                               child: Text('Add to Cart'),
                             ),
                           ],
@@ -511,15 +566,23 @@ class _AIChatScreenState extends State<AIChatScreen>
               child: ElevatedButton.icon(
                 onPressed:
                     () => _showAddToCartDialog(message.recommendedProducts!),
+                // Update the "Add All Recommended Products to Cart" button
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
+                  backgroundColor:
+                      isDark
+                          ? (_selectedTheme != null
+                              ? getThemeColor(_selectedTheme!).shade900
+                              : Colors.red.shade900)
+                          : (_selectedTheme != null
+                              ? getThemeColor(_selectedTheme!).shade400
+                              : Colors.red.shade400),
                   foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-                icon: Icon(Icons.shopping_cart),
+                icon: Icon(Icons.shopping_cart, color: Colors.white),
                 label: Text('Add All Recommended Products to Cart'),
               ),
             ),
@@ -577,7 +640,9 @@ class _AIChatScreenState extends State<AIChatScreen>
     }
 
     try {
-      final List<Product> recommendations = await _getProductRecommendations(message);
+      final List<Product> recommendations = await _getProductRecommendations(
+        message,
+      );
 
       final response = await http.post(
         Uri.parse(APIConfig.openRouterUrl),
@@ -592,7 +657,7 @@ class _AIChatScreenState extends State<AIChatScreen>
           'messages': [
             {'role': 'system', 'content': systemPrompt},
             {'role': 'user', 'content': message},
-          ]
+          ],
         }),
       );
 
@@ -602,15 +667,19 @@ class _AIChatScreenState extends State<AIChatScreen>
       }
 
       final data = jsonDecode(response.body);
-      return (data['choices'][0]['message']['content'] as String, recommendations);
-
+      return (
+        data['choices'][0]['message']['content'] as String,
+        recommendations,
+      );
     } catch (e, stackTrace) {
       print('Error in API request: $e');
       print('Stack trace: $stackTrace');
-      
+
       // Return fallback response with recommendations
       return (
-        APIConfig.fallbackResponses[Random().nextInt(APIConfig.fallbackResponses.length)],
+        APIConfig.fallbackResponses[Random().nextInt(
+          APIConfig.fallbackResponses.length,
+        )],
         await _getProductRecommendations(message),
       );
     }
@@ -722,13 +791,14 @@ class _AIChatScreenState extends State<AIChatScreen>
     try {
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
       final List<Product> recommendations = [];
-      
+
       // Add logging
       print('Starting product recommendations search');
-      
-      final QuerySnapshot allProducts = await firestore.collection('products').get();
+
+      final QuerySnapshot allProducts =
+          await firestore.collection('products').get();
       print('Found ${allProducts.docs.length} total products');
-  
+
       // Group products by category with error handling
       Map<String, List<DocumentSnapshot>> productsByCategory = {};
       for (var doc in allProducts.docs) {
@@ -741,10 +811,18 @@ class _AIChatScreenState extends State<AIChatScreen>
           continue;
         }
       }
-  
+
       // Process categories with better error handling
-      final categoriesToProcess = ['CPU\'s', 'Motherboards', 'RAM\'s', 'GPU\'s', 'Storage', 'PSU', 'Case'];
-      
+      final categoriesToProcess = [
+        'CPU\'s',
+        'Motherboards',
+        'RAM\'s',
+        'GPU\'s',
+        'Storage',
+        'PSU',
+        'Case',
+      ];
+
       for (final category in categoriesToProcess) {
         try {
           if (productsByCategory.containsKey(category)) {
@@ -752,14 +830,19 @@ class _AIChatScreenState extends State<AIChatScreen>
             if (products.isNotEmpty) {
               final doc = products.first;
               final data = doc.data() as Map<String, dynamic>;
-              recommendations.add(Product(
-                id: doc.id,
-                name: data['name'] ?? 'Unknown Product',
-                category: category,
-                price: (data['price'] is num) ? (data['price'] as num).toDouble() : 0.0,
-                description: data['description'] ?? '',
-                imageUrl: data['imagePath'] ?? '',
-              ));
+              recommendations.add(
+                Product(
+                  id: doc.id,
+                  name: data['name'] ?? 'Unknown Product',
+                  category: category,
+                  price:
+                      (data['price'] is num)
+                          ? (data['price'] as num).toDouble()
+                          : 0.0,
+                  description: data['description'] ?? '',
+                  imageUrl: data['imagePath'] ?? '',
+                ),
+              );
             }
           }
         } catch (e) {
@@ -767,7 +850,7 @@ class _AIChatScreenState extends State<AIChatScreen>
           continue;
         }
       }
-  
+
       print('Successfully found ${recommendations.length} recommendations');
       return recommendations;
     } catch (e, stackTrace) {
@@ -795,6 +878,10 @@ class _AIChatScreenState extends State<AIChatScreen>
 
   // Add this method to show the confirmation dialog
   void _showAddToCartDialog(List<Product> products) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeColor =
+        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -824,15 +911,10 @@ class _AIChatScreenState extends State<AIChatScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(
-                'No',
-                style: TextStyle(
-                  color:
-                      Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white70
-                          : Colors.grey.shade700,
-                ),
+              style: TextButton.styleFrom(
+                foregroundColor: isDark ? Colors.white70 : themeColor.shade700,
               ),
+              child: Text('No'),
             ),
             ElevatedButton(
               onPressed: () {
@@ -840,7 +922,8 @@ class _AIChatScreenState extends State<AIChatScreen>
                 _addAllToCart(products);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
+                backgroundColor:
+                    isDark ? themeColor.shade900 : themeColor.shade400,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Yes'),
