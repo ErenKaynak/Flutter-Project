@@ -16,14 +16,28 @@ import 'package:engineering_project/providers/cart_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // Add this when you have the key
-  // NotificationService.configure('YOUR_FCM_KEY');
-  
-  await NotificationService.init();
+  // Configure error handling
+  if (kDebugMode) {
+    FlutterError.onError = (FlutterErrorDetails details) {
+      if (!details.toString().contains('OpenGL ES API') && 
+          !details.toString().contains('EGL_emulation')) {
+        FlutterError.presentError(details);
+      }
+    };
+  }
+
+  // Set preferred orientations
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   runApp(const MyApp());
 }
 

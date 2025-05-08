@@ -166,24 +166,65 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
   }
 
   Future<void> _deleteCategory(String categoryId) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('categories')
-          .doc(categoryId)
-          .delete();
-      
-      await _loadCategories();
-      
+  try {
+    // Get the category name first
+    final categoryDoc = await FirebaseFirestore.instance
+        .collection('categories')
+        .doc(categoryId)
+        .get();
+    
+    final categoryName = categoryDoc.data()?['name'];
+
+    // Start a batch write
+    final batch = FirebaseFirestore.instance.batch();
+
+    // First, find all products with this category
+    final productsSnapshot = await FirebaseFirestore.instance
+        .collection('products')
+        .where('category', isEqualTo: categoryName)
+        .get();
+
+    // Update each product's category to null
+    for (var doc in productsSnapshot.docs) {
+      batch.update(doc.reference, {
+        'category': null,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    // Delete the category
+    batch.delete(FirebaseFirestore.instance
+        .collection('categories')
+        .doc(categoryId));
+
+    // Commit all changes
+    await batch.commit();
+
+    // Reload categories
+    await _loadCategories();
+
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Category deleted successfully')),
+        SnackBar(
+          content: Text(
+            'Category deleted and ${productsSnapshot.docs.length} products updated'
+          ),
+          backgroundColor: Colors.green,
+        ),
       );
-    } catch (e) {
-      print('Error deleting category: $e');
+    }
+  } catch (e) {
+    print('Error deleting category: $e');
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error deleting category')),
+        SnackBar(
+          content: Text('Error deleting category: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
+}
 
   Future<void> _updateCategoryOrder() async {
     try {
@@ -566,26 +607,52 @@ Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFil
                                     ),
                                     IconButton(
                                       icon: Icon(Icons.delete, color: Colors.red),
-                                      onPressed: () => showDialog(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          title: Text('Delete Category'),
-                                          content: Text('Are you sure you want to delete this category?'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(context),
-                                              child: Text('Cancel'),
+                                      onPressed: () async {
+                                        // Check for affected products first
+                                        final productsSnapshot = await FirebaseFirestore.instance
+                                            .collection('products')
+                                            .where('category', isEqualTo: category['name'])
+                                            .get();
+
+                                        final productCount = productsSnapshot.docs.length;
+
+                                        if (!mounted) return;
+
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: Text('Delete Category'),
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text('Are you sure you want to delete this category?'),
+                                                if (productCount > 0)
+                                                  Padding(
+                                                    padding: EdgeInsets.only(top: 8),
+                                                    child: Text(
+                                                      'Warning: $productCount product(s) using this category will be affected.',
+                                                      style: TextStyle(color: Colors.orange),
+                                                    ),
+                                                  ),
+                                              ],
                                             ),
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.pop(context);
-                                                _deleteCategory(category['id']);
-                                              },
-                                              child: Text('Delete', style: TextStyle(color: Colors.red)),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context),
+                                                child: Text('Cancel'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () {
+                                                  Navigator.pop(context);
+                                                  _deleteCategory(category['id']);
+                                                },
+                                                child: Text('Delete', style: TextStyle(color: Colors.red)),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),
