@@ -652,17 +652,11 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Widget _buildPasswordRequirement(String requirement, bool met) {
-    final themeNotifier = Provider.of<ThemeNotifier>(context);
     return Row(
       children: [
         Icon(
           met ? Icons.check_circle : Icons.cancel,
-          color:
-              met
-                  ? Colors.green
-                  : (themeNotifier.isSpecialModeActive
-                      ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-                      : Colors.red),
+          color: met ? Colors.green : Colors.red, // Always use green/red
           size: 16,
         ),
         const SizedBox(width: 5),
@@ -670,14 +664,7 @@ class _RegisterPageState extends State<RegisterPage> {
           requirement,
           style: TextStyle(
             fontSize: 12,
-            color:
-                met
-                    ? Colors.green
-                    : (themeNotifier.isSpecialModeActive
-                        ? themeNotifier.getThemeColor(
-                          themeNotifier.specialTheme,
-                        )
-                        : Colors.red),
+            color: met ? Colors.green : Colors.red, // Always use green/red
           ),
         ),
       ],
