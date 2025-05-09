@@ -2,6 +2,8 @@ import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/register_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
@@ -9,6 +11,7 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Scaffold(
       body: SafeArea(
@@ -21,7 +24,14 @@ class WelcomeScreen extends StatelessWidget {
                     : LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.red.shade50, Colors.white],
+                      colors: [
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier
+                                .getThemeColor(themeNotifier.specialTheme)
+                                .shade50
+                            : Colors.red.shade50,
+                        Colors.white,
+                      ],
                     ),
             color: isDarkMode ? Colors.black : null,
           ),
@@ -38,22 +48,29 @@ class WelcomeScreen extends StatelessWidget {
                       Container(
                         height: 180,
                         width: 180,
-                       decoration: BoxDecoration(
+                        decoration: BoxDecoration(
                           color: isDarkMode ? Colors.grey[900] : Colors.white54,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.red.shade100,
+                              color:
+                                  themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(
+                                            themeNotifier.specialTheme,
+                                          )
+                                          .shade100
+                                      : Colors.red.shade100,
                               blurRadius: 15,
                               spreadRadius: 5,
-                              )
+                            ),
                           ],
                         ),
                         child: ClipOval(
                           child: Image.asset(
-                            isDarkMode 
-                              ? 'lib/assets/Images/app-icon-dark.png'
-                              : 'lib/assets/Images/app-icon-light.png',
+                            isDarkMode
+                                ? 'lib/assets/Images/app-icon-dark.png'
+                                : 'lib/assets/Images/app-icon-light.png',
                             fit: BoxFit.scaleDown,
                           ),
                         ),
@@ -64,7 +81,12 @@ class WelcomeScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Colors.red.shade700,
+                          color:
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade700
+                                  : Colors.red.shade700,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -115,7 +137,12 @@ class WelcomeScreen extends StatelessWidget {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade400,
+                          backgroundColor:
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade400
+                                  : Colors.red.shade400,
                           foregroundColor: Colors.white,
                           minimumSize: const Size.fromHeight(55),
                           shape: RoundedRectangleBorder(
@@ -143,10 +170,22 @@ class WelcomeScreen extends StatelessWidget {
                         },
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(
-                            color: Colors.red.shade400,
+                            color:
+                                themeNotifier.isSpecialModeActive
+                                    ? themeNotifier
+                                        .getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
+                                        .shade400
+                                    : Colors.red.shade400,
                             width: 2,
                           ),
-                          foregroundColor: Colors.red.shade400,
+                          foregroundColor:
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade400
+                                  : Colors.red.shade400,
                           minimumSize: const Size.fromHeight(55),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -175,9 +214,7 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                         child: const Text(
                           "Continue as Guest",
-                          style: TextStyle(
-                            fontSize: 16,
-                          ),
+                          style: TextStyle(fontSize: 16),
                         ),
                       ),
                     ],

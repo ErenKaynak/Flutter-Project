@@ -2,8 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:engineering_project/pages/cart_page.dart';
+import 'package:engineering_project/pages/theme_notifier.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final String productId;
@@ -42,11 +44,10 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       duration: Duration(milliseconds: 300),
     );
 
-    _colorAnimation = ColorTween(
-      begin: Colors.red.shade400,
-      end: Colors.green.shade500,
-    ).animate(_colorAnimationController);
-
+    // Initialize color animation with ThemeNotifier
+    _colorAnimationController.addListener(() {
+      if (mounted) setState(() {});
+    });
     _tickAnimationController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 500),
@@ -61,6 +62,19 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
     fetchProductDetails();
     checkIfFavorite();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    _colorAnimation = ColorTween(
+      begin:
+          themeNotifier.isSpecialModeActive
+              ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+              : Colors.red.shade400,
+      end: Colors.green.shade500,
+    ).animate(_colorAnimationController);
   }
 
   @override
@@ -92,7 +106,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
           });
         }
 
-        // Yorumları ve ortalama puanı çek
+        // Fetch comments and average rating
         final commentsSnapshot =
             await FirebaseFirestore.instance
                 .collection('comments')
@@ -376,6 +390,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     if (isLoading) {
       return Scaffold(
@@ -455,7 +470,11 @@ class _ProductDetailPageState extends State<ProductDetailPage>
               Icons.favorite,
               color:
                   isFavorite
-                      ? Colors.red
+                      ? (themeNotifier.isSpecialModeActive
+                          ? themeNotifier.getThemeColor(
+                            themeNotifier.specialTheme,
+                          )
+                          : Colors.red)
                       : Theme.of(context).iconTheme.color?.withOpacity(0.5),
             ),
             onPressed: toggleFavorite,
@@ -680,7 +699,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                         ],
                       ),
                       SizedBox(height: 8),
-                      // Ortalama puan gösterme
+                      // Display average rating
                       if (averageRating != null)
                         Row(
                           children: [
@@ -766,7 +785,10 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                             Container(
                               decoration: BoxDecoration(
                                 border: Border.all(
-                                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300
+                                  color:
+                                      isDark
+                                          ? Colors.grey.shade700
+                                          : Colors.grey.shade300,
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -778,7 +800,10 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                       topLeft: Radius.circular(7),
                                       bottomLeft: Radius.circular(7),
                                     ),
-                                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                                    color:
+                                        isDark
+                                            ? Colors.grey.shade800
+                                            : Colors.grey.shade100,
                                     child: InkWell(
                                       onTap: decrementQuantity,
                                       borderRadius: BorderRadius.only(
@@ -788,22 +813,33 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                       child: Container(
                                         padding: EdgeInsets.all(12),
                                         child: Icon(
-                                          Icons.remove, 
+                                          Icons.remove,
                                           size: 16,
-                                          color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                                          color:
+                                              isDark
+                                                  ? Colors.grey.shade300
+                                                  : Colors.grey.shade700,
                                         ),
                                       ),
                                     ),
                                   ),
                                   Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 16),
-                                    color: isDark ? Colors.grey.shade900 : Colors.white,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    color:
+                                        isDark
+                                            ? Colors.grey.shade900
+                                            : Colors.white,
                                     child: Text(
                                       '$quantity',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                                        color:
+                                            isDark
+                                                ? Colors.grey.shade300
+                                                : Colors.grey.shade700,
                                       ),
                                     ),
                                   ),
@@ -812,7 +848,10 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                       topRight: Radius.circular(7),
                                       bottomRight: Radius.circular(7),
                                     ),
-                                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                                    color:
+                                        isDark
+                                            ? Colors.grey.shade800
+                                            : Colors.grey.shade100,
                                     child: InkWell(
                                       onTap: incrementQuantity,
                                       borderRadius: BorderRadius.only(
@@ -822,9 +861,12 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                       child: Container(
                                         padding: EdgeInsets.all(12),
                                         child: Icon(
-                                          Icons.add, 
+                                          Icons.add,
                                           size: 16,
-                                          color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                                          color:
+                                              isDark
+                                                  ? Colors.grey.shade300
+                                                  : Colors.grey.shade700,
                                         ),
                                       ),
                                     ),
@@ -871,8 +913,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                     : addToCart,
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor:
-                                                  _colorAnimation.value ??
-                                                  Colors.red.shade400,
+                                                  _colorAnimation.value,
                                               foregroundColor: Colors.white,
                                               shape: RoundedRectangleBorder(
                                                 borderRadius:
@@ -1023,15 +1064,16 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: isDark 
-                    ? [] 
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          spreadRadius: 1,
-                        ),
-                      ],
+                  boxShadow:
+                      isDark
+                          ? []
+                          : [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              spreadRadius: 1,
+                            ),
+                          ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1046,28 +1088,45 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Theme.of(context).textTheme.titleLarge?.color,
+                              color:
+                                  Theme.of(context).textTheme.titleLarge?.color,
                             ),
                           ),
                           if (averageRating != null)
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
-                                color: isDark ? Colors.amber.shade900.withOpacity(0.2) : Colors.amber.shade50,
+                                color:
+                                    isDark
+                                        ? Colors.amber.shade900.withOpacity(0.2)
+                                        : Colors.amber.shade50,
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: isDark ? Colors.amber.shade700 : Colors.amber.shade200,
+                                  color:
+                                      isDark
+                                          ? Colors.amber.shade700
+                                          : Colors.amber.shade200,
                                 ),
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.star, size: 16, color: Colors.amber),
+                                  Icon(
+                                    Icons.star,
+                                    size: 16,
+                                    color: Colors.amber,
+                                  ),
                                   SizedBox(width: 4),
                                   Text(
                                     averageRating!.toStringAsFixed(1),
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: isDark ? Colors.amber.shade400 : Colors.amber.shade900,
+                                      color:
+                                          isDark
+                                              ? Colors.amber.shade400
+                                              : Colors.amber.shade900,
                                     ),
                                   ),
                                 ],
@@ -1077,14 +1136,16 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                       ),
                     ),
                     StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('comments')
-                          .doc(widget.productId)
-                          .collection('userComments')
-                          .orderBy('timestamp', descending: true)
-                          .snapshots(),
+                      stream:
+                          FirebaseFirestore.instance
+                              .collection('comments')
+                              .doc(widget.productId)
+                              .collection('userComments')
+                              .orderBy('timestamp', descending: true)
+                              .snapshots(),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return Center(
                             child: Padding(
                               padding: EdgeInsets.all(20),
@@ -1092,7 +1153,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                             ),
                           );
                         }
-                        
+
                         if (snapshot.hasError) {
                           return Padding(
                             padding: EdgeInsets.all(20),
@@ -1103,7 +1164,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                         }
 
                         final comments = snapshot.data?.docs ?? [];
-                        
+
                         if (comments.isEmpty) {
                           return Padding(
                             padding: EdgeInsets.all(30),
@@ -1113,14 +1174,20 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                   Icon(
                                     Icons.rate_review_outlined,
                                     size: 48,
-                                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade400,
+                                    color:
+                                        isDark
+                                            ? Colors.grey.shade700
+                                            : Colors.grey.shade400,
                                   ),
                                   SizedBox(height: 16),
                                   Text(
                                     'No reviews yet',
                                     style: TextStyle(
                                       fontSize: 16,
-                                      color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+                                      color:
+                                          isDark
+                                              ? Colors.grey.shade500
+                                              : Colors.grey.shade600,
                                     ),
                                   ),
                                 ],
@@ -1134,25 +1201,35 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                           physics: NeverScrollableScrollPhysics(),
                           padding: EdgeInsets.symmetric(horizontal: 20),
                           itemCount: comments.length,
-                          separatorBuilder: (context, index) => Divider(
-                            height: 40,
-                            thickness: 1,
-                            color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                          ),
+                          separatorBuilder:
+                              (context, index) => Divider(
+                                height: 40,
+                                thickness: 1,
+                                color:
+                                    isDark
+                                        ? Colors.grey.shade800
+                                        : Colors.grey.shade200,
+                              ),
                           itemBuilder: (context, index) {
-                            final comment = comments[index].data() as Map<String, dynamic>;
+                            final comment =
+                                comments[index].data() as Map<String, dynamic>;
                             return FutureBuilder<DocumentSnapshot>(
-                              future: FirebaseFirestore.instance
-                                  .collection('users')
-                                  .doc(comment['userId'])
-                                  .get(),
+                              future:
+                                  FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(comment['userId'])
+                                      .get(),
                               builder: (context, userSnapshot) {
-                                final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
-                                final String fullName = userData != null 
-                                    ? "${userData['name'] ?? ''} ${userData['surname'] ?? ''}"
-                                    : 'Anonymous';
-                                final String profilePicUrl = userData?['profileImageUrl'] ?? '';
-                                
+                                final userData =
+                                    userSnapshot.data?.data()
+                                        as Map<String, dynamic>?;
+                                final String fullName =
+                                    userData != null
+                                        ? "${userData['name'] ?? ''} ${userData['surname'] ?? ''}"
+                                        : 'Anonymous';
+                                final String profilePicUrl =
+                                    userData?['profileImageUrl'] ?? '';
+
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -1160,52 +1237,86 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                       children: [
                                         CircleAvatar(
                                           radius: 24,
-                                          backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                                          backgroundImage: (profilePicUrl.isNotEmpty && profilePicUrl != "null") 
-                                              ? NetworkImage(profilePicUrl)
-                                              : null,
-                                          child: (profilePicUrl.isEmpty || profilePicUrl == "null")
-                                              ? Icon(
-                                                  Icons.person,
-                                                  color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
-                                                  size: 28,
-                                                )
-                                              : null,
+                                          backgroundColor:
+                                              isDark
+                                                  ? Colors.grey.shade800
+                                                  : Colors.grey.shade200,
+                                          backgroundImage:
+                                              (profilePicUrl.isNotEmpty &&
+                                                      profilePicUrl != "null")
+                                                  ? NetworkImage(profilePicUrl)
+                                                  : null,
+                                          child:
+                                              (profilePicUrl.isEmpty ||
+                                                      profilePicUrl == "null")
+                                                  ? Icon(
+                                                    Icons.person,
+                                                    color:
+                                                        isDark
+                                                            ? Colors
+                                                                .grey
+                                                                .shade600
+                                                            : Colors
+                                                                .grey
+                                                                .shade400,
+                                                    size: 28,
+                                                  )
+                                                  : null,
                                         ),
                                         SizedBox(width: 12),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 fullName,
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 16,
-                                                  color: Theme.of(context).textTheme.titleMedium?.color,
+                                                  color:
+                                                      Theme.of(context)
+                                                          .textTheme
+                                                          .titleMedium
+                                                          ?.color,
                                                 ),
                                               ),
                                               SizedBox(height: 4),
                                               Row(
                                                 children: [
-                                                  ...List.generate(5, (index) => Padding(
-                                                    padding: EdgeInsets.only(right: 2),
-                                                    child: Icon(
-                                                      index < (comment['rating'] ?? 0) 
-                                                          ? Icons.star 
-                                                          : Icons.star_border,
-                                                      size: 16,
-                                                      color: Colors.amber,
+                                                  ...List.generate(
+                                                    5,
+                                                    (index) => Padding(
+                                                      padding: EdgeInsets.only(
+                                                        right: 2,
+                                                      ),
+                                                      child: Icon(
+                                                        index <
+                                                                (comment['rating'] ??
+                                                                    0)
+                                                            ? Icons.star
+                                                            : Icons.star_border,
+                                                        size: 16,
+                                                        color: Colors.amber,
+                                                      ),
                                                     ),
-                                                  )),
+                                                  ),
                                                   SizedBox(width: 8),
                                                   Text(
-                                                    _formatTimestamp(comment['timestamp'] as Timestamp?),
+                                                    _formatTimestamp(
+                                                      comment['timestamp']
+                                                          as Timestamp?,
+                                                    ),
                                                     style: TextStyle(
                                                       fontSize: 12,
-                                                      color: isDark 
-                                                          ? Colors.grey.shade500 
-                                                          : Colors.grey.shade600,
+                                                      color:
+                                                          isDark
+                                                              ? Colors
+                                                                  .grey
+                                                                  .shade500
+                                                              : Colors
+                                                                  .grey
+                                                                  .shade600,
                                                     ),
                                                   ),
                                                 ],
@@ -1215,14 +1326,18 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                         ),
                                       ],
                                     ),
-                                    if (comment['comment']?.isNotEmpty ?? false) ...[
+                                    if (comment['comment']?.isNotEmpty ??
+                                        false) ...[
                                       SizedBox(height: 12),
                                       Text(
                                         comment['comment'] ?? '',
                                         style: TextStyle(
                                           fontSize: 14,
                                           height: 1.5,
-                                          color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                                          color:
+                                              isDark
+                                                  ? Colors.grey.shade300
+                                                  : Colors.grey.shade700,
                                         ),
                                       ),
                                     ],

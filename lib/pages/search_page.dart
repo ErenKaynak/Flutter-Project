@@ -4,10 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:engineering_project/pages/cart_page.dart';
-import 'package:lottie/lottie.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-enum SpecialColorTheme { blue, orange, yellow, green, purple }
+import 'package:engineering_project/pages/theme_notifier.dart';
+import 'package:provider/provider.dart';
 
 class FavoritesPage extends StatefulWidget {
   final Function? onFavoritesChanged;
@@ -20,7 +18,6 @@ class FavoritesPage extends StatefulWidget {
 
 class _FavoritesPageState extends State<FavoritesPage>
     with TickerProviderStateMixin {
-  SpecialColorTheme? _selectedTheme;
   bool _isLoading = true;
   List<Map<String, dynamic>> favoriteProducts = [];
   final Map<String, AnimationController> _animationControllers = {};
@@ -33,7 +30,6 @@ class _FavoritesPageState extends State<FavoritesPage>
   @override
   void initState() {
     super.initState();
-    _loadSelectedTheme();
     fetchFavorites();
   }
 
@@ -45,6 +41,7 @@ class _FavoritesPageState extends State<FavoritesPage>
   }
 
   void _initializeAnimationControllers() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
     _colorAnimationControllers.forEach((_, controller) => controller.dispose());
     _tickAnimationControllers.forEach((_, controller) => controller.dispose());
     _colorAnimationControllers.clear();
@@ -62,8 +59,10 @@ class _FavoritesPageState extends State<FavoritesPage>
       _colorAnimationControllers[productId] = colorController;
       _colorAnimations[productId] = ColorTween(
         begin:
-            _selectedTheme != null
-                ? getThemeColor(_selectedTheme!).shade400
+            themeNotifier.isSpecialModeActive
+                ? themeNotifier
+                    .getThemeColor(themeNotifier.specialTheme)
+                    .shade400
                 : Colors.red.shade400,
         end: Colors.green.shade500,
       ).animate(colorController);
@@ -245,50 +244,33 @@ class _FavoritesPageState extends State<FavoritesPage>
     );
   }
 
-  Future<void> _loadSelectedTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    final themeString = prefs.getString('selectedTheme');
-    if (themeString != null) {
-      setState(() {
-        _selectedTheme = SpecialColorTheme.values.firstWhere(
-          (e) => e.toString() == 'SpecialColorTheme.$themeString',
-          orElse: () => SpecialColorTheme.blue,
-        );
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor:
-            _selectedTheme != null
-                ? getThemeColor(_selectedTheme!)
-                : isDark
-                ? Theme.of(context).appBarTheme.backgroundColor
-                : Colors.red.shade700,
+            themeNotifier.isSpecialModeActive
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                : (isDark
+                    ? Theme.of(context).appBarTheme.backgroundColor
+                    : Colors.red.shade700),
         title: Text(
           "My Favorites",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        iconTheme: IconThemeData(
-          color: Colors.white,
-        ), // Makes back button white
+        iconTheme: IconThemeData(color: Colors.white),
         actions: [
           if (!_isLoading && favoriteProducts.isNotEmpty)
             IconButton(
-              icon: Icon(
-                Icons.refresh,
-                color: Colors.white, // Makes refresh icon white
-              ),
+              icon: Icon(Icons.refresh, color: Colors.white),
               onPressed: fetchFavorites,
               tooltip: 'Refresh',
             ),
         ],
-        elevation: 0, // Removes shadow
+        elevation: 0,
       ),
       body:
           _isLoading
@@ -300,6 +282,7 @@ class _FavoritesPageState extends State<FavoritesPage>
   }
 
   Widget _buildEmptyFavorites() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -308,8 +291,8 @@ class _FavoritesPageState extends State<FavoritesPage>
             Icons.favorite_border,
             size: 80,
             color:
-                _selectedTheme != null
-                    ? getThemeColor(_selectedTheme!)
+                themeNotifier.isSpecialModeActive
+                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
                     : Colors.red,
           ),
           SizedBox(height: 1),
@@ -338,8 +321,8 @@ class _FavoritesPageState extends State<FavoritesPage>
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               foregroundColor: Colors.white,
               backgroundColor:
-                  _selectedTheme != null
-                      ? getThemeColor(_selectedTheme!)
+                  themeNotifier.isSpecialModeActive
+                      ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
                       : Colors.red.shade700,
             ),
           ),
@@ -357,8 +340,7 @@ class _FavoritesPageState extends State<FavoritesPage>
           crossAxisCount: 2,
           crossAxisSpacing: 10,
           mainAxisSpacing: 15,
-          childAspectRatio:
-              0.75, // Increased from 0.65 to give more vertical space
+          childAspectRatio: 0.75,
         ),
         itemCount: favoriteProducts.length,
         itemBuilder: (context, index) {
@@ -379,7 +361,7 @@ class _FavoritesPageState extends State<FavoritesPage>
     required Map<String, dynamic> product,
     required bool isOutOfStock,
   }) {
-    // Initialize animation controller if it doesn't exist
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     if (!_animationControllers.containsKey(product['id'])) {
       _animationControllers[product['id']] = AnimationController(
         vsync: this,
@@ -393,8 +375,10 @@ class _FavoritesPageState extends State<FavoritesPage>
       );
       _colorAnimations[product['id']] = ColorTween(
         begin:
-            _selectedTheme != null
-                ? getThemeColor(_selectedTheme!).shade400
+            themeNotifier.isSpecialModeActive
+                ? themeNotifier
+                    .getThemeColor(themeNotifier.specialTheme)
+                    .shade400
                 : Colors.red.shade400,
         end: Colors.green.shade500,
       ).animate(_colorAnimationControllers[product['id']]!);
@@ -421,7 +405,7 @@ class _FavoritesPageState extends State<FavoritesPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Flexible(
-              flex: 4, // Adjusted flex ratio
+              flex: 4,
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -500,8 +484,10 @@ class _FavoritesPageState extends State<FavoritesPage>
                           child: Icon(
                             Icons.favorite,
                             color:
-                                _selectedTheme != null
-                                    ? getThemeColor(_selectedTheme!)
+                                themeNotifier.isSpecialModeActive
+                                    ? themeNotifier.getThemeColor(
+                                      themeNotifier.specialTheme,
+                                    )
                                     : Colors.red,
                             size: 20,
                           ),
@@ -513,23 +499,23 @@ class _FavoritesPageState extends State<FavoritesPage>
               ),
             ),
             Flexible(
-              flex: 3, // Adjusted flex ratio
+              flex: 3,
               child: Container(
-                padding: EdgeInsets.all(8), // Reduced padding
+                padding: EdgeInsets.all(8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min, // Add this
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       product["name"],
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 13, // Slightly reduced font size
+                        fontSize: 13,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 2), // Reduced spacing
+                    SizedBox(height: 2),
                     Text(
                       "₺${product["price"]}",
                       style: TextStyle(
@@ -538,10 +524,10 @@ class _FavoritesPageState extends State<FavoritesPage>
                         fontSize: 14,
                       ),
                     ),
-                    Spacer(flex: 1), // Add flexible space
+                    Spacer(flex: 1),
                     SizedBox(
                       width: double.infinity,
-                      height: 32, // Slightly reduced button height
+                      height: 32,
                       child: AnimatedBuilder(
                         animation: Listenable.merge([
                           _colorAnimationControllers[product['id']]!,
@@ -554,8 +540,12 @@ class _FavoritesPageState extends State<FavoritesPage>
                             style: ElevatedButton.styleFrom(
                               backgroundColor:
                                   _colorAnimations[product['id']]?.value ??
-                                  (_selectedTheme != null
-                                      ? getThemeColor(_selectedTheme!).shade400
+                                  (themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(
+                                            themeNotifier.specialTheme,
+                                          )
+                                          .shade400
                                       : Colors.red.shade400),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
@@ -579,6 +569,11 @@ class _FavoritesPageState extends State<FavoritesPage>
                                       Icon(
                                         Icons.shopping_cart_outlined,
                                         size: 16,
+                                        color:
+                                            themeNotifier.isSpecialModeActive
+                                                ? Colors
+                                                    .white // White when special mode is active
+                                                : null, // Default color otherwise
                                       ),
                                       SizedBox(width: 4),
                                       Text(
@@ -588,6 +583,9 @@ class _FavoritesPageState extends State<FavoritesPage>
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
+                                          color:
+                                              Colors
+                                                  .white, // Keep text color white always
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -623,22 +621,5 @@ class _FavoritesPageState extends State<FavoritesPage>
         ),
       ),
     );
-  }
-}
-
-MaterialColor getThemeColor(SpecialColorTheme theme) {
-  switch (theme) {
-    case SpecialColorTheme.blue:
-      return Colors.blue;
-    case SpecialColorTheme.orange:
-      return Colors.orange;
-    case SpecialColorTheme.yellow:
-      return Colors.yellow;
-    case SpecialColorTheme.green:
-      return Colors.green;
-    case SpecialColorTheme.purple:
-      return Colors.purple;
-    default:
-      return Colors.blue;
   }
 }

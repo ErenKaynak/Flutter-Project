@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({Key? key}) : super(key: key);
@@ -30,26 +32,28 @@ class _WalletPageState extends State<WalletPage> {
     setState(() => _isLoading = true);
 
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('wallet_transactions')
-          .where('user_id', isEqualTo: user.uid)
-          .orderBy('timestamp', descending: true)
-          .get();
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('wallet_transactions')
+              .where('user_id', isEqualTo: user.uid)
+              .orderBy('timestamp', descending: true)
+              .get();
 
       setState(() {
-        _transactions = snapshot.docs.map((doc) {
-          final data = doc.data();
-          return {
-            'id': doc.id,
-            'amount': (data['amount'] ?? 0.0).toDouble(),
-            'type': data['type'] ?? '',
-            'timestamp': data['timestamp']?.toDate() ?? DateTime.now(),
-            'cashback': (data['cashback'] ?? 0.0).toDouble(),
-            'method': data['method'] ?? '',
-            'status': data['status'] ?? 'completed',
-            'reference': data['reference'],
-          };
-        }).toList();
+        _transactions =
+            snapshot.docs.map((doc) {
+              final data = doc.data();
+              return {
+                'id': doc.id,
+                'amount': (data['amount'] ?? 0.0).toDouble(),
+                'type': data['type'] ?? '',
+                'timestamp': data['timestamp']?.toDate() ?? DateTime.now(),
+                'cashback': (data['cashback'] ?? 0.0).toDouble(),
+                'method': data['method'] ?? '',
+                'status': data['status'] ?? 'completed',
+                'reference': data['reference'],
+              };
+            }).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -66,17 +70,17 @@ class _WalletPageState extends State<WalletPage> {
     if (user == null) return;
 
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('wallets')
-          .doc(user.uid)
-          .get();
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('wallets')
+              .doc(user.uid)
+              .get();
 
       if (!doc.exists) {
-        // Create wallet if it doesn't exist
-        await FirebaseFirestore.instance.collection('wallets').doc(user.uid).set({
-          'balance': 0.0,
-          'created_at': FieldValue.serverTimestamp(),
-        });
+        await FirebaseFirestore.instance
+            .collection('wallets')
+            .doc(user.uid)
+            .set({'balance': 0.0, 'created_at': FieldValue.serverTimestamp()});
       } else {
         setState(() {
           _balance = (doc.data()?['balance'] ?? 0.0).toDouble();
@@ -94,18 +98,18 @@ class _WalletPageState extends State<WalletPage> {
     if (user == null) return;
 
     try {
-      // Start a batch write to ensure both operations complete
       final batch = FirebaseFirestore.instance.batch();
-      
-      // Update wallet balance
-      final walletRef = FirebaseFirestore.instance.collection('wallets').doc(user.uid);
+
+      final walletRef = FirebaseFirestore.instance
+          .collection('wallets')
+          .doc(user.uid);
       batch.update(walletRef, {
         'balance': FieldValue.increment(amount),
         'last_transaction': FieldValue.serverTimestamp(),
       });
 
-      // Create transaction record
-      final transactionRef = FirebaseFirestore.instance.collection('wallet_transactions').doc();
+      final transactionRef =
+          FirebaseFirestore.instance.collection('wallet_transactions').doc();
       batch.set(transactionRef, {
         'user_id': user.uid,
         'amount': amount,
@@ -115,13 +119,11 @@ class _WalletPageState extends State<WalletPage> {
         'status': 'completed',
       });
 
-      // Commit both operations
       await batch.commit();
 
-      // Refresh wallet balance and transactions
       await _fetchWalletBalance();
       await _fetchTransactions();
-      
+
       _amountController.clear();
 
       if (mounted) {
@@ -132,9 +134,9 @@ class _WalletPageState extends State<WalletPage> {
     } catch (e) {
       print('Error adding balance: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding balance: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error adding balance: $e')));
       }
     }
   }
@@ -145,18 +147,17 @@ class _WalletPageState extends State<WalletPage> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      final cardsSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('cards')
-          .get();
+      final cardsSnapshot =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('cards')
+              .get();
 
-      savedCards = cardsSnapshot.docs
-          .map((doc) => {
-                'id': doc.id,
-                ...doc.data(),
-              })
-          .toList();
+      savedCards =
+          cardsSnapshot.docs
+              .map((doc) => {'id': doc.id, ...doc.data()})
+              .toList();
     } catch (e) {
       print('Error loading cards: $e');
     }
@@ -167,297 +168,418 @@ class _WalletPageState extends State<WalletPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => AddMoneyBottomSheet(
-        savedCards: savedCards,
-        onAddMoney: _addBalance,
-      ),
+      builder:
+          (context) => AddMoneyBottomSheet(
+            savedCards: savedCards,
+            onAddMoney: _addBalance,
+          ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Wallet'),
-        elevation: 0,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () async {
-                await _fetchWalletBalance();
-                await _fetchTransactions();
-              },
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Balance Card
-                      Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: isDark
-                                ? [Colors.red.shade900, Colors.grey.shade900]
-                                : [Colors.red.shade500, Colors.red.shade100],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: isDark
-                                  ? Colors.black26
-                                  : Colors.red.shade200.withOpacity(0.5),
-                              blurRadius: 10,
-                              offset: const Offset(0, 5),
+      appBar: AppBar(title: const Text('My Wallet'), elevation: 0),
+      body:
+          _isLoading
+              ? Center(
+                child: CircularProgressIndicator(
+                  color:
+                      themeNotifier.isSpecialModeActive
+                          ? themeNotifier.getThemeColor(
+                            themeNotifier.specialTheme,
+                          )
+                          : Colors.red,
+                ),
+              )
+              : RefreshIndicator(
+                onRefresh: () async {
+                  await _fetchWalletBalance();
+                  await _fetchTransactions();
+                },
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors:
+                                  isDark
+                                      ? [
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade900
+                                            : Colors.red.shade900,
+                                        Colors.grey.shade900,
+                                      ]
+                                      : [
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade500
+                                            : Colors.red.shade500,
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade100
+                                            : Colors.red.shade100,
+                                      ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Current Balance',
-                              style: TextStyle(
-                                color: isDark ? Colors.grey[400] : Colors.white,
-                                fontSize: 16,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                    isDark
+                                        ? Colors.black26
+                                        : (themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade200
+                                                .withOpacity(0.5)
+                                            : Colors.red.shade200.withOpacity(
+                                              0.5,
+                                            )),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
                               ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Current Balance',
+                                style: TextStyle(
+                                  color:
+                                      isDark ? Colors.grey[400] : Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '₺${_balance.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                '1% Cashback on all purchases',
+                                style: TextStyle(
+                                  color:
+                                      isDark
+                                          ? Colors.grey[400]
+                                          : Colors.white70,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: _showAddMoneyDialog,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(
+                                            themeNotifier.specialTheme,
+                                          )
+                                          .shade400
+                                      : Colors.red.shade400,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '₺${_balance.toStringAsFixed(2)}',
+                            child: const Text(
+                              'Add Money',
                               style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 32,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 20),
-                            Text(
-                              '1% Cashback on all purchases',
-                              style: TextStyle(
-                                color: isDark ? Colors.grey[400] : Colors.white70,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Add Money Section
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _showAddMoneyDialog,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red.shade400,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 2,
-                          ),
-                          child: const Text(
-                            'Add Money',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
                           ),
                         ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Transactions Section
-                      Container(
-                        width: double.infinity,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Transaction History',
-                                    style: Theme.of(context).textTheme.titleLarge,
-                                  ),
-                                  Text(
-                                    '${_transactions.length} transactions',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            if (_transactions.isEmpty) ...[
-                              Center(
-                                child: Column(
+                        const SizedBox(height: 24),
+                        Container(
+                          width: double.infinity,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Container(
-                                      padding: EdgeInsets.all(20),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.receipt_long,
-                                        size: 48,
-                                        color: isDark ? Colors.grey[400] : Colors.grey[500],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
                                     Text(
-                                      'No transactions yet',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark ? Colors.grey[400] : Colors.grey[700],
-                                      ),
+                                      'Transaction History',
+                                      style:
+                                          Theme.of(
+                                            context,
+                                          ).textTheme.titleLarge,
                                     ),
-                                    const SizedBox(height: 8),
                                     Text(
-                                      'Your transaction history will appear here',
+                                      '${_transactions.length} transactions',
                                       style: TextStyle(
-                                        color: isDark ? Colors.grey[500] : Colors.grey[600],
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ] else ...[
-                              ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _transactions.length,
-                                itemBuilder: (context, index) {
-                                  final transaction = _transactions[index];
-                                  final bool isDeposit = transaction['type'] == 'deposit';
-                                  
-                                  return Card(
-                                    elevation: 2,
-                                    margin: EdgeInsets.only(bottom: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: InkWell(
-                                      onTap: () {
-                                        // Show transaction details in a modal bottom sheet
-                                        showModalBottomSheet(
-                                          context: context,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                                          ),
-                                          builder: (context) => _buildTransactionDetails(transaction),
-                                        );
-                                      },
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: Row(
-                                          children: [
-                                            // Transaction Icon
-                                            Container(
-                                              padding: EdgeInsets.all(12),
-                                              decoration: BoxDecoration(
-                                                color: isDeposit
-                                                    ? Colors.green.withOpacity(0.1)
-                                                    : Colors.red.withOpacity(0.1),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: Icon(
-                                                isDeposit ? Icons.add : Icons.shopping_bag,
-                                                color: isDeposit ? Colors.green : Colors.red,
-                                              ),
+                              const SizedBox(height: 16),
+                              if (_transactions.isEmpty) ...[
+                                Center(
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.all(20),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              isDark
+                                                  ? Colors.grey.shade800
+                                                  : Colors.grey.shade100,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.receipt_long,
+                                          size: 48,
+                                          color:
+                                              isDark
+                                                  ? Colors.grey[400]
+                                                  : Colors.grey[500],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'No transactions yet',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color:
+                                              isDark
+                                                  ? Colors.grey[400]
+                                                  : Colors.grey[700],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Your transaction history will appear here',
+                                        style: TextStyle(
+                                          color:
+                                              isDark
+                                                  ? Colors.grey[500]
+                                                  : Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ] else ...[
+                                ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: _transactions.length,
+                                  itemBuilder: (context, index) {
+                                    final transaction = _transactions[index];
+                                    final bool isDeposit =
+                                        transaction['type'] == 'deposit';
+
+                                    return Card(
+                                      elevation: 2,
+                                      margin: EdgeInsets.only(bottom: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: InkWell(
+                                        onTap: () {
+                                          showModalBottomSheet(
+                                            context: context,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.vertical(
+                                                    top: Radius.circular(20),
+                                                  ),
                                             ),
-                                            SizedBox(width: 16),
-                                            // Transaction Details
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                            builder:
+                                                (context) =>
+                                                    _buildTransactionDetails(
+                                                      transaction,
+                                                    ),
+                                          );
+                                        },
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(16.0),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                padding: EdgeInsets.all(12),
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      isDeposit
+                                                          ? Colors.green
+                                                              .withOpacity(0.1)
+                                                          : (themeNotifier
+                                                                  .isSpecialModeActive
+                                                              ? themeNotifier
+                                                                  .getThemeColor(
+                                                                    themeNotifier
+                                                                        .specialTheme,
+                                                                  )
+                                                                  .withOpacity(
+                                                                    0.1,
+                                                                  )
+                                                              : Colors.red
+                                                                  .withOpacity(
+                                                                    0.1,
+                                                                  )),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Icon(
+                                                  isDeposit
+                                                      ? Icons.add
+                                                      : Icons.shopping_bag,
+                                                  color:
+                                                      isDeposit
+                                                          ? Colors.green
+                                                          : (themeNotifier
+                                                                  .isSpecialModeActive
+                                                              ? themeNotifier
+                                                                  .getThemeColor(
+                                                                    themeNotifier
+                                                                        .specialTheme,
+                                                                  )
+                                                              : Colors.red),
+                                                ),
+                                              ),
+                                              SizedBox(width: 16),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      isDeposit
+                                                          ? 'Money Added'
+                                                          : (transaction['description'] ??
+                                                              'Purchase'),
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 16,
+                                                      ),
+                                                    ),
+                                                    SizedBox(height: 4),
+                                                    Text(
+                                                      _formatDate(
+                                                        transaction['timestamp'],
+                                                      ),
+                                                      style: TextStyle(
+                                                        color: Colors.grey[600],
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                    if (transaction['reference'] !=
+                                                        null)
+                                                      Text(
+                                                        transaction['reference'],
+                                                        style: TextStyle(
+                                                          color:
+                                                              Colors.grey[600],
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.end,
                                                 children: [
                                                   Text(
-                                                    isDeposit ? 'Money Added' : (transaction['description'] ?? 'Purchase'),
+                                                    '${isDeposit ? '+' : '-'}₺${transaction['amount'].abs().toStringAsFixed(2)}',
                                                     style: TextStyle(
-                                                      fontWeight: FontWeight.bold,
+                                                      color:
+                                                          isDeposit
+                                                              ? Colors.green
+                                                              : (themeNotifier
+                                                                      .isSpecialModeActive
+                                                                  ? themeNotifier
+                                                                      .getThemeColor(
+                                                                        themeNotifier
+                                                                            .specialTheme,
+                                                                      )
+                                                                  : Colors.red),
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                       fontSize: 16,
                                                     ),
                                                   ),
-                                                  SizedBox(height: 4),
-                                                  Text(
-                                                    _formatDate(transaction['timestamp']),
-                                                    style: TextStyle(
-                                                      color: Colors.grey[600],
-                                                      fontSize: 13,
-                                                    ),
-                                                  ),
-                                                  if (transaction['reference'] != null)
+                                                  if (transaction['cashback'] !=
+                                                          null &&
+                                                      transaction['cashback'] >
+                                                          0)
                                                     Text(
-                                                      transaction['reference'],
+                                                      '+₺${transaction['cashback'].toStringAsFixed(2)} cashback',
                                                       style: TextStyle(
-                                                        color: Colors.grey[600],
+                                                        color: Colors.green,
                                                         fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w500,
                                                       ),
                                                     ),
                                                 ],
                                               ),
-                                            ),
-                                            // Amount
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.end,
-                                              children: [
-                                                Text(
-                                                  '${isDeposit ? '+' : '-'}₺${transaction['amount'].abs().toStringAsFixed(2)}',
-                                                  style: TextStyle(
-                                                    color: isDeposit ? Colors.green : Colors.red,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 16,
-                                                  ),
-                                                ),
-                                                if (transaction['cashback'] != null &&
-                                                    transaction['cashback'] > 0)
-                                                  Text(
-                                                    '+₺${transaction['cashback'].toStringAsFixed(2)} cashback',
-                                                    style: TextStyle(
-                                                      color: Colors.green,
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.w500,
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  );
-                                },
-                              ),
+                                    );
+                                  },
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
     );
   }
 
@@ -467,7 +589,8 @@ class _WalletPageState extends State<WalletPage> {
 
   Widget _buildTransactionDetails(Map<String, dynamic> transaction) {
     final bool isDeposit = transaction['type'] == 'deposit';
-    
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return Container(
       padding: EdgeInsets.all(20),
       child: Column(
@@ -480,12 +603,25 @@ class _WalletPageState extends State<WalletPage> {
           ),
           SizedBox(height: 20),
           _detailRow('Type', isDeposit ? 'Deposit' : 'Purchase'),
-          _detailRow('Amount', '₺${transaction['amount'].abs().toStringAsFixed(2)}'),
+          _detailRow(
+            'Amount',
+            '₺${transaction['amount'].abs().toStringAsFixed(2)}',
+          ),
           if (transaction['cashback'] != null && transaction['cashback'] > 0)
-            _detailRow('Cashback', '₺${transaction['cashback'].toStringAsFixed(2)}'),
+            _detailRow(
+              'Cashback',
+              '₺${transaction['cashback'].toStringAsFixed(2)}',
+            ),
           _detailRow('Date', _formatDate(transaction['timestamp'])),
-          _detailRow('Status', transaction['status']?.toUpperCase() ?? 'COMPLETED'),
-          _detailRow('Method', transaction['method']?.replaceAll('_', ' ').toUpperCase() ?? 'WALLET'),
+          _detailRow(
+            'Status',
+            transaction['status']?.toUpperCase() ?? 'COMPLETED',
+          ),
+          _detailRow(
+            'Method',
+            transaction['method']?.replaceAll('_', ' ').toUpperCase() ??
+                'WALLET',
+          ),
           if (transaction['reference'] != null)
             _detailRow('Reference', transaction['reference']),
           if (transaction['description'] != null)
@@ -501,19 +637,10 @@ class _WalletPageState extends State<WalletPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 14,
-            ),
-          ),
+          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
           Text(
             value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           ),
         ],
       ),
@@ -540,7 +667,6 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
   final _amountController = TextEditingController();
   bool _showAddCard = false;
 
-  // Add card form controllers
   final _cardNumberController = TextEditingController();
   final _cardHolderController = TextEditingController();
   final _expiryController = TextEditingController();
@@ -555,6 +681,8 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return Container(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -588,7 +716,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                 errorText: _validateAmount(_amountController.text),
               ),
               onChanged: (value) {
-                setState(() {}); // Trigger rebuild to update error message
+                setState(() {});
               },
             ),
             const SizedBox(height: 20),
@@ -600,9 +728,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
               const SizedBox(height: 10),
               ...widget.savedCards.map((card) => _buildCardItem(card)),
             ],
-            if (_showAddCard) ...[
-              _buildAddCardForm(),
-            ],
+            if (_showAddCard) ...[_buildAddCardForm()],
             const SizedBox(height: 16),
             TextButton(
               onPressed: () {
@@ -621,27 +747,31 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                   final amount = double.tryParse(_amountController.text);
                   if (amount == null || amount <= 0) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter a valid amount')),
+                      const SnackBar(
+                        content: Text('Please enter a valid amount'),
+                      ),
                     );
                     return;
                   }
-                  
+
                   if (_showAddCard) {
-                    // Validate new card inputs
-                    if (_cardNumberError != null || 
-                        _expiryError != null || 
+                    if (_cardNumberError != null ||
+                        _expiryError != null ||
                         _cvvError != null ||
                         _cardNumberController.text.isEmpty ||
                         _cardHolderController.text.isEmpty ||
                         _expiryController.text.isEmpty ||
                         _cvvController.text.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please fill all card details correctly')),
+                        const SnackBar(
+                          content: Text(
+                            'Please fill all card details correctly',
+                          ),
+                        ),
                       );
                       return;
                     }
-                    
-                    // Save the new card first
+
                     await _saveNewCard();
                   } else if (_selectedCard == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -649,12 +779,17 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                     );
                     return;
                   }
-                  
+
                   widget.onAddMoney(amount);
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade400,
+                  backgroundColor:
+                      themeNotifier.isSpecialModeActive
+                          ? themeNotifier
+                              .getThemeColor(themeNotifier.specialTheme)
+                              .shade400
+                          : Colors.red.shade400,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -671,7 +806,8 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
 
   Widget _buildCardItem(Map<String, dynamic> card) {
     final isSelected = _selectedCard?['id'] == card['id'];
-    
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -683,15 +819,31 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           border: Border.all(
-            color: isSelected ? Colors.red.shade400 : Colors.grey.shade300,
+            color:
+                isSelected
+                    ? (themeNotifier.isSpecialModeActive
+                        ? themeNotifier
+                            .getThemeColor(themeNotifier.specialTheme)
+                            .shade400
+                        : Colors.red.shade400)
+                    : Colors.grey.shade300,
             width: 2,
           ),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
-            Icon(Icons.credit_card, 
-                 color: isSelected ? Colors.red.shade400 : Colors.grey),
+            Icon(
+              Icons.credit_card,
+              color:
+                  isSelected
+                      ? (themeNotifier.isSpecialModeActive
+                          ? themeNotifier
+                              .getThemeColor(themeNotifier.specialTheme)
+                              .shade400
+                          : Colors.red.shade400)
+                      : Colors.grey,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -709,7 +861,15 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
               ),
             ),
             if (isSelected)
-              Icon(Icons.check_circle, color: Colors.red.shade400),
+              Icon(
+                Icons.check_circle,
+                color:
+                    themeNotifier.isSpecialModeActive
+                        ? themeNotifier
+                            .getThemeColor(themeNotifier.specialTheme)
+                            .shade400
+                        : Colors.red.shade400,
+              ),
           ],
         ),
       ),
@@ -720,10 +880,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Add New Card',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Add New Card', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 16),
         TextField(
           controller: _cardNumberController,
@@ -743,9 +900,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
           decoration: InputDecoration(
             labelText: 'Card Number',
             prefixIcon: Icon(Icons.credit_card),
-            border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             errorText: _cardNumberError,
             counterText: '',
           ),
@@ -766,12 +921,13 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
           decoration: InputDecoration(
             labelText: 'Card Holder Name',
             prefixIcon: Icon(Icons.person),
-            border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-            errorText: _cardHolderController.text.isEmpty ? null : 
-                      !_namePattern.hasMatch(_cardHolderController.text) ? 
-                      'Only letters allowed' : null,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            errorText:
+                _cardHolderController.text.isEmpty
+                    ? null
+                    : !_namePattern.hasMatch(_cardHolderController.text)
+                    ? 'Only letters allowed'
+                    : null,
           ),
           onChanged: (value) => setState(() {}),
         ),
@@ -792,7 +948,9 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                   setState(() {
                     if (value.isEmpty) {
                       _expiryError = 'Required';
-                    } else if (!RegExp(r'^(0[1-9]|1[0-2])\/([0-9]{2})$').hasMatch(value)) {
+                    } else if (!RegExp(
+                      r'^(0[1-9]|1[0-2])\/([0-9]{2})$',
+                    ).hasMatch(value)) {
                       _expiryError = 'Use MM/YY format';
                     } else {
                       final parts = value.split('/');
@@ -811,8 +969,8 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                   labelText: 'MM/YY',
                   prefixIcon: Icon(Icons.calendar_today),
                   border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   errorText: _expiryError,
                   counterText: '',
                 ),
@@ -842,8 +1000,8 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                   labelText: 'CVV',
                   prefixIcon: Icon(Icons.security),
                   border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   errorText: _cvvError,
                   counterText: '',
                 ),
@@ -857,7 +1015,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
 
   String? _validateAmount(String value) {
     if (value.isEmpty) return null;
-    
+
     try {
       final amount = double.parse(value);
       if (amount <= 0) {
@@ -877,11 +1035,12 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
     if (user == null) return;
 
     try {
-      final cardRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('cards')
-          .doc();
+      final cardRef =
+          FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('cards')
+              .doc();
 
       await cardRef.set({
         'cardNumber': _cardNumberController.text,
@@ -892,23 +1051,22 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // Clear form
       _cardNumberController.clear();
       _cardHolderController.clear();
       _expiryController.clear();
       _cvvController.clear();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Card saved successfully')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Card saved successfully')));
 
       setState(() {
         _showAddCard = false;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving card: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error saving card: $e')));
     }
   }
 }

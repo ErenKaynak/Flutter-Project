@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:engineering_project/assets/components/cart_manager.dart' hide CartItem;
+import 'package:engineering_project/assets/components/cart_manager.dart'
+    hide CartItem;
 import 'package:engineering_project/pages/product-detail-page.dart';
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 
 class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({Key? key}) : super(key: key);
@@ -22,12 +25,12 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
   // Define standard status values to match admin page
   final List<String> _standardStatuses = [
-    "All", 
-    "Pending", 
-    "Preparing", 
-    "On Delivery", 
-    "Delivered", 
-    "Cancelled"
+    "All",
+    "Pending",
+    "Preparing",
+    "On Delivery",
+    "Delivered",
+    "Cancelled",
   ];
 
   @override
@@ -56,25 +59,28 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
       // First check orders/{userId}/userOrders (newer structure from cart_page.dart)
       try {
-        final userOrdersSnapshot = await FirebaseFirestore.instance
-            .collection('orders')
-            .doc(user.uid)
-            .collection('userOrders')
-            .orderBy('orderDate', descending: true)
-            .get();
+        final userOrdersSnapshot =
+            await FirebaseFirestore.instance
+                .collection('orders')
+                .doc(user.uid)
+                .collection('userOrders')
+                .orderBy('orderDate', descending: true)
+                .get();
 
-        print('Found ${userOrdersSnapshot.docs.length} orders in userOrders collection');
+        print(
+          'Found ${userOrdersSnapshot.docs.length} orders in userOrders collection',
+        );
 
         for (var doc in userOrdersSnapshot.docs) {
           final data = doc.data();
-          
+
           // Items are stored directly in the order document as an array
           final List<dynamic> itemsData = data['items'] as List<dynamic>? ?? [];
-          
+
           // Ensure we standardize the status to match admin page
           final originalStatus = data['status'] ?? 'Pending';
           final standardizedStatus = _standardizeStatus(originalStatus);
-          
+
           loadedOrders.add({
             'id': doc.id,
             'orderNumber': doc.id.substring(0, 8),
@@ -93,11 +99,12 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
       // Also check the orders collection for this user (older structure)
       try {
-        final orderDocs = await FirebaseFirestore.instance
-            .collection('orders')
-            .where('userId', isEqualTo: user.uid)
-            .orderBy('timestamp', descending: true)
-            .get();
+        final orderDocs =
+            await FirebaseFirestore.instance
+                .collection('orders')
+                .where('userId', isEqualTo: user.uid)
+                .orderBy('timestamp', descending: true)
+                .get();
 
         print('Found ${orderDocs.docs.length} orders in orders collection');
 
@@ -109,29 +116,33 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
           final data = doc.data();
           List<dynamic> items = [];
-          
+
           // Check if items are in the document or in a subcollection
           if (data.containsKey('items') && data['items'] is List) {
             items = data['items'] as List<dynamic>;
           } else {
             // Try to fetch items from subcollection
             try {
-              final itemsSnapshot = await FirebaseFirestore.instance
-                  .collection('orders')
-                  .doc(doc.id)
-                  .collection('items')
-                  .get();
-                  
-              items = itemsSnapshot.docs.map((itemDoc) {
-                final itemData = itemDoc.data();
-                return {
-                  'id': itemDoc.id,
-                  'name': itemData['name'] ?? 'Unknown Product',
-                  'price': itemData['price']?.toString() ?? '0',
-                  'imagePath': itemData['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-                  'quantity': itemData['quantity'] ?? 1,
-                };
-              }).toList();
+              final itemsSnapshot =
+                  await FirebaseFirestore.instance
+                      .collection('orders')
+                      .doc(doc.id)
+                      .collection('items')
+                      .get();
+
+              items =
+                  itemsSnapshot.docs.map((itemDoc) {
+                    final itemData = itemDoc.data();
+                    return {
+                      'id': itemDoc.id,
+                      'name': itemData['name'] ?? 'Unknown Product',
+                      'price': itemData['price']?.toString() ?? '0',
+                      'imagePath':
+                          itemData['imagePath'] ??
+                          'lib/assets/Images/placeholder.png',
+                      'quantity': itemData['quantity'] ?? 1,
+                    };
+                  }).toList();
             } catch (e) {
               print('Error fetching items subcollection: $e');
             }
@@ -164,9 +175,8 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           _errorMessage = "No orders found";
         }
       });
-      
+
       print('Total orders loaded: ${loadedOrders.length}');
-      
     } catch (error) {
       print('Error fetching orders: $error');
       setState(() {
@@ -179,7 +189,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   // Helper method to standardize status values
   String _standardizeStatus(String status) {
     final lowerStatus = status.toLowerCase();
-    
+
     // Map possible status values to standard ones
     if (lowerStatus == 'processing' || lowerStatus == 'pending') {
       return 'Pending';
@@ -192,7 +202,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     } else if (lowerStatus == 'cancelled') {
       return 'Cancelled';
     }
-    
+
     // If no match, return with first letter capitalized
     return _capitalizeFirstLetter(status);
   }
@@ -201,9 +211,9 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     if (_filterStatus == "All") {
       return _orders;
     } else {
-      return _orders.where((order) => 
-        order["status"].toString() == _filterStatus
-      ).toList();
+      return _orders
+          .where((order) => order["status"].toString() == _filterStatus)
+          .toList();
     }
   }
 
@@ -217,12 +227,13 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return false;
 
-    final comments = await FirebaseFirestore.instance
-        .collection('comments')
-        .doc(productId)
-        .collection('userComments')
-        .where('userId', isEqualTo: user.uid)
-        .get();
+    final comments =
+        await FirebaseFirestore.instance
+            .collection('comments')
+            .doc(productId)
+            .collection('userComments')
+            .where('userId', isEqualTo: user.uid)
+            .get();
 
     return comments.docs.isNotEmpty;
   }
@@ -244,123 +255,169 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     String comment = '';
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+
     return showDialog(
       context: context,
-      builder: (BuildContext context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
-          title: Text('Rate $productName'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) {
-                  return IconButton(
-                    icon: Icon(
-                      index < selectedRating ? Icons.star : Icons.star_border,
-                      color: Colors.amber,
-                      size: 32,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        selectedRating = index + 1;
-                      });
-                    },
-                    splashRadius: 24,
-                    tooltip: '${index + 1} stars',
-                  );
-                }),
-              ),
-              Text(
-                _getRatingText(selectedRating),
-                style: TextStyle(
-                  color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                  fontSize: 14,
-                ),
-              ),
-              SizedBox(height: 16),
-              TextField(
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Write your review (optional)',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+      builder:
+          (BuildContext context) => StatefulBuilder(
+            builder:
+                (context, setState) => AlertDialog(
+                  backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+                  title: Text('Rate $productName'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(5, (index) {
+                          return IconButton(
+                            icon: Icon(
+                              index < selectedRating
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              color:
+                                  themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(
+                                            themeNotifier.specialTheme,
+                                          )
+                                          .shade400
+                                      : Colors.amber,
+                              size: 32,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                selectedRating = index + 1;
+                              });
+                            },
+                            splashRadius: 24,
+                            tooltip: '${index + 1} stars',
+                          );
+                        }),
+                      ),
+                      Text(
+                        _getRatingText(selectedRating),
+                        style: TextStyle(
+                          color:
+                              isDark
+                                  ? Colors.grey.shade300
+                                  : Colors.grey.shade700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      TextField(
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          hintText: 'Write your review (optional)',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          filled: true,
+                          fillColor:
+                              isDark
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade50,
+                        ),
+                        onChanged: (value) => comment = value,
+                      ),
+                    ],
                   ),
-                  filled: true,
-                  fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed:
+                          selectedRating == 0
+                              ? null
+                              : () async {
+                                final user = FirebaseAuth.instance.currentUser;
+                                if (user != null) {
+                                  try {
+                                    await FirebaseFirestore.instance
+                                        .collection('comments')
+                                        .doc(productId)
+                                        .collection('userComments')
+                                        .add({
+                                          'userId': user.uid,
+                                          'userName':
+                                              user.displayName ?? 'User',
+                                          'rating': selectedRating,
+                                          'comment': comment,
+                                          'timestamp':
+                                              FieldValue.serverTimestamp(),
+                                        });
+
+                                    final commentsRef = FirebaseFirestore
+                                        .instance
+                                        .collection('comments')
+                                        .doc(productId)
+                                        .collection('userComments');
+
+                                    final commentsSnapshot =
+                                        await commentsRef.get();
+                                    final ratings =
+                                        commentsSnapshot.docs
+                                            .map(
+                                              (doc) =>
+                                                  doc.data()['rating'] as int,
+                                            )
+                                            .where((r) => r > 0)
+                                            .toList();
+
+                                    if (ratings.isNotEmpty) {
+                                      final avgRating =
+                                          ratings.reduce((a, b) => a + b) /
+                                          ratings.length;
+                                      await FirebaseFirestore.instance
+                                          .collection('products')
+                                          .doc(productId)
+                                          .update({
+                                            'averageRating': double.parse(
+                                              avgRating.toStringAsFixed(1),
+                                            ),
+                                            'ratingCount': ratings.length,
+                                          });
+                                    }
+
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Thank you for your review!',
+                                        ),
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    print('Error submitting review: $e');
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Failed to submit review',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier
+                                    .getThemeColor(themeNotifier.specialTheme)
+                                    .shade400
+                                : Colors.amber,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.grey,
+                      ),
+                      child: Text('Submit'),
+                    ),
+                  ],
                 ),
-                onChanged: (value) => comment = value,
-              ),
-            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: selectedRating == 0 ? null : () async {
-                final user = FirebaseAuth.instance.currentUser;
-                if (user != null) {
-                  try {
-                    await FirebaseFirestore.instance
-                        .collection('comments')
-                        .doc(productId)
-                        .collection('userComments')
-                        .add({
-                      'userId': user.uid,
-                      'userName': user.displayName ?? 'User',
-                      'rating': selectedRating,
-                      'comment': comment,
-                      'timestamp': FieldValue.serverTimestamp(),
-                    });
-
-                    final commentsRef = FirebaseFirestore.instance
-                        .collection('comments')
-                        .doc(productId)
-                        .collection('userComments');
-                        
-                    final commentsSnapshot = await commentsRef.get();
-                    final ratings = commentsSnapshot.docs
-                        .map((doc) => doc.data()['rating'] as int)
-                        .where((r) => r > 0)
-                        .toList();
-
-                    if (ratings.isNotEmpty) {
-                      final avgRating = ratings.reduce((a, b) => a + b) / ratings.length;
-                      await FirebaseFirestore.instance
-                          .collection('products')
-                          .doc(productId)
-                          .update({
-                        'averageRating': double.parse(avgRating.toStringAsFixed(1)),
-                        'ratingCount': ratings.length,
-                      });
-                    }
-
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Thank you for your review!')),
-                    );
-                  } catch (e) {
-                    print('Error submitting review: $e');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to submit review')),
-                    );
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.grey,
-              ),
-              child: Text('Submit'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -386,6 +443,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -401,150 +459,195 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         elevation: isDark ? 0 : 2,
         actions: [
           IconButton(
-            icon: Icon(
-              Icons.refresh,
-              color: Theme.of(context).iconTheme.color,
-            ),
+            icon: Icon(Icons.refresh, color: Theme.of(context).iconTheme.color),
             onPressed: _fetchOrders,
           ),
         ],
       ),
-      body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).primaryColor,
-              ),
-            )
-          : _errorMessage != null && _orders.isEmpty
+      body:
+          _isLoading
+              ? Center(
+                child: CircularProgressIndicator(
+                  color:
+                      themeNotifier.isSpecialModeActive
+                          ? themeNotifier
+                              .getThemeColor(themeNotifier.specialTheme)
+                              .shade400
+                          : Theme.of(context).primaryColor,
+                ),
+              )
+              : _errorMessage != null && _orders.isEmpty
               ? _buildErrorView()
               : _orders.isEmpty
-                  ? _buildEmptyOrdersView()
-                  : CustomScrollView(
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: Column(
-                            children: [
-                              // Header Section matching HomePage style
-                              Container(
-                                padding: EdgeInsets.all(16.0),
-                                margin: EdgeInsets.all(10.0),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: isDark
-                                        ? [Colors.red.shade900, Colors.grey.shade900]
-                                        : [Colors.red.shade300, Colors.white],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: isDark
-                                      ? []
+              ? _buildEmptyOrdersView()
+              : CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        // Header Section matching HomePage style
+                        Container(
+                          padding: EdgeInsets.all(16.0),
+                          margin: EdgeInsets.all(10.0),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors:
+                                  isDark
+                                      ? [
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade900
+                                            : Colors.red.shade900,
+                                        Colors.grey.shade900,
+                                      ]
                                       : [
-                                          BoxShadow(
-                                            color: Colors.black12,
-                                            blurRadius: 5,
-                                            offset: Offset(0, 2),
-                                          ),
-                                        ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: isDark
-                                            ? Colors.red.shade900
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade300
                                             : Colors.red.shade300,
-                                        shape: BoxShape.circle,
+                                        Colors.white,
+                                      ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow:
+                                isDark
+                                    ? []
+                                    : [
+                                      BoxShadow(
+                                        color:
+                                            themeNotifier.isSpecialModeActive
+                                                ? themeNotifier
+                                                    .getThemeColor(
+                                                      themeNotifier
+                                                          .specialTheme,
+                                                    )
+                                                    .shade200
+                                                    .withOpacity(0.5)
+                                                : Colors.black12,
+                                        blurRadius: 5,
+                                        offset: Offset(0, 2),
                                       ),
-                                      child: Icon(
-                                        Icons.shopping_bag_outlined,
-                                        size: 30,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            "Your Orders",
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              color: isDark
-                                                  ? Colors.grey[400]
-                                                  : Colors.black54,
-                                            ),
-                                          ),
-                                          Text(
-                                            "${_orders.length} orders",
-                                            style: TextStyle(
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.bold,
-                                              color: isDark
-                                                  ? Colors.white
-                                                  : Colors.black87,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
+                                    ],
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color:
+                                      themeNotifier.isSpecialModeActive
+                                          ? themeNotifier
+                                              .getThemeColor(
+                                                themeNotifier.specialTheme,
+                                              )
+                                              .shade300
+                                          : Colors.red.shade300,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.shopping_bag_outlined,
+                                  size: 30,
+                                  color: Colors.white,
                                 ),
                               ),
-                              // Filter Section
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 10),
+                              SizedBox(width: 16),
+                              Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      "Filter by Status",
+                                      "Your Orders",
                                       style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context)
-                                            .textTheme
-                                            .titleLarge
-                                            ?.color,
+                                        fontSize: 16,
+                                        color:
+                                            isDark
+                                                ? Colors.grey[400]
+                                                : Colors.black54,
                                       ),
                                     ),
-                                    SizedBox(height: 10),
-                                    _buildFilterButtons(),
+                                    Text(
+                                      "${_orders.length} orders",
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            isDark
+                                                ? Colors.white
+                                                : Colors.black87,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        // Orders List
-                        SliverPadding(
-                          padding: EdgeInsets.all(10),
-                          sliver: _buildOrdersList(),
+                        // Filter Section
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Filter by Status",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color:
+                                      Theme.of(
+                                        context,
+                                      ).textTheme.titleLarge?.color,
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              _buildFilterButtons(),
+                            ],
+                          ),
                         ),
                       ],
                     ),
+                  ),
+                  // Orders List
+                  SliverPadding(
+                    padding: EdgeInsets.all(10),
+                    sliver: _buildOrdersList(),
+                  ),
+                ],
+              ),
     );
   }
 
   Widget _buildErrorView() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, 
-            size: 80, 
-            color: isDark ? Colors.red.shade400 : Colors.red
+          Icon(
+            Icons.error_outline,
+            size: 80,
+            color:
+                themeNotifier.isSpecialModeActive
+                    ? themeNotifier
+                        .getThemeColor(themeNotifier.specialTheme)
+                        .shade400
+                    : (isDark ? Colors.red.shade400 : Colors.red),
           ),
           const SizedBox(height: 16),
           Text(
             _errorMessage ?? "Something went wrong",
             style: TextStyle(
-              fontSize: 18, 
+              fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Theme.of(context).textTheme.titleLarge?.color,
             ),
@@ -554,7 +657,12 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           ElevatedButton(
             onPressed: _fetchOrders,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
+              backgroundColor:
+                  themeNotifier.isSpecialModeActive
+                      ? themeNotifier
+                          .getThemeColor(themeNotifier.specialTheme)
+                          .shade400
+                      : Theme.of(context).primaryColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
             ),
@@ -566,20 +674,22 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   }
 
   Widget _buildEmptyOrdersView() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.shopping_bag_outlined, 
-            size: 80, 
-            color: Theme.of(context).textTheme.bodyMedium?.color
+            Icons.shopping_bag_outlined,
+            size: 80,
+            color: Theme.of(context).textTheme.bodyMedium?.color,
           ),
           const SizedBox(height: 16),
           Text(
             "No orders yet",
             style: TextStyle(
-              fontSize: 20, 
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Theme.of(context).textTheme.titleLarge?.color,
             ),
@@ -587,7 +697,9 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           const SizedBox(height: 8),
           Text(
             "Your order history will appear here",
-            style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+            style: TextStyle(
+              color: Theme.of(context).textTheme.bodyMedium?.color,
+            ),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
@@ -595,7 +707,12 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor:
+                  themeNotifier.isSpecialModeActive
+                      ? themeNotifier
+                          .getThemeColor(themeNotifier.specialTheme)
+                          .shade400
+                      : Colors.red,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
             ),
@@ -608,60 +725,97 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
   Widget _buildFilterButtons() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: _standardStatuses.map((status) {
-          final isSelected = _filterStatus == status;
-          return Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: () => _filterByStatus(status),
-              child: Column(
-                children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Theme.of(context).primaryColor
-                          : isDark
-                              ? Colors.grey.shade800
-                              : Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(20),
-                      border: isSelected
-                          ? Border.all(
-                              color: isDark
-                                  ? Colors.red.shade700
-                                  : Colors.red.shade400,
-                              width: 2,
-                            )
-                          : null,
-                      boxShadow: isSelected && !isDark
-                          ? [
-                              BoxShadow(
-                                color: Colors.red.shade200.withOpacity(0.5),
-                                blurRadius: 8,
-                                spreadRadius: 1,
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Text(
-                      status,
-                      style: TextStyle(
-                        color: isSelected
-                            ? Colors.white
-                            : Theme.of(context).textTheme.bodyLarge?.color,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        children:
+            _standardStatuses.map((status) {
+              final isSelected = _filterStatus == status;
+              return Padding(
+                padding: EdgeInsets.only(right: 12),
+                child: GestureDetector(
+                  onTap: () => _filterByStatus(status),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              isSelected
+                                  ? (themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(
+                                            themeNotifier.specialTheme,
+                                          )
+                                          .shade400
+                                      : Theme.of(context).primaryColor)
+                                  : isDark
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(20),
+                          border:
+                              isSelected
+                                  ? Border.all(
+                                    color:
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade700
+                                            : (isDark
+                                                ? Colors.red.shade700
+                                                : Colors.red.shade400),
+                                    width: 2,
+                                  )
+                                  : null,
+                          boxShadow:
+                              isSelected && !isDark
+                                  ? [
+                                    BoxShadow(
+                                      color:
+                                          themeNotifier.isSpecialModeActive
+                                              ? themeNotifier
+                                                  .getThemeColor(
+                                                    themeNotifier.specialTheme,
+                                                  )
+                                                  .shade200
+                                                  .withOpacity(0.5)
+                                              : Colors.red.shade200.withOpacity(
+                                                0.5,
+                                              ),
+                                      blurRadius: 8,
+                                      spreadRadius: 1,
+                                    ),
+                                  ]
+                                  : null,
+                        ),
+                        child: Text(
+                          status,
+                          style: TextStyle(
+                            color:
+                                isSelected
+                                    ? Colors.white
+                                    : Theme.of(
+                                      context,
+                                    ).textTheme.bodyLarge?.color,
+                            fontWeight:
+                                isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          );
-        }).toList(),
+                ),
+              );
+            }).toList(),
       ),
     );
   }
@@ -678,7 +832,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 const SizedBox(height: 16),
                 Text(
                   "No orders with '$_filterStatus' status",
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -699,15 +856,15 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           return _buildOrderCard(order);
         },
         childCount: filteredOrders.length,
-        addAutomaticKeepAlives: false, // Add this line
-        addRepaintBoundaries: true,    // Add this line
+        addAutomaticKeepAlives: false,
+        addRepaintBoundaries: true,
       ),
     );
   }
 
   Widget _buildOrderCard(Map<String, dynamic> order) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return RepaintBoundary(
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -715,9 +872,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         color: Theme.of(context).cardColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: isDark 
-              ? BorderSide(color: Colors.grey.shade800)
-              : BorderSide.none,
+          side:
+              isDark
+                  ? BorderSide(color: Colors.grey.shade800)
+                  : BorderSide.none,
         ),
         child: ExpansionTile(
           maintainState: false,
@@ -736,9 +894,9 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
             children: [
               const SizedBox(height: 4),
               Text(
-                DateFormat('MMM dd, yyyy - HH:mm').format(
-                  (order['timestamp'] as Timestamp).toDate(),
-                ),
+                DateFormat(
+                  'MMM dd, yyyy - HH:mm',
+                ).format((order['timestamp'] as Timestamp).toDate()),
                 style: const TextStyle(fontSize: 12),
               ),
               const SizedBox(height: 8),
@@ -769,9 +927,15 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
-                  ...order['items'].map<Widget>((item) => _buildOrderItem(item, status: order['status'])).toList(),
+                  ...order['items']
+                      .map<Widget>(
+                        (item) =>
+                            _buildOrderItem(item, status: order['status']),
+                      )
+                      .toList(),
                   const Divider(height: 32),
-                  if (order['trackingNumber'] != null && order['trackingNumber'].isNotEmpty) ...[
+                  if (order['trackingNumber'] != null &&
+                      order['trackingNumber'].isNotEmpty) ...[
                     const Text(
                       'Tracking Number:',
                       style: TextStyle(fontWeight: FontWeight.bold),
@@ -799,7 +963,9 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _capitalizeFirstLetter(order['paymentMethod'] ?? 'Not specified'),
+                    _capitalizeFirstLetter(
+                      order['paymentMethod'] ?? 'Not specified',
+                    ),
                     style: const TextStyle(fontSize: 14),
                   ),
                   const SizedBox(height: 20),
@@ -815,7 +981,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.blue,
                           side: const BorderSide(color: Colors.blue),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                         ),
                       ),
                       if (order['status'] == 'Pending')
@@ -828,7 +997,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,
                             side: const BorderSide(color: Colors.red),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
                           ),
                         ),
                     ],
@@ -850,33 +1022,39 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   Widget _buildStatusBadge(String status) {
     Color badgeColor;
     IconData iconData;
-    
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     switch (status) {
       case 'Pending':
-        badgeColor = Colors.orange;  // Changed to match admin
+        badgeColor =
+            themeNotifier.isSpecialModeActive
+                ? themeNotifier
+                    .getThemeColor(themeNotifier.specialTheme)
+                    .shade400
+                : Colors.orange;
         iconData = Icons.hourglass_bottom;
         break;
       case 'Preparing':
-        badgeColor = Colors.blue;  // Changed to match admin
+        badgeColor = Colors.blue;
         iconData = Icons.restaurant;
         break;
       case 'On Delivery':
-        badgeColor = Colors.purple;  // Already matches admin
+        badgeColor = Colors.purple;
         iconData = Icons.local_shipping;
         break;
       case 'Delivered':
-        badgeColor = Colors.green;  // Already matches admin
+        badgeColor = Colors.green;
         iconData = Icons.check_circle;
         break;
       case 'Cancelled':
-        badgeColor = Colors.red;  // Already matches admin
+        badgeColor = Colors.red;
         iconData = Icons.cancel;
         break;
       default:
         badgeColor = Colors.grey;
         iconData = Icons.help_outline;
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -904,14 +1082,20 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
   Widget _buildOrderItem(dynamic item, {required String status}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    final Map<String, dynamic> itemData = item is Map ? item as Map<String, dynamic> : {};
-    final String imagePath = itemData["imagePath"] ?? itemData["image"] ?? 'lib/assets/Images/placeholder.png';
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
+    final Map<String, dynamic> itemData =
+        item is Map ? item as Map<String, dynamic> : {};
+    final String imagePath =
+        itemData["imagePath"] ??
+        itemData["image"] ??
+        'lib/assets/Images/placeholder.png';
     final String itemPrice = itemData["price"]?.toString() ?? '0';
-    final int itemQuantity = itemData["quantity"] is int ? itemData["quantity"] : 1;
+    final int itemQuantity =
+        itemData["quantity"] is int ? itemData["quantity"] : 1;
     final String itemName = itemData["name"] ?? 'Unknown Product';
     final String productId = itemData["id"] ?? '';
-    
+
     return Container(
       padding: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -935,7 +1119,12 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Product is no longer available'),
-                backgroundColor: Colors.red,
+                backgroundColor:
+                    themeNotifier.isSpecialModeActive
+                        ? themeNotifier
+                            .getThemeColor(themeNotifier.specialTheme)
+                            .shade400
+                        : Colors.red,
               ),
             );
           }
@@ -978,9 +1167,9 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                   Text(
                     'Item Total: ₺${(double.tryParse(itemPrice) ?? 0) * itemQuantity}',
                     style: TextStyle(
-                      color: Colors.green[700], 
-                      fontSize: 13, 
-                      fontWeight: FontWeight.w500
+                      color: Colors.green[700],
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -995,14 +1184,23 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 return IconButton(
                   icon: Icon(
                     hasReviewed ? Icons.rate_review : Icons.star_border,
-                    color: canReview ? Colors.amber : Colors.grey,
+                    color:
+                        canReview
+                            ? (themeNotifier.isSpecialModeActive
+                                ? themeNotifier
+                                    .getThemeColor(themeNotifier.specialTheme)
+                                    .shade400
+                                : Colors.amber)
+                            : Colors.grey,
                   ),
-                  onPressed: canReview
-                      ? () => _showRatingDialog(productId, itemName)
-                      : null,
-                  tooltip: hasReviewed 
-                      ? 'Already reviewed'
-                      : status != 'Delivered'
+                  onPressed:
+                      canReview
+                          ? () => _showRatingDialog(productId, itemName)
+                          : null,
+                  tooltip:
+                      hasReviewed
+                          ? 'Already reviewed'
+                          : status != 'Delivered'
                           ? 'Can review after delivery'
                           : 'Rate this product',
                 );
@@ -1013,7 +1211,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       ),
     );
   }
-  
+
   Widget _buildProductImage(String imagePath) {
     if (imagePath.startsWith('http') || imagePath.startsWith('https')) {
       return Image.network(
@@ -1025,9 +1223,11 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           if (loadingProgress == null) return child;
           return Center(
             child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                  : null,
+              value:
+                  loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                      : null,
               strokeWidth: 2,
             ),
           );
@@ -1070,20 +1270,21 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       ),
     );
   }
-  
+
   void _handleReorder(Map<String, dynamic> order) async {
     try {
       // First check stock levels for all items
       final List<String> outOfStockItems = [];
       final List<String> insufficientStockItems = [];
-      
+
       // Check each item's current stock
       for (var item in order['items']) {
-        final productDoc = await FirebaseFirestore.instance
-            .collection('products')
-            .doc(item['id'])
-            .get();
-        
+        final productDoc =
+            await FirebaseFirestore.instance
+                .collection('products')
+                .doc(item['id'])
+                .get();
+
         if (!productDoc.exists) {
           outOfStockItems.add(item['name']);
           continue;
@@ -1095,62 +1296,73 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         if (currentStock <= 0) {
           outOfStockItems.add(item['name']);
         } else if (currentStock < requestedQuantity) {
-          insufficientStockItems.add('${item['name']} (Available: $currentStock, Requested: $requestedQuantity)');
+          insufficientStockItems.add(
+            '${item['name']} (Available: $currentStock, Requested: $requestedQuantity)',
+          );
         }
       }
 
       // Show error if any items are out of stock or have insufficient stock
       if (outOfStockItems.isNotEmpty || insufficientStockItems.isNotEmpty) {
         String errorMessage = '';
-        
+
         if (outOfStockItems.isNotEmpty) {
-          errorMessage += 'The following items are out of stock:\n• ${outOfStockItems.join('\n• ')}\n\n';
+          errorMessage +=
+              'The following items are out of stock:\n• ${outOfStockItems.join('\n• ')}\n\n';
         }
-        
+
         if (insufficientStockItems.isNotEmpty) {
-          errorMessage += 'Insufficient stock for:\n• ${insufficientStockItems.join('\n• ')}';
+          errorMessage +=
+              'Insufficient stock for:\n• ${insufficientStockItems.join('\n• ')}';
         }
 
         if (!mounted) return;
 
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            title: Text('Cannot Reorder'),
-            content: SingleChildScrollView(
-              child: Text(errorMessage),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('OK'),
+          builder:
+              (context) => AlertDialog(
+                title: Text('Cannot Reorder'),
+                content: SingleChildScrollView(child: Text(errorMessage)),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('OK'),
+                  ),
+                ],
               ),
-            ],
-          ),
         );
         return;
       }
 
       // If all stock checks pass, convert order items to CartItem objects
-      final List<CartItem> items = (order['items'] as List).map((item) => CartItem(
-        id: item['id'] ?? '',
-        name: item['name'] ?? '',
-        price: (double.tryParse(item['price']?.toString() ?? '0') ?? 0.0).toString(),
-        image: item['imagePath'] ?? item['image'] ?? '',
-        quantity: item['quantity'] ?? 1,
-      )).toList();
+      final List<CartItem> items =
+          (order['items'] as List)
+              .map(
+                (item) => CartItem(
+                  id: item['id'] ?? '',
+                  name: item['name'] ?? '',
+                  price:
+                      (double.tryParse(item['price']?.toString() ?? '0') ?? 0.0)
+                          .toString(),
+                  image: item['imagePath'] ?? item['image'] ?? '',
+                  quantity: item['quantity'] ?? 1,
+                ),
+              )
+              .toList();
 
       // Navigate to checkout page with the items
       if (!mounted) return;
-      
+
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => CheckoutPage(
-            subtotal: (order['total'] ?? 0.0).toDouble(),
-            items: items,
-            appliedDiscount: null,
-          ),
+          builder:
+              (context) => CheckoutPage(
+                subtotal: (order['total'] ?? 0.0).toDouble(),
+                items: items,
+                appliedDiscount: null,
+              ),
         ),
       );
     } catch (e) {
@@ -1159,7 +1371,9 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error checking product availability. Please try again.'),
+          content: Text(
+            'Error checking product availability. Please try again.',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -1170,36 +1384,48 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     // Store the context and theme information before showing dialog
     final currentContext = context;
     final isDark = Theme.of(currentContext).brightness == Brightness.dark;
-    final dialogBackgroundColor = Theme.of(currentContext).dialogBackgroundColor;
+    final dialogBackgroundColor =
+        Theme.of(currentContext).dialogBackgroundColor;
     final titleTextColor = Theme.of(currentContext).textTheme.titleLarge?.color;
     final bodyTextColor = Theme.of(currentContext).textTheme.bodyLarge?.color;
-    final primaryColor = Theme.of(currentContext).primaryColor;
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
 
     if (!mounted) return;
 
     final bool? shouldCancel = await showDialog<bool>(
       context: currentContext,
-      builder: (BuildContext context) => AlertDialog(
-        backgroundColor: dialogBackgroundColor,
-        title: Text(
-          'Cancel Order',
-          style: TextStyle(color: titleTextColor),
-        ),
-        content: Text(
-          'Are you sure you want to cancel this order?',
-          style: TextStyle(color: bodyTextColor),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('NO', style: TextStyle(color: primaryColor)),
+      builder:
+          (BuildContext context) => AlertDialog(
+            backgroundColor: dialogBackgroundColor,
+            title: Text(
+              'Cancel Order',
+              style: TextStyle(color: titleTextColor),
+            ),
+            content: Text(
+              'Are you sure you want to cancel this order?',
+              style: TextStyle(color: bodyTextColor),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(
+                  'NO',
+                  style: TextStyle(
+                    color:
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier
+                                .getThemeColor(themeNotifier.specialTheme)
+                                .shade400
+                            : Theme.of(context).primaryColor,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('YES', style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('YES', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
 
     if (shouldCancel != true || !mounted) return;
@@ -1242,7 +1468,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     } catch (e) {
       print('Error cancelling order: $e');
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(currentContext).showSnackBar(
         SnackBar(
           content: Text('Failed to cancel order: $e'),

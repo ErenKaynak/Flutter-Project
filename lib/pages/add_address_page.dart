@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 
 class AddAddressPage extends StatefulWidget {
   @override
@@ -54,8 +56,15 @@ class _AddAddressPageState extends State<AddAddressPage> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Colors.red.shade700;
-    final accentColor = Colors.red.shade700;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final primaryColor =
+        themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
+            : Colors.red.shade700;
+    final accentColor =
+        themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
+            : Colors.red.shade700;
 
     // Dynamic colors based on theme
     final backgroundColor = isDarkMode ? Color(0xFF121212) : Colors.white;
@@ -68,8 +77,14 @@ class _AddAddressPageState extends State<AddAddressPage> {
     return Scaffold(
       appBar: AppBar(
         surfaceTintColor: primaryColor,
-        title: Text('Add New Address'),
-        leading: BackButton(),
+        title: Text('Add New Address', style: TextStyle(color: Colors.white)),
+        leading: BackButton(color: Colors.white),
+        backgroundColor:
+            themeNotifier.isSpecialModeActive
+                ? themeNotifier
+                    .getThemeColor(themeNotifier.specialTheme)
+                    .shade700
+                : Colors.red.shade700,
         elevation: 2,
       ),
       body: Container(
@@ -78,7 +93,14 @@ class _AddAddressPageState extends State<AddAddressPage> {
             colors:
                 isDarkMode
                     ? [Color(0xFF121212), Color(0xFF1D1D1D)]
-                    : [Colors.white, Colors.red.shade50],
+                    : [
+                      Colors.white,
+                      themeNotifier.isSpecialModeActive
+                          ? themeNotifier
+                              .getThemeColor(themeNotifier.specialTheme)
+                              .shade50
+                          : Colors.red.shade50,
+                    ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -452,7 +474,15 @@ class _AddAddressPageState extends State<AddAddressPage> {
     required Color accentColor,
     required Color cardColor,
   }) {
-    final selectedBgColor = isDarkMode ? Color(0xFF2C2C2C) : Colors.red.shade50;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final selectedBgColor =
+        isDarkMode
+            ? Color(0xFF2C2C2C)
+            : (themeNotifier.isSpecialModeActive
+                ? themeNotifier
+                    .getThemeColor(themeNotifier.specialTheme)
+                    .shade50
+                : Colors.red.shade50);
     final unselectedBgColor = cardColor;
     final selectedBorderColor = accentColor;
     final unselectedBorderColor = Colors.transparent;
@@ -499,12 +529,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
                 ),
                 child: Column(
                   children: [
-                    Icon(
-                      Icons.home,
-                      color:
-                          primaryColor, // Always red in both light and dark mode
-                      size: 28,
-                    ),
+                    Icon(Icons.home, color: primaryColor, size: 28),
                     SizedBox(height: 8),
                     Text(
                       'Home',
@@ -548,12 +573,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
                 ),
                 child: Column(
                   children: [
-                    Icon(
-                      Icons.work,
-                      color:
-                          primaryColor, // Always red in both light and dark mode
-                      size: 28,
-                    ),
+                    Icon(Icons.work, color: primaryColor, size: 28),
                     SizedBox(height: 8),
                     Text(
                       'Work',
@@ -622,19 +642,32 @@ class _AddAddressPageState extends State<AddAddressPage> {
   }
 
   Widget _buildSaveButton({required Color primaryColor}) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     return Container(
       width: double.infinity,
       height: 55,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [primaryColor, Colors.red.shade500],
+          colors: [
+            primaryColor,
+            themeNotifier.isSpecialModeActive
+                ? themeNotifier
+                    .getThemeColor(themeNotifier.specialTheme)
+                    .shade500
+                : Colors.red.shade500,
+          ],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.shade300.withOpacity(0.5),
+            color: (themeNotifier.isSpecialModeActive
+                    ? themeNotifier
+                        .getThemeColor(themeNotifier.specialTheme)
+                        .shade300
+                    : Colors.red.shade300)
+                .withOpacity(0.5),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -725,6 +758,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
   void _showLoadingDialog() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final dialogBgColor = isDarkMode ? Color(0xFF1E1E1E) : Colors.white;
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
 
     showDialog(
       context: context,
@@ -738,7 +772,13 @@ class _AddAddressPageState extends State<AddAddressPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(
+                          themeNotifier.specialTheme,
+                        )
+                        : Colors.red,
+                  ),
                 ),
                 SizedBox(height: 16),
                 Text(
@@ -773,6 +813,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
   }
 
   void _showErrorSnackBar(String message) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -782,7 +823,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
             Expanded(child: Text(message)),
           ],
         ),
-        backgroundColor: Colors.red.shade700,
+        backgroundColor:
+            themeNotifier.isSpecialModeActive
+                ? themeNotifier
+                    .getThemeColor(themeNotifier.specialTheme)
+                    .shade700
+                : Colors.red.shade700,
         duration: Duration(seconds: 3),
       ),
     );

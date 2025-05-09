@@ -8,33 +8,13 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
-import 'package:shared_preferences/shared_preferences.dart';
-
-// SpecialColorTheme enum
-enum SpecialColorTheme { blue, orange, yellow, green, purple }
-
-// getThemeColor function
-MaterialColor getThemeColor(SpecialColorTheme theme) {
-  switch (theme) {
-    case SpecialColorTheme.blue:
-      return Colors.blue;
-    case SpecialColorTheme.orange:
-      return Colors.orange;
-    case SpecialColorTheme.yellow:
-      return Colors.yellow;
-    case SpecialColorTheme.green:
-      return Colors.green;
-    case SpecialColorTheme.purple:
-      return Colors.purple;
-    default:
-      return Colors.blue;
-  }
-}
+import 'package:engineering_project/pages/theme_notifier.dart';
+import 'package:provider/provider.dart';
 
 class CartItem {
   final String id;
   final String name;
-  final String price; // Price in TRY
+  final String price;
   final String image;
   int quantity;
 
@@ -145,7 +125,6 @@ class CartManager {
       if (doc.exists) {
         final currentQuantity = doc.data()?['quantity'] ?? 1;
         final newQuantity = (currentQuantity + change).clamp(1, 10);
-
         await docRef.update({'quantity': newQuantity});
       }
     } catch (_) {}
@@ -215,12 +194,16 @@ class OrderSuccessPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Order Confirmation'),
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+        backgroundColor:
+            themeNotifier.isSpecialModeActive
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                : Colors.red.shade700,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: Center(
@@ -293,7 +276,12 @@ class OrderSuccessPage extends StatelessWidget {
                 const SizedBox(width: 16),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
+                    backgroundColor:
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier.getThemeColor(
+                              themeNotifier.specialTheme,
+                            )
+                            : Colors.red,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -340,26 +328,11 @@ class _CartPageState extends State<CartPage> {
   DiscountCode? _appliedDiscount;
   bool _isApplyingDiscount = false;
   String? _discountError;
-  SpecialColorTheme? _selectedTheme;
 
   @override
   void initState() {
     super.initState();
-    _loadSelectedTheme();
     _checkLoginAndLoadCart();
-  }
-
-  Future<void> _loadSelectedTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    final themeString = prefs.getString('selectedTheme');
-    if (themeString != null) {
-      setState(() {
-        _selectedTheme = SpecialColorTheme.values.firstWhere(
-          (e) => e.toString() == 'SpecialColorTheme.$themeString',
-          orElse: () => SpecialColorTheme.blue,
-        );
-      });
-    }
   }
 
   Future<void> _checkLoginAndLoadCart() async {
@@ -620,19 +593,20 @@ class _CartPageState extends State<CartPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cartItems = _cartManager.items;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     if (_isLoading) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
           backgroundColor:
-              _selectedTheme != null
-                  ? getThemeColor(_selectedTheme!)
-                  : Theme.of(context).brightness == Brightness.light
-                  ? Colors.red.shade700
-                  : Theme.of(context).appBarTheme.backgroundColor,
-          title: Text('Your Cart', style: theme.appBarTheme.titleTextStyle),
-          leading: BackButton(color: theme.iconTheme.color),
+              themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                  : (theme.brightness == Brightness.light
+                      ? Colors.red.shade700
+                      : Theme.of(context).appBarTheme.backgroundColor),
+          title: Text('Your Cart', style: TextStyle(color: Colors.white)),
+          leading: BackButton(color: Colors.white),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -643,13 +617,13 @@ class _CartPageState extends State<CartPage> {
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
           backgroundColor:
-              _selectedTheme != null
-                  ? getThemeColor(_selectedTheme!)
-                  : Theme.of(context).brightness == Brightness.light
-                  ? Colors.red.shade700
-                  : Theme.of(context).appBarTheme.backgroundColor,
-          title: Text('Your Cart', style: theme.appBarTheme.titleTextStyle),
-          leading: BackButton(color: theme.iconTheme.color),
+              themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                  : (theme.brightness == Brightness.light
+                      ? Colors.red.shade700
+                      : Theme.of(context).appBarTheme.backgroundColor),
+          title: Text('Your Cart', style: TextStyle(color: Colors.white)),
+          leading: BackButton(color: Colors.white),
         ),
         body: Center(
           child: Column(
@@ -669,7 +643,12 @@ class _CartPageState extends State<CartPage> {
               const SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor:
+                      themeNotifier.isSpecialModeActive
+                          ? themeNotifier.getThemeColor(
+                            themeNotifier.specialTheme,
+                          )
+                          : Colors.red,
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () => Navigator.of(context).pop(),
@@ -685,20 +664,17 @@ class _CartPageState extends State<CartPage> {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor:
-            _selectedTheme != null
-                ? getThemeColor(_selectedTheme!)
-                : Theme.of(context).brightness == Brightness.light
-                ? Colors.red.shade700
-                : Theme.of(context).appBarTheme.backgroundColor,
+            themeNotifier.isSpecialModeActive
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                : (theme.brightness == Brightness.light
+                    ? Colors.red.shade700
+                    : Theme.of(context).appBarTheme.backgroundColor),
         title: Text('Your Cart', style: TextStyle(color: Colors.white)),
-        leading: BackButton(color: Colors.white), // Changed to white
+        leading: BackButton(color: Colors.white),
         actions: [
           if (cartItems.isNotEmpty)
             IconButton(
-              icon: Icon(
-                Icons.delete_outline,
-                color: Colors.white,
-              ), // Changed to white
+              icon: Icon(Icons.delete_outline, color: Colors.white),
               onPressed: () {
                 showDialog(
                   context: context,
@@ -740,9 +716,11 @@ class _CartPageState extends State<CartPage> {
                       Icons.shopping_cart_outlined,
                       size: 80,
                       color:
-                          _selectedTheme != null
-                              ? getThemeColor(_selectedTheme!)
-                              : Colors.red, // Update to use special theme color
+                          themeNotifier.isSpecialModeActive
+                              ? themeNotifier.getThemeColor(
+                                themeNotifier.specialTheme,
+                              )
+                              : Colors.red,
                     ),
                     const SizedBox(height: 20),
                     Text(
@@ -770,7 +748,12 @@ class _CartPageState extends State<CartPage> {
                           background: Container(
                             alignment: Alignment.centerRight,
                             padding: const EdgeInsets.only(right: 20),
-                            color: Colors.red,
+                            color:
+                                themeNotifier.isSpecialModeActive
+                                    ? themeNotifier.getThemeColor(
+                                      themeNotifier.specialTheme,
+                                    )
+                                    : Colors.red,
                             child: const Icon(
                               Icons.delete_outline_outlined,
                               color: Colors.white,
@@ -832,7 +815,17 @@ class _CartPageState extends State<CartPage> {
                                         Text(
                                           '₺${item.price}',
                                           style: theme.textTheme.bodyLarge
-                                              ?.copyWith(color: Colors.red),
+                                              ?.copyWith(
+                                                color:
+                                                    themeNotifier
+                                                            .isSpecialModeActive
+                                                        ? themeNotifier
+                                                            .getThemeColor(
+                                                              themeNotifier
+                                                                  .specialTheme,
+                                                            )
+                                                        : Colors.red,
+                                              ),
                                         ),
                                       ],
                                     ),
@@ -848,7 +841,15 @@ class _CartPageState extends State<CartPage> {
                                                 ? Icons.delete_outline_outlined
                                                 : Icons.remove,
                                             size: 16,
-                                            color: Colors.red,
+                                            color:
+                                                themeNotifier
+                                                        .isSpecialModeActive
+                                                    ? themeNotifier
+                                                        .getThemeColor(
+                                                          themeNotifier
+                                                              .specialTheme,
+                                                        )
+                                                    : Colors.red,
                                           ),
                                         ),
                                         onPressed: () {
@@ -870,10 +871,18 @@ class _CartPageState extends State<CartPage> {
                                         icon: CircleAvatar(
                                           radius: 14,
                                           backgroundColor: Colors.red.shade100,
-                                          child: const Icon(
+                                          child: Icon(
                                             Icons.add,
                                             size: 16,
-                                            color: Colors.red,
+                                            color:
+                                                themeNotifier
+                                                        .isSpecialModeActive
+                                                    ? themeNotifier
+                                                        .getThemeColor(
+                                                          themeNotifier
+                                                              .specialTheme,
+                                                        )
+                                                    : Colors.red,
                                           ),
                                         ),
                                         onPressed:
@@ -930,7 +939,12 @@ class _CartPageState extends State<CartPage> {
                               const SizedBox(width: 10),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
+                                  backgroundColor:
+                                      themeNotifier.isSpecialModeActive
+                                          ? themeNotifier.getThemeColor(
+                                            themeNotifier.specialTheme,
+                                          )
+                                          : Colors.red,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 12,
@@ -1074,10 +1088,15 @@ class _CartPageState extends State<CartPage> {
                             ),
                             Text(
                               '₺${_discountedTotal.toStringAsFixed(2)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.red,
+                                color:
+                                    themeNotifier.isSpecialModeActive
+                                        ? themeNotifier.getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
+                                        : Colors.red,
                               ),
                             ),
                           ],
@@ -1087,7 +1106,12 @@ class _CartPageState extends State<CartPage> {
                           width: double.infinity,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
+                              backgroundColor:
+                                  themeNotifier.isSpecialModeActive
+                                      ? themeNotifier.getThemeColor(
+                                        themeNotifier.specialTheme,
+                                      )
+                                      : Colors.red,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(

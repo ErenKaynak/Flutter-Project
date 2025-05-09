@@ -16,16 +16,14 @@ import 'package:engineering_project/providers/cart_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   // Configure error handling
   if (kDebugMode) {
     FlutterError.onError = (FlutterErrorDetails details) {
-      if (!details.toString().contains('OpenGL ES API') && 
+      if (!details.toString().contains('OpenGL ES API') &&
           !details.toString().contains('EGL_emulation')) {
         FlutterError.presentError(details);
       }
@@ -43,7 +41,7 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
-  
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -52,14 +50,41 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: Consumer<ThemeNotifier>(
-        builder: (context, themeNotifier, _) => MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'Engineering Project',
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: themeNotifier.themeMode,
-          home: AuthWrapper(),
-        ),
+        builder:
+            (context, themeNotifier, _) => MaterialApp(
+              debugShowCheckedModeBanner: false,
+              title: 'Engineering Project',
+              theme:
+                  themeNotifier.isSpecialModeActive
+                      ? AppTheme.lightTheme.copyWith(
+                        primaryColor: themeNotifier.getThemeColor(
+                          themeNotifier.specialTheme,
+                        ),
+                        colorScheme: ColorScheme.fromSwatch(
+                          primarySwatch: themeNotifier.getThemeColor(
+                            themeNotifier.specialTheme,
+                          ),
+                          brightness: Brightness.light,
+                        ),
+                      )
+                      : AppTheme.lightTheme,
+              darkTheme:
+                  themeNotifier.isSpecialModeActive
+                      ? AppTheme.darkTheme.copyWith(
+                        primaryColor: themeNotifier.getThemeColor(
+                          themeNotifier.specialTheme,
+                        ),
+                        colorScheme: ColorScheme.fromSwatch(
+                          primarySwatch: themeNotifier.getThemeColor(
+                            themeNotifier.specialTheme,
+                          ),
+                          brightness: Brightness.dark,
+                        ),
+                      )
+                      : AppTheme.darkTheme,
+              themeMode: themeNotifier.themeMode,
+              home: const AuthWrapper(),
+            ),
       ),
     );
   }
@@ -75,16 +100,14 @@ class AuthWrapper extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
-        
+
         if (snapshot.hasData && snapshot.data != null) {
           return const RootPage();
         }
-        
+
         return const WelcomeScreen();
       },
     );
@@ -92,26 +115,31 @@ class AuthWrapper extends StatelessWidget {
 }
 
 class SettingsWidget extends StatelessWidget {
+  const SettingsWidget({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+
     return PopupMenuButton<ThemeMode>(
       onSelected: (ThemeMode mode) {
-        Provider.of<ThemeNotifier>(context, listen: false).setThemeMode(mode);
+        themeNotifier.setThemeMode(mode);
       },
-      itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: ThemeMode.system,
-          child: Text('System Theme'),
-        ),
-        const PopupMenuItem(
-          value: ThemeMode.light,
-          child: Text('Light Theme'),
-        ),
-        const PopupMenuItem(
-          value: ThemeMode.dark,
-          child: Text('Dark Theme'),
-        ),
-      ],
+      itemBuilder:
+          (context) => [
+            const PopupMenuItem(
+              value: ThemeMode.system,
+              child: Text('System Theme'),
+            ),
+            const PopupMenuItem(
+              value: ThemeMode.light,
+              child: Text('Light Theme'),
+            ),
+            const PopupMenuItem(
+              value: ThemeMode.dark,
+              child: Text('Dark Theme'),
+            ),
+          ],
     );
   }
 }

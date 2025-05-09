@@ -7,6 +7,8 @@ import 'package:engineering_project/assets/components/square_tile.dart';
 import 'package:engineering_project/pages/forget_pw_page.dart';
 import 'package:engineering_project/admin-panel/admin_root.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 
 class LoginPage extends StatefulWidget {
   LoginPage({super.key});
@@ -63,12 +65,12 @@ class _LoginPageState extends State<LoginPage> {
 
   void signUserIn() async {
     if (!mounted) return;
-    
+
     setState(() {
       emailError = null;
       passwordError = null;
     });
-    
+
     if (!_formKey.currentState!.validate()) return;
 
     try {
@@ -83,7 +85,7 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       // Attempt sign in
-      final credential = await FirebaseAuth.  instance.signInWithEmailAndPassword(
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
@@ -94,15 +96,16 @@ class _LoginPageState extends State<LoginPage> {
       if (user != null) {
         // Save user data
         await _saveUserToFirestore(user);
-        
+
         if (!mounted) return;
 
         // Get user role
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-        
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+
         final String role = userDoc['role'] ?? 'user';
 
         if (!mounted) return;
@@ -111,12 +114,10 @@ class _LoginPageState extends State<LoginPage> {
         if (context.mounted) {
           // Pop the loading dialog first
           Navigator.of(context).pop();
-          
+
           // Then navigate to the appropriate screen
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => const RootScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const RootScreen()),
             (Route<dynamic> route) => false,
           );
         }
@@ -187,6 +188,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     // Check if device is in dark mode
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     // Define colors based on theme
     final backgroundColor = isDarkMode ? Color(0xFF121212) : Colors.grey[200];
@@ -194,8 +196,14 @@ class _LoginPageState extends State<LoginPage> {
     final secondaryTextColor = isDarkMode ? Colors.grey[300] : Colors.grey[800];
     final inputFillColor = isDarkMode ? Color(0xFF2C2C2C) : Colors.grey[300];
     final dividerColor = isDarkMode ? Colors.grey[700] : Colors.grey[400];
-    final iconColor = Colors.red.shade700;
-    final accentColor = Colors.red.shade500;
+    final iconColor =
+        themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
+            : Colors.red.shade700;
+    final accentColor =
+        themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade500
+            : Colors.red.shade500;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -209,30 +217,35 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 100),
-                 Container(
-                        height: 120,
-                        width: 120,
-                        decoration: BoxDecoration(
-                          color: isDarkMode ? Colors.grey[900] : Colors.white54,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.shade100,
-                              blurRadius: 10,
-                              spreadRadius: 3,
-                            ),
-                          ],
+                  Container(
+                    height: 120,
+                    width: 120,
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? Colors.grey[900] : Colors.white54,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade100
+                                  : Colors.red.shade100,
+                          blurRadius: 10,
+                          spreadRadius: 3,
                         ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            isDarkMode 
-                              ? 'lib/assets/Images/app-icon-dark.png'
-                              : 'lib/assets/Images/app-icon-light.png',
-                            width: 150,
-                            height: 150,
-                          ),
-                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        isDarkMode
+                            ? 'lib/assets/Images/app-icon-dark.png'
+                            : 'lib/assets/Images/app-icon-light.png',
+                        width: 150,
+                        height: 150,
                       ),
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   Text(
                     'Welcome Back! Log in Here',
@@ -334,8 +347,13 @@ class _LoginPageState extends State<LoginPage> {
                         child: Text(
                           emailError ?? passwordError ?? '',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.red,
+                          style: TextStyle(
+                            color:
+                                themeNotifier.isSpecialModeActive
+                                    ? themeNotifier.getThemeColor(
+                                      themeNotifier.specialTheme,
+                                    )
+                                    : Colors.red,
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),

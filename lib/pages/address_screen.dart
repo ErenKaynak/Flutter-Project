@@ -2,7 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'add_address_page.dart';
+import 'theme_notifier.dart';
 
 class AddressScreen extends StatefulWidget {
   @override
@@ -82,22 +84,36 @@ class _AddressScreenState extends State<AddressScreen> {
     final cardColor = Theme.of(context).cardColor;
     final textColor = Theme.of(context).textTheme.bodyMedium?.color;
     final borderColor = isDark ? Colors.grey.shade700 : Colors.transparent;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
             'My Addresses',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
           ),
-          backgroundColor: Colors.red.shade100,
+          backgroundColor:
+              themeNotifier.isSpecialModeActive
+                  ? themeNotifier
+                      .getThemeColor(themeNotifier.specialTheme)
+                      .shade100
+                  : Colors.red.shade100,
           elevation: 0,
+          iconTheme: IconThemeData(color: Colors.white),
         ),
         backgroundColor: bgColor,
         body:
             _isLoading
                 ? Center(
-                  child: CircularProgressIndicator(color: Colors.red.shade300),
+                  child: CircularProgressIndicator(
+                    color:
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier
+                                .getThemeColor(themeNotifier.specialTheme)
+                                .shade300
+                            : Colors.red.shade300,
+                  ),
                 )
                 : RefreshIndicator(
                   onRefresh: () async {
@@ -105,7 +121,12 @@ class _AddressScreenState extends State<AddressScreen> {
                     await Future.delayed(const Duration(seconds: 1));
                     setState(() => _isLoading = false);
                   },
-                  color: Colors.red.shade300,
+                  color:
+                      themeNotifier.isSpecialModeActive
+                          ? themeNotifier
+                              .getThemeColor(themeNotifier.specialTheme)
+                              .shade300
+                          : Colors.red.shade300,
                   child: CustomScrollView(
                     slivers: [
                       SliverToBoxAdapter(
@@ -133,7 +154,14 @@ class _AddressScreenState extends State<AddressScreen> {
                               child: Row(
                                 children: [
                                   CircleAvatar(
-                                    backgroundColor: Colors.red.shade700,
+                                    backgroundColor:
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade700
+                                            : Colors.red.shade700,
                                     radius: 24,
                                     child: const Icon(
                                       Icons.location_on,
@@ -174,11 +202,24 @@ class _AddressScreenState extends State<AddressScreen> {
                               ),
                               child: ElevatedButton.icon(
                                 onPressed: _navigateToAddAddress,
-                                icon: const Icon(Icons.add_location_alt, ),
-                                label: const Text('Add New Address'),
+                                icon: Icon(
+                                  Icons.add_location_alt,
+                                  color: Colors.white,
+                                ),
+                                label: const Text(
+                                  'Add New Address',
+                                  style: TextStyle(color: Colors.white),
+                                ),
                                 style: ElevatedButton.styleFrom(
                                   minimumSize: const Size.fromHeight(54),
-                                  backgroundColor: Colors.red.shade700,
+                                  backgroundColor:
+                                      themeNotifier.isSpecialModeActive
+                                          ? themeNotifier
+                                              .getThemeColor(
+                                                themeNotifier.specialTheme,
+                                              )
+                                              .shade700
+                                          : Colors.red.shade700,
                                   foregroundColor: Colors.white,
                                   elevation: 2,
                                   shape: RoundedRectangleBorder(
@@ -236,6 +277,7 @@ class _AddressScreenState extends State<AddressScreen> {
         final borderColor =
             isDark ? Colors.grey.shade700 : Colors.grey.shade200;
         final textColor = Theme.of(context).textTheme.bodyMedium?.color;
+        final themeNotifier = Provider.of<ThemeNotifier>(context);
 
         return SliverList(
           delegate: SliverChildBuilderDelegate((context, index) {
@@ -257,8 +299,20 @@ class _AddressScreenState extends State<AddressScreen> {
                       decoration: BoxDecoration(
                         color:
                             isDark
-                                ? Colors.red.shade900
-                                : Colors.red.shade50,
+                                ? (themeNotifier.isSpecialModeActive
+                                    ? themeNotifier
+                                        .getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
+                                        .shade900
+                                    : Colors.red.shade900)
+                                : (themeNotifier.isSpecialModeActive
+                                    ? themeNotifier
+                                        .getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
+                                        .shade50
+                                    : Colors.red.shade50),
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(12),
                         ),
@@ -267,13 +321,35 @@ class _AddressScreenState extends State<AddressScreen> {
                         children: [
                           CircleAvatar(
                             backgroundColor:
-                                isDark ? Colors.red.shade800 : Colors.red.shade100,
+                                isDark
+                                    ? (themeNotifier.isSpecialModeActive
+                                        ? themeNotifier
+                                            .getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            .shade800
+                                        : Colors.red.shade800)
+                                    : (themeNotifier.isSpecialModeActive
+                                        ? themeNotifier
+                                            .getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            .shade100
+                                        : Colors.red.shade100),
                             child: Icon(
                               data['addressType'] == 'Home'
                                   ? Icons.home
                                   : Icons.work,
                               color:
-                                  isDark ? Colors.white : Colors.red.shade700,
+                                  isDark
+                                      ? Colors.white
+                                      : (themeNotifier.isSpecialModeActive
+                                          ? themeNotifier
+                                              .getThemeColor(
+                                                themeNotifier.specialTheme,
+                                              )
+                                              .shade700
+                                          : Colors.red.shade700),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -287,7 +363,13 @@ class _AddressScreenState extends State<AddressScreen> {
                                 color:
                                     isDark
                                         ? Colors.white
-                                        : Colors.red.shade700,
+                                        : (themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade700
+                                            : Colors.red.shade700),
                               ),
                             ),
                           ),
@@ -314,7 +396,14 @@ class _AddressScreenState extends State<AddressScreen> {
                               Icon(
                                 Icons.person,
                                 size: 18,
-                                color: Colors.red.shade700,
+                                color:
+                                    themeNotifier.isSpecialModeActive
+                                        ? themeNotifier
+                                            .getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            .shade700
+                                        : Colors.red.shade700,
                               ),
                               const SizedBox(width: 8),
                               Text(
@@ -329,7 +418,14 @@ class _AddressScreenState extends State<AddressScreen> {
                               Icon(
                                 Icons.location_on,
                                 size: 18,
-                                color: Colors.red.shade700,
+                                color:
+                                    themeNotifier.isSpecialModeActive
+                                        ? themeNotifier
+                                            .getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            .shade700
+                                        : Colors.red.shade700,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -346,7 +442,14 @@ class _AddressScreenState extends State<AddressScreen> {
                               Icon(
                                 Icons.phone,
                                 size: 18,
-                                color: Colors.red.shade700,
+                                color:
+                                    themeNotifier.isSpecialModeActive
+                                        ? themeNotifier
+                                            .getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            .shade700
+                                        : Colors.red.shade700,
                               ),
                               const SizedBox(width: 8),
                               Text(
@@ -378,11 +481,27 @@ class _AddressScreenState extends State<AddressScreen> {
                             onPressed: () {},
                             icon: Icon(
                               Icons.delete_outline,
-                              color: Colors.red.shade300,
+                              color:
+                                  themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(
+                                            themeNotifier.specialTheme,
+                                          )
+                                          .shade300
+                                      : Colors.red.shade300,
                             ),
                             label: Text(
                               'Delete',
-                              style: TextStyle(color: Colors.red.shade300),
+                              style: TextStyle(
+                                color:
+                                    themeNotifier.isSpecialModeActive
+                                        ? themeNotifier
+                                            .getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            .shade300
+                                        : Colors.red.shade300,
+                              ),
                             ),
                           ),
                           TextButton.icon(

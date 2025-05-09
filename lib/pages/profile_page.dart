@@ -10,34 +10,12 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'theme_notifier.dart';
 import 'address_screen.dart';
 import 'past_orders_page.dart';
 import 'welcome_screen.dart';
 import '../admin-panel/admin_main.dart';
-
-// SpecialColorTheme enum
-enum SpecialColorTheme { blue, orange, yellow, green, purple }
-
-// getThemeColor function
-MaterialColor getThemeColor(SpecialColorTheme theme) {
-  switch (theme) {
-    case SpecialColorTheme.blue:
-      return Colors.blue;
-    case SpecialColorTheme.orange:
-      return Colors.orange;
-    case SpecialColorTheme.yellow:
-      return Colors.yellow;
-    case SpecialColorTheme.green:
-      return Colors.green;
-    case SpecialColorTheme.purple:
-      return Colors.purple;
-    default:
-      return Colors.blue;
-  }
-}
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -61,41 +39,13 @@ class _ProfilePageState extends State<ProfilePage> {
   // Special Mode toggle variables
   int _tapCount = 0;
   bool _showSpecialModeToggle = false;
-
-  // Color picker variables
   bool isColorPickerVisible = false;
-  SpecialColorTheme? _selectedTheme;
 
   @override
   void initState() {
     super.initState();
     _checkAISettings();
     fetchProfileData();
-    _loadSelectedTheme(); // Load persisted theme
-  }
-
-  // Load selected theme from SharedPreferences
-  Future<void> _loadSelectedTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    final themeString = prefs.getString('selectedTheme');
-    if (themeString != null) {
-      setState(() {
-        _selectedTheme = SpecialColorTheme.values.firstWhere(
-          (e) => e.toString() == 'SpecialColorTheme.$themeString',
-          orElse: () => SpecialColorTheme.blue,
-        );
-      });
-    }
-  }
-
-  // Save selected theme to SharedPreferences
-  Future<void> _saveSelectedTheme(SpecialColorTheme? theme) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (theme != null) {
-      await prefs.setString('selectedTheme', theme.toString().split('.').last);
-    } else {
-      await prefs.remove('selectedTheme');
-    }
   }
 
   Future<void> _checkAISettings() async {
@@ -139,8 +89,11 @@ class _ProfilePageState extends State<ProfilePage> {
       _tapCount++;
       if (_tapCount >= 3) {
         _showSpecialModeToggle = true;
-        isColorPickerVisible =
-            _selectedTheme != null; // Show color picker if theme is selected
+        final themeNotifier = Provider.of<ThemeNotifier>(
+          context,
+          listen: false,
+        );
+        isColorPickerVisible = themeNotifier.isSpecialModeActive;
         _tapCount = 0;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -336,6 +289,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _changeProfilePicture() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -375,16 +329,20 @@ class _ProfilePageState extends State<ProfilePage> {
                     leading: Icon(
                       Icons.delete_outline,
                       color:
-                          _selectedTheme != null
-                              ? getThemeColor(_selectedTheme!)
+                          themeNotifier.isSpecialModeActive
+                              ? themeNotifier.getThemeColor(
+                                themeNotifier.specialTheme,
+                              )
                               : Colors.red,
                     ),
                     title: Text(
                       'Remove Photo',
                       style: TextStyle(
                         color:
-                            _selectedTheme != null
-                                ? getThemeColor(_selectedTheme!)
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier.getThemeColor(
+                                  themeNotifier.specialTheme,
+                                )
                                 : Colors.red,
                       ),
                     ),
@@ -445,14 +403,16 @@ class _ProfilePageState extends State<ProfilePage> {
     final color = isBlack ? Colors.black : Theme.of(context).cardColor;
     final textColor = isBlack ? Colors.white : null;
     final iconColor =
-        _selectedTheme != null
-            ? getThemeColor(_selectedTheme!)
+        themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
             : Colors.red.shade700;
     final borderColor =
         isDark
             ? Colors.white.withOpacity(0.2)
-            : _selectedTheme != null
-            ? getThemeColor(_selectedTheme!).withOpacity(0.3)
+            : themeNotifier.isSpecialModeActive
+            ? themeNotifier
+                .getThemeColor(themeNotifier.specialTheme)
+                .withOpacity(0.3)
             : Colors.red.withOpacity(0.3);
 
     return Padding(
@@ -495,27 +455,30 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+    final isDarkMode = themeNotifier.isDarkMode;
     final isBlackMode = themeNotifier.isBlackMode;
     final isDark =
         Theme.of(context).brightness == Brightness.dark || isBlackMode;
     final outlineColor =
         isDark
             ? Colors.white.withOpacity(0.2)
-            : _selectedTheme != null
-            ? getThemeColor(_selectedTheme!).withOpacity(0.3)
+            : themeNotifier.isSpecialModeActive
+            ? themeNotifier
+                .getThemeColor(themeNotifier.specialTheme)
+                .withOpacity(0.3)
             : Colors.red.withOpacity(0.3);
 
-    // Apply light mode when Special Mode is on, unless a special theme is selected
     final backgroundColor =
-        _selectedTheme != null
-            ? getThemeColor(_selectedTheme!).withOpacity(0.1)
+        themeNotifier.isSpecialModeActive
+            ? themeNotifier
+                .getThemeColor(themeNotifier.specialTheme)
+                .withOpacity(0.1)
             : isDark
             ? Colors.black
             : Colors.grey[100];
     final appBarColor =
-        _selectedTheme != null
-            ? getThemeColor(_selectedTheme!)
+        themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
             : isDark
             ? Colors.black
             : Colors.white;
@@ -554,19 +517,35 @@ class _ProfilePageState extends State<ProfilePage> {
                       colors:
                           isDark
                               ? [
-                                _selectedTheme != null
-                                    ? getThemeColor(_selectedTheme!).shade900
+                                themeNotifier.isSpecialModeActive
+                                    ? themeNotifier
+                                        .getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
+                                        .shade900
                                     : Colors.red.shade900,
-                                _selectedTheme != null
-                                    ? getThemeColor(_selectedTheme!).shade900
+                                themeNotifier.isSpecialModeActive
+                                    ? themeNotifier
+                                        .getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
+                                        .shade900
                                     : Colors.grey.shade900,
                               ]
                               : [
-                                _selectedTheme != null
-                                    ? getThemeColor(_selectedTheme!).shade500
+                                themeNotifier.isSpecialModeActive
+                                    ? themeNotifier
+                                        .getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
+                                        .shade500
                                     : Colors.red.shade500,
-                                _selectedTheme != null
-                                    ? getThemeColor(_selectedTheme!).shade100
+                                themeNotifier.isSpecialModeActive
+                                    ? themeNotifier
+                                        .getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
+                                        .shade100
                                     : Colors.red.shade100,
                               ],
                       begin: Alignment.topLeft,
@@ -656,8 +635,10 @@ class _ProfilePageState extends State<ProfilePage> {
                           Icon(
                             Icons.lock_outline,
                             color:
-                                _selectedTheme != null
-                                    ? getThemeColor(_selectedTheme!)
+                                themeNotifier.isSpecialModeActive
+                                    ? themeNotifier.getThemeColor(
+                                      themeNotifier.specialTheme,
+                                    )
                                     : Colors.red.shade700,
                             size: 22,
                           ),
@@ -685,11 +666,19 @@ class _ProfilePageState extends State<ProfilePage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               isDark
-                                  ? (_selectedTheme != null
-                                      ? getThemeColor(_selectedTheme!).shade900
+                                  ? (themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(
+                                            themeNotifier.specialTheme,
+                                          )
+                                          .shade900
                                       : Colors.red.shade900)
-                                  : (_selectedTheme != null
-                                      ? getThemeColor(_selectedTheme!).shade400
+                                  : (themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(
+                                            themeNotifier.specialTheme,
+                                          )
+                                          .shade400
                                       : Colors.red.shade400),
                           foregroundColor: Colors.white,
                           minimumSize: const Size.fromHeight(50),
@@ -719,8 +708,12 @@ class _ProfilePageState extends State<ProfilePage> {
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(
                             color:
-                                _selectedTheme != null
-                                    ? getThemeColor(_selectedTheme!).shade400
+                                themeNotifier.isSpecialModeActive
+                                    ? themeNotifier
+                                        .getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
+                                        .shade400
                                     : Colors.red.shade400,
                             width: 2,
                           ),
@@ -735,8 +728,12 @@ class _ProfilePageState extends State<ProfilePage> {
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color:
-                                _selectedTheme != null
-                                    ? getThemeColor(_selectedTheme!).shade400
+                                themeNotifier.isSpecialModeActive
+                                    ? themeNotifier
+                                        .getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
+                                        .shade400
                                     : Colors.red.shade400,
                           ),
                         ),
@@ -800,27 +797,35 @@ class _ProfilePageState extends State<ProfilePage> {
                           colors:
                               isDark
                                   ? [
-                                    _selectedTheme != null
-                                        ? getThemeColor(
-                                          _selectedTheme!,
-                                        ).shade900
+                                    themeNotifier.isSpecialModeActive
+                                        ? themeNotifier
+                                            .getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            .shade900
                                         : Colors.red.shade900,
-                                    _selectedTheme != null
-                                        ? getThemeColor(
-                                          _selectedTheme!,
-                                        ).shade900
+                                    themeNotifier.isSpecialModeActive
+                                        ? themeNotifier
+                                            .getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            .shade900
                                         : Colors.grey.shade900,
                                   ]
                                   : [
-                                    _selectedTheme != null
-                                        ? getThemeColor(
-                                          _selectedTheme!,
-                                        ).shade500
+                                    themeNotifier.isSpecialModeActive
+                                        ? themeNotifier
+                                            .getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            .shade500
                                         : Colors.red.shade500,
-                                    _selectedTheme != null
-                                        ? getThemeColor(
-                                          _selectedTheme!,
-                                        ).shade100
+                                    themeNotifier.isSpecialModeActive
+                                        ? themeNotifier
+                                            .getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            .shade100
                                         : Colors.red.shade100,
                                   ],
                           begin: Alignment.topLeft,
@@ -877,8 +882,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                     color:
                                         isDark
                                             ? Colors.white
-                                            : _selectedTheme != null
-                                            ? getThemeColor(_selectedTheme!)
+                                            : themeNotifier.isSpecialModeActive
+                                            ? themeNotifier.getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
                                             : Colors.red.shade700,
                                     shape: BoxShape.circle,
                                     border: Border.all(
@@ -974,8 +981,10 @@ class _ProfilePageState extends State<ProfilePage> {
                               Icon(
                                 Icons.settings,
                                 color:
-                                    _selectedTheme != null
-                                        ? getThemeColor(_selectedTheme!)
+                                    themeNotifier.isSpecialModeActive
+                                        ? themeNotifier.getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
                                         : Colors.red.shade700,
                                 size: 22,
                               ),
@@ -1062,8 +1071,10 @@ class _ProfilePageState extends State<ProfilePage> {
                               Icon(
                                 Icons.palette,
                                 color:
-                                    _selectedTheme != null
-                                        ? getThemeColor(_selectedTheme!)
+                                    themeNotifier.isSpecialModeActive
+                                        ? themeNotifier.getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
                                         : Colors.red.shade700,
                                 size: 22,
                               ),
@@ -1099,9 +1110,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 setState(() {
                                   isColorPickerVisible = val;
                                   if (!val) {
-                                    _selectedTheme =
-                                        null; // Clear selected theme
-                                    _saveSelectedTheme(null);
+                                    themeNotifier.setSpecialTheme(
+                                      SpecialTheme.none,
+                                    );
                                   }
                                 });
                               },
@@ -1113,34 +1124,38 @@ class _ProfilePageState extends State<ProfilePage> {
                               child: Wrap(
                                 spacing: 16,
                                 children:
-                                    SpecialColorTheme.values.map((theme) {
-                                      final color = getThemeColor(theme);
-                                      return GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            _selectedTheme = theme;
-                                            _showSpecialModeToggle =
-                                                false; // Hide Special Mode toggle
-                                            isColorPickerVisible =
-                                                false; // Hide color picker
-                                          });
-                                          _saveSelectedTheme(
-                                            theme,
-                                          ); // Save theme
-                                        },
-                                        child: CircleAvatar(
-                                          backgroundColor: color,
-                                          radius: 24,
-                                          child:
-                                              _selectedTheme == theme
-                                                  ? const Icon(
-                                                    Icons.check,
-                                                    color: Colors.white,
-                                                  )
-                                                  : null,
-                                        ),
-                                      );
-                                    }).toList(),
+                                    SpecialTheme.values
+                                        .where(
+                                          (theme) => theme != SpecialTheme.none,
+                                        )
+                                        .map((theme) {
+                                          final color = themeNotifier
+                                              .getThemeColor(theme);
+                                          return GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                themeNotifier.setSpecialTheme(
+                                                  theme,
+                                                );
+                                                _showSpecialModeToggle = false;
+                                                isColorPickerVisible = false;
+                                              });
+                                            },
+                                            child: CircleAvatar(
+                                              backgroundColor: color,
+                                              radius: 24,
+                                              child:
+                                                  themeNotifier.specialTheme ==
+                                                          theme
+                                                      ? const Icon(
+                                                        Icons.check,
+                                                        color: Colors.white,
+                                                      )
+                                                      : null,
+                                            ),
+                                          );
+                                        })
+                                        .toList(),
                               ),
                             ),
                         ],
@@ -1163,11 +1178,19 @@ class _ProfilePageState extends State<ProfilePage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               isDark
-                                  ? (_selectedTheme != null
-                                      ? getThemeColor(_selectedTheme!).shade900
+                                  ? (themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(
+                                            themeNotifier.specialTheme,
+                                          )
+                                          .shade900
                                       : Colors.red.shade900)
-                                  : (_selectedTheme != null
-                                      ? getThemeColor(_selectedTheme!).shade700
+                                  : (themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(
+                                            themeNotifier.specialTheme,
+                                          )
+                                          .shade700
                                       : Colors.red.shade700),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.all(16),
@@ -1201,19 +1224,27 @@ class _ProfilePageState extends State<ProfilePage> {
                     colors:
                         isDark
                             ? [
-                              _selectedTheme != null
-                                  ? getThemeColor(_selectedTheme!).shade900
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade900
                                   : Colors.red.shade900,
-                              _selectedTheme != null
-                                  ? getThemeColor(_selectedTheme!).shade800
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade800
                                   : Colors.red.shade800,
                             ]
                             : [
-                              _selectedTheme != null
-                                  ? getThemeColor(_selectedTheme!).shade500
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade500
                                   : Colors.red.shade500,
-                              _selectedTheme != null
-                                  ? getThemeColor(_selectedTheme!).shade400
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade400
                                   : Colors.red.shade400,
                             ],
                   ),
@@ -1259,6 +1290,7 @@ class _ProfilePageState extends State<ProfilePage> {
     Function(bool) onChanged,
     bool isDark,
   ) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
@@ -1267,8 +1299,10 @@ class _ProfilePageState extends State<ProfilePage> {
           color:
               isDark
                   ? Colors.white.withOpacity(0.1)
-                  : (_selectedTheme != null
-                      ? getThemeColor(_selectedTheme!).withOpacity(0.1)
+                  : (themeNotifier.isSpecialModeActive
+                      ? themeNotifier
+                          .getThemeColor(themeNotifier.specialTheme)
+                          .withOpacity(0.1)
                       : Colors.red.withOpacity(0.1)),
           width: 1,
         ),
@@ -1283,8 +1317,10 @@ class _ProfilePageState extends State<ProfilePage> {
               Icon(
                 icon,
                 color:
-                    _selectedTheme != null
-                        ? getThemeColor(_selectedTheme!)
+                    themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(
+                          themeNotifier.specialTheme,
+                        )
                         : Colors.red.shade700,
               ),
               const SizedBox(width: 12),
@@ -1301,8 +1337,10 @@ class _ProfilePageState extends State<ProfilePage> {
             value: value,
             onChanged: onChanged,
             activeColor:
-                _selectedTheme != null
-                    ? getThemeColor(_selectedTheme!).shade700
+                themeNotifier.isSpecialModeActive
+                    ? themeNotifier
+                        .getThemeColor(themeNotifier.specialTheme)
+                        .shade700
                     : Colors.red.shade700,
           ),
         ],
@@ -1311,6 +1349,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildReferralCode() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     return Container(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -1321,8 +1360,10 @@ class _ProfilePageState extends State<ProfilePage> {
           color:
               Theme.of(context).brightness == Brightness.dark
                   ? Colors.white.withOpacity(0.2)
-                  : (_selectedTheme != null
-                      ? getThemeColor(_selectedTheme!).withOpacity(0.3)
+                  : (themeNotifier.isSpecialModeActive
+                      ? themeNotifier
+                          .getThemeColor(themeNotifier.specialTheme)
+                          .withOpacity(0.3)
                       : Colors.red.withOpacity(0.3)),
         ),
       ),

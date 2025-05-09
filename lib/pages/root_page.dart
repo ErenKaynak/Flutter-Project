@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'cart_page.dart';
 import 'profile_page.dart';
 import 'search_page.dart' as FavoritesPage;
 import 'home_page.dart' as HomePage;
 import 'package:engineering_project/assets/components/auth_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'theme_notifier.dart';
 
 // Import or create an admin page
 class AdminPage extends StatefulWidget {
@@ -19,12 +20,22 @@ class _AdminPageState extends State<AdminPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text("Admin Dashboard"),
-        backgroundColor: Theme.of(context).primaryColor,
+        title: const Text(
+          "Admin Dashboard",
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor:
+            themeNotifier.isSpecialModeActive
+                ? themeNotifier
+                    .getThemeColor(themeNotifier.specialTheme)
+                    .shade700
+                : Colors.red.shade700,
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -49,7 +60,12 @@ class _AdminPageState extends State<AdminPage> {
                 child: ListTile(
                   leading: Icon(
                     Icons.people,
-                    color: Theme.of(context).primaryColor,
+                    color:
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier
+                                .getThemeColor(themeNotifier.specialTheme)
+                                .shade700
+                            : Colors.red.shade700,
                   ),
                   title: Text(
                     "User Management",
@@ -82,7 +98,12 @@ class _AdminPageState extends State<AdminPage> {
                 child: ListTile(
                   leading: Icon(
                     Icons.inventory_2,
-                    color: Theme.of(context).primaryColor,
+                    color:
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier
+                                .getThemeColor(themeNotifier.specialTheme)
+                                .shade700
+                            : Colors.red.shade700,
                   ),
                   title: Text(
                     "Product Management",
@@ -115,7 +136,12 @@ class _AdminPageState extends State<AdminPage> {
                 child: ListTile(
                   leading: Icon(
                     Icons.shopping_cart,
-                    color: Theme.of(context).primaryColor,
+                    color:
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier
+                                .getThemeColor(themeNotifier.specialTheme)
+                                .shade700
+                            : Colors.red.shade700,
                   ),
                   title: Text(
                     "Order Management",
@@ -153,8 +179,6 @@ class RootScreen extends StatefulWidget {
   State<RootScreen> createState() => _RootScreenState();
 }
 
-enum SpecialColorTheme { blue, orange, yellow, green, purple }
-
 class _RootScreenState extends State<RootScreen> {
   late PageController controller;
   int currentScreen = 0;
@@ -167,14 +191,12 @@ class _RootScreenState extends State<RootScreen> {
   bool isAdmin = false;
   bool isLoading = true;
   bool _mounted = true;
-  SpecialColorTheme? _selectedTheme;
 
   @override
   void initState() {
     super.initState();
     controller = PageController(initialPage: currentScreen);
     checkAdminStatus();
-    _loadSelectedTheme();
   }
 
   @override
@@ -218,50 +240,26 @@ class _RootScreenState extends State<RootScreen> {
     }
   }
 
-  Future<void> _loadSelectedTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    final themeString = prefs.getString('selectedTheme');
-    if (themeString != null) {
-      setState(() {
-        _selectedTheme = SpecialColorTheme.values.firstWhere(
-          (e) => e.toString() == 'SpecialColorTheme.$themeString',
-          orElse: () => SpecialColorTheme.blue,
-        );
-      });
-    }
-  }
-
-  MaterialColor getThemeColor(SpecialColorTheme theme) {
-    switch (theme) {
-      case SpecialColorTheme.blue:
-        return Colors.blue;
-      case SpecialColorTheme.orange:
-        return Colors.orange;
-      case SpecialColorTheme.yellow:
-        return Colors.yellow;
-      case SpecialColorTheme.green:
-        return Colors.green;
-      case SpecialColorTheme.purple:
-        return Colors.purple;
-      default:
-        return Colors.blue;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     if (isLoading) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: CircularProgressIndicator(
-            color: Theme.of(context).primaryColor,
+            color:
+                themeNotifier.isSpecialModeActive
+                    ? themeNotifier
+                        .getThemeColor(themeNotifier.specialTheme)
+                        .shade700
+                    : Colors.red.shade700,
           ),
         ),
       );
     }
-
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: PageView(
@@ -275,8 +273,10 @@ class _RootScreenState extends State<RootScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16.0),
             color:
-                _selectedTheme != null
-                    ? getThemeColor(_selectedTheme!).shade100
+                themeNotifier.isSpecialModeActive
+                    ? themeNotifier
+                        .getThemeColor(themeNotifier.specialTheme)
+                        .shade100
                     : isDark
                     ? Colors.grey[900]
                     : Colors.white,
@@ -293,8 +293,10 @@ class _RootScreenState extends State<RootScreen> {
           ),
           child: NavigationBar(
             indicatorColor:
-                _selectedTheme != null
-                    ? getThemeColor(_selectedTheme!).shade200
+                themeNotifier.isSpecialModeActive
+                    ? themeNotifier
+                        .getThemeColor(themeNotifier.specialTheme)
+                        .shade200
                     : isDark
                     ? Colors.grey[800]!
                     : Colors.white,
@@ -345,17 +347,16 @@ class _RootScreenState extends State<RootScreen> {
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSelected = currentScreen == index;
-    final themeColor =
-        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return NavigationDestination(
       icon: Icon(
         icon,
         color:
             isSelected
-                ? (_selectedTheme != null
-                    ? themeColor
-                    : Theme.of(context).primaryColor)
+                ? (themeNotifier.isSpecialModeActive
+                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                    : Colors.red)
                 : isDark
                 ? Colors.grey[400]
                 : Colors.black54,

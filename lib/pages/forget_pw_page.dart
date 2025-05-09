@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -45,6 +47,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -66,29 +69,56 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               margin: EdgeInsets.all(16.0),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: isDark
-                      ? [Colors.red.shade900, Colors.grey.shade900]
-                      : [Colors.red.shade300, Colors.white],
+                  colors:
+                      isDark
+                          ? [
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier
+                                    .getThemeColor(themeNotifier.specialTheme)
+                                    .shade900
+                                : Colors.red.shade900,
+                            Colors.grey.shade900,
+                          ]
+                          : [
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier
+                                    .getThemeColor(themeNotifier.specialTheme)
+                                    .shade300
+                                : Colors.red.shade300,
+                            Colors.white,
+                          ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: isDark
-                    ? []
-                    : [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 5,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
+                boxShadow:
+                    isDark
+                        ? []
+                        : [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 5,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
               ),
               child: Row(
                 children: [
                   Container(
                     padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.red.shade900 : Colors.red.shade300,
+                      color:
+                          isDark
+                              ? (themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade900
+                                  : Colors.red.shade900)
+                              : (themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade300
+                                  : Colors.red.shade300),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -165,7 +195,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         color: Theme.of(context).iconTheme.color,
                       ),
                       filled: true,
-                      fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                      fillColor:
+                          isDark ? Colors.grey.shade800 : Colors.grey.shade50,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -173,13 +204,21 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                          color:
+                              isDark
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade300,
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: Colors.red.shade700,
+                          color:
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade700
+                                  : Colors.red.shade700,
                           width: 2,
                         ),
                       ),
@@ -191,14 +230,31 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     height: 55,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.red.shade700, Colors.red.shade900],
+                        colors: [
+                          themeNotifier.isSpecialModeActive
+                              ? themeNotifier
+                                  .getThemeColor(themeNotifier.specialTheme)
+                                  .shade700
+                              : Colors.red.shade700,
+                          themeNotifier.isSpecialModeActive
+                              ? themeNotifier
+                                  .getThemeColor(themeNotifier.specialTheme)
+                                  .shade900
+                              : Colors.red.shade900,
+                        ],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.red.shade200.withOpacity(0.5),
+                          color:
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade200
+                                      .withOpacity(0.5)
+                                  : Colors.red.shade200.withOpacity(0.5),
                           blurRadius: 8,
                           offset: Offset(0, 4),
                         ),

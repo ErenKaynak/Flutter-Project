@@ -2,47 +2,17 @@ import 'package:engineering_project/pages/cart_page.dart' as CartPage;
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:engineering_project/pages/search_page.dart';
+import 'package:engineering_project/pages/theme_notifier.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 
-enum SpecialColorTheme { blue, orange, yellow, green, purple }
-
-MaterialColor getThemeColor(SpecialColorTheme theme) {
-  switch (theme) {
-    case SpecialColorTheme.blue:
-      return Colors.blue;
-    case SpecialColorTheme.orange:
-      return Colors.orange;
-    case SpecialColorTheme.yellow:
-      return Colors.yellow;
-    case SpecialColorTheme.green:
-      return Colors.green;
-    case SpecialColorTheme.purple:
-      return Colors.purple;
-    default:
-      return Colors.blue;
-  }
-}
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, home: HomePage());
-  }
-}
-
 class HomePage extends StatefulWidget {
+  const HomePage({Key? key}) : super(key: key);
+
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -66,10 +36,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   bool _isDisposed = false;
   String _userName = "Guest";
 
-  // Add these variables
-  SpecialColorTheme? _selectedTheme;
-  bool isColorPickerVisible = false;
-
   @override
   void initState() {
     super.initState();
@@ -85,21 +51,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       }
     });
     _loadInitialData();
-    _loadSelectedTheme(); // Add this line
-  }
-
-  // Add this method
-  Future<void> _loadSelectedTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    final themeString = prefs.getString('selectedTheme');
-    if (themeString != null) {
-      setState(() {
-        _selectedTheme = SpecialColorTheme.values.firstWhere(
-          (e) => e.toString() == 'SpecialColorTheme.$themeString',
-          orElse: () => SpecialColorTheme.blue,
-        );
-      });
-    }
   }
 
   Future<void> _loadCategories() async {
@@ -209,6 +160,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _tickAnimations.clear();
     _isAddingToCartMap.clear();
     if (!mounted) return;
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
     for (var product in products) {
       final productId = product['id'];
       final colorController = AnimationController(
@@ -218,8 +170,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       _colorAnimationControllers[productId] = colorController;
       _colorAnimations[productId] = ColorTween(
         begin:
-            _selectedTheme != null
-                ? getThemeColor(_selectedTheme!).shade400
+            themeNotifier.isSpecialModeActive
+                ? themeNotifier
+                    .getThemeColor(themeNotifier.specialTheme)
+                    .shade400
                 : Colors.red.shade400,
         end: Colors.green.shade500,
       ).animate(colorController);
@@ -540,14 +494,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
           backgroundColor:
-              _selectedTheme != null
-                  ? getThemeColor(_selectedTheme!)
+              themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
                   : isDark
                   ? Colors.black
                   : Colors.white,
@@ -571,8 +526,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
                     color:
-                        _selectedTheme != null
-                            ? getThemeColor(_selectedTheme!).withOpacity(0.5)
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier
+                                .getThemeColor(themeNotifier.specialTheme)
+                                .withOpacity(0.5)
                             : Colors.red.withOpacity(0.5),
                   ),
                 ),
@@ -621,8 +578,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     color:
                         isDark
                             ? Colors.white
-                            : (_selectedTheme != null
-                                ? getThemeColor(_selectedTheme!)
+                            : (themeNotifier.isSpecialModeActive
+                                ? themeNotifier.getThemeColor(
+                                  themeNotifier.specialTheme,
+                                )
                                 : Colors.grey[800]),
                   ),
                   onPressed: () {
@@ -644,8 +603,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       padding: EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color:
-                            _selectedTheme != null
-                                ? getThemeColor(_selectedTheme!)
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier.getThemeColor(
+                                  themeNotifier.specialTheme,
+                                )
                                 : Colors.red,
                         shape: BoxShape.circle,
                       ),
@@ -687,23 +648,32 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                         Theme.of(context).brightness ==
                                                 Brightness.dark
                                             ? [
-                                              _selectedTheme != null
-                                                  ? getThemeColor(
-                                                    _selectedTheme!,
-                                                  ).shade900
+                                              themeNotifier.isSpecialModeActive
+                                                  ? themeNotifier
+                                                      .getThemeColor(
+                                                        themeNotifier
+                                                            .specialTheme,
+                                                      )
+                                                      .shade900
                                                   : Colors.red.shade900,
                                               Colors.black54,
                                             ]
                                             : [
-                                              _selectedTheme != null
-                                                  ? getThemeColor(
-                                                    _selectedTheme!,
-                                                  ).shade500
+                                              themeNotifier.isSpecialModeActive
+                                                  ? themeNotifier
+                                                      .getThemeColor(
+                                                        themeNotifier
+                                                            .specialTheme,
+                                                      )
+                                                      .shade500
                                                   : Colors.red.shade500,
-                                              _selectedTheme != null
-                                                  ? getThemeColor(
-                                                    _selectedTheme!,
-                                                  ).shade100
+                                              themeNotifier.isSpecialModeActive
+                                                  ? themeNotifier
+                                                      .getThemeColor(
+                                                        themeNotifier
+                                                            .specialTheme,
+                                                      )
+                                                      .shade100
                                                   : Colors.red.shade100,
                                             ],
                                     begin: Alignment.topLeft,
@@ -729,15 +699,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                       backgroundColor:
                                           Theme.of(context).brightness ==
                                                   Brightness.dark
-                                              ? (_selectedTheme != null
-                                                  ? getThemeColor(
-                                                    _selectedTheme!,
-                                                  ).shade700
+                                              ? (themeNotifier
+                                                      .isSpecialModeActive
+                                                  ? themeNotifier
+                                                      .getThemeColor(
+                                                        themeNotifier
+                                                            .specialTheme,
+                                                      )
+                                                      .shade700
                                                   : Colors.red.shade700)
-                                              : (_selectedTheme != null
-                                                  ? getThemeColor(
-                                                    _selectedTheme!,
-                                                  ).shade300
+                                              : (themeNotifier
+                                                      .isSpecialModeActive
+                                                  ? themeNotifier
+                                                      .getThemeColor(
+                                                        themeNotifier
+                                                            .specialTheme,
+                                                      )
+                                                      .shade300
                                                   : Colors.red.shade300),
                                       backgroundImage:
                                           _userProfilePicture != null &&
@@ -814,6 +792,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildBannerSection() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 10),
       height: 180,
@@ -844,17 +823,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   colors:
                       Theme.of(context).brightness == Brightness.dark
                           ? [
-                            _selectedTheme != null
-                                ? getThemeColor(_selectedTheme!).shade900
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier
+                                    .getThemeColor(themeNotifier.specialTheme)
+                                    .shade900
                                 : Colors.red.shade900,
                             Colors.black54,
                           ]
                           : [
-                            _selectedTheme != null
-                                ? getThemeColor(_selectedTheme!).shade500
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier
+                                    .getThemeColor(themeNotifier.specialTheme)
+                                    .shade500
                                 : Colors.red.shade500,
-                            _selectedTheme != null
-                                ? getThemeColor(_selectedTheme!).shade100
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier
+                                    .getThemeColor(themeNotifier.specialTheme)
+                                    .shade100
                                 : Colors.red.shade100,
                           ],
                   begin: Alignment.topLeft,
@@ -888,8 +873,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       'Shop Now',
                       style: TextStyle(
                         color:
-                            _selectedTheme != null
-                                ? getThemeColor(_selectedTheme!)
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier.getThemeColor(
+                                  themeNotifier.specialTheme,
+                                )
                                 : (Theme.of(context).brightness ==
                                         Brightness.dark
                                     ? Colors.white
@@ -914,6 +901,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildCategoriesHeader() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     return Padding(
       padding: EdgeInsets.all(10),
       child: Row(
@@ -931,8 +919,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   Icons.sort,
                   size: 20,
                   color:
-                      _selectedTheme != null
-                          ? getThemeColor(_selectedTheme!)
+                      themeNotifier.isSpecialModeActive
+                          ? themeNotifier.getThemeColor(
+                            themeNotifier.specialTheme,
+                          )
                           : Colors.red.shade700,
                 ),
                 SizedBox(width: 4),
@@ -940,8 +930,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   "Sort",
                   style: TextStyle(
                     color:
-                        _selectedTheme != null
-                            ? getThemeColor(_selectedTheme!)
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier.getThemeColor(
+                              themeNotifier.specialTheme,
+                            )
                             : Colors.red.shade700,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1068,6 +1060,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     VoidCallback onTap,
     bool isAsset,
   ) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
@@ -1081,13 +1074,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               color:
                   isDark
                       ? (isSelected
-                          ? (_selectedTheme != null
-                              ? getThemeColor(_selectedTheme!).shade900
+                          ? (themeNotifier.isSpecialModeActive
+                              ? themeNotifier
+                                  .getThemeColor(themeNotifier.specialTheme)
+                                  .shade900
                               : Colors.red.shade900)
                           : Colors.grey.shade800)
                       : (isSelected
-                          ? (_selectedTheme != null
-                              ? getThemeColor(_selectedTheme!).shade50
+                          ? (themeNotifier.isSpecialModeActive
+                              ? themeNotifier
+                                  .getThemeColor(themeNotifier.specialTheme)
+                                  .shade50
                               : Colors.red.shade50)
                           : Colors.grey.shade200),
               border:
@@ -1095,11 +1092,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       ? Border.all(
                         color:
                             isDark
-                                ? (_selectedTheme != null
-                                    ? getThemeColor(_selectedTheme!).shade700
+                                ? (themeNotifier.isSpecialModeActive
+                                    ? themeNotifier
+                                        .getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
+                                        .shade700
                                     : Colors.red.shade700)
-                                : (_selectedTheme != null
-                                    ? getThemeColor(_selectedTheme!).shade400
+                                : (themeNotifier.isSpecialModeActive
+                                    ? themeNotifier
+                                        .getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
+                                        .shade400
                                     : Colors.red.shade400),
                         width: 2,
                       )
@@ -1109,10 +1114,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       ? [
                         BoxShadow(
                           color:
-                              _selectedTheme != null
-                                  ? getThemeColor(
-                                    _selectedTheme!,
-                                  ).withOpacity(0.5)
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .withOpacity(0.5)
                                   : (isDark
                                       ? Colors.red.shade900.withOpacity(0.5)
                                       : Colors.red.shade300.withOpacity(0.5)),
@@ -1159,13 +1164,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               color:
                   isDark
                       ? (isSelected
-                          ? (_selectedTheme != null
-                              ? getThemeColor(_selectedTheme!).shade400
+                          ? (themeNotifier.isSpecialModeActive
+                              ? themeNotifier
+                                  .getThemeColor(themeNotifier.specialTheme)
+                                  .shade400
                               : Colors.red.shade400)
                           : Colors.white70)
                       : (isSelected
-                          ? (_selectedTheme != null
-                              ? getThemeColor(_selectedTheme!)
+                          ? (themeNotifier.isSpecialModeActive
+                              ? themeNotifier.getThemeColor(
+                                themeNotifier.specialTheme,
+                              )
                               : Colors.red)
                           : Colors.black),
             ),
@@ -1233,8 +1242,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           crossAxisCount: 2,
           crossAxisSpacing: 10,
           mainAxisSpacing: 15,
-          childAspectRatio:
-              0.65, // Increased from 0.6 to give more vertical space
+          childAspectRatio: 0.65,
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
           final product = filteredProducts[index];
@@ -1270,6 +1278,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     required bool isFavorite,
     required AnimationController animationController,
   }) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     return GestureDetector(
       onTap: () => _navigateToProductDetail(product),
       child: Card(
@@ -1344,8 +1353,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           child: Icon(
                             isFavorite ? Icons.favorite : Icons.favorite_border,
                             color:
-                                _selectedTheme != null
-                                    ? getThemeColor(_selectedTheme!)
+                                themeNotifier.isSpecialModeActive
+                                    ? themeNotifier.getThemeColor(
+                                      themeNotifier.specialTheme,
+                                    )
                                     : Colors.red,
                             size: 20,
                           ),
@@ -1448,10 +1459,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor:
                                     _colorAnimations[product['id']]?.value ??
-                                    (_selectedTheme != null
-                                        ? getThemeColor(
-                                          _selectedTheme!,
-                                        ).shade400
+                                    (themeNotifier.isSpecialModeActive
+                                        ? themeNotifier
+                                            .getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            .shade400
                                         : Colors.red.shade400),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
@@ -1528,7 +1541,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
 class FavoritesPage extends StatefulWidget {
   final Function onFavoritesChanged;
-  FavoritesPage({required this.onFavoritesChanged});
+  const FavoritesPage({Key? key, required this.onFavoritesChanged})
+    : super(key: key);
+
   @override
   _FavoritesPageState createState() => _FavoritesPageState();
 }
@@ -1714,6 +1729,7 @@ class CartManager extends ChangeNotifier {
   List<CartItem> _items = [];
   List<CartItem> get items => _items;
   int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
+
   void addItem(CartItem item) {
     final index = _items.indexWhere((i) => i.id == item.id);
     if (index >= 0) {
@@ -1809,6 +1825,7 @@ class CartItem {
   final double price;
   final String imagePath;
   int quantity;
+
   CartItem({
     required this.id,
     required this.name,

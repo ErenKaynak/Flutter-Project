@@ -94,7 +94,7 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
       vsync: this,
       duration: const Duration(milliseconds: 600),
     )..repeat();
-    
+
     _testFirebaseConnection();
     _loadUserProfile();
     _checkAIAvailability();
@@ -105,7 +105,7 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
+
     // Precache images after dependencies are ready
     _precacheImages();
 
@@ -131,7 +131,7 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
       'lib/assets/Images/Mascot/mascot-crossedarms.png',
       'lib/assets/Images/Mascot/mascot-wave.png',
     ];
-    
+
     for (final path in assetPaths) {
       precacheImage(AssetImage(path), context);
     }
@@ -213,7 +213,7 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
   Widget build(BuildContext context) {
     // Add this at the start of build method
     _debugAdminStatus();
-    
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeColor =
         _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
@@ -361,7 +361,8 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
               frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
                 return frame == null ? const SizedBox() : child;
               },
-              errorBuilder: (context, error, stackTrace) => const Icon(Icons.error),
+              errorBuilder:
+                  (context, error, stackTrace) => const Icon(Icons.error),
             ),
           ),
           const SizedBox(width: 12),
@@ -468,7 +469,9 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                               fit: BoxFit.cover,
                               loadingBuilder: (context, child, progress) {
                                 if (progress == null) return child;
-                                return Center(child: CircularProgressIndicator());
+                                return Center(
+                                  child: CircularProgressIndicator(),
+                                );
                               },
                             ),
                           ),
@@ -543,19 +546,28 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                                   child: Image.network(
                                     product.imageUrl,
                                     fit: BoxFit.cover,
-                                    frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                                    frameBuilder: (
+                                      context,
+                                      child,
+                                      frame,
+                                      wasSynchronouslyLoaded,
+                                    ) {
                                       if (wasSynchronouslyLoaded) return child;
                                       return AnimatedOpacity(
                                         opacity: frame == null ? 0 : 1,
-                                        duration: const Duration(milliseconds: 500),
+                                        duration: const Duration(
+                                          milliseconds: 500,
+                                        ),
                                         curve: Curves.easeOut,
                                         child: child,
                                       );
                                     },
-                                    errorBuilder: (context, error, stackTrace) => Container(
-                                      color: Colors.grey[200],
-                                      child: const Icon(Icons.error),
-                                    ),
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
+                                              color: Colors.grey[200],
+                                              child: const Icon(Icons.error),
+                                            ),
                                     cacheWidth: 320, // Add width constraint
                                     cacheHeight: 240, // Add height constraint
                                   ),
@@ -630,10 +642,7 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
 
     setState(() {
       if (text.isNotEmpty) {
-        _messages.add(ChatMessage(
-          text: text,
-          isUser: true,
-        ));
+        _messages.add(ChatMessage(text: text, isUser: true));
       }
       _messageController.clear();
       _isTyping = true;
@@ -642,10 +651,7 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
     try {
       if (_currentProductId != null && image != null) {
         setState(() {
-          _messages.add(ChatMessage(
-            text: 'Uploading image...',
-            isUser: true,
-          ));
+          _messages.add(ChatMessage(text: 'Uploading image...', isUser: true));
         });
 
         final imageUrl = await _uploadProductImage(image);
@@ -654,14 +660,16 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
               .collection('products')
               .doc(_currentProductId)
               .update({
-            'imagePath': imageUrl,
-            'images': FieldValue.arrayUnion([imageUrl]),
-          });
-          
-          _addMessage(ChatMessage(
-            text: 'Image uploaded and added to the product successfully!',
-            isUser: false,
-          ));
+                'imagePath': imageUrl,
+                'images': FieldValue.arrayUnion([imageUrl]),
+              });
+
+          _addMessage(
+            ChatMessage(
+              text: 'Image uploaded and added to the product successfully!',
+              isUser: false,
+            ),
+          );
 
           // Reset product creation state
           setState(() {
@@ -669,31 +677,38 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
           });
           return;
         } else {
-          _addMessage(ChatMessage(
-            text: 'Failed to upload image. Please try again.',
-            isUser: false,
-          ));
+          _addMessage(
+            ChatMessage(
+              text: 'Failed to upload image. Please try again.',
+              isUser: false,
+            ),
+          );
           return;
         }
       }
 
-      if (text.toLowerCase().contains('add new product') || 
+      if (text.toLowerCase().contains('add new product') ||
           text.toLowerCase().contains('update product')) {
         await _handleProductCreation(text);
       } else {
         final (response, recommendations) = await _getAIResponse(text);
-        _addMessage(ChatMessage(
-          text: response,
-          isUser: false,
-          recommendedProducts: recommendations.isNotEmpty ? recommendations : null,
-        ));
+        _addMessage(
+          ChatMessage(
+            text: response,
+            isUser: false,
+            recommendedProducts:
+                recommendations.isNotEmpty ? recommendations : null,
+          ),
+        );
       }
     } catch (e) {
       print('Error in _handleSubmitted: $e');
-      _addMessage(ChatMessage(
-        text: 'An error occurred. Please try again.',
-        isUser: false,
-      ));
+      _addMessage(
+        ChatMessage(
+          text: 'An error occurred. Please try again.',
+          isUser: false,
+        ),
+      );
     } finally {
       setState(() {
         _isTyping = false;
@@ -711,19 +726,25 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
 
     try {
       // Check if message contains product-related keywords
-      bool shouldRecommend = message.toLowerCase().contains('recommend') ||
+      bool shouldRecommend =
+          message.toLowerCase().contains('recommend') ||
           message.toLowerCase().contains('pc build') ||
           message.toLowerCase().contains('build') ||
           message.toLowerCase().contains('suggest') ||
           message.toLowerCase().contains('looking for');
 
       // Only get recommendations if user specifically asked
-      final List<Product> recommendations = shouldRecommend 
-          ? await _getProductRecommendations(message, {
-              'cpu_brand': message.toLowerCase().contains('intel') ? 'intel' : 'amd',
-              'use_case': message.toLowerCase().contains('gaming') ? 'gaming' : 'work',
-            })
-          : [];
+      final List<Product> recommendations =
+          shouldRecommend
+              ? await _getProductRecommendations(message, {
+                'cpu_brand':
+                    message.toLowerCase().contains('intel') ? 'intel' : 'amd',
+                'use_case':
+                    message.toLowerCase().contains('gaming')
+                        ? 'gaming'
+                        : 'work',
+              })
+              : [];
 
       final response = await http.post(
         Uri.parse(APIConfig.openRouterUrl),
@@ -761,7 +782,7 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
         APIConfig.fallbackResponses[Random().nextInt(
           APIConfig.fallbackResponses.length,
         )],
-        <Product>[],  // Explicitly typed empty list as List<Product>
+        <Product>[], // Explicitly typed empty list as List<Product>
       );
     }
   }
@@ -876,13 +897,16 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
       final List<Product> recommendations = [];
 
-      print('Starting product recommendations search with preferences: $preferences');
+      print(
+        'Starting product recommendations search with preferences: $preferences',
+      );
 
       // Get all products and filter by availability
-      final QuerySnapshot allProducts = await firestore
-          .collection('products')
-          .where('stock', isGreaterThan: 0) // Only get products in stock
-          .get();
+      final QuerySnapshot allProducts =
+          await firestore
+              .collection('products')
+              .where('stock', isGreaterThan: 0) // Only get products in stock
+              .get();
 
       print('Found ${allProducts.docs.length} available products');
 
@@ -897,18 +921,19 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
       // CPU Selection Logic
       if (productsByCategory.containsKey('CPU\'s')) {
         var cpus = productsByCategory['CPU\'s']!;
-        
+
         // Filter by brand if specified
         if (preferences['cpu_brand'] != null) {
-          cpus = cpus.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final name = (data['name'] as String).toLowerCase();
-            return name.contains(preferences['cpu_brand']!.toLowerCase());
-          }).toList();
+          cpus =
+              cpus.where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final name = (data['name'] as String).toLowerCase();
+                return name.contains(preferences['cpu_brand']!.toLowerCase());
+              }).toList();
         }
 
         // Sort by price if it's a budget build
-        if (message.toLowerCase().contains('budget') || 
+        if (message.toLowerCase().contains('budget') ||
             message.toLowerCase().contains('cheap')) {
           cpus.sort((a, b) {
             final priceA = (a.data() as Map<String, dynamic>)['price'] as num;
@@ -920,15 +945,17 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
         if (cpus.isNotEmpty) {
           final doc = cpus.first;
           final data = doc.data() as Map<String, dynamic>;
-          recommendations.add(Product(
-            id: doc.id,
-            name: data['name'],
-            category: 'CPU\'s',
-            price: (data['price'] as num).toDouble(),
-            description: data['description'] ?? '',
-            imageUrl: data['imagePath'] ?? '',
-            stock: data['stock'] as int? ?? 0,  // Add stock field
-          ));
+          recommendations.add(
+            Product(
+              id: doc.id,
+              name: data['name'],
+              category: 'CPU\'s',
+              price: (data['price'] as num).toDouble(),
+              description: data['description'] ?? '',
+              imageUrl: data['imagePath'] ?? '',
+              stock: data['stock'] as int? ?? 0, // Add stock field
+            ),
+          );
         }
       }
 
@@ -938,37 +965,42 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
       }
 
       // Get CPU brand for compatibility
-      final cpuBrand = recommendations.first.name.toLowerCase().contains('intel') 
-          ? 'intel' 
-          : 'amd';
+      final cpuBrand =
+          recommendations.first.name.toLowerCase().contains('intel')
+              ? 'intel'
+              : 'amd';
 
       // Compatible Motherboard Selection
       if (productsByCategory.containsKey('Motherboards')) {
-        var motherboards = productsByCategory['Motherboards']!.where((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          final name = (data['name'] as String).toLowerCase();
-          return name.contains(cpuBrand);
-        }).toList();
+        var motherboards =
+            productsByCategory['Motherboards']!.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final name = (data['name'] as String).toLowerCase();
+              return name.contains(cpuBrand);
+            }).toList();
 
         if (motherboards.isNotEmpty) {
           final doc = motherboards[0];
           final data = doc.data() as Map<String, dynamic>;
-          recommendations.add(Product(
-            id: doc.id,
-            name: data['name'],
-            category: 'Motherboards',
-            price: (data['price'] as num).toDouble(),
-            description: data['description'] ?? '',
-            imageUrl: data['imagePath'] ?? '',
-            stock: data['stock'] as int? ?? 0,  // Add stock field
-          ));
+          recommendations.add(
+            Product(
+              id: doc.id,
+              name: data['name'],
+              category: 'Motherboards',
+              price: (data['price'] as num).toDouble(),
+              description: data['description'] ?? '',
+              imageUrl: data['imagePath'] ?? '',
+              stock: data['stock'] as int? ?? 0, // Add stock field
+            ),
+          );
         }
       }
 
       // Add other components based on use case
       final isGaming = preferences['use_case'] == 'gaming';
-      final isBudget = message.toLowerCase().contains('budget') || 
-                       message.toLowerCase().contains('cheap');
+      final isBudget =
+          message.toLowerCase().contains('budget') ||
+          message.toLowerCase().contains('cheap');
 
       // Define required categories
       final requiredCategories = ['RAM\'s', 'Storage', 'PSU', 'Case'];
@@ -978,7 +1010,7 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
         if (!productsByCategory.containsKey(category)) continue;
 
         var products = productsByCategory[category]!;
-        
+
         // Sort by price for budget builds
         if (isBudget) {
           products.sort((a, b) {
@@ -990,25 +1022,28 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
 
         // Special handling for gaming GPUs
         if (category == 'GPU\'s' && isGaming && !isBudget) {
-          products = products.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final price = (data['price'] as num).toDouble();
-            return price >= 300; // Gaming GPUs threshold
-          }).toList();
+          products =
+              products.where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final price = (data['price'] as num).toDouble();
+                return price >= 300; // Gaming GPUs threshold
+              }).toList();
         }
 
         if (products.isNotEmpty) {
           final doc = products.first;
           final data = doc.data() as Map<String, dynamic>;
-          recommendations.add(Product(
-            id: doc.id,
-            name: data['name'],
-            category: category,
-            price: (data['price'] as num).toDouble(),
-            description: data['description'] ?? '',
-            imageUrl: data['imagePath'] ?? '',
-            stock: data['stock'] as int? ?? 0,  // Add stock field
-          ));
+          recommendations.add(
+            Product(
+              id: doc.id,
+              name: data['name'],
+              category: category,
+              price: (data['price'] as num).toDouble(),
+              description: data['description'] ?? '',
+              imageUrl: data['imagePath'] ?? '',
+              stock: data['stock'] as int? ?? 0, // Add stock field
+            ),
+          );
         }
       }
 
@@ -1099,10 +1134,11 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
     if (user == null) return false;
 
     try {
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
       // Check if role is "admin" instead of isAdmin field
       return userDoc.data()?['role'] == 'admin';
     } catch (e) {
@@ -1115,14 +1151,17 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
   List<String> _getFilteredStarters() {
     print('Getting filtered starters. Is admin: $_isAdmin'); // Debug print
     final List<String> starters = List.from(_conversationStarters);
-    
+
     if (!_isAdmin) {
-      return starters.where((starter) => 
-        !starter.toLowerCase().contains('add new product') && 
-        !starter.toLowerCase().contains('update product')
-      ).toList();
+      return starters
+          .where(
+            (starter) =>
+                !starter.toLowerCase().contains('add new product') &&
+                !starter.toLowerCase().contains('update product'),
+          )
+          .toList();
     }
-    
+
     return starters;
   }
 
@@ -1132,7 +1171,7 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
 
     try {
       List<int> imageBytes;
-      
+
       if (kIsWeb) {
         if (imageSource is XFile) {
           // Handle XFile for web
@@ -1161,7 +1200,7 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
       }
 
       final base64Image = base64Encode(imageBytes);
-      
+
       // Update the API endpoint to use HTTPS
       final response = await http.post(
         Uri.parse('https://api.imgur.com/3/image'),
@@ -1173,10 +1212,7 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
           'Access-Control-Allow-Methods': 'POST',
           'Access-Control-Allow-Headers': 'Authorization, Content-Type',
         },
-        body: jsonEncode({
-          'image': base64Image,
-          'type': 'base64',
-        }),
+        body: jsonEncode({'image': base64Image, 'type': 'base64'}),
       );
 
       if (response.statusCode == 200) {
@@ -1186,13 +1222,15 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
           return responseData['data']['link'];
         }
       }
-      throw Exception('Image upload failed with status: ${response.statusCode}');
+      throw Exception(
+        'Image upload failed with status: ${response.statusCode}',
+      );
     } catch (e) {
       print('Error uploading image: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to upload image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to upload image: $e')));
       }
       return null;
     }
@@ -1200,24 +1238,29 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
 
   Future<void> _handleProductCreation(String message) async {
     if (!_isAdmin) {
-      _addMessage(ChatMessage(
-        text: 'Sorry, only admin users can add products.',
-        isUser: false,
-      ));
+      _addMessage(
+        ChatMessage(
+          text: 'Sorry, only admin users can add products.',
+          isUser: false,
+        ),
+      );
       return;
     }
 
     if (message.toLowerCase().contains('add new product')) {
-      _addMessage(ChatMessage(
-        text: 'Please provide the product details in the following format:\n'
-            'Name: [Product Name]\n'
-            'Price: [Price in TRY]\n'
-            'Category: [CPU/GPU/RAM/Storage/Motherboard/Case/PSU]\n'
-            'Description: [Product Description]\n'
-            'Stock: [Stock Quantity]\n\n'
-            'You can also send an image of the product.',
-        isUser: false,
-      ));
+      _addMessage(
+        ChatMessage(
+          text:
+              'Please provide the product details in the following format:\n'
+              'Name: [Product Name]\n'
+              'Price: [Price in TRY]\n'
+              'Category: [CPU/GPU/RAM/Storage/Motherboard/Case/PSU]\n'
+              'Description: [Product Description]\n'
+              'Stock: [Stock Quantity]\n\n'
+              'You can also send an image of the product.',
+          isUser: false,
+        ),
+      );
       return;
     }
 
@@ -1234,10 +1277,13 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
 
     // Validate required fields
     if (!_validateProductDetails(productDetails)) {
-      _addMessage(ChatMessage(
-        text: 'Please provide all required product details in the correct format.',
-        isUser: false,
-      ));
+      _addMessage(
+        ChatMessage(
+          text:
+              'Please provide all required product details in the correct format.',
+          isUser: false,
+        ),
+      );
       return;
     }
 
@@ -1261,15 +1307,17 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
         _currentProductId = docRef.id;
       });
 
-      _addMessage(ChatMessage(
-        text: 'Product created successfully! You can now send images for this product.',
-        isUser: false,
-      ));
+      _addMessage(
+        ChatMessage(
+          text:
+              'Product created successfully! You can now send images for this product.',
+          isUser: false,
+        ),
+      );
     } catch (e) {
-      _addMessage(ChatMessage(
-        text: 'Error creating product: $e',
-        isUser: false,
-      ));
+      _addMessage(
+        ChatMessage(text: 'Error creating product: $e', isUser: false),
+      );
     }
   }
 
@@ -1289,15 +1337,20 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
 
     // Validate category
     final validCategories = [
-      "CPU's", "GPU's", "RAM's", "Storage", 
-      "Motherboards", "Cases", "PSUs"
+      "CPU's",
+      "GPU's",
+      "RAM's",
+      "Storage",
+      "Motherboards",
+      "Cases",
+      "PSUs",
     ];
     if (!validCategories.contains(details['category'])) {
       return false;
     }
 
     // Validate stock if provided
-    if (details.containsKey('stock') && 
+    if (details.containsKey('stock') &&
         int.tryParse(details['stock']!) == null) {
       return false;
     }
@@ -1328,15 +1381,15 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
           .doc(user.uid)
           .snapshots()
           .listen((snapshot) {
-        if (mounted) {
-          setState(() {
-            // Check role field instead of isAdmin
-            _isAdmin = snapshot.data()?['role'] == 'admin';
-            print('Admin status updated: $_isAdmin'); 
-            print('User role: ${snapshot.data()?['role']}');
+            if (mounted) {
+              setState(() {
+                // Check role field instead of isAdmin
+                _isAdmin = snapshot.data()?['role'] == 'admin';
+                print('Admin status updated: $_isAdmin');
+                print('User role: ${snapshot.data()?['role']}');
+              });
+            }
           });
-        }
-      });
     } catch (e) {
       print('Error checking admin status: $e');
       setState(() {
@@ -1349,13 +1402,11 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
     final user = FirebaseAuth.instance.currentUser;
     print('Current user: ${user?.uid}');
     print('Is admin: $_isAdmin');
-    
+
     if (user != null) {
-      FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get()
-          .then((doc) {
+      FirebaseFirestore.instance.collection('users').doc(user.uid).get().then((
+        doc,
+      ) {
         print('User data: ${doc.data()}');
         print('User role: ${doc.data()?['role']}');
         print('Admin status from role: ${doc.data()?['role'] == 'admin'}');
@@ -1373,7 +1424,8 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
     String? mainImagePath;
     List<String> additionalImagePaths = [];
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeColor = _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+    final themeColor =
+        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
 
     showDialog(
       context: context,
@@ -1417,65 +1469,80 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                             Container(
                               height: 200,
                               decoration: BoxDecoration(
-                                color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+                                color:
+                                    isDark
+                                        ? Colors.grey.shade700
+                                        : Colors.grey.shade200,
                                 borderRadius: BorderRadius.circular(15),
                                 border: Border.all(
                                   color: themeColor.withOpacity(0.5),
                                   width: 2,
                                 ),
                               ),
-                              child: mainImagePath != null
-                                  ? Stack(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(13),
-                                          child: Image.network(
-                                            mainImagePath!,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                        Positioned(
-                                          top: 8,
-                                          right: 8,
-                                          child: IconButton(
-                                            icon: Icon(Icons.delete, color: Colors.red),
-                                            onPressed: () {
-                                              setState(() => mainImagePath = null);
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : InkWell(
-                                      onTap: () async {
-                                        final imageUrl = await _pickAndUploadImage();
-                                        if (imageUrl != null) {
-                                          setState(() => mainImagePath = imageUrl);
-                                        }
-                                      },
-                                      child: Center(
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.add_photo_alternate,
-                                              size: 40,
-                                              color: themeColor,
+                              child:
+                                  mainImagePath != null
+                                      ? Stack(
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              13,
                                             ),
-                                            SizedBox(height: 8),
-                                            Text(
-                                              'Add Main Image',
-                                              style: TextStyle(
-                                                color: themeColor,
-                                                fontWeight: FontWeight.bold,
+                                            child: Image.network(
+                                              mainImagePath!,
+                                              width: double.infinity,
+                                              height: double.infinity,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                          Positioned(
+                                            top: 8,
+                                            right: 8,
+                                            child: IconButton(
+                                              icon: Icon(
+                                                Icons.delete,
+                                                color: Colors.red,
                                               ),
+                                              onPressed: () {
+                                                setState(
+                                                  () => mainImagePath = null,
+                                                );
+                                              },
                                             ),
-                                          ],
+                                          ),
+                                        ],
+                                      )
+                                      : InkWell(
+                                        onTap: () async {
+                                          final imageUrl =
+                                              await _pickAndUploadImage();
+                                          if (imageUrl != null) {
+                                            setState(
+                                              () => mainImagePath = imageUrl,
+                                            );
+                                          }
+                                        },
+                                        child: Center(
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.add_photo_alternate,
+                                                size: 40,
+                                                color: themeColor,
+                                              ),
+                                              SizedBox(height: 8),
+                                              Text(
+                                                'Add Main Image',
+                                                style: TextStyle(
+                                                  color: themeColor,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                    ),
                             ),
                             SizedBox(height: 16),
                             // Additional Images
@@ -1483,68 +1550,89 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                               height: 100,
                               child: ListView.builder(
                                 scrollDirection: Axis.horizontal,
-                                itemCount: max(3, additionalImagePaths.length), // Use max to show at least 3 slots
+                                itemCount: max(
+                                  3,
+                                  additionalImagePaths.length,
+                                ), // Use max to show at least 3 slots
                                 itemBuilder: (context, index) {
-                                  final hasImage = index < additionalImagePaths.length;
+                                  final hasImage =
+                                      index < additionalImagePaths.length;
                                   return Container(
                                     width: 100,
                                     margin: EdgeInsets.only(right: 8),
                                     decoration: BoxDecoration(
-                                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+                                      color:
+                                          isDark
+                                              ? Colors.grey.shade700
+                                              : Colors.grey.shade200,
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
                                         color: themeColor.withOpacity(0.5),
                                       ),
                                     ),
-                                    child: hasImage
-                                        ? Stack(
-                                            children: [
-                                              ClipRRect(
-                                                borderRadius: BorderRadius.circular(9),
-                                                child: Image.network(
-                                                  additionalImagePaths[index],
-                                                  width: double.infinity,
-                                                  height: double.infinity,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error, stackTrace) => Center(
-                                                    child: Icon(Icons.error, color: Colors.red),
+                                    child:
+                                        hasImage
+                                            ? Stack(
+                                              children: [
+                                                ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(9),
+                                                  child: Image.network(
+                                                    additionalImagePaths[index],
+                                                    width: double.infinity,
+                                                    height: double.infinity,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder:
+                                                        (
+                                                          context,
+                                                          error,
+                                                          stackTrace,
+                                                        ) => Center(
+                                                          child: Icon(
+                                                            Icons.error,
+                                                            color: Colors.red,
+                                                          ),
+                                                        ),
                                                   ),
                                                 ),
-                                              ),
-                                              Positioned(
-                                                top: 4,
-                                                right: 4,
-                                                child: IconButton(
-                                                  icon: Icon(
-                                                    Icons.delete,
-                                                    color: Colors.red,
-                                                    size: 20,
+                                                Positioned(
+                                                  top: 4,
+                                                  right: 4,
+                                                  child: IconButton(
+                                                    icon: Icon(
+                                                      Icons.delete,
+                                                      color: Colors.red,
+                                                      size: 20,
+                                                    ),
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        additionalImagePaths
+                                                            .removeAt(index);
+                                                      });
+                                                    },
                                                   ),
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      additionalImagePaths.removeAt(index);
-                                                    });
-                                                  },
                                                 ),
-                                              ),
-                                            ],
-                                          )
-                                        : InkWell(
-                                            onTap: () async {
-                                              final imageUrl = await _pickAndUploadImage();
-                                              if (imageUrl != null) {
-                                                setState(() {
-                                                  additionalImagePaths.add(imageUrl);
-                                                });
-                                              }
-                                            },
-                                            child: Center(
-                                              child: Icon(
-                                                Icons.add_photo_alternate,
-                                                color: themeColor,
+                                              ],
+                                            )
+                                            : InkWell(
+                                              onTap: () async {
+                                                final imageUrl =
+                                                    await _pickAndUploadImage();
+                                                if (imageUrl != null) {
+                                                  setState(() {
+                                                    additionalImagePaths.add(
+                                                      imageUrl,
+                                                    );
+                                                  });
+                                                }
+                                              },
+                                              child: Center(
+                                                child: Icon(
+                                                  Icons.add_photo_alternate,
+                                                  color: themeColor,
+                                                ),
                                               ),
                                             ),
-                                          ),
                                   );
                                 },
                               ),
@@ -1574,40 +1662,63 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 12),
                               decoration: BoxDecoration(
-                                color: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
+                                color:
+                                    isDark
+                                        ? Colors.grey.shade700
+                                        : Colors.grey.shade100,
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                                  color:
+                                      isDark
+                                          ? Colors.grey.shade600
+                                          : Colors.grey.shade300,
                                 ),
                               ),
                               child: FutureBuilder<List<String>>(
                                 future: _fetchCategories(),
                                 builder: (context, snapshot) {
-                                  if (snapshot.connectionState == ConnectionState.waiting) {
-                                    return Center(child: CircularProgressIndicator());
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.waiting) {
+                                    return Center(
+                                      child: CircularProgressIndicator(),
+                                    );
                                   }
-                                  
-                                  final categories = snapshot.data ?? ["CPU's", "GPU's", "RAM's", "Storage", "Motherboards", "Cases", "PSUs"];
-                                  
+
+                                  final categories =
+                                      snapshot.data ??
+                                      [
+                                        "CPU's",
+                                        "GPU's",
+                                        "RAM's",
+                                        "Storage",
+                                        "Motherboards",
+                                        "Cases",
+                                        "PSUs",
+                                      ];
+
                                   // Check if selectedCategory exists in the categories list
-                                  if (selectedCategory != null && !categories.contains(selectedCategory)) {
+                                  if (selectedCategory != null &&
+                                      !categories.contains(selectedCategory)) {
                                     // If category doesn't exist anymore, reset selection to null
                                     selectedCategory = null;
                                   }
-                                  
+
                                   return DropdownButtonHideUnderline(
                                     child: DropdownButton<String>(
                                       value: selectedCategory,
                                       isExpanded: true,
                                       hint: Text('Select Category'),
-                                      items: categories.map((String category) {
-                                        return DropdownMenuItem(
-                                          value: category,
-                                          child: Text(category),
-                                        );
-                                      }).toList(),
+                                      items:
+                                          categories.map((String category) {
+                                            return DropdownMenuItem(
+                                              value: category,
+                                              child: Text(category),
+                                            );
+                                          }).toList(),
                                       onChanged: (String? newValue) {
-                                        setState(() => selectedCategory = newValue);
+                                        setState(
+                                          () => selectedCategory = newValue,
+                                        );
                                       },
                                     ),
                                   );
@@ -1712,8 +1823,10 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
   Future<String?> _pickAndUploadImage() async {
     try {
       final ImagePicker picker = ImagePicker();
-      final XFile? pickedImage = await picker.pickImage(source: ImageSource.gallery);
-      
+      final XFile? pickedImage = await picker.pickImage(
+        source: ImageSource.gallery,
+      );
+
       if (pickedImage != null) {
         if (kIsWeb) {
           return await _uploadProductImage(pickedImage);
@@ -1741,18 +1854,22 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
         category == null ||
         mainImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill in all required fields and add a main image')),
+        SnackBar(
+          content: Text(
+            'Please fill in all required fields and add a main image',
+          ),
+        ),
       );
       return false;
     }
-    
+
     if (double.tryParse(price) == null || int.tryParse(stock) == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please enter valid price and stock numbers')),
       );
       return false;
     }
-    
+
     return true;
   }
 
@@ -1778,17 +1895,17 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
       };
 
       await FirebaseFirestore.instance.collection('products').add(product);
-      
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Product added successfully')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Product added successfully')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding product: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error adding product: $e')));
       }
     }
   }
@@ -1797,9 +1914,8 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
   Future<List<Product>> _searchProducts(String query) async {
     try {
       final lowerQuery = query.toLowerCase();
-      final snapshot = await FirebaseFirestore.instance
-          .collection('products')
-          .get();
+      final snapshot =
+          await FirebaseFirestore.instance.collection('products').get();
 
       return snapshot.docs
           .map((doc) {
@@ -1811,12 +1927,13 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
               category: data['category'] as String,
               description: data['description'] as String? ?? '',
               imageUrl: data['imagePath'] as String? ?? '',
-              images: List<String>.from(data['images'] ?? []), // Properly cast images array
+              images: List<String>.from(
+                data['images'] ?? [],
+              ), // Properly cast images array
               stock: data['stock'] as int? ?? 0,
             );
           })
-          .where((product) => 
-              product.name.toLowerCase().contains(lowerQuery))
+          .where((product) => product.name.toLowerCase().contains(lowerQuery))
           .toList();
     } catch (e) {
       print('Error searching products: $e');
@@ -1827,7 +1944,7 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
   // Add this method to show the product search dialog
   void _showProductSearchDialog() {
     final TextEditingController searchController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1881,14 +1998,15 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
               itemBuilder: (context, index) {
                 final product = products[index];
                 return ListTile(
-                  leading: product.imageUrl.isNotEmpty
-                      ? Image.network(
-                          product.imageUrl,
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
-                        )
-                      : Icon(Icons.image_not_supported),
+                  leading:
+                      product.imageUrl.isNotEmpty
+                          ? Image.network(
+                            product.imageUrl,
+                            width: 50,
+                            height: 50,
+                            fit: BoxFit.cover,
+                          )
+                          : Icon(Icons.image_not_supported),
                   title: Text(product.name),
                   subtitle: Text('₺${product.price.toStringAsFixed(2)}'),
                   onTap: () {
@@ -1906,16 +2024,26 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
 
   // Update this method in _AIChatScreenState class
   void _showUpdateProductDialog(Product product) {
-    final TextEditingController nameController = TextEditingController(text: product.name);
-    final TextEditingController priceController = TextEditingController(text: product.price.toString());
-    final TextEditingController stockController = TextEditingController(text: product.stock.toString());
-    final TextEditingController descriptionController = TextEditingController(text: product.description);
+    final TextEditingController nameController = TextEditingController(
+      text: product.name,
+    );
+    final TextEditingController priceController = TextEditingController(
+      text: product.price.toString(),
+    );
+    final TextEditingController stockController = TextEditingController(
+      text: product.stock.toString(),
+    );
+    final TextEditingController descriptionController = TextEditingController(
+      text: product.description,
+    );
     String? selectedCategory = product.category;
     String mainImagePath = product.imageUrl;
-    List<String> additionalImagePaths = List.from(product.images)
-      ..remove(product.imageUrl); // Remove main image since it's already shown in mainImagePath
+    List<String> additionalImagePaths = List.from(product.images)..remove(
+      product.imageUrl,
+    ); // Remove main image since it's already shown in mainImagePath
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeColor = _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+    final themeColor =
+        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
 
     showDialog(
       context: context,
@@ -1959,68 +2087,86 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                             Container(
                               height: 200,
                               decoration: BoxDecoration(
-                                color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+                                color:
+                                    isDark
+                                        ? Colors.grey.shade700
+                                        : Colors.grey.shade200,
                                 borderRadius: BorderRadius.circular(15),
                                 border: Border.all(
                                   color: themeColor.withOpacity(0.5),
                                   width: 2,
                                 ),
                               ),
-                              child: mainImagePath.isNotEmpty
-                                  ? Stack(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(13),
-                                          child: Image.network(
-                                            mainImagePath,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                        Positioned(
-                                          top: 8,
-                                          right: 8,
-                                          child: IconButton(
-                                            icon: Icon(Icons.edit, color: Colors.white),
-                                            onPressed: () async {
-                                              final imageUrl = await _pickAndUploadImage();
-                                              if (imageUrl != null) {
-                                                setState(() => mainImagePath = imageUrl);
-                                              }
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : InkWell(
-                                      onTap: () async {
-                                        final imageUrl = await _pickAndUploadImage();
-                                        if (imageUrl != null) {
-                                          setState(() => mainImagePath = imageUrl);
-                                        }
-                                      },
-                                      child: Center(
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.add_photo_alternate,
-                                              size: 40,
-                                              color: themeColor,
+                              child:
+                                  mainImagePath.isNotEmpty
+                                      ? Stack(
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              13,
                                             ),
-                                            SizedBox(height: 8),
-                                            Text(
-                                              'Update Main Image',
-                                              style: TextStyle(
-                                                color: themeColor,
-                                                fontWeight: FontWeight.bold,
+                                            child: Image.network(
+                                              mainImagePath,
+                                              width: double.infinity,
+                                              height: double.infinity,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                          Positioned(
+                                            top: 8,
+                                            right: 8,
+                                            child: IconButton(
+                                              icon: Icon(
+                                                Icons.edit,
+                                                color: Colors.white,
                                               ),
+                                              onPressed: () async {
+                                                final imageUrl =
+                                                    await _pickAndUploadImage();
+                                                if (imageUrl != null) {
+                                                  setState(
+                                                    () =>
+                                                        mainImagePath =
+                                                            imageUrl,
+                                                  );
+                                                }
+                                              },
                                             ),
-                                          ],
+                                          ),
+                                        ],
+                                      )
+                                      : InkWell(
+                                        onTap: () async {
+                                          final imageUrl =
+                                              await _pickAndUploadImage();
+                                          if (imageUrl != null) {
+                                            setState(
+                                              () => mainImagePath = imageUrl,
+                                            );
+                                          }
+                                        },
+                                        child: Center(
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.add_photo_alternate,
+                                                size: 40,
+                                                color: themeColor,
+                                              ),
+                                              SizedBox(height: 8),
+                                              Text(
+                                                'Update Main Image',
+                                                style: TextStyle(
+                                                  color: themeColor,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                    ),
                             ),
                             SizedBox(height: 16),
                             // Additional Images
@@ -2028,68 +2174,89 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                               height: 100,
                               child: ListView.builder(
                                 scrollDirection: Axis.horizontal,
-                                itemCount: max(3, additionalImagePaths.length), // Use max to show at least 3 slots
+                                itemCount: max(
+                                  3,
+                                  additionalImagePaths.length,
+                                ), // Use max to show at least 3 slots
                                 itemBuilder: (context, index) {
-                                  final hasImage = index < additionalImagePaths.length;
+                                  final hasImage =
+                                      index < additionalImagePaths.length;
                                   return Container(
                                     width: 100,
                                     margin: EdgeInsets.only(right: 8),
                                     decoration: BoxDecoration(
-                                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+                                      color:
+                                          isDark
+                                              ? Colors.grey.shade700
+                                              : Colors.grey.shade200,
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
                                         color: themeColor.withOpacity(0.5),
                                       ),
                                     ),
-                                    child: hasImage
-                                        ? Stack(
-                                            children: [
-                                              ClipRRect(
-                                                borderRadius: BorderRadius.circular(9),
-                                                child: Image.network(
-                                                  additionalImagePaths[index],
-                                                  width: double.infinity,
-                                                  height: double.infinity,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error, stackTrace) => Center(
-                                                    child: Icon(Icons.error, color: Colors.red),
+                                    child:
+                                        hasImage
+                                            ? Stack(
+                                              children: [
+                                                ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(9),
+                                                  child: Image.network(
+                                                    additionalImagePaths[index],
+                                                    width: double.infinity,
+                                                    height: double.infinity,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder:
+                                                        (
+                                                          context,
+                                                          error,
+                                                          stackTrace,
+                                                        ) => Center(
+                                                          child: Icon(
+                                                            Icons.error,
+                                                            color: Colors.red,
+                                                          ),
+                                                        ),
                                                   ),
                                                 ),
-                                              ),
-                                              Positioned(
-                                                top: 4,
-                                                right: 4,
-                                                child: IconButton(
-                                                  icon: Icon(
-                                                    Icons.delete,
-                                                    color: Colors.red,
-                                                    size: 20,
+                                                Positioned(
+                                                  top: 4,
+                                                  right: 4,
+                                                  child: IconButton(
+                                                    icon: Icon(
+                                                      Icons.delete,
+                                                      color: Colors.red,
+                                                      size: 20,
+                                                    ),
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        additionalImagePaths
+                                                            .removeAt(index);
+                                                      });
+                                                    },
                                                   ),
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      additionalImagePaths.removeAt(index);
-                                                    });
-                                                  },
                                                 ),
-                                              ),
-                                            ],
-                                          )
-                                        : InkWell(
-                                            onTap: () async {
-                                              final imageUrl = await _pickAndUploadImage();
-                                              if (imageUrl != null) {
-                                                setState(() {
-                                                  additionalImagePaths.add(imageUrl);
-                                                });
-                                              }
-                                            },
-                                            child: Center(
-                                              child: Icon(
-                                                Icons.add_photo_alternate,
-                                                color: themeColor,
+                                              ],
+                                            )
+                                            : InkWell(
+                                              onTap: () async {
+                                                final imageUrl =
+                                                    await _pickAndUploadImage();
+                                                if (imageUrl != null) {
+                                                  setState(() {
+                                                    additionalImagePaths.add(
+                                                      imageUrl,
+                                                    );
+                                                  });
+                                                }
+                                              },
+                                              child: Center(
+                                                child: Icon(
+                                                  Icons.add_photo_alternate,
+                                                  color: themeColor,
+                                                ),
                                               ),
                                             ),
-                                          ),
                                   );
                                 },
                               ),
@@ -2119,40 +2286,63 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 12),
                               decoration: BoxDecoration(
-                                color: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
+                                color:
+                                    isDark
+                                        ? Colors.grey.shade700
+                                        : Colors.grey.shade100,
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                                  color:
+                                      isDark
+                                          ? Colors.grey.shade600
+                                          : Colors.grey.shade300,
                                 ),
                               ),
                               child: FutureBuilder<List<String>>(
                                 future: _fetchCategories(),
                                 builder: (context, snapshot) {
-                                  if (snapshot.connectionState == ConnectionState.waiting) {
-                                    return Center(child: CircularProgressIndicator());
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.waiting) {
+                                    return Center(
+                                      child: CircularProgressIndicator(),
+                                    );
                                   }
-                                  
-                                  final categories = snapshot.data ?? ["CPU's", "GPU's", "RAM's", "Storage", "Motherboards", "Cases", "PSUs"];
-                                  
+
+                                  final categories =
+                                      snapshot.data ??
+                                      [
+                                        "CPU's",
+                                        "GPU's",
+                                        "RAM's",
+                                        "Storage",
+                                        "Motherboards",
+                                        "Cases",
+                                        "PSUs",
+                                      ];
+
                                   // Check if selectedCategory exists in the categories list
-                                  if (selectedCategory != null && !categories.contains(selectedCategory)) {
+                                  if (selectedCategory != null &&
+                                      !categories.contains(selectedCategory)) {
                                     // If category doesn't exist anymore, reset selection to null
                                     selectedCategory = null;
                                   }
-                                  
+
                                   return DropdownButtonHideUnderline(
                                     child: DropdownButton<String>(
                                       value: selectedCategory,
                                       isExpanded: true,
                                       hint: Text('Select Category'),
-                                      items: categories.map((String category) {
-                                        return DropdownMenuItem(
-                                          value: category,
-                                          child: Text(category),
-                                        );
-                                      }).toList(),
+                                      items:
+                                          categories.map((String category) {
+                                            return DropdownMenuItem(
+                                              value: category,
+                                              child: Text(category),
+                                            );
+                                          }).toList(),
                                       onChanged: (String? newValue) {
-                                        setState(() => selectedCategory = newValue);
+                                        setState(
+                                          () => selectedCategory = newValue,
+                                        );
                                       },
                                     ),
                                   );
@@ -2199,7 +2389,10 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                                   'category': selectedCategory,
                                   'description': descriptionController.text,
                                   'imagePath': mainImagePath,
-                                  'images': [mainImagePath, ...additionalImagePaths],
+                                  'images': [
+                                    mainImagePath,
+                                    ...additionalImagePaths,
+                                  ],
                                   'updatedAt': FieldValue.serverTimestamp(),
                                 };
 
@@ -2210,11 +2403,17 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
 
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Product updated successfully')),
+                                  SnackBar(
+                                    content: Text(
+                                      'Product updated successfully',
+                                    ),
+                                  ),
                                 );
                               } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error updating product: $e')),
+                                  SnackBar(
+                                    content: Text('Error updating product: $e'),
+                                  ),
                                 );
                               }
                             },
@@ -2236,7 +2435,8 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
   // Update the _uploadProductImage method to handle image URL returns
   Widget _buildImageUploadField() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeColor = _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+    final themeColor =
+        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
 
     return Container(
       decoration: BoxDecoration(
@@ -2302,10 +2502,12 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
   void _handleImageMessage(String? imageUrl) {
     if (imageUrl != null) {
       setState(() {
-        _messages.add(ChatMessage(
-          text: 'Image uploaded: $imageUrl\n${_messageController.text}',
-          isUser: true,
-        ));
+        _messages.add(
+          ChatMessage(
+            text: 'Image uploaded: $imageUrl\n${_messageController.text}',
+            isUser: true,
+          ),
+        );
         _messageController.clear();
       });
     }
@@ -2314,16 +2516,25 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
   // Add this method to _AIChatScreenState class
   Future<List<String>> _fetchCategories() async {
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('categories')
-          .orderBy('name')
-          .get();
-      
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('categories')
+              .orderBy('name')
+              .get();
+
       return snapshot.docs.map((doc) => doc.data()['name'] as String).toList();
     } catch (e) {
       print('Error fetching categories: $e');
       // Return default categories as fallback
-      return ["CPU's", "GPU's", "RAM's", "Storage", "Motherboards", "Cases", "PSUs"];
+      return [
+        "CPU's",
+        "GPU's",
+        "RAM's",
+        "Storage",
+        "Motherboards",
+        "Cases",
+        "PSUs",
+      ];
     }
   }
 
@@ -2331,7 +2542,8 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
   void _showManageCategoriesDialog() {
     final TextEditingController categoryController = TextEditingController();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeColor = _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+    final themeColor =
+        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
 
     showDialog(
       context: context,
@@ -2374,10 +2586,11 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                 ),
                 SizedBox(height: 16),
                 StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('categories')
-                      .orderBy('name')
-                      .snapshots(),
+                  stream:
+                      FirebaseFirestore.instance
+                          .collection('categories')
+                          .orderBy('name')
+                          .snapshots(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
                       return Center(child: CircularProgressIndicator());
@@ -2396,12 +2609,16 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                               onPressed: () async {
                                 try {
                                   final categoryName = category['name'];
-                                  final isInUse = await _isCategoryInUse(categoryName);
-                                  
+                                  final isInUse = await _isCategoryInUse(
+                                    categoryName,
+                                  );
+
                                   if (isInUse) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Cannot delete category "$categoryName" because it is being used by existing products'),
+                                        content: Text(
+                                          'Cannot delete category "$categoryName" because it is being used by existing products',
+                                        ),
                                         backgroundColor: Colors.red,
                                       ),
                                     );
@@ -2414,15 +2631,25 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                                     builder: (BuildContext context) {
                                       return AlertDialog(
                                         title: Text('Confirm Deletion'),
-                                        content: Text('Are you sure you want to delete the category "$categoryName"?'),
+                                        content: Text(
+                                          'Are you sure you want to delete the category "$categoryName"?',
+                                        ),
                                         actions: [
                                           TextButton(
-                                            onPressed: () => Navigator.of(context).pop(false),
+                                            onPressed:
+                                                () => Navigator.of(
+                                                  context,
+                                                ).pop(false),
                                             child: Text('Cancel'),
                                           ),
                                           TextButton(
-                                            onPressed: () => Navigator.of(context).pop(true),
-                                            style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                            onPressed:
+                                                () => Navigator.of(
+                                                  context,
+                                                ).pop(true),
+                                            style: TextButton.styleFrom(
+                                              foregroundColor: Colors.red,
+                                            ),
                                             child: Text('Delete'),
                                           ),
                                         ],
@@ -2438,7 +2665,9 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
 
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Category "$categoryName" deleted successfully'),
+                                        content: Text(
+                                          'Category "$categoryName" deleted successfully',
+                                        ),
                                         backgroundColor: Colors.green,
                                       ),
                                     );
@@ -2446,7 +2675,9 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text('Error deleting category: $e'),
+                                      content: Text(
+                                        'Error deleting category: $e',
+                                      ),
                                       backgroundColor: Colors.red,
                                     ),
                                   );
@@ -2475,11 +2706,12 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
 
   // Add this helper method to check if category is in use
   Future<bool> _isCategoryInUse(String categoryName) async {
-    final productsSnapshot = await FirebaseFirestore.instance
-        .collection('products')
-        .where('category', isEqualTo: categoryName)
-        .get();
-    
+    final productsSnapshot =
+        await FirebaseFirestore.instance
+            .collection('products')
+            .where('category', isEqualTo: categoryName)
+            .get();
+
     return productsSnapshot.docs.isNotEmpty;
   }
 }
@@ -2516,6 +2748,6 @@ class Product {
     required this.description,
     required this.imageUrl,
     this.images = const [],
-    required this.stock,  // Make sure stock is required
+    required this.stock, // Make sure stock is required
   });
 }
