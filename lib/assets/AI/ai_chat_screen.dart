@@ -66,12 +66,16 @@ class _AIChatScreenState extends State<AIChatScreen>
   ];
 
   final String systemPrompt = '''
-You are a knowledgeable PC hardware assistant. Help users with PC builds using only available components.
+You are a knowledgeable PC hardware assistant in the selling app. Help users with PC builds using only available components if they ask you to.
+- If the user initate a small talk or a conversation, respond in a friendly manner.
+- Make your responses short and concise if user didnt ask detailed information.
 - Only recommend products that we have in stock
 - Focus on compatibility between components
-- Consider the user's budget and intended use (gaming, work, etc.)
+- Consider the user's budget
 - If we don't have a specific component, suggest alternatives from our inventory
 - Don't mention or suggest products we don't have in stock
+- If the user asks for a specific brand, try to recommend that brand if we have it in stock
+- If the user asks for a specific use case (gaming, work, etc.), tailor your recommendations accordingly
 ''';
 
   // OpenRouter Configuration
@@ -242,11 +246,8 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                       : ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: _messages.length,
-                        reverse: true,
                         itemBuilder: (context, index) {
-                          final message =
-                              _messages[_messages.length - 1 - index];
-                          return _buildMessage(message);
+                          return _buildMessage(_messages[index]);
                         },
                       ),
             ),
@@ -409,42 +410,38 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
     final themeColor =
         _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
 
+    // Clean up any code formatting from the response
+    String cleanText = message.text.replaceAll(RegExp(r'```[\w]*\n|```'), '')  // Remove code block markers
+                                  .replaceAll(RegExp(r'\*[\w]*\n'), '')         // Remove language markers
+                                  .trim();                                       // Clean up whitespace
+  
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
-        crossAxisAlignment:
-            message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment:
-                message.isUser
-                    ? MainAxisAlignment.end
-                    : MainAxisAlignment.start,
+            mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!message.isUser)
+              if (!message.isUser) ...[
                 CircleAvatar(
-                  backgroundColor:
-                      isDark ? themeColor.shade900 : themeColor.shade100,
+                  backgroundColor: isDark ? themeColor.shade900 : themeColor.shade100,
                   child: Image.asset(
                     'lib/assets/Images/Mascot/mascot-crossedarms.png',
                     width: 37,
                     height: 37,
                   ),
                 ),
-              const SizedBox(width: 8),
+                const SizedBox(width: 8),
+              ],
               Flexible(
                 child: Container(
                   padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color:
-                        message.isUser
-                            ? (isDark
-                                ? themeColor.shade900
-                                : themeColor.shade400)
-                            : (isDark
-                                ? Colors.grey.shade800
-                                : Colors.grey.shade100),
+                    color: message.isUser 
+                      ? (isDark ? themeColor.shade900 : themeColor.shade400)
+                      : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(message.isUser ? 20 : 0),
                       topRight: Radius.circular(message.isUser ? 0 : 20),
@@ -452,186 +449,28 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
                       bottomRight: Radius.circular(20),
                     ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (message.imageUrl != null)
-                        Container(
-                          constraints: BoxConstraints(
-                            maxHeight: 200,
-                            maxWidth: 300,
-                          ),
-                          margin: EdgeInsets.only(bottom: 8),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              message.imageUrl!,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (context, child, progress) {
-                                if (progress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      Text(
-                        message.text,
-                        style: TextStyle(
-                          color:
-                              message.isUser
-                                  ? Colors.white
-                                  : (isDark ? Colors.white70 : Colors.black87),
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    cleanText,
+                    style: TextStyle(
+                      color: message.isUser 
+                        ? Colors.white 
+                        : (isDark ? Colors.white70 : Colors.black87),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              if (message.isUser)
+              if (message.isUser) ...[
+                const SizedBox(width: 8),
                 CircleAvatar(
-                  backgroundColor:
-                      isDark ? themeColor.shade900 : themeColor.shade100,
-                  backgroundImage:
-                      _userProfileImage != null
-                          ? NetworkImage(_userProfileImage!)
-                          : null,
-                  child:
-                      _userProfileImage == null
-                          ? Icon(
-                            Icons.person,
-                            color:
-                                isDark ? Colors.white70 : themeColor.shade400,
-                          )
-                          : null,
+                  backgroundColor: isDark ? themeColor.shade900 : themeColor.shade100,
+                  backgroundImage: _userProfileImage != null ? NetworkImage(_userProfileImage!) : null,
+                  child: _userProfileImage == null 
+                    ? Icon(Icons.person, color: isDark ? Colors.white70 : themeColor.shade400)
+                    : null,
                 ),
+              ],
             ],
           ),
-
-          // Product recommendations section
-          if (!message.isUser && message.recommendedProducts != null)
-            Container(
-              height: 200,
-              margin: EdgeInsets.only(top: 16),
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: message.recommendedProducts!.length,
-                itemBuilder: (context, index) {
-                  final product = message.recommendedProducts![index];
-                  return Card(
-                    margin: EdgeInsets.only(right: 16),
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) =>
-                                    ProductDetailPage(productId: product.id),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        width: 160,
-                        padding: EdgeInsets.all(8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (product.imageUrl.isNotEmpty)
-                              Expanded(
-                                child: Hero(
-                                  tag: 'product-${product.id}',
-                                  child: Image.network(
-                                    product.imageUrl,
-                                    fit: BoxFit.cover,
-                                    frameBuilder: (
-                                      context,
-                                      child,
-                                      frame,
-                                      wasSynchronouslyLoaded,
-                                    ) {
-                                      if (wasSynchronouslyLoaded) return child;
-                                      return AnimatedOpacity(
-                                        opacity: frame == null ? 0 : 1,
-                                        duration: const Duration(
-                                          milliseconds: 500,
-                                        ),
-                                        curve: Curves.easeOut,
-                                        child: child,
-                                      );
-                                    },
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            Container(
-                                              color: Colors.grey[200],
-                                              child: const Icon(Icons.error),
-                                            ),
-                                    cacheWidth: 320, // Add width constraint
-                                    cacheHeight: 240, // Add height constraint
-                                  ),
-                                ),
-                              ),
-                            SizedBox(height: 8),
-                            Text(
-                              product.name,
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              '\₺${product.price.toStringAsFixed(2)}',
-                              style: TextStyle(color: Colors.green),
-                            ),
-                            // Update the TextButton in product card
-                            TextButton(
-                              onPressed: () => _addToCart(product),
-                              style: TextButton.styleFrom(
-                                foregroundColor:
-                                    _selectedTheme != null
-                                        ? getThemeColor(_selectedTheme!)
-                                        : Colors.red,
-                              ),
-                              child: Text('Add to Cart'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          SizedBox(height: 8),
-          if (!message.isUser &&
-              message.recommendedProducts != null &&
-              message.recommendedProducts!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: ElevatedButton.icon(
-                onPressed:
-                    () => _showAddToCartDialog(message.recommendedProducts!),
-                // Update the "Add All Recommended Products to Cart" button
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      isDark
-                          ? (_selectedTheme != null
-                              ? getThemeColor(_selectedTheme!).shade900
-                              : Colors.red.shade900)
-                          : (_selectedTheme != null
-                              ? getThemeColor(_selectedTheme!).shade400
-                              : Colors.red.shade400),
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                icon: Icon(Icons.shopping_cart, color: Colors.white),
-                label: Text('Add All Recommended Products to Cart'),
-              ),
-            ),
         ],
       ),
     );
@@ -725,32 +564,24 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
     }
 
     try {
-      // Check if message contains product-related keywords
-      bool shouldRecommend =
-          message.toLowerCase().contains('recommend') ||
+      bool shouldRecommend = message.toLowerCase().contains('recommend') ||
           message.toLowerCase().contains('pc build') ||
           message.toLowerCase().contains('build') ||
           message.toLowerCase().contains('suggest') ||
           message.toLowerCase().contains('looking for');
 
-      // Only get recommendations if user specifically asked
-      final List<Product> recommendations =
-          shouldRecommend
-              ? await _getProductRecommendations(message, {
-                'cpu_brand':
-                    message.toLowerCase().contains('intel') ? 'intel' : 'amd',
-                'use_case':
-                    message.toLowerCase().contains('gaming')
-                        ? 'gaming'
-                        : 'work',
-              })
-              : [];
+      final List<Product> recommendations = shouldRecommend
+          ? await _getProductRecommendations(message, {
+              'cpu_brand': message.toLowerCase().contains('intel') ? 'intel' : 'amd',
+              'use_case': message.toLowerCase().contains('gaming') ? 'gaming' : 'work',
+            })
+          : [];
 
       final response = await http.post(
-        Uri.parse(APIConfig.openRouterUrl),
+        Uri.parse(_openRouterUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${APIConfig.ApiKey}',
+          'Authorization': 'Bearer ${_openRouterApiKey}',
           'HTTP-Referer': 'http://localhost',
           'X-Title': 'AI Chat Assistant',
         },
@@ -764,25 +595,32 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
       );
 
       if (response.statusCode != 200) {
-        print('API error ${response.statusCode}: ${response.body}');
-        throw Exception('API request failed');
+        throw Exception('API request failed with status: ${response.statusCode}');
       }
 
       final data = jsonDecode(response.body);
-      return (
-        data['choices'][0]['message']['content'] as String,
-        recommendations,
-      );
+      String aiResponse = data['choices'][0]['message']['content'] as String;
+      
+      // Simplified cleanup - only remove extra whitespace and normalize line breaks
+      aiResponse = aiResponse
+          .trim()
+          .replaceAll(RegExp(r'\n{2,}'), '\n')  // Replace multiple line breaks with single
+          .replaceAll(RegExp(r'\s{2,}'), ' ');  // Replace multiple spaces with single
+
+      if (aiResponse.isEmpty) {
+        return (
+          'I apologize, but I couldn\'t generate a proper response. Please try asking your question again.',
+          recommendations,
+        );
+      }
+
+      return (aiResponse, recommendations);
     } catch (e, stackTrace) {
       print('Error in API request: $e');
       print('Stack trace: $stackTrace');
-
-      // Return fallback response without recommendations unless specifically asked
       return (
-        APIConfig.fallbackResponses[Random().nextInt(
-          APIConfig.fallbackResponses.length,
-        )],
-        <Product>[], // Explicitly typed empty list as List<Product>
+        'I apologize, but I encountered an error. Please try again in a moment.',
+        <Product>[],
       );
     }
   }
@@ -1360,7 +1198,7 @@ You are a knowledgeable PC hardware assistant. Help users with PC builds using o
 
   void _addMessage(ChatMessage message) {
     setState(() {
-      _messages.insert(0, message);
+      _messages.add(message); // Add to end instead of insert at 0
       _isTyping = false;
     });
   }

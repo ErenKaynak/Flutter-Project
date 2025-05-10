@@ -1,7 +1,7 @@
 class APIConfig {
   // Make sure these are valid OpenRouter API keys
   static const String ApiKey =
-      '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';
+      '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';
   static const String openRouterUrl =
       'https://openrouter.ai/api/v1/chat/completions';
 

@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../pages/theme_notifier.dart';
 import 'admin_main.dart';
 
 class AdminRoot extends StatefulWidget {
@@ -41,15 +43,35 @@ class _AdminRootState extends State<AdminRoot> {
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
+
     if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(
+            color: themeColor,
+          ),
+        ),
       );
     }
 
     if (!isAdmin) {
-      return const Scaffold(
-        body: Center(child: Text('Access Denied: Admins only')), 
+      return Scaffold(
+        backgroundColor: isDark ? Colors.black : Colors.white,
+        body: Center(
+          child: Text(
+            'Access Denied: Admins only',
+            style: TextStyle(
+              color: themeColor,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
       );
     }
 

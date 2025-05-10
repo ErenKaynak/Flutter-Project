@@ -7,6 +7,8 @@ import 'package:engineering_project/admin-panel/admin_user.dart';
 import 'package:engineering_project/admin-panel/admin_statistics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../pages/theme_notifier.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -31,6 +33,12 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   Widget _buildLowStockList(List<QueryDocumentSnapshot> products) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
+
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -42,18 +50,21 @@ class _AdminPageState extends State<AdminPage> {
 
         return ListTile(
           dense: true,
-          leading: const Icon(Icons.warning, color: Colors.orange),
+          leading: Icon(
+            Icons.warning,
+            color: themeColor,
+          ),
           title: Text(
             product['name'] ?? 'Unnamed Product',
             style: TextStyle(
-              color: stock == 0 ? Colors.red : null,
+              color: stock == 0 ? themeColor : (isDark ? Colors.white : Colors.black87),
               fontWeight: stock == 0 ? FontWeight.bold : null,
             ),
           ),
           subtitle: Text(
             'Stock remaining: $stock',
             style: TextStyle(
-              color: stock == 0 ? Colors.red : null,
+              color: stock == 0 ? themeColor : (isDark ? Colors.white70 : Colors.black54),
             ),
           ),
           onTap: () => _showUpdateStockDialog(context, productId, product['name'], stock),
@@ -191,13 +202,17 @@ class _AdminPageState extends State<AdminPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
         title: const Text("Admin Dashboard"),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: themeColor,
         elevation: isDark ? 0 : 2,
       ),
       body: SingleChildScrollView(
@@ -448,11 +463,15 @@ class _AdminPageState extends State<AdminPage> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
 
     return Card(
       elevation: isDark ? 1 : 2,
-      color: Theme.of(context).cardColor,
+      color: isDark ? Colors.grey.shade900 : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
@@ -465,13 +484,15 @@ class _AdminPageState extends State<AdminPage> {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isDark ? Colors.red.shade900.withOpacity(0.2) : Colors.red.shade50,
+            color: isDark 
+                ? themeColor.shade900.withOpacity(0.2) 
+                : themeColor.shade50,
             borderRadius: BorderRadius.circular(8),
           ),
           child: icon is IconData 
               ? Icon(
                   icon,
-                  color: isDark ? Colors.red.shade400 : Colors.red.shade700,
+                  color: isDark ? themeColor.shade400 : themeColor.shade700,
                 )
               : icon, // Use the widget directly if it's not IconData
         ),
@@ -479,18 +500,18 @@ class _AdminPageState extends State<AdminPage> {
           title,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Theme.of(context).textTheme.titleMedium?.color,
+            color: isDark ? Colors.white : Colors.black87,
           ),
         ),
         subtitle: Text(
           subtitle,
           style: TextStyle(
-            color: Theme.of(context).textTheme.bodyMedium?.color,
+            color: isDark ? Colors.white70 : Colors.black54,
           ),
         ),
         trailing: Icon(
           Icons.arrow_forward_ios,
-          color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
+          color: themeColor.withOpacity(0.5),
           size: 20,
         ),
         onTap: onTap,
