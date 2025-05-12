@@ -404,5 +404,58 @@
     "thankYouForReview": "Değerlendirmeniz için teşekkür ederiz",
     "failedToSubmitReview": "Değerlendirme gönderilemedi",
     "items": "Ürünler",
-    "trackingNumber": "Takip Numarası"
+    "trackingNumber": "Takip Numarası",
+    "categoryAll": "Tüm Kategoriler",
+    "categoryCPU": "İşlemciler",
+    "categoryGPU": "Ekran Kartları",
+    "categoryRAM": "RAM",
+    "categoryMotherboard": "Anakartlar",
+    "categoryStorage": "Depolama",
+    "categoryCase": "Kasalar",
+    "categoryPSU": "Güç Kaynakları",
+    "categoryPreBuilt": "Hazır Sistemler",
+    "aiChatTitle": "Asistan Tommy",
+    "askMeAnything": "Bana Her Şeyi Sorabilirsin...",
+    "howCanIHelp": "Bugün size nasıl yardımcı olabilirim?",
+    "iNeedAssistance": "Yardıma ihtiyacım var",
+    "recommendCheapestPC": "Bana en ucuz PC yapılandırmasını öner",
+    "lookingForGamingPC": "Oyun bilgisayarı yapılandırması arıyorum",
+    "addNewProduct": "Yeni Ürün Ekle",
+    "updateProduct": "Ürünü Güncelle",
+    "productDetails": "Ürün Detayları",
+    "productName": "Ürün Adı",
+    "productPrice": "Fiyat",
+    "productStock": "Stok",
+    "productCategory": "Kategori",
+    "productDescription": "Açıklama",
+    "mainImage": "Ana Görsel",
+    "additionalImages": "Ek Görseller",
+    "generateAIDescription": "Yapay Zeka ile Açıklama Oluştur",
+    "pleaseEnterProductName": "Lütfen önce ürün adını girin",
+    "errorGeneratingDescription": "Açıklama oluşturulurken hata: {error}",
+    "@errorGeneratingDescription": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "searchProduct": "Ürün Ara",
+    "selectProductToUpdate": "Güncellenecek Ürünü Seçin",
+    "imageRequired": "Ana görsel gereklidir",
+    "productUpdated": "Ürün başarıyla güncellendi",
+    "errorUpdatingProduct": "Ürün güncellenirken hata: {error}",
+    "@errorUpdatingProduct": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "onVacation": "Şu anda tatildeyim!! Daha sonra tekrar deneyin :P",
+    "adminOnly": "Sadece yöneticiler ürün ekleyebilir",
+    "selectCategory": "Kategori Seç",
+    "update": "Güncelle",
+    "price": "Fiyat",
+    "stock": "Stok"
 } 

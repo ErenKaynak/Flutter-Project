@@ -45,7 +45,7 @@ class _AdminProductsState extends State<AdminProducts> {
     "Storage", 
     "Motherboards",
     "Cases",
-    "PSUs"
+    "PSU"
   ];
 
   String selectedFilterCategory = "All";
@@ -383,7 +383,7 @@ Your task is to generate extremely detailed, technically precise product descrip
       "RAM's": 'RAM',
       'Storage': 'Depolama',
       'Cases': 'Kasa',
-      'PSUs': 'Güç Kaynağı'
+      'PSU': 'Güç Kaynağı'
     };
 
     // Spec translations
@@ -434,7 +434,7 @@ Your task is to generate extremely detailed, technically precise product descrip
       "RAM's": 'الذاكرة',
       'Storage': 'التخزين',
       'Cases': 'الهيكل',
-      'PSUs': 'مزود الطاقة'
+      'PSU': 'مزود الطاقة'
     };
 
     // Spec translations

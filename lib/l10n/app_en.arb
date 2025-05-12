@@ -522,5 +522,58 @@
                 "type": "int"
             }
         }
-    }
+    },
+    "categoryAll": "All Categories",
+    "categoryCPU": "CPUs",
+    "categoryGPU": "GPUs",
+    "categoryRAM": "RAM",
+    "categoryMotherboard": "Motherboards",
+    "categoryStorage": "Storage",
+    "categoryCase": "Cases",
+    "categoryPSU": "Power Supplies",
+    "categoryPreBuilt": "Pre-Built PCs",
+    "aiChatTitle": "Assistant Tommy",
+    "askMeAnything": "Ask Me Anything...",
+    "howCanIHelp": "How can I help you today?",
+    "iNeedAssistance": "I need assistance",
+    "recommendCheapestPC": "Recommend me the cheapest PC build",
+    "lookingForGamingPC": "Looking for a gaming PC build",
+    "addNewProduct": "Add New Product",
+    "updateProduct": "Update Product",
+    "productDetails": "Product Details",
+    "productName": "Product Name",
+    "productPrice": "Price",
+    "productStock": "Stock",
+    "productCategory": "Category",
+    "productDescription": "Description",
+    "mainImage": "Main Image",
+    "additionalImages": "Additional Images",
+    "generateAIDescription": "Generate AI Description",
+    "pleaseEnterProductName": "Please enter product name first",
+    "errorGeneratingDescription": "Error generating description: {error}",
+    "@errorGeneratingDescription": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "searchProduct": "Search Product",
+    "selectProductToUpdate": "Select Product to Update",
+    "imageRequired": "Main image is required",
+    "productUpdated": "Product updated successfully",
+    "errorUpdatingProduct": "Error updating product: {error}",
+    "@errorUpdatingProduct": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "onVacation": "I'm currently on vacation!! Try to talk to me later :P",
+    "adminOnly": "Only admin users can add products",
+    "price": "Price",
+    "stock": "Stock",
+    "selectCategory": "Select Category",
+    "update": "Update"
 } 
