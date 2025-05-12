@@ -579,10 +579,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         isDark
                             ? Colors.white
                             : (themeNotifier.isSpecialModeActive
-                                ? themeNotifier.getThemeColor(
-                                  themeNotifier.specialTheme,
-                                )
-                                : Colors.grey[800]),
+                                ? Colors
+                                    .white // White in special mode
+                                : Colors.grey[800]), // Default color otherwise
                   ),
                   onPressed: () {
                     if (mounted) {
