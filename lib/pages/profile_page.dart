@@ -10,6 +10,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'theme_notifier.dart';
 import 'address_screen.dart';
@@ -96,8 +97,8 @@ class _ProfilePageState extends State<ProfilePage> {
         isColorPickerVisible = themeNotifier.isSpecialModeActive;
         _tapCount = 0;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Special Mode toggle enabled!'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.specialMode),
             duration: Duration(seconds: 2),
           ),
         );
@@ -222,8 +223,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile picture removed'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.removePhoto),
             duration: Duration(seconds: 2),
           ),
         );
@@ -232,8 +233,8 @@ class _ProfilePageState extends State<ProfilePage> {
       print('Error removing profile picture: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to remove profile picture'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorAddingToCart),
             duration: Duration(seconds: 2),
           ),
         );
@@ -242,6 +243,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showEditProfileDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final TextEditingController nameController = TextEditingController(
       text: name,
     );
@@ -253,25 +255,25 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Edit Profile'),
+            title: Text(l10n.editProfile),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Name'),
+                  decoration: InputDecoration(labelText: l10n.name),
                 ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: surnameController,
-                  decoration: const InputDecoration(labelText: 'Surname'),
+                  decoration: InputDecoration(labelText: l10n.surname),
                 ),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               TextButton(
                 onPressed: () {
@@ -281,7 +283,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   );
                   Navigator.pop(context);
                 },
-                child: const Text('Save'),
+                child: Text(l10n.save),
               ),
             ],
           ),
@@ -289,6 +291,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _changeProfilePicture() {
+    final l10n = AppLocalizations.of(context)!;
     final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
     showModalBottomSheet(
       context: context,
@@ -302,7 +305,7 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.photo_camera),
-                  title: const Text('Take a photo'),
+                  title: Text(l10n.takePhoto),
                   onTap: () {
                     Navigator.pop(context);
                     _uploadImage(ImageSource.camera);
@@ -310,7 +313,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.photo_library),
-                  title: const Text('Choose from gallery'),
+                  title: Text(l10n.chooseFromGallery),
                   onTap: () {
                     Navigator.pop(context);
                     _uploadImage(ImageSource.gallery);
@@ -318,7 +321,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.link),
-                  title: const Text('Add from URL'),
+                  title: Text(l10n.addFromUrl),
                   onTap: () {
                     Navigator.pop(context);
                     _showUrlInputDialog();
@@ -336,7 +339,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               : Colors.red,
                     ),
                     title: Text(
-                      'Remove Photo',
+                      l10n.removePhoto,
                       style: TextStyle(
                         color:
                             themeNotifier.isSpecialModeActive
@@ -358,13 +361,14 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showUrlInputDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final TextEditingController urlController = TextEditingController();
 
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Enter Image URL'),
+            title: Text(l10n.enterImageUrl),
             content: TextField(
               controller: urlController,
               decoration: const InputDecoration(
@@ -375,7 +379,7 @@ class _ProfilePageState extends State<ProfilePage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               TextButton(
                 onPressed: () {
@@ -384,7 +388,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   }
                   Navigator.pop(context);
                 },
-                child: const Text('Add'),
+                child: Text(l10n.add),
               ),
             ],
           ),
@@ -455,6 +459,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
     final isDarkMode = themeNotifier.isDarkMode;
     final isBlackMode = themeNotifier.isBlackMode;
     final isDark =
@@ -493,7 +498,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           elevation: 10,
           title: Text(
-            'Profile',
+            l10n.profile,
             style: TextStyle(
               color: isDark ? Colors.white : Colors.black87,
               fontWeight: FontWeight.bold,
@@ -588,7 +593,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Welcome, Guest',
+                        l10n.welcome,
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -604,7 +609,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Sign in to access all features',
+                        l10n.signInToAccess,
                         style: TextStyle(
                           fontSize: 16,
                           color: Colors.white.withOpacity(0.9),
@@ -644,7 +649,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Authentication',
+                            l10n.authentication,
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -687,8 +692,8 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                           elevation: 2,
                         ),
-                        child: const Text(
-                          'Sign In',
+                        child: Text(
+                          l10n.signIn,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -723,7 +728,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         ),
                         child: Text(
-                          'Create Account',
+                          l10n.createAccount,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -758,7 +763,7 @@ class _ProfilePageState extends State<ProfilePage> {
         title: GestureDetector(
           onTap: _handleProfileTitleTap,
           child: Text(
-            'Profile',
+            l10n.profile,
             style: TextStyle(
               color: isDark ? Colors.white : Colors.black87,
               fontWeight: FontWeight.bold,
@@ -915,7 +920,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             (name?.isNotEmpty == true ||
                                     surname?.isNotEmpty == true)
                                 ? '$name $surname'.trim()
-                                : 'Add Your Name',
+                                : l10n.addYourName,
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -945,8 +950,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                   width: 1,
                                 ),
                               ),
-                              child: const Text(
-                                'ADMIN',
+                              child: Text(
+                                l10n.admin,
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
@@ -990,7 +995,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Account Settings',
+                                l10n.accountSettings,
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -1006,7 +1011,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                           if (role == 'admin')
                             buildButton(
-                              'Admin Panel',
+                              l10n.adminPanel,
                               Icons.admin_panel_settings,
                               () {
                                 Navigator.push(
@@ -1018,7 +1023,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               },
                               themeNotifier,
                             ),
-                          buildButton('My Addresses', Icons.location_on, () {
+                          buildButton(l10n.myAddresses, Icons.location_on, () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -1026,7 +1031,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             );
                           }, themeNotifier),
-                          buildButton('My Orders', Icons.history, () {
+                          buildButton(l10n.myOrders, Icons.history, () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -1035,7 +1040,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             );
                           }, themeNotifier),
                           buildButton(
-                            'My Wallet',
+                            l10n.myWallet,
                             Icons.account_balance_wallet,
                             () => Navigator.push(
                               context,
@@ -1080,7 +1085,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Appearance',
+                                l10n.appearance,
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -1095,7 +1100,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             height: 32,
                           ),
                           _buildThemeToggle(
-                            'Dark Mode',
+                            l10n.darkMode,
                             Icons.brightness_6,
                             isDarkMode,
                             (_) => themeNotifier.toggleTheme(),
@@ -1103,7 +1108,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                           if (_showSpecialModeToggle)
                             _buildThemeToggle(
-                              'Special Mode',
+                              l10n.specialMode,
                               Icons.color_lens,
                               isColorPickerVisible,
                               (val) {
@@ -1199,8 +1204,8 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                           elevation: 4,
                         ),
-                        child: const Text(
-                          'Log Out',
+                        child: Text(
+                          l10n.signOut,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -1349,6 +1354,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildReferralCode() {
+    final l10n = AppLocalizations.of(context)!;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1371,7 +1377,7 @@ class _ProfilePageState extends State<ProfilePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Your Referral Code',
+            l10n.referralCode,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -1383,7 +1389,7 @@ class _ProfilePageState extends State<ProfilePage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                referralCode ?? 'Loading...',
+                referralCode ?? l10n.loading,
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w500,
@@ -1396,8 +1402,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   if (referralCode != null) {
                     Clipboard.setData(ClipboardData(text: referralCode!));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Referral code copied to clipboard'),
+                      SnackBar(
+                        content: Text(l10n.copiedToClipboard),
                       ),
                     );
                   }

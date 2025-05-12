@@ -12,7 +12,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:engineering_project/providers/cart_provider.dart';
+import 'package:engineering_project/providers/language_provider.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,9 +45,9 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeNotifier()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
-        // Add other providers if needed
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
       ],
-      child: MyApp(),
+      child: const MyApp(),
     ),
   );
 }
@@ -53,48 +57,44 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ThemeNotifier()),
-        ChangeNotifierProvider(create: (_) => CartProvider()),
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final languageProvider = Provider.of<LanguageProvider>(context);
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Engineering Project',
+      theme: themeNotifier.isSpecialModeActive
+          ? AppTheme.lightTheme.copyWith(
+              primaryColor: themeNotifier.getThemeColor(themeNotifier.specialTheme),
+              colorScheme: ColorScheme.fromSwatch(
+                primarySwatch: themeNotifier.getThemeColor(themeNotifier.specialTheme),
+                brightness: Brightness.light,
+              ),
+            )
+          : AppTheme.lightTheme,
+      darkTheme: themeNotifier.isSpecialModeActive
+          ? AppTheme.darkTheme.copyWith(
+              primaryColor: themeNotifier.getThemeColor(themeNotifier.specialTheme),
+              colorScheme: ColorScheme.fromSwatch(
+                primarySwatch: themeNotifier.getThemeColor(themeNotifier.specialTheme),
+                brightness: Brightness.dark,
+              ),
+            )
+          : AppTheme.darkTheme,
+      themeMode: themeNotifier.themeMode,
+      locale: languageProvider.currentLocale,
+      localizationsDelegates: [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
-      child: Consumer<ThemeNotifier>(
-        builder:
-            (context, themeNotifier, _) => MaterialApp(
-              debugShowCheckedModeBanner: false,
-              title: 'Engineering Project',
-              theme:
-                  themeNotifier.isSpecialModeActive
-                      ? AppTheme.lightTheme.copyWith(
-                        primaryColor: themeNotifier.getThemeColor(
-                          themeNotifier.specialTheme,
-                        ),
-                        colorScheme: ColorScheme.fromSwatch(
-                          primarySwatch: themeNotifier.getThemeColor(
-                            themeNotifier.specialTheme,
-                          ),
-                          brightness: Brightness.light,
-                        ),
-                      )
-                      : AppTheme.lightTheme,
-              darkTheme:
-                  themeNotifier.isSpecialModeActive
-                      ? AppTheme.darkTheme.copyWith(
-                        primaryColor: themeNotifier.getThemeColor(
-                          themeNotifier.specialTheme,
-                        ),
-                        colorScheme: ColorScheme.fromSwatch(
-                          primarySwatch: themeNotifier.getThemeColor(
-                            themeNotifier.specialTheme,
-                          ),
-                          brightness: Brightness.dark,
-                        ),
-                      )
-                      : AppTheme.darkTheme,
-              themeMode: themeNotifier.themeMode,
-              home: const AuthWrapper(),
-            ),
-      ),
+      supportedLocales: const [
+        Locale('en'), // English
+        Locale('tr'), // Turkish
+        Locale('ar'), // Arabic
+      ],
+      home: const AuthWrapper(),
     );
   }
 }

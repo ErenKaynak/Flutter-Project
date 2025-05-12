@@ -9,6 +9,7 @@ import 'package:engineering_project/admin-panel/admin_root.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class LoginPage extends StatefulWidget {
   LoginPage({super.key});
@@ -186,9 +187,9 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Check if device is in dark mode
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     // Define colors based on theme
     final backgroundColor = isDarkMode ? Color(0xFF121212) : Colors.grey[200];
@@ -248,7 +249,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'Welcome Back! Log in Here',
+                    l10n.welcome,
                     style: TextStyle(
                       color: textColor,
                       fontSize: 16,
@@ -265,7 +266,7 @@ class _LoginPageState extends State<LoginPage> {
                     decoration: InputDecoration(
                       fillColor: inputFillColor,
                       filled: true,
-                      hintText: 'Email',
+                      hintText: l10n.email,
                       hintStyle: TextStyle(
                         color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                       ),
@@ -302,7 +303,7 @@ class _LoginPageState extends State<LoginPage> {
                     decoration: InputDecoration(
                       fillColor: inputFillColor,
                       filled: true,
-                      hintText: 'Password',
+                      hintText: l10n.password,
                       hintStyle: TextStyle(
                         color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                       ),
@@ -365,7 +366,7 @@ class _LoginPageState extends State<LoginPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Not a member?',
+                        l10n.notAMember,
                         style: TextStyle(color: secondaryTextColor),
                       ),
                       const SizedBox(width: 4),
@@ -379,7 +380,7 @@ class _LoginPageState extends State<LoginPage> {
                           );
                         },
                         child: Text(
-                          'Register!',
+                          l10n.register,
                           style: TextStyle(
                             color: accentColor,
                             fontWeight: FontWeight.bold,
@@ -399,7 +400,7 @@ class _LoginPageState extends State<LoginPage> {
                       );
                     },
                     child: Text(
-                      'Forgot your password?',
+                      l10n.forgotPassword,
                       style: TextStyle(
                         color: accentColor,
                         fontWeight: FontWeight.bold,

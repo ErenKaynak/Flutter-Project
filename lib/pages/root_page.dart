@@ -7,6 +7,7 @@ import 'search_page.dart' as FavoritesPage;
 import 'home_page.dart' as HomePage;
 import 'package:engineering_project/assets/components/auth_service.dart';
 import 'theme_notifier.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 // Import or create an admin page
 class AdminPage extends StatefulWidget {
@@ -21,12 +22,13 @@ class _AdminPageState extends State<AdminPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          "Admin Dashboard",
+        title: Text(
+          l10n.adminDashboard,
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor:
@@ -44,7 +46,7 @@ class _AdminPageState extends State<AdminPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Admin Controls",
+                l10n.adminControls,
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -68,13 +70,13 @@ class _AdminPageState extends State<AdminPage> {
                             : Colors.red.shade700,
                   ),
                   title: Text(
-                    "User Management",
+                    l10n.userManagement,
                     style: TextStyle(
                       color: Theme.of(context).textTheme.titleMedium?.color,
                     ),
                   ),
                   subtitle: Text(
-                    "View and manage users",
+                    l10n.viewAndManageUsers,
                     style: TextStyle(
                       color: Theme.of(context).textTheme.bodyMedium?.color,
                     ),
@@ -106,13 +108,13 @@ class _AdminPageState extends State<AdminPage> {
                             : Colors.red.shade700,
                   ),
                   title: Text(
-                    "Product Management",
+                    l10n.productManagement,
                     style: TextStyle(
                       color: Theme.of(context).textTheme.titleMedium?.color,
                     ),
                   ),
                   subtitle: Text(
-                    "Add, edit or remove products",
+                    l10n.manageProducts,
                     style: TextStyle(
                       color: Theme.of(context).textTheme.bodyMedium?.color,
                     ),
@@ -144,13 +146,13 @@ class _AdminPageState extends State<AdminPage> {
                             : Colors.red.shade700,
                   ),
                   title: Text(
-                    "Order Management",
+                    l10n.orderManagement,
                     style: TextStyle(
                       color: Theme.of(context).textTheme.titleMedium?.color,
                     ),
                   ),
                   subtitle: Text(
-                    "View and process orders",
+                    l10n.viewAndProcessOrders,
                     style: TextStyle(
                       color: Theme.of(context).textTheme.bodyMedium?.color,
                     ),
@@ -327,12 +329,6 @@ class _RootScreenState extends State<RootScreen> {
                 'Profile',
                 3,
               ),
-              if (isAdmin)
-                _buildNavigationDestination(
-                  Icons.admin_panel_settings_outlined,
-                  'Admin',
-                  4,
-                ),
             ],
           ),
         ),
@@ -348,6 +344,14 @@ class _RootScreenState extends State<RootScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSelected = currentScreen == index;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    final labels = [
+      l10n.home,
+      l10n.favorites,
+      l10n.cart,
+      l10n.profile,
+    ];
 
     return NavigationDestination(
       icon: Icon(
@@ -362,7 +366,7 @@ class _RootScreenState extends State<RootScreen> {
                 : Colors.black54,
         size: 30,
       ),
-      label: label,
+      label: labels[index],
     );
   }
 }

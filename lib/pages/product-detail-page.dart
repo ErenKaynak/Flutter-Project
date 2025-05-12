@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:engineering_project/pages/cart_page.dart';
 import 'package:engineering_project/pages/theme_notifier.dart';
+import 'package:engineering_project/models/localized_product.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final String productId;
@@ -19,12 +21,13 @@ class ProductDetailPage extends StatefulWidget {
 
 class _ProductDetailPageState extends State<ProductDetailPage>
     with TickerProviderStateMixin {
-  Map<String, dynamic>? productData;
+  LocalizedProduct? productData;
   bool isLoading = true;
-  int quantity = 1;
-  int selectedImageIndex = 0;
+  int selectedQuantity = 1;
   int availableStock = 0;
   bool isFavorite = false;
+  bool isCheckingFavorite = true;
+  bool isOutOfStock = false;
 
   double? averageRating;
   int totalRatings = 0;
@@ -60,8 +63,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       ),
     );
 
-    fetchProductDetails();
-    checkIfFavorite();
+    _loadProductData();
+    _checkFavoriteStatus();
   }
 
   @override
@@ -84,24 +87,24 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     super.dispose();
   }
 
-  Future<void> fetchProductDetails() async {
+  Future<void> _loadProductData() async {
     try {
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('products')
-              .doc(widget.productId)
-              .get();
+      final doc = await FirebaseFirestore.instance
+          .collection('products')
+          .doc(widget.productId)
+          .get();
 
       if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
-
-        final stockValue = data['stock'];
-        final stock = stockValue is int ? stockValue : 0;
-
+        // Add debug print for raw data
+        print('Raw Firestore Data: ${doc.data()}');
+        
+        final localizedProduct = LocalizedProduct.fromFirestore(doc);
+        
         if (mounted) {
           setState(() {
-            productData = data;
-            availableStock = stock;
+            productData = localizedProduct;
+            availableStock = localizedProduct.stock;
+            isOutOfStock = localizedProduct.stock <= 0;
             isLoading = false;
           });
         }
@@ -137,7 +140,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         throw Exception('Product does not exist');
       }
     } catch (e) {
-      print("❌ Error fetching product: $e");
+      print("❌ Error loading product: $e");
       if (mounted) {
         setState(() {
           isLoading = false;
@@ -146,194 +149,126 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     }
   }
 
-  Future<void> checkIfFavorite() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+  Future<void> _checkFavoriteStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('favorites')
+            .doc(widget.productId)
+            .get();
 
-      final docSnapshot =
-          await FirebaseFirestore.instance
-              .collection('favorites')
-              .doc(user.uid)
-              .collection('userFavorites')
-              .doc(widget.productId)
-              .get();
-
-      if (mounted) {
         setState(() {
-          isFavorite = docSnapshot.exists;
+          isFavorite = doc.exists;
+          isCheckingFavorite = false;
+        });
+      } catch (e) {
+        print("❌ Error checking favorite status: $e");
+        setState(() {
+          isCheckingFavorite = false;
         });
       }
-    } catch (e) {
-      print('Error checking favorite status: $e');
+    } else {
+      setState(() {
+        isCheckingFavorite = false;
+      });
     }
   }
 
-  Future<void> toggleFavorite() async {
+  Future<void> _toggleFavorite() async {
     final user = FirebaseAuth.instance.currentUser;
+    final l10n = AppLocalizations.of(context)!;
+
     if (user == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Please log in to add favorites')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.pleaseLoginToAdd)),
+      );
       return;
     }
 
     try {
-      final favRef = FirebaseFirestore.instance
-          .collection('favorites')
+      final favoriteRef = FirebaseFirestore.instance
+          .collection('users')
           .doc(user.uid)
-          .collection('userFavorites')
+          .collection('favorites')
           .doc(widget.productId);
 
       if (isFavorite) {
-        await favRef.delete();
-        if (mounted) {
-          setState(() {
-            isFavorite = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Removed from favorites'),
-              duration: Duration(seconds: 1),
-            ),
-          );
-        }
+        await favoriteRef.delete();
+        setState(() => isFavorite = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.removedFromFavorites)),
+        );
       } else {
-        await favRef.set({
-          'name': productData?['name'] ?? 'Unknown Product',
-          'price': productData?['price']?.toString() ?? '0',
-          'image':
-              productData?['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-          'category': productData?['category'] ?? 'Uncategorized',
-          'description':
-              productData?['description'] ?? 'No description available',
-          'stock': availableStock,
+        await favoriteRef.set({
+          'productId': widget.productId,
           'addedAt': FieldValue.serverTimestamp(),
         });
-        if (mounted) {
-          setState(() {
-            isFavorite = true;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Added to favorites'),
-              duration: Duration(seconds: 1),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      print('Error toggling favorite: $e');
-      if (mounted) {
+        setState(() => isFavorite = true);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update favorites'),
-            duration: Duration(seconds: 2),
-          ),
+          SnackBar(content: Text(l10n.addedToFavorites)),
         );
       }
-    }
-  }
-
-  void incrementQuantity() {
-    setState(() {
-      if (quantity < availableStock && quantity < 10) quantity++;
-    });
-  }
-
-  void decrementQuantity() {
-    setState(() {
-      if (quantity > 1) quantity--;
-    });
-  }
-
-  Future<void> addToCart() async {
-    if (_isAddingToCart) return;
-
-    if (availableStock <= 0) {
+    } catch (e) {
+      print("❌ Error toggling favorite: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sorry, this product is out of stock')),
+        SnackBar(content: Text(l10n.failedToUpdateFavorites)),
       );
-      return;
     }
+  }
 
-    if (quantity > availableStock) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Cannot add more than available stock ($availableStock)',
-          ),
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _isAddingToCart = true;
-    });
-
-    _colorAnimationController.forward();
-    await Future.delayed(Duration(milliseconds: 200));
-    _tickAnimationController.forward();
-
+  Future<void> _addToCart() async {
     final user = FirebaseAuth.instance.currentUser;
+    final l10n = AppLocalizations.of(context)!;
 
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('You must be logged in to add to cart')),
+        SnackBar(content: Text(l10n.pleaseSignIn)),
       );
-      _resetAnimations();
       return;
     }
 
-    final cartRef = FirebaseFirestore.instance
-        .collection('cart')
-        .doc(user.uid)
-        .collection('userCart')
-        .doc(widget.productId);
+    if (isOutOfStock) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.outOfStock)),
+      );
+      return;
+    }
 
     try {
-      final existingItem = await cartRef.get();
+      final cartRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('cart')
+          .doc(widget.productId);
 
-      if (existingItem.exists) {
-        final prevQuantity = existingItem['quantity'] ?? 1;
+      final cartDoc = await cartRef.get();
+      Map<String, dynamic>? cartData = cartDoc.exists ? cartDoc.data() as Map<String, dynamic> : null;
+      final currentQuantity = cartData?['quantity'] as int? ?? 0;
+      final newQuantity = currentQuantity + selectedQuantity;
 
-        if (prevQuantity + quantity > availableStock) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Cannot add more than available stock ($availableStock)',
-                ),
-              ),
-            );
-          }
-          _resetAnimations();
-          return;
-        }
-
-        await cartRef.update({'quantity': prevQuantity + quantity});
-      } else {
-        await cartRef.set({
-          'productId': widget.productId,
-          'name': productData?['name'],
-          'price': productData?['price'],
-          'imagePath': productData?['imagePath'],
-          'quantity': quantity,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-      }
-
-      if (!mounted) {
-        _resetAnimations();
+      if (newQuantity > availableStock) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.cannotAddMoreThanStock(availableStock)),
+          ),
+        );
         return;
       }
 
+      await cartRef.set({
+        'productId': widget.productId,
+        'quantity': newQuantity,
+        'addedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${productData?['name']} x$quantity added to cart'),
+          content: Text(l10n.addedToCart(productData?.name ?? '')),
           action: SnackBarAction(
-            label: 'VIEW CART',
+            label: l10n.viewCart,
             onPressed: () {
               Navigator.push(
                 context,
@@ -343,19 +278,11 @@ class _ProductDetailPageState extends State<ProductDetailPage>
           ),
         ),
       );
-
-      await Future.delayed(Duration(seconds: 1));
-      if (mounted) {
-        _resetAnimations();
-      }
     } catch (e) {
-      print('❌ Error adding to cart: $e');
-      _resetAnimations();
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to add to cart')));
-      }
+      print("❌ Error adding to cart: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.failedToAddToCart)),
+      );
     }
   }
 
@@ -376,14 +303,15 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   }
 
   String _formatTimestamp(Timestamp? timestamp) {
-    if (timestamp == null) return 'Just now';
+    final l10n = AppLocalizations.of(context)!;
+    if (timestamp == null) return l10n.loading;
     final now = DateTime.now();
     final date = timestamp.toDate();
     final difference = now.difference(date);
 
-    if (difference.inMinutes < 1) return 'Just now';
-    if (difference.inHours < 1) return '${difference.inMinutes} minutes ago';
-    if (difference.inDays < 1) return '${difference.inHours} hours ago';
+    if (difference.inMinutes < 1) return l10n.loading;
+    if (difference.inHours < 1) return l10n.minutesAgo(difference.inMinutes);
+    if (difference.inDays < 1) return l10n.hoursAgo(difference.inHours);
     return DateFormat('MMM d, yyyy').format(date);
   }
 
@@ -391,6 +319,15 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
+    final currentLocale = Localizations.localeOf(context).languageCode;
+
+    // Add debug prints
+    print('Current Locale: $currentLocale');
+    if (productData != null) {
+      print('Available Descriptions: ${productData!.descriptions.keys.toList()}');
+      print('Selected Description: ${productData!.getDescription(currentLocale)}');
+    }
 
     if (isLoading) {
       return Scaffold(
@@ -398,7 +335,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         appBar: AppBar(
           backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
           title: Text(
-            "Loading...",
+            l10n.loading,
             style: TextStyle(
               color: Theme.of(context).textTheme.titleLarge?.color,
             ),
@@ -418,7 +355,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         appBar: AppBar(
           backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
           title: Text(
-            "Error",
+            l10n.productNotFound,
             style: TextStyle(
               color: Theme.of(context).textTheme.titleLarge?.color,
             ),
@@ -426,7 +363,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         ),
         body: Center(
           child: Text(
-            "Product not found",
+            l10n.productNotFound,
             style: TextStyle(
               color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
@@ -435,17 +372,12 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       );
     }
 
-    final name = productData!['name'] ?? 'Unknown';
-    final price = productData!['price']?.toString() ?? '0';
-    final imagePath = productData!['imagePath'] ?? '';
-    final category = productData!['category'] ?? 'Uncategorized';
-    final description =
-        productData!['description'] ?? 'No description available.';
-    final List<String> images =
-        (productData!['images'] as List<dynamic>?)
-            ?.map((e) => e.toString())
-            .toList() ??
-        [];
+    final name = productData!.name;
+    final price = productData!.price.toString();
+    final imagePath = productData!.imageUrl;
+    final category = productData!.category;
+    final description = productData!.getDescription(currentLocale);
+    final images = productData!.images;
 
     if (images.isEmpty) images.add(imagePath);
 
@@ -465,20 +397,14 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         ),
         iconTheme: IconThemeData(color: Theme.of(context).iconTheme.color),
         actions: [
-          IconButton(
-            icon: Icon(
-              Icons.favorite,
-              color:
-                  isFavorite
-                      ? (themeNotifier.isSpecialModeActive
-                          ? themeNotifier.getThemeColor(
-                            themeNotifier.specialTheme,
-                          )
-                          : Colors.red)
-                      : Theme.of(context).iconTheme.color?.withOpacity(0.5),
+          if (!isCheckingFavorite)
+            IconButton(
+              icon: Icon(
+                isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: isFavorite ? Colors.red : Theme.of(context).iconTheme.color,
+              ),
+              onPressed: _toggleFavorite,
             ),
-            onPressed: toggleFavorite,
-          ),
           Stack(
             alignment: Alignment.center,
             children: [
@@ -498,7 +424,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       ),
       body: RefreshIndicator(
         color: Theme.of(context).primaryColor,
-        onRefresh: fetchProductDetails,
+        onRefresh: _loadProductData,
         child: SingleChildScrollView(
           physics: AlwaysScrollableScrollPhysics(),
           child: Column(
@@ -525,7 +451,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     child: Hero(
                       tag: 'product-${widget.productId}',
                       child: Image.network(
-                        images[selectedImageIndex],
+                        images[selectedQuantity - 1],
                         fit: BoxFit.contain,
                         errorBuilder:
                             (_, __, ___) => Icon(
@@ -580,14 +506,14 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     itemCount: images.length,
                     itemBuilder: (context, index) {
                       return GestureDetector(
-                        onTap: () => setState(() => selectedImageIndex = index),
+                        onTap: () => setState(() => selectedQuantity = index + 1),
                         child: Container(
                           margin: EdgeInsets.symmetric(horizontal: 6),
                           width: 70,
                           decoration: BoxDecoration(
                             border: Border.all(
                               color:
-                                  selectedImageIndex == index
+                                  selectedQuantity == index + 1
                                       ? Theme.of(context).primaryColor
                                       : isDark
                                       ? Colors.grey.shade700
@@ -597,7 +523,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                             borderRadius: BorderRadius.circular(8),
                             color: Theme.of(context).cardColor,
                             boxShadow:
-                                selectedImageIndex == index && !isDark
+                                selectedQuantity == index + 1 && !isDark
                                     ? [
                                       BoxShadow(
                                         color: Theme.of(
@@ -755,8 +681,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                           SizedBox(width: 8),
                           Text(
                             isOutOfStock
-                                ? "Out of Stock"
-                                : "In Stock: $availableStock available",
+                                ? l10n.outOfStock
+                                : l10n.inStock(availableStock),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
@@ -771,14 +697,11 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "Quantity",
+                              AppLocalizations.of(context)!.productQuantity,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color:
-                                    Theme.of(
-                                      context,
-                                    ).textTheme.titleLarge?.color,
+                                color: Theme.of(context).textTheme.titleLarge?.color,
                               ),
                             ),
                             SizedBox(height: 10),
@@ -805,7 +728,13 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                             ? Colors.grey.shade800
                                             : Colors.grey.shade100,
                                     child: InkWell(
-                                      onTap: decrementQuantity,
+                                      onTap: selectedQuantity > 1
+                                          ? () {
+                                              setState(() {
+                                                selectedQuantity--;
+                                              });
+                                            }
+                                          : null,
                                       borderRadius: BorderRadius.only(
                                         topLeft: Radius.circular(7),
                                         bottomLeft: Radius.circular(7),
@@ -832,7 +761,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                             ? Colors.grey.shade900
                                             : Colors.white,
                                     child: Text(
-                                      '$quantity',
+                                      '$selectedQuantity',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -853,7 +782,13 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                             ? Colors.grey.shade800
                                             : Colors.grey.shade100,
                                     child: InkWell(
-                                      onTap: incrementQuantity,
+                                      onTap: selectedQuantity < availableStock
+                                          ? () {
+                                              setState(() {
+                                                selectedQuantity++;
+                                              });
+                                            }
+                                          : null,
                                       borderRadius: BorderRadius.only(
                                         topRight: Radius.circular(7),
                                         bottomRight: Radius.circular(7),
@@ -910,7 +845,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                             onPressed:
                                                 _isAddingToCart
                                                     ? null
-                                                    : addToCart,
+                                                    : _addToCart,
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor:
                                                   _colorAnimation.value,
@@ -940,7 +875,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                       ),
                                                       SizedBox(width: 8),
                                                       Text(
-                                                        "ADD TO CART",
+                                                        l10n.addToCart,
                                                         style: TextStyle(
                                                           fontSize: 16,
                                                           fontWeight:
@@ -995,7 +930,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Product Description",
+                        l10n.productDescription,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -1015,7 +950,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                   ),
                 ),
               ),
-              if (productData!['specifications'] != null)
+              if (productData!.specifications != null)
                 Container(
                   margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
                   decoration: BoxDecoration(
@@ -1038,7 +973,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Specifications",
+                          l10n.specifications,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -1048,7 +983,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                         ),
                         SizedBox(height: 12),
                         Text(
-                          productData!['specifications'].toString(),
+                          productData!.specifications!,
                           style: TextStyle(
                             fontSize: 15,
                             height: 1.5,
@@ -1084,7 +1019,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            "Customer Reviews",
+                            l10n.customerReviews,
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -1158,7 +1093,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                           return Padding(
                             padding: EdgeInsets.all(20),
                             child: Center(
-                              child: Text('Could not load reviews'),
+                              child: Text(AppLocalizations.of(context)!.couldNotLoadReviews),
                             ),
                           );
                         }
@@ -1181,7 +1116,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                   ),
                                   SizedBox(height: 16),
                                   Text(
-                                    'No reviews yet',
+                                    AppLocalizations.of(context)!.noReviewsYet,
                                     style: TextStyle(
                                       fontSize: 16,
                                       color:
@@ -1226,7 +1161,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                 final String fullName =
                                     userData != null
                                         ? "${userData['name'] ?? ''} ${userData['surname'] ?? ''}"
-                                        : 'Anonymous';
+                                        : AppLocalizations.of(context)!.anonymous;
                                 final String profilePicUrl =
                                     userData?['profileImageUrl'] ?? '';
 

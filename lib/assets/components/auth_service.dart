@@ -43,7 +43,7 @@ class AuthService {
           .doc(user.uid)
           .get();
       
-      if (userDoc.exists && userDoc.get('isAdmin') == true) {
+      if (userDoc.exists && userDoc.get('role') == 'admin') {
         return true;
       }
       

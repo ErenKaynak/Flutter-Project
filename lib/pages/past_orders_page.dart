@@ -9,6 +9,7 @@ import 'package:engineering_project/assets/components/cart_manager.dart'
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({Key? key}) : super(key: key);
@@ -23,15 +24,42 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   String _filterStatus = "All";
   String? _errorMessage;
 
+  // Status constants
+  static const String STATUS_ALL = 'All';
+  static const String STATUS_PENDING = 'Pending';
+  static const String STATUS_PREPARING = 'Preparing';
+  static const String STATUS_ON_DELIVERY = 'On Delivery';
+  static const String STATUS_DELIVERED = 'Delivered';
+  static const String STATUS_CANCELLED = 'Cancelled';
+
   // Define standard status values to match admin page
-  final List<String> _standardStatuses = [
-    "All",
-    "Pending",
-    "Preparing",
-    "On Delivery",
-    "Delivered",
-    "Cancelled",
+  List<String> _standardStatuses(AppLocalizations l10n) => [
+    STATUS_ALL,
+    STATUS_PENDING,
+    STATUS_PREPARING,
+    STATUS_ON_DELIVERY,
+    STATUS_DELIVERED,
+    STATUS_CANCELLED,
   ];
+
+  String _getLocalizedStatus(String status, AppLocalizations l10n) {
+    switch (status) {
+      case STATUS_ALL:
+        return l10n.allOrders;
+      case STATUS_PENDING:
+        return l10n.pending;
+      case STATUS_PREPARING:
+        return l10n.preparing;
+      case STATUS_ON_DELIVERY:
+        return l10n.onDelivery;
+      case STATUS_DELIVERED:
+        return l10n.delivered;
+      case STATUS_CANCELLED:
+        return l10n.cancelled;
+      default:
+        return status;
+    }
+  }
 
   @override
   void initState() {
@@ -49,7 +77,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         setState(() {
-          _errorMessage = "Please login to view your orders";
+          _errorMessage = AppLocalizations.of(context)!.pleaseSignIn;
           _isLoading = false;
         });
         return;
@@ -130,19 +158,17 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                       .collection('items')
                       .get();
 
-              items =
-                  itemsSnapshot.docs.map((itemDoc) {
-                    final itemData = itemDoc.data();
-                    return {
-                      'id': itemDoc.id,
-                      'name': itemData['name'] ?? 'Unknown Product',
-                      'price': itemData['price']?.toString() ?? '0',
-                      'imagePath':
-                          itemData['imagePath'] ??
-                          'lib/assets/Images/placeholder.png',
-                      'quantity': itemData['quantity'] ?? 1,
-                    };
-                  }).toList();
+              items = itemsSnapshot.docs.map((itemDoc) {
+                final itemData = itemDoc.data();
+                final l10n = AppLocalizations.of(context)!;
+                return {
+                  'id': itemDoc.id,
+                  'name': itemData['name'] ?? l10n.productNotFound,
+                  'price': itemData['price']?.toString() ?? '0',
+                  'imagePath': itemData['imagePath'] ?? 'lib/assets/Images/placeholder.png',
+                  'quantity': itemData['quantity'] ?? 1,
+                };
+              }).toList();
             } catch (e) {
               print('Error fetching items subcollection: $e');
             }
@@ -172,7 +198,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         _orders = loadedOrders;
         _isLoading = false;
         if (loadedOrders.isEmpty) {
-          _errorMessage = "No orders found";
+          _errorMessage = AppLocalizations.of(context)!.noOrdersYet;
         }
       });
 
@@ -180,7 +206,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     } catch (error) {
       print('Error fetching orders: $error');
       setState(() {
-        _errorMessage = "Error loading orders: $error";
+        _errorMessage = "${AppLocalizations.of(context)!.somethingWentWrong}: $error";
         _isLoading = false;
       });
     }
@@ -239,12 +265,14 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   }
 
   Future<void> _showRatingDialog(String productId, String productName) async {
+    final l10n = AppLocalizations.of(context)!;
+    
     // Check if user has already reviewed
     final hasReviewed = await _hasUserReviewedProduct(productId);
     if (hasReviewed) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('You have already reviewed this product'),
+          content: Text(l10n.alreadyReviewed),
           backgroundColor: Colors.orange,
         ),
       );
@@ -259,182 +287,148 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
     return showDialog(
       context: context,
-      builder:
-          (BuildContext context) => StatefulBuilder(
-            builder:
-                (context, setState) => AlertDialog(
-                  backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
-                  title: Text('Rate $productName'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(5, (index) {
-                          return IconButton(
-                            icon: Icon(
-                              index < selectedRating
-                                  ? Icons.star
-                                  : Icons.star_border,
-                              color:
-                                  themeNotifier.isSpecialModeActive
-                                      ? themeNotifier
-                                          .getThemeColor(
-                                            themeNotifier.specialTheme,
-                                          )
-                                          .shade400
-                                      : Colors.amber,
-                              size: 32,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                selectedRating = index + 1;
-                              });
-                            },
-                            splashRadius: 24,
-                            tooltip: '${index + 1} stars',
-                          );
-                        }),
-                      ),
-                      Text(
-                        _getRatingText(selectedRating),
-                        style: TextStyle(
-                          color:
-                              isDark
-                                  ? Colors.grey.shade300
-                                  : Colors.grey.shade700,
-                          fontSize: 14,
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      TextField(
-                        maxLines: 3,
-                        decoration: InputDecoration(
-                          hintText: 'Write your review (optional)',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          filled: true,
-                          fillColor:
-                              isDark
-                                  ? Colors.grey.shade800
-                                  : Colors.grey.shade50,
-                        ),
-                        onChanged: (value) => comment = value,
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text('Cancel'),
+      builder: (BuildContext context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+          title: Text(l10n.rateProduct),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  return IconButton(
+                    icon: Icon(
+                      index < selectedRating ? Icons.star : Icons.star_border,
+                      color: themeNotifier.isSpecialModeActive
+                          ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                          : Colors.amber,
+                      size: 32,
                     ),
-                    ElevatedButton(
-                      onPressed:
-                          selectedRating == 0
-                              ? null
-                              : () async {
-                                final user = FirebaseAuth.instance.currentUser;
-                                if (user != null) {
-                                  try {
-                                    await FirebaseFirestore.instance
-                                        .collection('comments')
-                                        .doc(productId)
-                                        .collection('userComments')
-                                        .add({
-                                          'userId': user.uid,
-                                          'userName':
-                                              user.displayName ?? 'User',
-                                          'rating': selectedRating,
-                                          'comment': comment,
-                                          'timestamp':
-                                              FieldValue.serverTimestamp(),
-                                        });
-
-                                    final commentsRef = FirebaseFirestore
-                                        .instance
-                                        .collection('comments')
-                                        .doc(productId)
-                                        .collection('userComments');
-
-                                    final commentsSnapshot =
-                                        await commentsRef.get();
-                                    final ratings =
-                                        commentsSnapshot.docs
-                                            .map(
-                                              (doc) =>
-                                                  doc.data()['rating'] as int,
-                                            )
-                                            .where((r) => r > 0)
-                                            .toList();
-
-                                    if (ratings.isNotEmpty) {
-                                      final avgRating =
-                                          ratings.reduce((a, b) => a + b) /
-                                          ratings.length;
-                                      await FirebaseFirestore.instance
-                                          .collection('products')
-                                          .doc(productId)
-                                          .update({
-                                            'averageRating': double.parse(
-                                              avgRating.toStringAsFixed(1),
-                                            ),
-                                            'ratingCount': ratings.length,
-                                          });
-                                    }
-
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Thank you for your review!',
-                                        ),
-                                      ),
-                                    );
-                                  } catch (e) {
-                                    print('Error submitting review: $e');
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Failed to submit review',
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            themeNotifier.isSpecialModeActive
-                                ? themeNotifier
-                                    .getThemeColor(themeNotifier.specialTheme)
-                                    .shade400
-                                : Colors.amber,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: Colors.grey,
-                      ),
-                      child: Text('Submit'),
-                    ),
-                  ],
+                    onPressed: () {
+                      setState(() {
+                        selectedRating = index + 1;
+                      });
+                    },
+                    splashRadius: 24,
+                    tooltip: '${index + 1} stars',
+                  );
+                }),
+              ),
+              Text(
+                _getRatingText(selectedRating),
+                style: TextStyle(
+                  color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                  fontSize: 14,
                 ),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: l10n.writeReview,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  filled: true,
+                  fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                ),
+                onChanged: (value) => comment = value,
+              ),
+            ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: selectedRating == 0
+                  ? null
+                  : () async {
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user != null) {
+                        try {
+                          await FirebaseFirestore.instance
+                              .collection('comments')
+                              .doc(productId)
+                              .collection('userComments')
+                              .add({
+                                'userId': user.uid,
+                                'userName': user.displayName ?? 'User',
+                                'rating': selectedRating,
+                                'comment': comment,
+                                'timestamp': FieldValue.serverTimestamp(),
+                              });
+
+                          final commentsRef = FirebaseFirestore.instance
+                              .collection('comments')
+                              .doc(productId)
+                              .collection('userComments');
+
+                          final commentsSnapshot = await commentsRef.get();
+                          final ratings = commentsSnapshot.docs
+                              .map((doc) => doc.data()['rating'] as int)
+                              .where((r) => r > 0)
+                              .toList();
+
+                          if (ratings.isNotEmpty) {
+                            final avgRating = ratings.reduce((a, b) => a + b) / ratings.length;
+                            await FirebaseFirestore.instance
+                                .collection('products')
+                                .doc(productId)
+                                .update({
+                                  'averageRating': double.parse(avgRating.toStringAsFixed(1)),
+                                  'ratingCount': ratings.length,
+                                });
+                          }
+
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.thankYouForReview),
+                            ),
+                          );
+                        } catch (e) {
+                          print('Error submitting review: $e');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.failedToSubmitReview),
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: themeNotifier.isSpecialModeActive
+                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                    : Colors.amber,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.grey,
+              ),
+              child: Text(l10n.submitReview),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   String _getRatingText(int rating) {
+    final l10n = AppLocalizations.of(context)!;
     switch (rating) {
       case 0:
-        return 'Select your rating';
+        return l10n.selectRating;
       case 1:
-        return 'Poor';
+        return l10n.poor;
       case 2:
-        return 'Fair';
+        return l10n.fair;
       case 3:
-        return 'Good';
+        return l10n.good;
       case 4:
-        return 'Very Good';
+        return l10n.veryGood;
       case 5:
-        return 'Excellent';
+        return l10n.excellent;
       default:
         return '';
     }
@@ -444,13 +438,14 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         title: Text(
-          'Order History',
+          l10n.orderHistory,
           style: TextStyle(
             color: Theme.of(context).textTheme.titleLarge?.color,
             fontWeight: FontWeight.bold,
@@ -464,170 +459,135 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           ),
         ],
       ),
-      body:
-          _isLoading
-              ? Center(
-                child: CircularProgressIndicator(
-                  color:
-                      themeNotifier.isSpecialModeActive
-                          ? themeNotifier
-                              .getThemeColor(themeNotifier.specialTheme)
-                              .shade400
-                          : Theme.of(context).primaryColor,
-                ),
-              )
-              : _errorMessage != null && _orders.isEmpty
+      body: _isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                color: themeNotifier.isSpecialModeActive
+                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                    : Theme.of(context).primaryColor,
+              ),
+            )
+          : _errorMessage != null && _orders.isEmpty
               ? _buildErrorView()
               : _orders.isEmpty
-              ? _buildEmptyOrdersView()
-              : CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Column(
-                      children: [
-                        // Header Section matching HomePage style
-                        Container(
-                          padding: EdgeInsets.all(16.0),
-                          margin: EdgeInsets.all(10.0),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors:
-                                  isDark
-                                      ? [
-                                        themeNotifier.isSpecialModeActive
-                                            ? themeNotifier
-                                                .getThemeColor(
-                                                  themeNotifier.specialTheme,
-                                                )
-                                                .shade900
-                                            : Colors.red.shade900,
-                                        Colors.grey.shade900,
-                                      ]
-                                      : [
-                                        themeNotifier.isSpecialModeActive
-                                            ? themeNotifier
-                                                .getThemeColor(
-                                                  themeNotifier.specialTheme,
-                                                )
-                                                .shade300
-                                            : Colors.red.shade300,
-                                        Colors.white,
-                                      ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow:
-                                isDark
-                                    ? []
-                                    : [
-                                      BoxShadow(
-                                        color:
-                                            themeNotifier.isSpecialModeActive
-                                                ? themeNotifier
-                                                    .getThemeColor(
-                                                      themeNotifier
-                                                          .specialTheme,
-                                                    )
-                                                    .shade200
-                                                    .withOpacity(0.5)
-                                                : Colors.black12,
-                                        blurRadius: 5,
-                                        offset: Offset(0, 2),
-                                      ),
-                                    ],
-                          ),
-                          child: Row(
+                  ? _buildEmptyOrdersView()
+                  : CustomScrollView(
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: Column(
                             children: [
                               Container(
-                                padding: EdgeInsets.all(12),
+                                padding: EdgeInsets.all(16.0),
+                                margin: EdgeInsets.all(10.0),
                                 decoration: BoxDecoration(
-                                  color:
-                                      themeNotifier.isSpecialModeActive
-                                          ? themeNotifier
-                                              .getThemeColor(
-                                                themeNotifier.specialTheme,
-                                              )
-                                              .shade300
-                                          : Colors.red.shade300,
-                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: isDark
+                                        ? [
+                                            themeNotifier.isSpecialModeActive
+                                                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900
+                                                : Colors.red.shade900,
+                                            Colors.grey.shade900,
+                                          ]
+                                        : [
+                                            themeNotifier.isSpecialModeActive
+                                                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade300
+                                                : Colors.red.shade300,
+                                            Colors.white,
+                                          ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: isDark
+                                      ? []
+                                      : [
+                                          BoxShadow(
+                                            color: themeNotifier.isSpecialModeActive
+                                                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade200.withOpacity(0.5)
+                                                : Colors.black12,
+                                            blurRadius: 5,
+                                            offset: Offset(0, 2),
+                                          ),
+                                        ],
                                 ),
-                                child: Icon(
-                                  Icons.shopping_bag_outlined,
-                                  size: 30,
-                                  color: Colors.white,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: themeNotifier.isSpecialModeActive
+                                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade300
+                                            : Colors.red.shade300,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.shopping_bag_outlined,
+                                        size: 30,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            l10n.yourOrders,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: isDark ? Colors.grey[400] : Colors.black54,
+                                            ),
+                                          ),
+                                          Text(
+                                            l10n.ordersCount(
+                                              _orders.length,
+                                            ),
+                                            style: TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold,
+                                              color: isDark ? Colors.white : Colors.black87,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              SizedBox(width: 16),
-                              Expanded(
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 10),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      "Your Orders",
+                                      l10n.filterByStatus,
                                       style: TextStyle(
-                                        fontSize: 16,
-                                        color:
-                                            isDark
-                                                ? Colors.grey[400]
-                                                : Colors.black54,
-                                      ),
-                                    ),
-                                    Text(
-                                      "${_orders.length} orders",
-                                      style: TextStyle(
-                                        fontSize: 24,
+                                        fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        color:
-                                            isDark
-                                                ? Colors.white
-                                                : Colors.black87,
+                                        color: Theme.of(context).textTheme.titleLarge?.color,
                                       ),
                                     ),
+                                    SizedBox(height: 10),
+                                    _buildFilterButtons(),
                                   ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        // Filter Section
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 10),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Filter by Status",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color:
-                                      Theme.of(
-                                        context,
-                                      ).textTheme.titleLarge?.color,
-                                ),
-                              ),
-                              SizedBox(height: 10),
-                              _buildFilterButtons(),
-                            ],
-                          ),
+                        SliverPadding(
+                          padding: EdgeInsets.all(10),
+                          sliver: _buildOrdersList(),
                         ),
                       ],
                     ),
-                  ),
-                  // Orders List
-                  SliverPadding(
-                    padding: EdgeInsets.all(10),
-                    sliver: _buildOrdersList(),
-                  ),
-                ],
-              ),
     );
   }
 
   Widget _buildErrorView() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Center(
       child: Column(
@@ -636,37 +596,33 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           Icon(
             Icons.error_outline,
             size: 80,
-            color:
-                themeNotifier.isSpecialModeActive
-                    ? themeNotifier
-                        .getThemeColor(themeNotifier.specialTheme)
-                        .shade400
-                    : (isDark ? Colors.red.shade400 : Colors.red),
+            color: themeNotifier.isSpecialModeActive
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                : (isDark ? Colors.red.shade400 : Colors.red),
           ),
           const SizedBox(height: 16),
           Text(
-            _errorMessage ?? "Something went wrong",
+            _errorMessage ?? l10n.somethingWentWrong,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Theme.of(context).textTheme.titleLarge?.color,
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: _fetchOrders,
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  themeNotifier.isSpecialModeActive
-                      ? themeNotifier
-                          .getThemeColor(themeNotifier.specialTheme)
-                          .shade400
-                      : Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+              backgroundColor: themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                  : Theme.of(context).primaryColor,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Try Again'),
+            child: Text(l10n.tryAgain),
           ),
         ],
       ),
@@ -674,7 +630,9 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   }
 
   Widget _buildEmptyOrdersView() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Center(
       child: Column(
@@ -683,11 +641,13 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           Icon(
             Icons.shopping_bag_outlined,
             size: 80,
-            color: Theme.of(context).textTheme.bodyMedium?.color,
+            color: themeNotifier.isSpecialModeActive
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                : (isDark ? Colors.red.shade400 : Colors.red),
           ),
           const SizedBox(height: 16),
           Text(
-            "No orders yet",
+            l10n.noOrdersYet,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -696,7 +656,8 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            "Your order history will appear here",
+            l10n.yourOrderHistoryWillAppearHere,
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: Theme.of(context).textTheme.bodyMedium?.color,
             ),
@@ -704,19 +665,18 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pushReplacementNamed(context, '/');
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  themeNotifier.isSpecialModeActive
-                      ? themeNotifier
-                          .getThemeColor(themeNotifier.specialTheme)
-                          .shade400
-                      : Colors.red,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+              backgroundColor: themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                  : Theme.of(context).primaryColor,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Start Shopping'),
+            child: Text(l10n.startShopping),
           ),
         ],
       ),
@@ -724,103 +684,50 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   }
 
   Widget _buildFilterButtons() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
+    final statuses = _standardStatuses(l10n);
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children:
-            _standardStatuses.map((status) {
-              final isSelected = _filterStatus == status;
-              return Padding(
-                padding: EdgeInsets.only(right: 12),
-                child: GestureDetector(
-                  onTap: () => _filterByStatus(status),
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              isSelected
-                                  ? (themeNotifier.isSpecialModeActive
-                                      ? themeNotifier
-                                          .getThemeColor(
-                                            themeNotifier.specialTheme,
-                                          )
-                                          .shade400
-                                      : Theme.of(context).primaryColor)
-                                  : isDark
-                                  ? Colors.grey.shade800
-                                  : Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(20),
-                          border:
-                              isSelected
-                                  ? Border.all(
-                                    color:
-                                        themeNotifier.isSpecialModeActive
-                                            ? themeNotifier
-                                                .getThemeColor(
-                                                  themeNotifier.specialTheme,
-                                                )
-                                                .shade700
-                                            : (isDark
-                                                ? Colors.red.shade700
-                                                : Colors.red.shade400),
-                                    width: 2,
-                                  )
-                                  : null,
-                          boxShadow:
-                              isSelected && !isDark
-                                  ? [
-                                    BoxShadow(
-                                      color:
-                                          themeNotifier.isSpecialModeActive
-                                              ? themeNotifier
-                                                  .getThemeColor(
-                                                    themeNotifier.specialTheme,
-                                                  )
-                                                  .shade200
-                                                  .withOpacity(0.5)
-                                              : Colors.red.shade200.withOpacity(
-                                                0.5,
-                                              ),
-                                      blurRadius: 8,
-                                      spreadRadius: 1,
-                                    ),
-                                  ]
-                                  : null,
-                        ),
-                        child: Text(
-                          status,
-                          style: TextStyle(
-                            color:
-                                isSelected
-                                    ? Colors.white
-                                    : Theme.of(
-                                      context,
-                                    ).textTheme.bodyLarge?.color,
-                            fontWeight:
-                                isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
+        children: statuses.map((status) {
+          final isSelected = _filterStatus == status;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FilterChip(
+              label: Text(status),
+              selected: isSelected,
+              onSelected: (bool selected) {
+                setState(() {
+                  _filterStatus = selected ? status : l10n.allOrders;
+                });
+              },
+              backgroundColor: Theme.of(context).cardColor,
+              selectedColor: themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade100
+                  : Theme.of(context).primaryColor.withOpacity(0.2),
+              checkmarkColor: themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                  : Theme.of(context).primaryColor,
+              labelStyle: TextStyle(
+                color: isSelected
+                    ? (themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                        : Theme.of(context).primaryColor)
+                    : Theme.of(context).textTheme.bodyMedium?.color,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
 
   Widget _buildOrdersList() {
+    final l10n = AppLocalizations.of(context)!;
+    
     if (filteredOrders.isEmpty) {
       return SliverToBoxAdapter(
         child: Center(
@@ -831,7 +738,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 Icon(Icons.filter_list_off, size: 70, color: Colors.grey),
                 const SizedBox(height: 16),
                 Text(
-                  "No orders with '$_filterStatus' status",
+                  l10n.noOrdersWithStatus(_getLocalizedStatus(_filterStatus, l10n)),
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -839,7 +746,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Try selecting a different filter",
+                  l10n.tryDifferentFilter,
                   style: TextStyle(color: Colors.grey[600]),
                 ),
               ],
@@ -864,6 +771,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
   Widget _buildOrderCard(Map<String, dynamic> order) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return RepaintBoundary(
       child: Card(
@@ -883,7 +791,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           childrenPadding: EdgeInsets.zero,
           title: Text(
-            'Order #${order['orderNumber']}',
+            '${l10n.orderPrefix}${order['orderNumber']}',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: Theme.of(context).textTheme.titleMedium?.color,
@@ -895,7 +803,8 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
               const SizedBox(height: 4),
               Text(
                 DateFormat(
-                  'MMM dd, yyyy - HH:mm',
+                  l10n.dateFormat,
+                  Localizations.localeOf(context).languageCode,
                 ).format((order['timestamp'] as Timestamp).toDate()),
                 style: const TextStyle(fontSize: 12),
               ),
@@ -904,11 +813,20 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 children: [
                   _buildStatusBadge(order['status']),
                   const Spacer(),
-                  Text(
-                    'Total: ₺${order['total'].toString()}',
-                    style: TextStyle(
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: '${l10n.total}: '),
+                        TextSpan(
+                          text: '₺${order['total'].toString()}',
+                          style: const TextStyle(
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.green.shade700,
                     ),
                   ),
                 ],
@@ -922,9 +840,9 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Items:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.items,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   ...order['items']
@@ -936,9 +854,9 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                   const Divider(height: 32),
                   if (order['trackingNumber'] != null &&
                       order['trackingNumber'].isNotEmpty) ...[
-                    const Text(
-                      'Tracking Number:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    Text(
+                      l10n.trackingNumber,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -947,24 +865,24 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                     ),
                     const SizedBox(height: 8),
                   ],
-                  const Text(
-                    'Shipping Address:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.shippingAddressLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    order['shippingAddress'] ?? 'No address provided',
+                    order['shippingAddress'] ?? l10n.defaultShippingAddress,
                     style: const TextStyle(fontSize: 14),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Payment Method:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.paymentMethodLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _capitalizeFirstLetter(
-                      order['paymentMethod'] ?? 'Not specified',
+                      order['paymentMethod'] ?? l10n.cardPayment,
                     ),
                     style: const TextStyle(fontSize: 14),
                   ),
@@ -977,7 +895,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                           _handleReorder(order);
                         },
                         icon: const Icon(Icons.replay),
-                        label: const Text('Reorder'),
+                        label: Text(l10n.reorderButton),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.blue,
                           side: const BorderSide(color: Colors.blue),
@@ -993,7 +911,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                             _handleCancelOrder(order);
                           },
                           icon: const Icon(Icons.cancel_outlined),
-                          label: const Text('Cancel'),
+                          label: Text(l10n.cancelOrder),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,
                             side: const BorderSide(color: Colors.red),
@@ -1023,30 +941,28 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     Color badgeColor;
     IconData iconData;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     switch (status) {
-      case 'Pending':
-        badgeColor =
-            themeNotifier.isSpecialModeActive
-                ? themeNotifier
-                    .getThemeColor(themeNotifier.specialTheme)
-                    .shade400
-                : Colors.orange;
+      case STATUS_PENDING:
+        badgeColor = themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+            : Colors.orange;
         iconData = Icons.hourglass_bottom;
         break;
-      case 'Preparing':
+      case STATUS_PREPARING:
         badgeColor = Colors.blue;
         iconData = Icons.restaurant;
         break;
-      case 'On Delivery':
+      case STATUS_ON_DELIVERY:
         badgeColor = Colors.purple;
         iconData = Icons.local_shipping;
         break;
-      case 'Delivered':
+      case STATUS_DELIVERED:
         badgeColor = Colors.green;
         iconData = Icons.check_circle;
         break;
-      case 'Cancelled':
+      case STATUS_CANCELLED:
         badgeColor = Colors.red;
         iconData = Icons.cancel;
         break;
@@ -1060,18 +976,18 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       decoration: BoxDecoration(
         color: badgeColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: badgeColor.withOpacity(0.5)),
+        border: Border.all(color: badgeColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(iconData, size: 12, color: badgeColor),
+          Icon(iconData, size: 16, color: badgeColor),
           const SizedBox(width: 4),
           Text(
-            status,
+            _getLocalizedStatus(status, l10n),
             style: TextStyle(
-              fontSize: 12,
               color: badgeColor,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1080,210 +996,112 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     );
   }
 
-  Widget _buildOrderItem(dynamic item, {required String status}) {
+  Widget _buildOrderItem(Map<String, dynamic> item, {required String status}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-
-    final Map<String, dynamic> itemData =
-        item is Map ? item as Map<String, dynamic> : {};
-    final String imagePath =
-        itemData["imagePath"] ??
-        itemData["image"] ??
-        'lib/assets/Images/placeholder.png';
-    final String itemPrice = itemData["price"]?.toString() ?? '0';
-    final int itemQuantity =
-        itemData["quantity"] is int ? itemData["quantity"] : 1;
-    final String itemName = itemData["name"] ?? 'Unknown Product';
-    final String productId = itemData["id"] ?? '';
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
-      padding: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-            width: 1,
-          ),
-        ),
-      ),
-      child: InkWell(
-        onTap: () {
-          if (productId.isNotEmpty) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ProductDetailPage(productId: productId),
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Product is no longer available'),
-                backgroundColor:
-                    themeNotifier.isSpecialModeActive
-                        ? themeNotifier
-                            .getThemeColor(themeNotifier.specialTheme)
-                            .shade400
-                        : Colors.red,
-              ),
-            );
-          }
-        },
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              item['imagePath'] ?? 'lib/assets/Images/placeholder.png',
               width: 60,
               height: 60,
-              decoration: BoxDecoration(
-                color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: _buildProductImage(imagePath),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    itemName,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      decoration: TextDecoration.underline,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Qty: $itemQuantity × ₺$itemPrice',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Item Total: ₺${(double.tryParse(itemPrice) ?? 0) * itemQuantity}',
-                    style: TextStyle(
-                      color: Colors.green[700],
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            FutureBuilder<bool>(
-              future: _hasUserReviewedProduct(productId),
-              builder: (context, snapshot) {
-                final bool hasReviewed = snapshot.data ?? false;
-                final bool canReview = status == 'Delivered' && !hasReviewed;
-
-                return IconButton(
-                  icon: Icon(
-                    hasReviewed ? Icons.rate_review : Icons.star_border,
-                    color:
-                        canReview
-                            ? (themeNotifier.isSpecialModeActive
-                                ? themeNotifier
-                                    .getThemeColor(themeNotifier.specialTheme)
-                                    .shade400
-                                : Colors.amber)
-                            : Colors.grey,
-                  ),
-                  onPressed:
-                      canReview
-                          ? () => _showRatingDialog(productId, itemName)
-                          : null,
-                  tooltip:
-                      hasReviewed
-                          ? 'Already reviewed'
-                          : status != 'Delivered'
-                          ? 'Can review after delivery'
-                          : 'Rate this product',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 60,
+                  height: 60,
+                  color: Colors.grey.shade200,
+                  child: Icon(Icons.image_not_supported, color: Colors.grey),
                 );
               },
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProductImage(String imagePath) {
-    if (imagePath.startsWith('http') || imagePath.startsWith('https')) {
-      return Image.network(
-        imagePath,
-        fit: BoxFit.cover,
-        width: 60,
-        height: 60,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Center(
-            child: CircularProgressIndicator(
-              value:
-                  loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                          loadingProgress.expectedTotalBytes!
-                      : null,
-              strokeWidth: 2,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item['name'] ?? l10n.productNotFound,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: '${l10n.quantityPrefix} '),
+                      TextSpan(text: '${item['quantity']} × ₺${item['price']}'),
+                    ],
+                  ),
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: '${l10n.itemTotalPrefix} '),
+                      TextSpan(
+                        text: '₺${(double.parse(item['price'].toString()) * (item['quantity'] as int)).toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ],
             ),
-          );
-        },
-        errorBuilder: (context, error, stackTrace) {
-          print('Error loading image: $error');
-          return _buildFallbackImage();
-        },
-      );
-    } else {
-      // Handle local assets
-      if (imagePath.startsWith('lib/')) {
-        imagePath = imagePath.replaceFirst('lib/', '');
-      }
-      return Image.asset(
-        imagePath,
-        fit: BoxFit.cover,
-        width: 60,
-        height: 60,
-        errorBuilder: (context, error, stackTrace) {
-          print('Error loading asset image: $error');
-          return _buildFallbackImage();
-        },
-      );
-    }
-  }
-
-  Widget _buildFallbackImage() {
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Icon(
-        Icons.image_not_supported_outlined,
-        size: 24,
-        color: Colors.grey[400],
+          ),
+          if (status == STATUS_DELIVERED)
+            FutureBuilder<bool>(
+              future: _hasUserReviewedProduct(item['id']),
+              builder: (context, snapshot) {
+                final bool hasReviewed = snapshot.data ?? false;
+                return TextButton(
+                  onPressed: hasReviewed ? null : () => _showRatingDialog(item['id'], item['name']),
+                  child: Text(
+                    hasReviewed ? l10n.alreadyReviewed : l10n.rateProduct,
+                    style: TextStyle(
+                      color: hasReviewed
+                          ? Colors.grey
+                          : (themeNotifier.isSpecialModeActive
+                              ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                              : Theme.of(context).primaryColor),
+                      fontSize: 12,
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
       ),
     );
   }
 
   void _handleReorder(Map<String, dynamic> order) async {
+    final l10n = AppLocalizations.of(context)!;
+    
     try {
-      // First check stock levels for all items
       final List<String> outOfStockItems = [];
       final List<String> insufficientStockItems = [];
 
-      // Check each item's current stock
       for (var item in order['items']) {
-        final productDoc =
-            await FirebaseFirestore.instance
-                .collection('products')
-                .doc(item['id'])
-                .get();
+        final productDoc = await FirebaseFirestore.instance
+            .collection('products')
+            .doc(item['id'])
+            .get();
 
         if (!productDoc.exists) {
           outOfStockItems.add(item['name']);
@@ -1302,67 +1120,57 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         }
       }
 
-      // Show error if any items are out of stock or have insufficient stock
       if (outOfStockItems.isNotEmpty || insufficientStockItems.isNotEmpty) {
         String errorMessage = '';
 
         if (outOfStockItems.isNotEmpty) {
-          errorMessage +=
-              'The following items are out of stock:\n• ${outOfStockItems.join('\n• ')}\n\n';
+          errorMessage += l10n.outOfStockItems(outOfStockItems.join('\n• ')) + '\n\n';
         }
 
         if (insufficientStockItems.isNotEmpty) {
-          errorMessage +=
-              'Insufficient stock for:\n• ${insufficientStockItems.join('\n• ')}';
+          errorMessage += l10n.insufficientStockItems(insufficientStockItems.join('\n• '));
         }
 
         if (!mounted) return;
 
         showDialog(
           context: context,
-          builder:
-              (context) => AlertDialog(
-                title: Text('Cannot Reorder'),
-                content: SingleChildScrollView(child: Text(errorMessage)),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('OK'),
-                  ),
-                ],
+          builder: (context) => AlertDialog(
+            title: Text(l10n.cannotReorder),
+            content: SingleChildScrollView(child: Text(errorMessage)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(l10n.ok),
               ),
+            ],
+          ),
         );
         return;
       }
 
-      // If all stock checks pass, convert order items to CartItem objects
-      final List<CartItem> items =
-          (order['items'] as List)
-              .map(
-                (item) => CartItem(
-                  id: item['id'] ?? '',
-                  name: item['name'] ?? '',
-                  price:
-                      (double.tryParse(item['price']?.toString() ?? '0') ?? 0.0)
-                          .toString(),
-                  image: item['imagePath'] ?? item['image'] ?? '',
-                  quantity: item['quantity'] ?? 1,
-                ),
-              )
-              .toList();
+      final List<CartItem> items = (order['items'] as List)
+          .map(
+            (item) => CartItem(
+              id: item['id'] ?? '',
+              name: item['name'] ?? '',
+              price: (double.tryParse(item['price']?.toString() ?? '0') ?? 0.0).toString(),
+              image: item['imagePath'] ?? item['image'] ?? '',
+              quantity: item['quantity'] ?? 1,
+            ),
+          )
+          .toList();
 
-      // Navigate to checkout page with the items
       if (!mounted) return;
 
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder:
-              (context) => CheckoutPage(
-                subtotal: (order['total'] ?? 0.0).toDouble(),
-                items: items,
-                appliedDiscount: null,
-              ),
+          builder: (context) => CheckoutPage(
+            subtotal: (order['total'] ?? 0.0).toDouble(),
+            items: items,
+            appliedDiscount: null,
+          ),
         ),
       );
     } catch (e) {
@@ -1371,110 +1179,50 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Error checking product availability. Please try again.',
-          ),
+          content: Text(l10n.errorCheckingAvailability),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
 
-  void _handleCancelOrder(Map<String, dynamic> order) async {
-    // Store the context and theme information before showing dialog
-    final currentContext = context;
-    final isDark = Theme.of(currentContext).brightness == Brightness.dark;
-    final dialogBackgroundColor =
-        Theme.of(currentContext).dialogBackgroundColor;
-    final titleTextColor = Theme.of(currentContext).textTheme.titleLarge?.color;
-    final bodyTextColor = Theme.of(currentContext).textTheme.bodyLarge?.color;
-    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
-
-    if (!mounted) return;
-
-    final bool? shouldCancel = await showDialog<bool>(
-      context: currentContext,
-      builder:
-          (BuildContext context) => AlertDialog(
-            backgroundColor: dialogBackgroundColor,
-            title: Text(
-              'Cancel Order',
-              style: TextStyle(color: titleTextColor),
-            ),
-            content: Text(
-              'Are you sure you want to cancel this order?',
-              style: TextStyle(color: bodyTextColor),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(
-                  'NO',
-                  style: TextStyle(
-                    color:
-                        themeNotifier.isSpecialModeActive
-                            ? themeNotifier
-                                .getThemeColor(themeNotifier.specialTheme)
-                                .shade400
-                            : Theme.of(context).primaryColor,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('YES', style: TextStyle(color: Colors.red)),
-              ),
-            ],
+  Future<void> _handleCancelOrder(Map<String, dynamic> order) async {
+    final l10n = AppLocalizations.of(context)!;
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.cancelOrder),
+        content: Text(l10n.confirmCancelOrder),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
     );
 
-    if (shouldCancel != true || !mounted) return;
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception('User not logged in');
-
-      // Update order status in main orders collection
-      await FirebaseFirestore.instance
-          .collection('orders')
-          .doc(order['id'])
-          .update({
-            'status': 'Cancelled',
-            'cancelledAt': FieldValue.serverTimestamp(),
-          });
-
-      // Update order status in user's orders subcollection
-      await FirebaseFirestore.instance
-          .collection('orders')
-          .doc(user.uid)
-          .collection('userOrders')
-          .doc(order['id'])
-          .update({
-            'status': 'Cancelled',
-            'cancelledAt': FieldValue.serverTimestamp(),
-          });
-
-      if (!mounted) return;
-
-      // Refresh orders list
-      _fetchOrders();
-
-      ScaffoldMessenger.of(currentContext).showSnackBar(
-        const SnackBar(
-          content: Text('Order cancelled successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      print('Error cancelling order: $e');
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(currentContext).showSnackBar(
-        SnackBar(
-          content: Text('Failed to cancel order: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    if (confirm == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .doc(order['id'])
+            .update({'status': STATUS_CANCELLED});
+        await _fetchOrders();
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.failedToCancelOrder(error.toString())),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'add_address_page.dart';
 import 'theme_notifier.dart';
 
@@ -85,12 +86,13 @@ class _AddressScreenState extends State<AddressScreen> {
     final textColor = Theme.of(context).textTheme.bodyMedium?.color;
     final borderColor = isDark ? Colors.grey.shade700 : Colors.transparent;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'My Addresses',
+          title: Text(
+            l10n.myAddresses,
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
           ),
           backgroundColor:
@@ -103,115 +105,56 @@ class _AddressScreenState extends State<AddressScreen> {
           iconTheme: IconThemeData(color: Colors.white),
         ),
         backgroundColor: bgColor,
-        body:
-            _isLoading
-                ? Center(
-                  child: CircularProgressIndicator(
-                    color:
-                        themeNotifier.isSpecialModeActive
-                            ? themeNotifier
-                                .getThemeColor(themeNotifier.specialTheme)
-                                .shade300
-                            : Colors.red.shade300,
-                  ),
-                )
-                : RefreshIndicator(
-                  onRefresh: () async {
-                    setState(() => _isLoading = true);
-                    await Future.delayed(const Duration(seconds: 1));
-                    setState(() => _isLoading = false);
-                  },
+        body: _isLoading
+            ? Center(
+                child: CircularProgressIndicator(
                   color:
                       themeNotifier.isSpecialModeActive
                           ? themeNotifier
                               .getThemeColor(themeNotifier.specialTheme)
                               .shade300
                           : Colors.red.shade300,
-                  child: CustomScrollView(
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16.0),
-                              margin: const EdgeInsets.all(10.0),
-                              decoration: BoxDecoration(
-                                color: cardColor,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: borderColor),
-                                boxShadow:
-                                    isDark
-                                        ? []
-                                        : [
+                ),
+              )
+            : RefreshIndicator(
+                onRefresh: () async {
+                  setState(() => _isLoading = true);
+                  await Future.delayed(const Duration(seconds: 1));
+                  setState(() => _isLoading = false);
+                },
+                color:
+                    themeNotifier.isSpecialModeActive
+                        ? themeNotifier
+                            .getThemeColor(themeNotifier.specialTheme)
+                            .shade300
+                        : Colors.red.shade300,
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16.0),
+                            margin: const EdgeInsets.all(10.0),
+                            decoration: BoxDecoration(
+                              color: cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: borderColor),
+                              boxShadow:
+                                  isDark
+                                      ? []
+                                      : [
                                           BoxShadow(
                                             color: Colors.black12,
                                             blurRadius: 5,
                                             offset: Offset(0, 2),
                                           ),
                                         ],
-                              ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    backgroundColor:
-                                        themeNotifier.isSpecialModeActive
-                                            ? themeNotifier
-                                                .getThemeColor(
-                                                  themeNotifier.specialTheme,
-                                                )
-                                                .shade700
-                                            : Colors.red.shade700,
-                                    radius: 24,
-                                    child: const Icon(
-                                      Icons.location_on,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Hello',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: textColor?.withOpacity(0.6),
-                                          ),
-                                        ),
-                                        Text(
-                                          _userName,
-                                          style: TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.bold,
-                                            color: textColor,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
                             ),
-                            const SizedBox(height: 20),
-                            Container(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 10.0,
-                              ),
-                              child: ElevatedButton.icon(
-                                onPressed: _navigateToAddAddress,
-                                icon: Icon(
-                                  Icons.add_location_alt,
-                                  color: Colors.white,
-                                ),
-                                label: const Text(
-                                  'Add New Address',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size.fromHeight(54),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
                                   backgroundColor:
                                       themeNotifier.isSpecialModeActive
                                           ? themeNotifier
@@ -220,41 +163,100 @@ class _AddressScreenState extends State<AddressScreen> {
                                               )
                                               .shade700
                                           : Colors.red.shade700,
-                                  foregroundColor: Colors.white,
-                                  elevation: 2,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                  radius: 24,
+                                  child: const Icon(
+                                    Icons.location_on,
+                                    color: Colors.white,
                                   ),
                                 ),
-                              ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        l10n.hello,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: textColor?.withOpacity(0.6),
+                                        ),
+                                      ),
+                                      Text(
+                                        _userName,
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: textColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 20),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0,
+                          ),
+                          const SizedBox(height: 20),
+                          Container(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 10.0,
+                            ),
+                            child: ElevatedButton.icon(
+                              onPressed: _navigateToAddAddress,
+                              icon: Icon(
+                                Icons.add_location_alt,
+                                color: Colors.white,
                               ),
-                              child: Text(
-                                "Your Addresses",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: textColor,
+                              label: Text(
+                                l10n.addNewAddress,
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size.fromHeight(54),
+                                backgroundColor:
+                                    themeNotifier.isSpecialModeActive
+                                        ? themeNotifier
+                                            .getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            .shade700
+                                        : Colors.red.shade700,
+                                foregroundColor: Colors.white,
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 10),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 20),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                            ),
+                            child: Text(
+                              l10n.yourAddresses,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: textColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
                       ),
-                      _buildAddressesList(),
-                    ],
-                  ),
+                    ),
+                    _buildAddressesList(),
+                  ],
                 ),
+              ),
       ),
     );
   }
 
   Widget _buildAddressesList() {
+    final l10n = AppLocalizations.of(context)!;
     return StreamBuilder<QuerySnapshot>(
       stream: addressesStream,
       builder: (context, snapshot) {
@@ -264,7 +266,7 @@ class _AddressScreenState extends State<AddressScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Text(
-                  'No addresses found.',
+                  l10n.noAddressesFound,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
@@ -381,7 +383,16 @@ class _AddressScreenState extends State<AddressScreen> {
                                       ? Colors.grey.shade400
                                       : Colors.grey.shade600,
                             ),
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AddAddressPage(
+                                    addressToEdit: doc,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -491,7 +502,7 @@ class _AddressScreenState extends State<AddressScreen> {
                                       : Colors.red.shade300,
                             ),
                             label: Text(
-                              'Delete',
+                              l10n.delete,
                               style: TextStyle(
                                 color:
                                     themeNotifier.isSpecialModeActive
@@ -511,7 +522,7 @@ class _AddressScreenState extends State<AddressScreen> {
                               color: Colors.green.shade600,
                             ),
                             label: Text(
-                              'Set as Default',
+                              l10n.setAsDefault,
                               style: TextStyle(color: Colors.green.shade600),
                             ),
                           ),

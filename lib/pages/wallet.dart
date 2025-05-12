@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({Key? key}) : super(key: key);
@@ -180,9 +181,10 @@ class _WalletPageState extends State<WalletPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Wallet'), elevation: 0),
+      appBar: AppBar(title: Text(l10n.myWallet), elevation: 0),
       body:
           _isLoading
               ? Center(
@@ -268,7 +270,7 @@ class _WalletPageState extends State<WalletPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Current Balance',
+                                l10n.currentBalance,
                                 style: TextStyle(
                                   color:
                                       isDark ? Colors.grey[400] : Colors.white,
@@ -278,7 +280,7 @@ class _WalletPageState extends State<WalletPage> {
                               const SizedBox(height: 8),
                               Text(
                                 '₺${_balance.toStringAsFixed(2)}',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 32,
                                   fontWeight: FontWeight.bold,
@@ -286,7 +288,7 @@ class _WalletPageState extends State<WalletPage> {
                               ),
                               const SizedBox(height: 20),
                               Text(
-                                '1% Cashback on all purchases',
+                                l10n.cashbackInfo,
                                 style: TextStyle(
                                   color:
                                       isDark
@@ -320,9 +322,9 @@ class _WalletPageState extends State<WalletPage> {
                               ),
                               elevation: 2,
                             ),
-                            child: const Text(
-                              'Add Money',
-                              style: TextStyle(
+                            child: Text(
+                              l10n.addMoney,
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -344,14 +346,16 @@ class _WalletPageState extends State<WalletPage> {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Transaction History',
+                                      l10n.transactionHistory,
                                       style:
                                           Theme.of(
                                             context,
                                           ).textTheme.titleLarge,
                                     ),
                                     Text(
-                                      '${_transactions.length} transactions',
+                                      l10n.transactionsCount(
+                                        _transactions.length,
+                                      ),
                                       style: TextStyle(
                                         color: Colors.grey[600],
                                         fontSize: 14,
@@ -385,7 +389,7 @@ class _WalletPageState extends State<WalletPage> {
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
-                                        'No transactions yet',
+                                        l10n.noTransactions,
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
@@ -397,7 +401,7 @@ class _WalletPageState extends State<WalletPage> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        'Your transaction history will appear here',
+                                        l10n.transactionsWillAppear,
                                         style: TextStyle(
                                           color:
                                               isDark
@@ -494,9 +498,9 @@ class _WalletPageState extends State<WalletPage> {
                                                   children: [
                                                     Text(
                                                       isDeposit
-                                                          ? 'Money Added'
+                                                          ? l10n.deposit
                                                           : (transaction['description'] ??
-                                                              'Purchase'),
+                                                              l10n.purchase),
                                                       style: TextStyle(
                                                         fontWeight:
                                                             FontWeight.bold,
@@ -590,6 +594,7 @@ class _WalletPageState extends State<WalletPage> {
   Widget _buildTransactionDetails(Map<String, dynamic> transaction) {
     final bool isDeposit = transaction['type'] == 'deposit';
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       padding: EdgeInsets.all(20),
@@ -598,13 +603,13 @@ class _WalletPageState extends State<WalletPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Transaction Details',
+            l10n.transactionDetails,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           SizedBox(height: 20),
-          _detailRow('Type', isDeposit ? 'Deposit' : 'Purchase'),
+          _detailRow(l10n.type, isDeposit ? l10n.deposit : l10n.purchase),
           _detailRow(
-            'Amount',
+            l10n.amount,
             '₺${transaction['amount'].abs().toStringAsFixed(2)}',
           ),
           if (transaction['cashback'] != null && transaction['cashback'] > 0)
@@ -612,20 +617,19 @@ class _WalletPageState extends State<WalletPage> {
               'Cashback',
               '₺${transaction['cashback'].toStringAsFixed(2)}',
             ),
-          _detailRow('Date', _formatDate(transaction['timestamp'])),
+          _detailRow(l10n.date, _formatDate(transaction['timestamp'])),
           _detailRow(
-            'Status',
+            l10n.status,
             transaction['status']?.toUpperCase() ?? 'COMPLETED',
           ),
           _detailRow(
-            'Method',
-            transaction['method']?.replaceAll('_', ' ').toUpperCase() ??
-                'WALLET',
+            l10n.method,
+            transaction['method']?.replaceAll('_', ' ').toUpperCase() ?? 'WALLET',
           ),
           if (transaction['reference'] != null)
-            _detailRow('Reference', transaction['reference']),
+            _detailRow(l10n.reference, transaction['reference']),
           if (transaction['description'] != null)
-            _detailRow('Description', transaction['description']),
+            _detailRow(l10n.description, transaction['description']),
         ],
       ),
     );
@@ -682,6 +686,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       padding: EdgeInsets.only(
@@ -696,24 +701,24 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Add Money to Wallet',
+              l10n.addMoneyToWallet,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 20),
             TextField(
               controller: _amountController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
               ],
               decoration: InputDecoration(
-                labelText: 'Amount',
+                labelText: l10n.amount,
                 prefixText: '₺',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 hintText: '0.00',
-                errorText: _validateAmount(_amountController.text),
+                errorText: _validateAmount(_amountController.text, l10n),
               ),
               onChanged: (value) {
                 setState(() {});
@@ -722,7 +727,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
             const SizedBox(height: 20),
             if (!_showAddCard && widget.savedCards.isNotEmpty) ...[
               Text(
-                'Select Card',
+                l10n.selectCard,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 10),
@@ -736,7 +741,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                   _showAddCard = !_showAddCard;
                 });
               },
-              child: Text(_showAddCard ? 'Use Saved Card' : 'Add New Card'),
+              child: Text(_showAddCard ? l10n.useCard : l10n.addNewCard),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -747,8 +752,8 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                   final amount = double.tryParse(_amountController.text);
                   if (amount == null || amount <= 0) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Please enter a valid amount'),
+                      SnackBar(
+                        content: Text(l10n.enterValidAmount),
                       ),
                     );
                     return;
@@ -763,10 +768,8 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                         _expiryController.text.isEmpty ||
                         _cvvController.text.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Please fill all card details correctly',
-                          ),
+                        SnackBar(
+                          content: Text(l10n.fillCardDetails),
                         ),
                       );
                       return;
@@ -775,7 +778,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                     await _saveNewCard();
                   } else if (_selectedCard == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please select a card')),
+                      SnackBar(content: Text(l10n.pleaseSelectCard)),
                     );
                     return;
                   }
@@ -784,17 +787,14 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      themeNotifier.isSpecialModeActive
-                          ? themeNotifier
-                              .getThemeColor(themeNotifier.specialTheme)
-                              .shade400
-                          : Colors.red.shade400,
+                  backgroundColor: themeNotifier.isSpecialModeActive
+                      ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                      : Colors.red.shade400,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text('Add Money'),
+                child: Text(l10n.addMoney),
               ),
             ),
             const SizedBox(height: 20),
@@ -819,14 +819,11 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           border: Border.all(
-            color:
-                isSelected
-                    ? (themeNotifier.isSpecialModeActive
-                        ? themeNotifier
-                            .getThemeColor(themeNotifier.specialTheme)
-                            .shade400
-                        : Colors.red.shade400)
-                    : Colors.grey.shade300,
+            color: isSelected
+                ? (themeNotifier.isSpecialModeActive
+                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                    : Colors.red.shade400)
+                : Colors.grey.shade300,
             width: 2,
           ),
           borderRadius: BorderRadius.circular(12),
@@ -835,14 +832,11 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
           children: [
             Icon(
               Icons.credit_card,
-              color:
-                  isSelected
-                      ? (themeNotifier.isSpecialModeActive
-                          ? themeNotifier
-                              .getThemeColor(themeNotifier.specialTheme)
-                              .shade400
-                          : Colors.red.shade400)
-                      : Colors.grey,
+              color: isSelected
+                  ? (themeNotifier.isSpecialModeActive
+                      ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                      : Colors.red.shade400)
+                  : Colors.grey,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -863,12 +857,9 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
             if (isSelected)
               Icon(
                 Icons.check_circle,
-                color:
-                    themeNotifier.isSpecialModeActive
-                        ? themeNotifier
-                            .getThemeColor(themeNotifier.specialTheme)
-                            .shade400
-                        : Colors.red.shade400,
+                color: themeNotifier.isSpecialModeActive
+                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                    : Colors.red.shade400,
               ),
           ],
         ),
@@ -877,10 +868,11 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
   }
 
   Widget _buildAddCardForm() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Add New Card', style: Theme.of(context).textTheme.titleMedium),
+        Text(l10n.addNewCard, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 16),
         TextField(
           controller: _cardNumberController,
@@ -889,17 +881,17 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
           onChanged: (value) {
             setState(() {
               if (value.length != 16) {
-                _cardNumberError = 'Card number must be 16 digits';
+                _cardNumberError = l10n.cardNumberError;
               } else if (!RegExp(r'^[0-9]{16}$').hasMatch(value)) {
-                _cardNumberError = 'Invalid card number';
+                _cardNumberError = l10n.invalidCardNumber;
               } else {
                 _cardNumberError = null;
               }
             });
           },
           decoration: InputDecoration(
-            labelText: 'Card Number',
-            prefixIcon: Icon(Icons.credit_card),
+            labelText: l10n.cardNumber,
+            prefixIcon: const Icon(Icons.credit_card),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             errorText: _cardNumberError,
             counterText: '',
@@ -919,14 +911,13 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
             }),
           ],
           decoration: InputDecoration(
-            labelText: 'Card Holder Name',
-            prefixIcon: Icon(Icons.person),
+            labelText: l10n.cardHolderName,
+            prefixIcon: const Icon(Icons.person),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            errorText:
-                _cardHolderController.text.isEmpty
-                    ? null
-                    : !_namePattern.hasMatch(_cardHolderController.text)
-                    ? 'Only letters allowed'
+            errorText: _cardHolderController.text.isEmpty
+                ? null
+                : !_namePattern.hasMatch(_cardHolderController.text)
+                    ? l10n.onlyLettersAllowed
                     : null,
           ),
           onChanged: (value) => setState(() {}),
@@ -947,18 +938,16 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                 onChanged: (value) {
                   setState(() {
                     if (value.isEmpty) {
-                      _expiryError = 'Required';
-                    } else if (!RegExp(
-                      r'^(0[1-9]|1[0-2])\/([0-9]{2})$',
-                    ).hasMatch(value)) {
-                      _expiryError = 'Use MM/YY format';
+                      _expiryError = l10n.required;
+                    } else if (!RegExp(r'^(0[1-9]|1[0-2])\/([0-9]{2})$').hasMatch(value)) {
+                      _expiryError = l10n.useMMYYFormat;
                     } else {
                       final parts = value.split('/');
                       final month = int.parse(parts[0]);
                       final year = int.parse('20${parts[1]}');
                       final expiry = DateTime(year, month);
                       if (expiry.isBefore(DateTime.now())) {
-                        _expiryError = 'Card expired';
+                        _expiryError = l10n.cardExpired;
                       } else {
                         _expiryError = null;
                       }
@@ -967,10 +956,8 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                 },
                 decoration: InputDecoration(
                   labelText: 'MM/YY',
-                  prefixIcon: Icon(Icons.calendar_today),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  prefixIcon: const Icon(Icons.calendar_today),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   errorText: _expiryError,
                   counterText: '',
                 ),
@@ -990,7 +977,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                 onChanged: (value) {
                   setState(() {
                     if (!_numberPattern.hasMatch(value) || value.length != 3) {
-                      _cvvError = 'Invalid CVV';
+                      _cvvError = l10n.invalidCVV;
                     } else {
                       _cvvError = null;
                     }
@@ -998,10 +985,8 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                 },
                 decoration: InputDecoration(
                   labelText: 'CVV',
-                  prefixIcon: Icon(Icons.security),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  prefixIcon: const Icon(Icons.security),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   errorText: _cvvError,
                   counterText: '',
                 ),
@@ -1013,19 +998,19 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
     );
   }
 
-  String? _validateAmount(String value) {
+  String? _validateAmount(String value, AppLocalizations l10n) {
     if (value.isEmpty) return null;
 
     try {
       final amount = double.parse(value);
       if (amount <= 0) {
-        return 'Amount must be greater than 0';
+        return l10n.amountMustBeGreater;
       }
       if (amount > 10000) {
-        return 'Maximum amount is ₺10,000';
+        return l10n.maximumAmount;
       }
     } catch (e) {
-      return 'Invalid amount';
+      return l10n.invalidAmount;
     }
     return null;
   }
@@ -1035,12 +1020,11 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
     if (user == null) return;
 
     try {
-      final cardRef =
-          FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .collection('cards')
-              .doc();
+      final cardRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('cards')
+          .doc();
 
       await cardRef.set({
         'cardNumber': _cardNumberController.text,
@@ -1056,17 +1040,19 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
       _expiryController.clear();
       _cvvController.clear();
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Card saved successfully')));
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.cardSaved)),
+      );
 
       setState(() {
         _showAddCard = false;
       });
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error saving card: $e')));
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.errorSavingCard(e.toString()))),
+      );
     }
   }
 }

@@ -6,6 +6,7 @@ import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:engineering_project/pages/cart_page.dart';
 import 'package:engineering_project/pages/theme_notifier.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class FavoritesPage extends StatefulWidget {
   final Function? onFavoritesChanged;
@@ -130,6 +131,7 @@ class _FavoritesPageState extends State<FavoritesPage>
   }
 
   Future<void> removeFromFavorites(String productId) async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -153,7 +155,7 @@ class _FavoritesPageState extends State<FavoritesPage>
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Removed from favorites'),
+          content: Text(l10n.removedFromFavorites),
           duration: Duration(seconds: 1),
         ),
       );
@@ -161,7 +163,7 @@ class _FavoritesPageState extends State<FavoritesPage>
       print('Error removing from favorites: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to remove from favorites'),
+          content: Text(l10n.failedToRemove),
           duration: Duration(seconds: 2),
         ),
       );
@@ -169,6 +171,7 @@ class _FavoritesPageState extends State<FavoritesPage>
   }
 
   Future<void> addToCart(Map<String, dynamic> product) async {
+    final l10n = AppLocalizations.of(context)!;
     final controller = _animationControllers[product['id']];
     if (controller != null && mounted) {
       controller.reset();
@@ -181,7 +184,7 @@ class _FavoritesPageState extends State<FavoritesPage>
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Please log in to add items to cart'),
+            content: Text(l10n.pleaseLoginToAdd),
             duration: Duration(seconds: 2),
           ),
         );
@@ -211,10 +214,10 @@ class _FavoritesPageState extends State<FavoritesPage>
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${product["name"]} added to cart'),
+          content: Text(l10n.addedToCart(product["name"])),
           duration: Duration(seconds: 2),
           action: SnackBarAction(
-            label: 'VIEW CART',
+            label: l10n.viewCart,
             onPressed: () {
               Navigator.push(
                 context,
@@ -228,7 +231,7 @@ class _FavoritesPageState extends State<FavoritesPage>
       print('Error adding item to cart: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to add item to cart'),
+          content: Text(l10n.failedToAddToCart),
           duration: Duration(seconds: 2),
         ),
       );
@@ -248,6 +251,7 @@ class _FavoritesPageState extends State<FavoritesPage>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
@@ -258,7 +262,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                     ? Theme.of(context).appBarTheme.backgroundColor
                     : Colors.red.shade700),
         title: Text(
-          "My Favorites",
+          l10n.myFavorites,
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         iconTheme: IconThemeData(color: Colors.white),
@@ -267,7 +271,7 @@ class _FavoritesPageState extends State<FavoritesPage>
             IconButton(
               icon: Icon(Icons.refresh, color: Colors.white),
               onPressed: fetchFavorites,
-              tooltip: 'Refresh',
+              tooltip: l10n.refresh,
             ),
         ],
         elevation: 0,
@@ -283,6 +287,8 @@ class _FavoritesPageState extends State<FavoritesPage>
 
   Widget _buildEmptyFavorites() {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -297,7 +303,7 @@ class _FavoritesPageState extends State<FavoritesPage>
           ),
           SizedBox(height: 1),
           Text(
-            "No favorites yet",
+            l10n.noFavoritesYet,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -306,7 +312,7 @@ class _FavoritesPageState extends State<FavoritesPage>
           ),
           SizedBox(height: 1),
           Text(
-            "Items you mark as favorite will appear here",
+            l10n.itemsYouFavorite,
             style: TextStyle(color: Colors.grey[600], fontSize: 16),
           ),
           SizedBox(height: 1),
@@ -316,7 +322,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                   context,
                   MaterialPageRoute(builder: (context) => const RootScreen()),
                 ),
-            child: Text("Explore Products"),
+            child: Text(l10n.exploreProducts),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               foregroundColor: Colors.white,
@@ -361,6 +367,7 @@ class _FavoritesPageState extends State<FavoritesPage>
     required Map<String, dynamic> product,
     required bool isOutOfStock,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     if (!_animationControllers.containsKey(product['id'])) {
       _animationControllers[product['id']] = AnimationController(
@@ -578,14 +585,12 @@ class _FavoritesPageState extends State<FavoritesPage>
                                       SizedBox(width: 4),
                                       Text(
                                         isOutOfStock
-                                            ? "OUT OF STOCK"
-                                            : "ADD TO CART",
+                                            ? l10n.outOfStock
+                                            : l10n.addToCart,
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          color:
-                                              Colors
-                                                  .white, // Keep text color white always
+                                          color: Colors.white,
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,

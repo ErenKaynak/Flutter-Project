@@ -3,12 +3,14 @@ import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:engineering_project/pages/search_page.dart';
 import 'package:engineering_project/pages/theme_notifier.dart';
+import 'package:engineering_project/assets/components/cart_manager.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -34,15 +36,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final Map<String, Animation<double>> _tickAnimations = {};
   final Map<String, bool> _isAddingToCartMap = {};
   bool _isDisposed = false;
-  String _userName = "Guest";
+  String _userName = "";
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _cartManager.loadCart();
     _cartManager.addListener(_updateUI);
-    _getUserProfile();
-    _loadCategories();
     _searchController.addListener(() {
       if (mounted) {
         setState(() {
@@ -50,7 +51,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         });
       }
     });
-    _loadInitialData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _isInitialized = true;
+      _getUserProfile();
+      _loadCategories();
+      _loadInitialData();
+    }
   }
 
   Future<void> _loadCategories() async {
@@ -121,30 +132,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       setState(() {
-        _userName = "Guest";
+        _userName = AppLocalizations.of(context)!.guestUser;
         _userProfilePicture = null;
       });
       return;
     }
     try {
-      final userDoc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .get();
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       final profileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
       if (mounted) {
         setState(() {
-          _userName = userDoc.data()?['name'] ?? 'User';
-          _userProfilePicture =
-              profileImageUrl.isNotEmpty ? profileImageUrl : null;
+          _userName = userDoc.data()?['name'] ?? AppLocalizations.of(context)!.guestUser;
+          _userProfilePicture = profileImageUrl.isNotEmpty ? profileImageUrl : null;
         });
       }
     } catch (e) {
       print('Error fetching user profile: $e');
       if (mounted) {
         setState(() {
-          _userName = "User";
+          _userName = AppLocalizations.of(context)!.guestUser;
           _userProfilePicture = null;
         });
       }
@@ -169,12 +175,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       );
       _colorAnimationControllers[productId] = colorController;
       _colorAnimations[productId] = ColorTween(
-        begin:
-            themeNotifier.isSpecialModeActive
-                ? themeNotifier
-                    .getThemeColor(themeNotifier.specialTheme)
-                    .shade400
-                : Colors.red.shade400,
+        begin: themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+            : Colors.red.shade400,
         end: Colors.green.shade500,
       ).animate(colorController);
       final tickController = AnimationController(
@@ -190,22 +193,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> fetchProducts() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!mounted) return;
     try {
-      final QuerySnapshot snapshot =
-          await FirebaseFirestore.instance.collection('products').get();
+      final QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('products').get();
       final List<Map<String, dynamic>> loadedProducts = [];
       snapshot.docs.forEach((doc) {
         final data = doc.data() as Map<String, dynamic>;
-        print('Product: ${data['name']}, Image path: ${data['imagePath']}');
         String priceString = data['price']?.toString() ?? '0';
         loadedProducts.add({
           'id': doc.id,
-          'name': data['name'] ?? 'Unknown Product',
+          'name': data['name'] ?? l10n.loading,
           'price': priceString,
-          'category': data['category'] ?? 'Uncategorized',
+          'category': data['category'] ?? l10n.allCategories,
           'image': data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-          'description': data['description'] ?? 'No description available',
+          'description': data['description'] ?? l10n.loading,
           'stock': data['stock'] ?? 0,
           'averageRating': data['averageRating']?.toDouble() ?? 0.0,
           'ratingCount': data['ratingCount'] ?? 0,
@@ -371,130 +373,64 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _navigateToProductDetail(Map<String, dynamic> product) {
-    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ProductDetailPage(productId: product["id"]),
+        builder: (context) => ProductDetailPage(productId: product['id']),
       ),
     );
   }
 
   Future<void> _addToCart(Map<String, dynamic> product) async {
+    final l10n = AppLocalizations.of(context)!;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.info_outline, color: Colors.white),
-              const SizedBox(width: 8),
-              const Text('You need to sign in to continue'),
-              const Spacer(),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => LoginPage()),
-                  );
-                },
-                child: const Text(
-                  'SIGN IN',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          duration: const Duration(seconds: 3),
-          backgroundColor: Colors.red.shade400,
-        ),
+        SnackBar(content: Text(l10n.pleaseSignIn)),
       );
       return;
     }
+
     if (_isAddingToCartMap[product['id']] == true) return;
-    _isAddingToCartMap[product['id']] = true;
-    _colorAnimationControllers[product['id']]?.forward();
-    await Future.delayed(Duration(milliseconds: 200));
-    _tickAnimationControllers[product['id']]?.forward();
+
+    setState(() {
+      _isAddingToCartMap[product['id']] = true;
+    });
+
     try {
-      final cartRef = FirebaseFirestore.instance
-          .collection('cart')
-          .doc(user.uid)
-          .collection('userCart')
-          .doc(product['id']);
-      final docSnapshot = await cartRef.get();
-      if (docSnapshot.exists) {
-        final currentQuantity = docSnapshot.data()?['quantity'] ?? 1;
-        final newQuantity = (currentQuantity + 1).clamp(1, 10);
-        await cartRef.update({'quantity': newQuantity});
-      } else {
-        await cartRef.set({
-          'name': product['name'],
-          'price': product['price'],
-          'imagePath': product['image'],
-          'quantity': 1,
-        });
-      }
+      await _cartManager.addToCart(product);
       if (mounted) {
+        _colorAnimationControllers[product['id']]?.forward();
+        _tickAnimationControllers[product['id']]?.forward();
+        final message = l10n.addedToCart.toString().replaceFirst('{productName}', product['name']);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${product["name"]} added to cart'),
-            duration: Duration(seconds: 2),
-            action: SnackBarAction(
-              label: 'VIEW CART',
-              onPressed: () {
-                if (mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CartPage.CartPage(),
-                    ),
-                  );
-                }
-              },
-            ),
-          ),
+          SnackBar(content: Text(message)),
         );
-      }
-      await Future.delayed(Duration(seconds: 1));
-      if (mounted) {
-        _resetAnimations(product['id']);
       }
     } catch (e) {
-      print('Error adding item to cart: $e');
-      _resetAnimations(product['id']);
+      print('Error adding to cart: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to add item to cart: $e'),
-            duration: Duration(seconds: 2),
-          ),
+          SnackBar(content: Text(l10n.errorAddingToCart)),
         );
       }
-    }
-  }
-
-  void _resetAnimations(String productId) {
-    final colorController = _colorAnimationControllers[productId];
-    final tickController = _tickAnimationControllers[productId];
-    if (colorController?.isAnimating ?? false) {
-      colorController?.stop();
-    }
-    if (tickController?.isAnimating ?? false) {
-      tickController?.stop();
-    }
-    colorController?.reset();
-    tickController?.reset();
-    if (mounted) {
-      setState(() {
-        _isAddingToCartMap[productId] = false;
-      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAddingToCartMap[product['id']] = false;
+        });
+        Future.delayed(Duration(seconds: 1), () {
+          _colorAnimationControllers[product['id']]?.reverse();
+          _tickAnimationControllers[product['id']]?.reverse();
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SafeArea(
@@ -516,7 +452,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               controller: _searchController,
               style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               decoration: InputDecoration(
-                hintText: "Search products",
+                hintText: l10n.searchProducts,
                 hintStyle: TextStyle(
                   color: isDark ? Colors.grey[400] : Colors.grey[600],
                 ),
@@ -741,7 +677,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            "Welcome",
+                                            l10n.welcome,
                                             style: TextStyle(
                                               fontSize: 16,
                                               color:
@@ -792,6 +728,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildBannerSection() {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 10),
       height: 180,
@@ -853,7 +790,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Special Offers',
+                    l10n.specialOffers,
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -862,24 +799,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Get up to 20% off on selected products',
+                    l10n.specialOffersDescription,
                     style: TextStyle(fontSize: 16, color: Colors.white),
                   ),
                   SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {},
                     child: Text(
-                      'Shop Now',
+                      l10n.shopNow,
                       style: TextStyle(
-                        color:
-                            themeNotifier.isSpecialModeActive
-                                ? themeNotifier.getThemeColor(
-                                  themeNotifier.specialTheme,
-                                )
-                                : (Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white
-                                    : Colors.red),
+                        color: themeNotifier.isSpecialModeActive
+                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                            : (Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.red),
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
@@ -901,13 +834,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildCategoriesHeader() {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.all(10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            "Categories",
+            l10n.categories,
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           PopupMenuButton<String>(
@@ -926,14 +860,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
                 SizedBox(width: 4),
                 Text(
-                  "Sort",
+                  l10n.sort,
                   style: TextStyle(
-                    color:
-                        themeNotifier.isSpecialModeActive
-                            ? themeNotifier.getThemeColor(
-                              themeNotifier.specialTheme,
-                            )
-                            : Colors.red.shade700,
+                    color: themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                        : Colors.red.shade700,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1060,7 +991,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     bool isAsset,
   ) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -1070,112 +1003,87 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             height: 70,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color:
-                  isDark
-                      ? (isSelected
+              color: isDark
+                  ? (isSelected
+                      ? (themeNotifier.isSpecialModeActive
+                          ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900
+                          : Colors.red.shade900)
+                      : Colors.grey.shade800)
+                  : (isSelected
+                      ? (themeNotifier.isSpecialModeActive
+                          ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade50
+                          : Colors.red.shade50)
+                      : Colors.grey.shade200),
+              border: isSelected
+                  ? Border.all(
+                      color: isDark
                           ? (themeNotifier.isSpecialModeActive
-                              ? themeNotifier
-                                  .getThemeColor(themeNotifier.specialTheme)
-                                  .shade900
-                              : Colors.red.shade900)
-                          : Colors.grey.shade800)
-                      : (isSelected
-                          ? (themeNotifier.isSpecialModeActive
-                              ? themeNotifier
-                                  .getThemeColor(themeNotifier.specialTheme)
-                                  .shade50
-                              : Colors.red.shade50)
-                          : Colors.grey.shade200),
-              border:
-                  isSelected
-                      ? Border.all(
-                        color:
-                            isDark
-                                ? (themeNotifier.isSpecialModeActive
-                                    ? themeNotifier
-                                        .getThemeColor(
-                                          themeNotifier.specialTheme,
-                                        )
-                                        .shade700
-                                    : Colors.red.shade700)
-                                : (themeNotifier.isSpecialModeActive
-                                    ? themeNotifier
-                                        .getThemeColor(
-                                          themeNotifier.specialTheme,
-                                        )
-                                        .shade400
-                                    : Colors.red.shade400),
-                        width: 2,
-                      )
-                      : null,
-              boxShadow:
-                  isSelected
-                      ? [
-                        BoxShadow(
-                          color:
-                              themeNotifier.isSpecialModeActive
-                                  ? themeNotifier
-                                      .getThemeColor(themeNotifier.specialTheme)
-                                      .withOpacity(0.5)
-                                  : (isDark
-                                      ? Colors.red.shade900.withOpacity(0.5)
-                                      : Colors.red.shade300.withOpacity(0.5)),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                      : null,
+                              ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
+                              : Colors.red.shade700)
+                          : (themeNotifier.isSpecialModeActive
+                              ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                              : Colors.red.shade400),
+                      width: 2,
+                    )
+                  : null,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: themeNotifier.isSpecialModeActive
+                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).withOpacity(0.5)
+                            : (isDark
+                                ? Colors.red.shade900.withOpacity(0.5)
+                                : Colors.red.shade400.withOpacity(0.5)),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ]
+                  : null,
             ),
             padding: EdgeInsets.all(10),
-            child:
-                isAsset
-                    ? Image.asset(
+            child: isAsset
+                ? Image.asset(
+                    imagePath,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        Icons.category,
+                        color: isDark ? Colors.white70 : Colors.grey,
+                      );
+                    },
+                  )
+                : ColorFiltered(
+                    colorFilter: isDark
+                        ? ColorFilter.mode(Colors.white70, BlendMode.srcIn)
+                        : ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                    child: Image.network(
                       imagePath,
                       fit: BoxFit.contain,
-                      color: isDark ? Colors.white60 : null,
-                    )
-                    : ColorFiltered(
-                      colorFilter:
-                          isDark
-                              ? ColorFilter.mode(
-                                Colors.white70,
-                                BlendMode.srcIn,
-                              )
-                              : ColorFilter.mode(Colors.black, BlendMode.srcIn),
-                      child: Image.network(
-                        imagePath,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          print('Error loading category image: $error');
-                          return Icon(
-                            Icons.category,
-                            color: isDark ? Colors.white70 : Colors.grey,
-                          );
-                        },
-                      ),
+                      errorBuilder: (context, error, stackTrace) {
+                        return Icon(
+                          Icons.category,
+                          color: isDark ? Colors.white70 : Colors.grey,
+                        );
+                      },
                     ),
+                  ),
           ),
           SizedBox(height: 8),
           Text(
             label,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color:
-                  isDark
-                      ? (isSelected
-                          ? (themeNotifier.isSpecialModeActive
-                              ? themeNotifier
-                                  .getThemeColor(themeNotifier.specialTheme)
-                                  .shade400
-                              : Colors.red.shade400)
-                          : Colors.white70)
-                      : (isSelected
-                          ? (themeNotifier.isSpecialModeActive
-                              ? themeNotifier.getThemeColor(
-                                themeNotifier.specialTheme,
-                              )
-                              : Colors.red)
-                          : Colors.black),
+              color: isDark
+                  ? (isSelected
+                      ? (themeNotifier.isSpecialModeActive
+                          ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                          : Colors.red.shade400)
+                      : Colors.white70)
+                  : (isSelected
+                      ? (themeNotifier.isSpecialModeActive
+                          ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                          : Colors.red)
+                      : Colors.black),
             ),
           ),
         ],
@@ -1184,6 +1092,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildProductsHeader() {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.all(10),
       child: Row(
@@ -1191,14 +1100,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         children: [
           Text(
             _searchQuery.isNotEmpty
-                ? "Search Results"
+                ? l10n.searchProducts
                 : (_selectedCategory == "All"
-                    ? "Best Deals"
+                    ? l10n.bestDeals
                     : _selectedCategory),
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           Text(
-            "${filteredProducts.length} products",
+            "${filteredProducts.length} ${l10n.products}",
             style: TextStyle(color: Colors.grey[600]),
           ),
         ],
@@ -1207,6 +1116,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildProductsGrid() {
+    final l10n = AppLocalizations.of(context)!;
     if (filteredProducts.isEmpty) {
       return SliverToBoxAdapter(
         child: Center(
@@ -1218,14 +1128,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 Icon(Icons.search_off, size: 70, color: Colors.grey),
                 SizedBox(height: 16),
                 Text(
-                  "No products found",
+                  l10n.noProductsFound,
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
                 Text(
                   _searchQuery.isNotEmpty
-                      ? "Try a different search term"
-                      : "Try selecting a different category",
+                      ? l10n.tryDifferentSearch
+                      : l10n.tryDifferentCategory,
                   style: TextStyle(color: Colors.grey[600]),
                 ),
               ],
@@ -1234,6 +1144,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ),
       );
     }
+
     return SliverPadding(
       padding: EdgeInsets.all(10),
       sliver: SliverGrid(
@@ -1243,298 +1154,313 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           mainAxisSpacing: 15,
           childAspectRatio: 0.65,
         ),
-        delegate: SliverChildBuilderDelegate((context, index) {
-          final product = filteredProducts[index];
-          final int stock = product["stock"] is int ? product["stock"] : 0;
-          final bool isOutOfStock = stock <= 0;
-          final bool isFavorite = favoriteProductIds.contains(product['id']);
-          if (!_animationControllers.containsKey(product['id']) &&
-              mounted &&
-              !_isDisposed) {
-            _animationControllers[product['id']] = AnimationController(
-              vsync: this,
-              duration: Duration(seconds: 2),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final product = filteredProducts[index];
+            final int stock = product["stock"] is int ? product["stock"] : 0;
+            final bool isOutOfStock = stock <= 0;
+            final bool isFavorite = favoriteProductIds.contains(product['id']);
+
+            if (!_animationControllers.containsKey(product['id']) &&
+                mounted &&
+                !_isDisposed) {
+              _animationControllers[product['id']] = AnimationController(
+                vsync: this,
+                duration: Duration(milliseconds: 300),
+              );
+            }
+
+            final animationController = _animationControllers[product['id']];
+            if (animationController == null) return Container();
+
+            return GestureDetector(
+              onTap: () => _navigateToProductDetail(product),
+              child: Card(
+                elevation: 3,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey.shade800
+                    : Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Flexible(
+                      flex: 3,
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey.shade900
+                              : Colors.grey[200],
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                        ),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Center(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                                child: _buildProductImage(product),
+                              ),
+                            ),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: _buildFavoriteButton(product['id'], isFavorite),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Flexible(
+                      flex: 2,
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      product["name"],
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Flexible(
+                                    child: Text(
+                                      "₺${product["price"]}",
+                                      style: TextStyle(
+                                        color: Colors.green.shade700,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  SizedBox(height: 6),
+                                  _buildRatingBar(product),
+                                ],
+                              ),
+                            ),
+                            _buildAddToCartButton(product, isOutOfStock, animationController),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             );
-          }
-          final animationController = _animationControllers[product['id']];
-          if (animationController == null) {
-            return Container();
-          }
-          return _buildProductCard(
-            product: product,
-            isOutOfStock: isOutOfStock,
-            isFavorite: isFavorite,
-            animationController: animationController,
-          );
-        }, childCount: filteredProducts.length),
+          },
+          childCount: filteredProducts.length,
+        ),
       ),
     );
   }
 
-  Widget _buildProductCard({
-    required Map<String, dynamic> product,
-    required bool isOutOfStock,
-    required bool isFavorite,
-    required AnimationController animationController,
-  }) {
+  Widget _buildProductImage(Map<String, dynamic> product) {
+    if (product["image"].startsWith('http') || product["image"].startsWith('https')) {
+      return Image.network(
+        product["image"],
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (context, error, stackTrace) => Image.asset(
+          'lib/assets/Images/placeholder.png',
+          fit: BoxFit.cover,
+        ),
+      );
+    } else {
+      return Image.asset(
+        product["image"],
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (context, error, stackTrace) => Icon(
+          Icons.image_not_supported,
+          size: 40,
+          color: Colors.grey[400],
+        ),
+      );
+    }
+  }
+
+  Widget _buildFavoriteButton(String productId, bool isFavorite) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    return GestureDetector(
-      onTap: () => _navigateToProductDetail(product),
-      child: Card(
-        elevation: 3,
-        color:
-            Theme.of(context).brightness == Brightness.dark
-                ? Colors.grey.shade800
-                : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Flexible(
-              flex: 3,
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color:
-                      Theme.of(context).brightness == Brightness.dark
-                          ? Colors.grey.shade900
-                          : Colors.grey[200],
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Center(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(12),
-                        ),
-                        child:
-                            (product["image"].startsWith('http') ||
-                                    product["image"].startsWith('https'))
-                                ? Image.network(
-                                  product["image"],
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  errorBuilder:
-                                      (context, error, stackTrace) =>
-                                          Image.asset(
-                                            'lib/assets/Images/placeholder.png',
-                                            fit: BoxFit.cover,
-                                          ),
-                                )
-                                : Image.asset(
-                                  product["image"],
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  errorBuilder:
-                                      (context, error, stackTrace) => Icon(
-                                        Icons.image_not_supported,
-                                        size: 40,
-                                        color: Colors.grey[400],
-                                      ),
-                                ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.8),
-                          shape: BoxShape.circle,
-                        ),
-                        child: GestureDetector(
-                          onTap: () => toggleFavorite(product),
-                          child: Icon(
-                            isFavorite ? Icons.favorite : Icons.favorite_border,
-                            color:
-                                themeNotifier.isSpecialModeActive
-                                    ? themeNotifier.getThemeColor(
-                                      themeNotifier.specialTheme,
-                                    )
-                                    : Colors.red,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Flexible(
-              flex: 2,
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              product["name"],
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              softWrap: true,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Flexible(
-                            child: Text(
-                              "₺${product["price"]}",
-                              style: TextStyle(
-                                color: Colors.green.shade700,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          SizedBox(height: 6),
-                          Flexible(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                ...List.generate(5, (index) {
-                                  double rating =
-                                      product["averageRating"] ?? 0.0;
-                                  return Icon(
-                                    index < rating.floor()
-                                        ? Icons.star
-                                        : (index < rating
-                                            ? Icons.star_half
-                                            : Icons.star_border),
-                                    color: Colors.yellow.shade700,
-                                    size: 16,
-                                  );
-                                }),
-                                SizedBox(width: 4),
-                                Text(
-                                  '(${product["ratingCount"] ?? 0})',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 36,
-                        child: AnimatedBuilder(
-                          animation: Listenable.merge([
-                            _colorAnimationControllers[product['id']]!,
-                            _tickAnimationControllers[product['id']]!,
-                          ]),
-                          builder: (context, child) {
-                            return ElevatedButton(
-                              onPressed:
-                                  isOutOfStock ||
-                                          _isAddingToCartMap[product['id']] ==
-                                              true
-                                      ? null
-                                      : () => _addToCart(product),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    _colorAnimations[product['id']]?.value ??
-                                    (themeNotifier.isSpecialModeActive
-                                        ? themeNotifier
-                                            .getThemeColor(
-                                              themeNotifier.specialTheme,
-                                            )
-                                            .shade400
-                                        : Colors.red.shade400),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                elevation: 2,
-                                padding: EdgeInsets.symmetric(horizontal: 8),
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Opacity(
-                                    opacity:
-                                        1.0 -
-                                        (_colorAnimationControllers[product['id']]
-                                                ?.value ??
-                                            0.0),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.shopping_cart_outlined,
-                                          size: 16,
-                                          color: Colors.white,
-                                        ),
-                                        SizedBox(width: 4),
-                                        Text(
-                                          isOutOfStock
-                                              ? "OUT OF STOCK"
-                                              : "ADD TO CART",
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if ((_colorAnimationControllers[product['id']]
-                                              ?.value ??
-                                          0.0) >
-                                      0)
-                                    Transform.scale(
-                                      scale:
-                                          _tickAnimations[product['id']]
-                                              ?.value ??
-                                          0.0,
-                                      child: Icon(
-                                        Icons.check,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+    return Container(
+      padding: EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.8),
+        shape: BoxShape.circle,
+      ),
+      child: GestureDetector(
+        onTap: () => _toggleFavorite(productId),
+        child: Icon(
+          isFavorite ? Icons.favorite : Icons.favorite_border,
+          color: themeNotifier.isSpecialModeActive
+              ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+              : Colors.red,
+          size: 20,
         ),
       ),
     );
+  }
+
+  Widget _buildRatingBar(Map<String, dynamic> product) {
+    return Flexible(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          ...List.generate(5, (index) {
+            double rating = product["averageRating"] ?? 0.0;
+            return Icon(
+              index < rating.floor()
+                  ? Icons.star
+                  : (index < rating ? Icons.star_half : Icons.star_border),
+              color: Colors.yellow.shade700,
+              size: 16,
+            );
+          }),
+          SizedBox(width: 4),
+          Text(
+            '(${product["ratingCount"] ?? 0})',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddToCartButton(
+    Map<String, dynamic> product,
+    bool isOutOfStock,
+    AnimationController animationController,
+  ) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
+      child: SizedBox(
+        width: double.infinity,
+        height: 36,
+        child: AnimatedBuilder(
+          animation: Listenable.merge([
+            _colorAnimationControllers[product['id']]!,
+            _tickAnimationControllers[product['id']]!,
+          ]),
+          builder: (context, child) {
+            return ElevatedButton(
+              onPressed: isOutOfStock || _isAddingToCartMap[product['id']] == true
+                  ? null
+                  : () => _addToCart(product),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _colorAnimations[product['id']]?.value ??
+                    (themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                        : Colors.red.shade400),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 2,
+                padding: EdgeInsets.symmetric(horizontal: 8),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Opacity(
+                    opacity: 1.0 - (_colorAnimationControllers[product['id']]?.value ?? 0.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.shopping_cart_outlined, size: 16, color: Colors.white),
+                        SizedBox(width: 4),
+                        Text(
+                          isOutOfStock ? l10n.outOfStock : l10n.addToCart,
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if ((_colorAnimationControllers[product['id']]?.value ?? 0.0) > 0)
+                    Transform.scale(
+                      scale: _tickAnimations[product['id']]?.value ?? 0.0,
+                      child: Icon(Icons.check, color: Colors.white, size: 24),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _toggleFavorite(String productId) async {
+    final l10n = AppLocalizations.of(context)!;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.pleaseSignIn)),
+      );
+      return;
+    }
+
+    try {
+      final isFavorite = favoriteProductIds.contains(productId);
+      if (isFavorite) {
+        await FirebaseFirestore.instance
+            .collection('favorites')
+            .doc(user.uid)
+            .collection('userFavorites')
+            .doc(productId)
+            .delete();
+        if (mounted) {
+          setState(() {
+            favoriteProductIds.remove(productId);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.removedFromFavorites)),
+          );
+        }
+      } else {
+        await FirebaseFirestore.instance
+            .collection('favorites')
+            .doc(user.uid)
+            .collection('userFavorites')
+            .doc(productId)
+            .set({'timestamp': FieldValue.serverTimestamp()});
+        if (mounted) {
+          setState(() {
+            favoriteProductIds.add(productId);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.addedToFavorites)),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error toggling favorite: $e');
+    }
   }
 }
 
@@ -1814,6 +1740,35 @@ class CartManager extends ChangeNotifier {
       await batch.commit();
     } catch (e) {
       print('Error saving cart: $e');
+    }
+  }
+
+  Future<void> addToCart(Map<String, dynamic> product) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final cartRef = FirebaseFirestore.instance
+          .collection('cart')
+          .doc(user.uid)
+          .collection('userCart')
+          .doc(product['id']);
+      final docSnapshot = await cartRef.get();
+      if (docSnapshot.exists) {
+        final currentQuantity = docSnapshot.data()?['quantity'] ?? 1;
+        final newQuantity = (currentQuantity + 1).clamp(1, 10);
+        await cartRef.update({'quantity': newQuantity});
+      } else {
+        await cartRef.set({
+          'name': product['name'],
+          'price': product['price'],
+          'imagePath': product['image'],
+          'quantity': 1,
+        });
+      }
+      notifyListeners();
+    } catch (e) {
+      print('Error adding item to cart: $e');
     }
   }
 }

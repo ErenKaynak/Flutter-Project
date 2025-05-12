@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:engineering_project/pages/cart_page.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class CheckoutPage extends StatefulWidget {
   final double subtotal;
@@ -360,19 +361,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   bool _validateCardInputs() {
+    final l10n = AppLocalizations.of(context)!;
     if (_cardNumberController.text.isEmpty ||
         _cardHolderController.text.isEmpty ||
         _expiryDateController.text.isEmpty ||
         _cvvController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.fillAllFields)),
+      );
       return false;
     }
 
     if (_isCardExpired(_expiryDateController.text)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Your card is expired, please try again')),
+        SnackBar(content: Text(l10n.cardExpired)),
       );
       return false;
     }
@@ -407,16 +409,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Future<void> _processOrder() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_selectedAddress == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select an address')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.pleaseSelectAddress)),
+      );
       return;
     }
 
     if (_selectedPaymentMethod == 'Credit Card' && _selectedCard == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a credit card')),
+        SnackBar(content: Text(l10n.pleaseSelectCard)),
       );
       return;
     }
@@ -622,6 +625,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   Widget _buildAddressSection() {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -629,10 +633,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Delivery Address',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
             TextButton.icon(
               onPressed: () async {
                 final result = await Navigator.push(
@@ -644,16 +644,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 }
               },
               icon: const Icon(Icons.add),
-              label: const Text('Add New'),
+              label: Text(l10n.addNew),
             ),
           ],
         ),
         const SizedBox(height: 8),
         if (_savedAddresses.isEmpty)
-          const Card(
+          Card(
             child: Padding(
               padding: EdgeInsets.all(16),
-              child: Text('No saved addresses'),
+              child: Text(l10n.noSavedAddresses),
             ),
           )
         else
@@ -728,6 +728,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   Widget _buildCreditCardSection() {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -735,23 +736,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Credit Cards',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
             TextButton.icon(
               onPressed: _addNewCard,
               icon: const Icon(Icons.add),
-              label: const Text('Add New'),
+              label: Text(l10n.addNew),
             ),
           ],
         ),
         const SizedBox(height: 8),
         if (_savedCards.isEmpty)
-          const Card(
+          Card(
             child: Padding(
               padding: EdgeInsets.all(16),
-              child: Text('No saved cards'),
+              child: Text(l10n.noSavedCards),
             ),
           )
         else
@@ -945,11 +942,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Checkout',
+          l10n.checkout,
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: isDark ? Colors.white : Colors.black87,
@@ -1045,11 +1043,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildSectionTitle('Delivery Address'),
+                          _buildSectionTitle(l10n.deliveryAddress),
                           const SizedBox(height: 8),
                           _buildAddressSection(),
                           const SizedBox(height: 24),
-                          _buildSectionTitle('Payment Method'),
+                          _buildSectionTitle(l10n.payment),
                           const SizedBox(height: 8),
                           Card(
                             elevation: isDark ? 0 : 2,
@@ -1081,12 +1079,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           ),
                           if (_selectedPaymentMethod == 'Credit Card') ...[
                             const SizedBox(height: 24),
-                            _buildSectionTitle('Credit Cards'),
+                            _buildSectionTitle(l10n.creditCards),
                             const SizedBox(height: 8),
                             _buildCreditCardSection(),
                           ],
                           const SizedBox(height: 24),
-                          _buildSectionTitle('Order Summary'),
+                          _buildSectionTitle(l10n.orderSummary),
                           const SizedBox(height: 8),
                           _buildOrderItemsList(),
                           const SizedBox(height: 12),
@@ -1134,7 +1132,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ),
                     )
                     : Text(
-                      'PLACE ORDER',
+                      l10n.placeOrder,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -1148,6 +1146,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Widget _buildProgressStep(int step, String label, bool isActive) {
+    final l10n = AppLocalizations.of(context)!;
+    final stepLabel = step == 1 ? l10n.address :
+                     step == 2 ? l10n.payment :
+                     l10n.confirm;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
 
@@ -1186,7 +1188,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ),
         const SizedBox(height: 4),
         Text(
-          label,
+          stepLabel,
           style: TextStyle(
             color:
                 isActive
@@ -1226,6 +1228,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   Widget _buildPaymentOption(String title, String subtitle) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return RadioListTile<String>(
       value: title,
@@ -1234,7 +1237,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         setState(() => _selectedPaymentMethod = value!);
       },
       title: Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text(subtitle),
+      subtitle: Text(title == 'Credit Card' ? l10n.payWithCreditCard : subtitle),
       activeColor:
           themeNotifier.isSpecialModeActive
               ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
@@ -1244,6 +1247,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   Widget _buildWalletOption() {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return RadioListTile<String>(
       value: 'Wallet',
@@ -1271,7 +1275,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
           const SizedBox(width: 8),
           Text(
-            'Pay with Wallet',
+            l10n.payWithWallet,
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: _walletBalance >= total ? null : Colors.grey.shade400,
@@ -1282,10 +1286,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Available Balance: ₺${_walletBalance.toStringAsFixed(2)}'),
+          Text(l10n.availableBalance(_walletBalance.toStringAsFixed(2))),
           if (_walletBalance < total)
             Text(
-              'Insufficient balance',
+              l10n.insufficientBalance,
               style: TextStyle(
                 color:
                     themeNotifier.isSpecialModeActive
@@ -1308,6 +1312,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Widget _buildOrderSummaryCard() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final remainingForFree = 10000 - widget.subtotal;
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       children: [
@@ -1327,7 +1332,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Add ₺${remainingForFree.toStringAsFixed(2)} more to get free shipping!',
+                    l10n.addMoreForFreeShipping(remainingForFree.toStringAsFixed(2)),
                     style: TextStyle(
                       color: isDark ? Colors.grey[400] : Colors.grey[700],
                       fontSize: 14,
@@ -1351,18 +1356,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                _buildSummaryRow('Subtotal', widget.subtotal),
+                _buildSummaryRow(l10n.subtotal, widget.subtotal),
                 if (widget.appliedDiscount != null)
                   _buildSummaryRow(
-                    'Discount (${widget.appliedDiscount!.discountPercentage}%)',
+                    l10n.discount(widget.appliedDiscount!.discountPercentage.round()),
                     -widget.appliedDiscount!.calculateDiscount(widget.subtotal),
                     isDiscount: true,
                   ),
-                _buildSummaryRow('Shipping', shippingCost),
+                _buildSummaryRow(l10n.shipping, shippingCost),
                 Divider(
                   color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
                 ),
-                _buildSummaryRow('Total', total, isTotal: true),
+                _buildSummaryRow(l10n.total, total, isTotal: true),
               ],
             ),
           ),
@@ -1378,8 +1383,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
     bool isDiscount = false,
     String? note,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isFreeShipping = label == 'Shipping' && widget.subtotal >= 10000;
+    final isFreeShipping = label == l10n.shipping && widget.subtotal >= 10000;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -1407,14 +1413,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
           Row(
             children: [
-              if (widget.subtotal < 10000 && label == 'Shipping')
+              if (widget.subtotal < 10000 && label == l10n.shipping)
                 Text(
-                  'Free over ₺10,000',
+                  l10n.freeShippingOver,
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               const SizedBox(width: 8),
               Text(
-                isFreeShipping ? 'FREE' : '₺${amount.toStringAsFixed(2)}',
+                isFreeShipping ? l10n.free : '₺${amount.toStringAsFixed(2)}',
                 style: TextStyle(
                   fontSize: isTotal ? 18 : 16,
                   fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,

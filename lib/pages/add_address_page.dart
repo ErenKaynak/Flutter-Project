@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'theme_notifier.dart';
 
 class AddAddressPage extends StatefulWidget {
+  final DocumentSnapshot? addressToEdit;
+
+  const AddAddressPage({Key? key, this.addressToEdit}) : super(key: key);
+
   @override
   _AddAddressPageState createState() => _AddAddressPageState();
 }
@@ -13,18 +18,21 @@ class _AddAddressPageState extends State<AddAddressPage> {
   final _formKey = GlobalKey<FormState>();
   final _scrollController = ScrollController();
 
-  String firstName = '';
-  String lastName = '';
-  String phone = '';
+  // Add TextEditingControllers
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _streetController = TextEditingController();
+  final TextEditingController _neighborhoodController = TextEditingController();
+  final TextEditingController _buildingNoController = TextEditingController();
+  final TextEditingController _apartmentController = TextEditingController();
+  final TextEditingController _floorController = TextEditingController();
+  final TextEditingController _doorNoController = TextEditingController();
+  final TextEditingController _addressLabelController = TextEditingController();
+
   String addressType = 'Home';
-  String street = '';
-  String neighborhood = '';
-  String buildingNo = '';
-  String apartment = '';
-  String floor = '';
-  String doorNo = '';
   String city = '';
-  String addressLabel = '';
+  String? addressId;
 
   // Focus nodes to manage keyboard focus
   final FocusNode _lastNameFocus = FocusNode();
@@ -38,7 +46,42 @@ class _AddAddressPageState extends State<AddAddressPage> {
   final FocusNode _addressLabelFocus = FocusNode();
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.addressToEdit != null) {
+      final data = widget.addressToEdit!.data() as Map<String, dynamic>;
+      addressId = widget.addressToEdit!.id;
+      
+      // Initialize controllers with existing data
+      _firstNameController.text = data['firstName'] ?? '';
+      _lastNameController.text = data['lastName'] ?? '';
+      _phoneController.text = data['phone'] ?? '';
+      addressType = data['addressType'] ?? 'Home';
+      _streetController.text = data['street'] ?? '';
+      _neighborhoodController.text = data['neighborhood'] ?? '';
+      _buildingNoController.text = data['buildingNo'] ?? '';
+      _apartmentController.text = data['apartment'] ?? '';
+      _floorController.text = data['floor'] ?? '';
+      _doorNoController.text = data['doorNo'] ?? '';
+      city = data['city'] ?? '';
+      _addressLabelController.text = data['label'] ?? '';
+    }
+  }
+
+  @override
   void dispose() {
+    // Dispose controllers
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _phoneController.dispose();
+    _streetController.dispose();
+    _neighborhoodController.dispose();
+    _buildingNoController.dispose();
+    _apartmentController.dispose();
+    _floorController.dispose();
+    _doorNoController.dispose();
+    _addressLabelController.dispose();
+    _scrollController.dispose();
     // Dispose focus nodes when the page is disposed
     _lastNameFocus.dispose();
     _phoneFocus.dispose();
@@ -49,7 +92,6 @@ class _AddAddressPageState extends State<AddAddressPage> {
     _floorFocus.dispose();
     _doorNoFocus.dispose();
     _addressLabelFocus.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -65,6 +107,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
         themeNotifier.isSpecialModeActive
             ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
             : Colors.red.shade700;
+    final l10n = AppLocalizations.of(context)!;
 
     // Dynamic colors based on theme
     final backgroundColor = isDarkMode ? Color(0xFF121212) : Colors.white;
@@ -77,7 +120,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
     return Scaffold(
       appBar: AppBar(
         surfaceTintColor: primaryColor,
-        title: Text('Add New Address', style: TextStyle(color: Colors.white)),
+        title: Text(l10n.addNewAddress, style: TextStyle(color: Colors.white)),
         leading: BackButton(color: Colors.white),
         backgroundColor:
             themeNotifier.isSpecialModeActive
@@ -115,7 +158,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSectionHeader(
-                    'Recipient Info',
+                    l10n.recipientInfo,
                     Icons.person,
                     accentColor,
                   ),
@@ -128,11 +171,11 @@ class _AddAddressPageState extends State<AddAddressPage> {
                           children: [
                             Expanded(
                               child: _buildTextField(
-                                label: 'First Name',
-                                onChanged: (val) => firstName = val,
+                                label: l10n.firstName,
+                                controller: _firstNameController,
                                 validator: (val) {
                                   if (val == null || val.isEmpty) {
-                                    return 'Please enter first name';
+                                    return l10n.pleaseEnterFirstName;
                                   }
                                   return null;
                                 },
@@ -149,12 +192,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
                             SizedBox(width: 12),
                             Expanded(
                               child: _buildTextField(
-                                label: 'Last Name',
+                                label: l10n.lastName,
                                 focusNode: _lastNameFocus,
-                                onChanged: (val) => lastName = val,
+                                controller: _lastNameController,
                                 validator: (val) {
                                   if (val == null || val.isEmpty) {
-                                    return 'Please enter last name';
+                                    return l10n.pleaseEnterLastName;
                                   }
                                   return null;
                                 },
@@ -172,17 +215,17 @@ class _AddAddressPageState extends State<AddAddressPage> {
                         ),
                         SizedBox(height: 16),
                         _buildTextField(
-                          label: 'Phone Number',
+                          label: l10n.phoneNumber,
                           focusNode: _phoneFocus,
                           keyboardType: TextInputType.phone,
-                          onChanged: (val) => phone = val,
+                          controller: _phoneController,
                           validator: (val) {
                             if (val == null || val.isEmpty) {
-                              return 'Please enter phone number';
+                              return l10n.pleaseEnterPhoneNumber;
                             }
                             // Basic phone validation
                             if (val.length < 10) {
-                              return 'Please enter a valid phone number';
+                              return l10n.invalidPhoneNumber;
                             }
                             return null;
                           },
@@ -199,7 +242,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
 
                   SizedBox(height: 25),
                   _buildSectionHeader(
-                    'Address Type',
+                    l10n.addressType,
                     Icons.location_on,
                     accentColor,
                   ),
@@ -213,7 +256,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
 
                   SizedBox(height: 25),
                   _buildSectionHeader(
-                    'Address Details',
+                    l10n.addressDetails,
                     Icons.home,
                     accentColor,
                   ),
@@ -223,12 +266,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
                     child: Column(
                       children: [
                         _buildTextField(
-                          label: 'Street / Avenue',
+                          label: l10n.streetAvenue,
                           focusNode: _streetFocus,
-                          onChanged: (val) => street = val,
+                          controller: _streetController,
                           validator: (val) {
                             if (val == null || val.isEmpty) {
-                              return 'Please enter street name';
+                              return l10n.pleaseEnterStreetName;
                             }
                             return null;
                           },
@@ -243,12 +286,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
                         ),
                         SizedBox(height: 16),
                         _buildTextField(
-                          label: 'Neighborhood',
+                          label: l10n.neighborhood,
                           focusNode: _neighborhoodFocus,
-                          onChanged: (val) => neighborhood = val,
+                          controller: _neighborhoodController,
                           validator: (val) {
                             if (val == null || val.isEmpty) {
-                              return 'Please enter neighborhood';
+                              return l10n.pleaseEnterNeighborhood;
                             }
                             return null;
                           },
@@ -266,12 +309,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
                           children: [
                             Expanded(
                               child: _buildTextField(
-                                label: 'Building No',
+                                label: l10n.buildingNo,
                                 focusNode: _buildingNoFocus,
-                                onChanged: (val) => buildingNo = val,
+                                controller: _buildingNoController,
                                 validator: (val) {
                                   if (val == null || val.isEmpty) {
-                                    return 'Required';
+                                    return l10n.required;
                                   }
                                   return null;
                                 },
@@ -288,12 +331,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
                             SizedBox(width: 12),
                             Expanded(
                               child: _buildTextField(
-                                label: 'Apartment Name',
+                                label: l10n.apartmentName,
                                 focusNode: _apartmentFocus,
-                                onChanged: (val) => apartment = val,
+                                controller: _apartmentController,
                                 validator: (val) {
                                   if (val == null || val.isEmpty) {
-                                    return 'Required';
+                                    return l10n.required;
                                   }
                                   return null;
                                 },
@@ -314,12 +357,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
                           children: [
                             Expanded(
                               child: _buildTextField(
-                                label: 'Floor No',
+                                label: l10n.floorNo,
                                 focusNode: _floorFocus,
-                                onChanged: (val) => floor = val,
+                                controller: _floorController,
                                 validator: (val) {
                                   if (val == null || val.isEmpty) {
-                                    return 'Required';
+                                    return l10n.required;
                                   }
                                   return null;
                                 },
@@ -336,12 +379,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
                             SizedBox(width: 12),
                             Expanded(
                               child: _buildTextField(
-                                label: 'Door No',
+                                label: l10n.doorNo,
                                 focusNode: _doorNoFocus,
-                                onChanged: (val) => doorNo = val,
+                                controller: _doorNoController,
                                 validator: (val) {
                                   if (val == null || val.isEmpty) {
-                                    return 'Required';
+                                    return l10n.required;
                                   }
                                   return null;
                                 },
@@ -360,13 +403,13 @@ class _AddAddressPageState extends State<AddAddressPage> {
                         ),
                         SizedBox(height: 16),
                         _buildTextField(
-                          label: 'Address Label',
-                          hintText: 'Example: Home, Work, etc.',
+                          label: l10n.addressLabel,
+                          hintText: l10n.addressLabelHint,
                           focusNode: _addressLabelFocus,
-                          onChanged: (val) => addressLabel = val,
+                          controller: _addressLabelController,
                           validator: (val) {
                             if (val == null || val.isEmpty) {
-                              return 'Please enter an address label';
+                              return l10n.pleaseEnterAddressLabel;
                             }
                             return null;
                           },
@@ -438,8 +481,10 @@ class _AddAddressPageState extends State<AddAddressPage> {
     required bool isDarkMode,
     required Color accentColor,
     required Color bgColor,
+    TextEditingController? controller,
   }) {
     return TextFormField(
+      controller: controller,
       focusNode: focusNode,
       decoration: InputDecoration(
         labelText: label,
@@ -475,6 +520,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
     required Color cardColor,
   }) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
     final selectedBgColor =
         isDarkMode
             ? Color(0xFF2C2C2C)
@@ -532,7 +578,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
                     Icon(Icons.home, color: primaryColor, size: 28),
                     SizedBox(height: 8),
                     Text(
-                      'Home',
+                      l10n.home,
                       style: TextStyle(
                         fontWeight:
                             addressType == 'Home'
@@ -576,7 +622,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
                     Icon(Icons.work, color: primaryColor, size: 28),
                     SizedBox(height: 8),
                     Text(
-                      'Work',
+                      l10n.work,
                       style: TextStyle(
                         fontWeight:
                             addressType == 'Work'
@@ -603,9 +649,10 @@ class _AddAddressPageState extends State<AddAddressPage> {
     required Color accentColor,
     required Color bgColor,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return DropdownButtonFormField<String>(
       decoration: InputDecoration(
-        labelText: 'City',
+        labelText: l10n.city,
         filled: true,
         fillColor: bgColor,
         border: OutlineInputBorder(
@@ -622,12 +669,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
         labelStyle: TextStyle(color: isDarkMode ? Colors.grey.shade300 : null),
       ),
       value: city.isEmpty ? null : city,
-      hint: Text('Select City'),
+      hint: Text(l10n.selectCity),
       dropdownColor: isDarkMode ? Color(0xFF2C2C2C) : Colors.white,
       style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
       validator: (val) {
         if (val == null || val.isEmpty) {
-          return 'Please select a city';
+          return l10n.pleaseSelectCity;
         }
         return null;
       },
@@ -643,6 +690,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
 
   Widget _buildSaveButton({required Color primaryColor}) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
       height: 55,
@@ -683,7 +731,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
           ),
         ),
         child: Text(
-          'Save Address',
+          l10n.saveAddress,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -695,63 +743,67 @@ class _AddAddressPageState extends State<AddAddressPage> {
   }
 
   Future<void> _saveAddress() async {
-    // First validate all fields
+    final l10n = AppLocalizations.of(context)!;
     if (_formKey.currentState!.validate()) {
       try {
         final uid = FirebaseAuth.instance.currentUser?.uid;
         print("✅ UID: $uid");
 
         if (uid == null) {
-          _showErrorSnackBar('User not logged in.');
+          _showErrorSnackBar(l10n.userNotLoggedIn);
           return;
         }
 
-        // Show loading indicator
         _showLoadingDialog();
 
-        await FirebaseFirestore.instance.collection('addresses').add({
+        final addressData = {
           'userId': uid,
-          'firstName': firstName,
-          'lastName': lastName,
-          'phone': phone,
+          'firstName': _firstNameController.text,
+          'lastName': _lastNameController.text,
+          'phone': _phoneController.text,
           'addressType': addressType,
-          'street': street,
-          'neighborhood': neighborhood,
-          'buildingNo': buildingNo,
-          'apartment': apartment,
-          'floor': floor,
-          'doorNo': doorNo,
+          'street': _streetController.text,
+          'neighborhood': _neighborhoodController.text,
+          'buildingNo': _buildingNoController.text,
+          'apartment': _apartmentController.text,
+          'floor': _floorController.text,
+          'doorNo': _doorNoController.text,
           'city': city,
-          'label': addressLabel,
-          'createdAt': Timestamp.now(),
-        });
+          'label': _addressLabelController.text,
+          'updatedAt': Timestamp.now(),
+        };
 
-        // Dismiss loading dialog
-        Navigator.pop(context);
+        if (addressId != null) {
+          await FirebaseFirestore.instance
+              .collection('addresses')
+              .doc(addressId)
+              .update(addressData);
+        } else {
+          addressData['createdAt'] = Timestamp.now();
+          await FirebaseFirestore.instance
+              .collection('addresses')
+              .add(addressData);
+        }
 
-        _showSuccessSnackBar('Address saved successfully');
+        Navigator.pop(context); // Dismiss loading dialog
+        _showSuccessSnackBar(l10n.addressSaved);
 
-        // Return to previous screen
         Future.delayed(Duration(seconds: 1), () {
           Navigator.pop(context);
         });
       } catch (e) {
-        // Dismiss loading dialog if it's showing
         if (Navigator.canPop(context)) {
           Navigator.pop(context);
         }
-        _showErrorSnackBar('Error saving address: $e');
+        _showErrorSnackBar(l10n.errorSavingAddress(e.toString()));
       }
     } else {
-      // Form validation failed
-      // Auto-scroll to the first error
       _scrollController.animateTo(
         0.0,
         duration: Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
-
-      _showErrorSnackBar('Please fill all required fields');
+      _showErrorSnackBar(l10n.fillAllFields);
     }
   }
 
@@ -759,6 +811,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final dialogBgColor = isDarkMode ? Color(0xFF1E1E1E) : Colors.white;
     final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
@@ -782,7 +835,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
                 ),
                 SizedBox(height: 16),
                 Text(
-                  'Saving address...',
+                  l10n.savingAddress,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: isDarkMode ? Colors.white : Colors.black87,

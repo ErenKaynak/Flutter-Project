@@ -1,0 +1,526 @@
+{
+    "appTitle": "Engineering Project",
+    "welcome": "Welcome",
+    "login": "Login",
+    "signIn": "Sign In",
+    "register": "Register",
+    "guest": "Continue as Guest",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot Password?",
+    "notAMember": "Not a member?",
+    "alreadyHaveAccount": "Already have an account?",
+    "profile": "Profile",
+    "home": "Home",
+    "favorites": "Favorites",
+    "cart": "Cart",
+    "settings": "Settings",
+    "language": "Language",
+    "english": "English",
+    "turkish": "Turkish",
+    "arabic": "Arabic",
+    "darkMode": "Dark Mode",
+    "specialMode": "Special Mode",
+    "addToCart": "ADD TO CART",
+    "outOfStock": "OUT OF STOCK",
+    "removeFromFavorites": "Remove from favorites",
+    "addedToFavorites": "Added to favorites",
+    "removedFromFavorites": "Removed from favorites",
+    "searchProducts": "Search products",
+    "categories": "Categories",
+    "allCategories": "All Categories",
+    "bestDeals": "Best Deals",
+    "products": "{count} products",
+    "productQuantity": "Quantity",
+    "@products": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "noProductsFound": "No products found",
+    "tryDifferentSearch": "Try a different search term",
+    "tryDifferentCategory": "Try selecting a different category",
+    "viewCart": "VIEW CART",
+    "addedToCart": "{productName} added to cart",
+    "@addedToCart": {
+        "placeholders": {
+            "productName": {
+                "type": "String"
+            }
+        }
+    },
+    "errorAddingToCart": "Failed to add item to cart",
+    "pleaseSignIn": "Please sign in to continue",
+    "signOut": "Sign Out",
+    "editProfile": "Edit Profile",
+    "name": "Name",
+    "surname": "Surname",
+    "save": "Save",
+    "cancel": "Cancel",
+    "accountSettings": "Account Settings",
+    "myAddresses": "My Addresses",
+    "addNewAddress": "Add New Address",
+    "guest": "Guest",
+    "hello": "Hello",
+    "yourAddresses": "Your Addresses",
+    "noAddressesFound": "No addresses found.",
+    "recipientInfo": "Recipient Info",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "phoneNumber": "Phone Number",
+    "addressType": "Address Type",
+    "addressDetails": "Address Details",
+    "streetAvenue": "Street / Avenue",
+    "neighborhood": "Neighborhood",
+    "buildingNo": "Building No",
+    "apartmentName": "Apartment Name",
+    "floorNo": "Floor No",
+    "doorNo": "Door No",
+    "city": "City",
+    "addressLabel": "Address Label",
+    "addressLabelHint": "Example: Home, Work, etc.",
+    "saveAddress": "Save Address",
+    "savingAddress": "Saving address...",
+    "addressSaved": "Address saved successfully",
+    "userNotLoggedIn": "User not logged in.",
+    "errorSavingAddress": "Error saving address: {error}",
+    "@errorSavingAddress": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "fillAllFields": "Please fill all required fields",
+    "pleaseEnterFirstName": "Please enter first name",
+    "pleaseEnterLastName": "Please enter last name",
+    "pleaseEnterPhoneNumber": "Please enter phone number",
+    "invalidPhoneNumber": "Please enter a valid phone number",
+    "pleaseEnterStreetName": "Please enter street name",
+    "pleaseEnterNeighborhood": "Please enter neighborhood",
+    "required": "Required",
+    "pleaseEnterAddressLabel": "Please enter an address label",
+    "selectCity": "Select City",
+    "pleaseSelectCity": "Please select a city",
+    "work": "Work",
+    "delete": "Delete",
+    "setAsDefault": "Set as Default",
+    "myOrders": "My Orders",
+    "myWallet": "My Wallet",
+    "appearance": "Appearance",
+    "adminPanel": "Admin Panel",
+    "referralCode": "Your Referral Code",
+    "copiedToClipboard": "Copied to clipboard",
+    "changeProfilePicture": "Change Profile Picture",
+    "takePhoto": "Take a photo",
+    "chooseFromGallery": "Choose from gallery",
+    "addFromUrl": "Add from URL",
+    "removePhoto": "Remove Photo",
+    "enterImageUrl": "Enter Image URL",
+    "add": "Add",
+    "sort": "Sort",
+    "priceLowToHigh": "Price: Low to High",
+    "priceHighToLow": "Price: High to Low",
+    "nameAToZ": "Name: A to Z",
+    "nameZToA": "Name: Z to A",
+    "specialOffers": "Special Offers",
+    "@specialOffers": {
+        "description": "Title for special offers section"
+    },
+    "specialOffersDescription": "Get up to 20% off on selected products",
+    "@specialOffersDescription": {
+        "description": "Description text for special offers"
+    },
+    "shopNow": "Shop Now",
+    "@shopNow": {
+        "description": "Button text for shopping action"
+    },
+    "authentication": "Authentication",
+    "createAccount": "Create Account",
+    "addYourName": "Add Your Name",
+    "admin": "ADMIN",
+    "guestUser": "Guest",
+    "signInToAccess": "Sign in to access all features",
+    "yourReferralCode": "Your Referral Code",
+    "loading": "Loading...",
+    "noFavoritesYet": "No favorites yet",
+    "itemsYouFavorite": "Items you favorite will appear here",
+    "yourCart": "Your Cart",
+    "emptyCart": "Your cart is empty",
+    "addItemsToCheckout": "Add items to your cart to checkout",
+    "clearCart": "Clear Cart",
+    "clearCartConfirmation": "Are you sure you want to remove all items?",
+    "discountCode": "Discount Code",
+    "enterCode": "Enter code",
+    "apply": "APPLY",
+    "discountApplied": "Discount applied: {code}",
+    "@discountApplied": {
+        "placeholders": {
+            "code": {
+                "type": "String"
+            }
+        }
+    },
+    "percentOff": "{percent}% off",
+    "@percentOff": {
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
+    "invalidDiscountCode": "Invalid or expired discount code",
+    "notApplicableDiscount": "This code is not applicable to items in your cart",
+    "subtotal": "Subtotal",
+    "discount": "Discount ({percent}%)",
+    "@discount": {
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
+    "total": "Total",
+    "totalAmount": "Total: ₺{amount}",
+    "@totalAmount": {
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "checkout": "CHECKOUT",
+    "paymentSuccessful": "Payment Successful!",
+    "amountPaid": "Amount Paid: ₺{amount}",
+    "@amountPaid": {
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "orderPlaced": "Your order has been placed successfully.",
+    "orderId": "Order ID: {id}",
+    "@orderId": {
+        "placeholders": {
+            "id": {
+                "type": "String"
+            }
+        }
+    },
+    "viewOrders": "VIEW ORDERS",
+    "continueShopping": "CONTINUE SHOPPING",
+    "cardExpired": "Your card is expired, please try again",
+    "pleaseSelectAddress": "Please select an address",
+    "pleaseSelectCard": "Please select a credit card",
+    "deliveryAddress": "Delivery Address",
+    "addNew": "Add New",
+    "noSavedAddresses": "No saved addresses",
+    "creditCards": "Credit Cards",
+    "noSavedCards": "No saved cards",
+    "payWithCreditCard": "Pay with credit card",
+    "payWithWallet": "Pay with Wallet",
+    "availableBalance": "Available Balance: ₺{amount}",
+    "@availableBalance": {
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "insufficientBalance": "Insufficient balance",
+    "addMoreForFreeShipping": "Add ₺{amount} more to get free shipping!",
+    "@addMoreForFreeShipping": {
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "freeShippingOver": "Free over ₺10,000",
+    "free": "FREE",
+    "shipping": "Shipping",
+    "placeOrder": "PLACE ORDER",
+    "address": "Address",
+    "payment": "Payment",
+    "confirm": "Confirm",
+    "paymentMethod": "Payment Method",
+    "addNewCard": "Add New Card",
+    "orderSummary": "Order Summary",
+    "cardNumber": "Card Number",
+    "cardNumberHint": "1234 5678 9012 3456",
+    "cardHolderName": "Card Holder Name",
+    "cardHolderHint": "JOHN DOE",
+    "expiryDate": "Expiry Date",
+    "expiryDateHint": "MM/YY",
+    "cardIsExpired": "Card is expired",
+    "cvv": "CVV",
+    "cvvHint": "123",
+    "deleteCard": "Delete Card",
+    "deleteCardConfirmation": "Are you sure you want to delete this card?",
+    "delete": "DELETE",
+    "defaultCard": "Default Card",
+    "expires": "Expires: {date}",
+    "@expires": {
+        "placeholders": {
+            "date": {
+                "type": "String"
+            }
+        }
+    },
+    "ok": "OK",
+    "cannotReorder": "Cannot Reorder",
+    "outOfStockItems": "The following items are out of stock:\n• {items}",
+    "@outOfStockItems": {
+        "placeholders": {
+            "items": {
+                "type": "String"
+            }
+        }
+    },
+    "insufficientStockItems": "Insufficient stock for:\n• {items}",
+    "@insufficientStockItems": {
+        "placeholders": {
+            "items": {
+                "type": "String"
+            }
+        }
+    },
+    "myFavorites": "My Favorites",
+    "refresh": "Refresh",
+    "itemsYouFavorite": "Items you mark as favorite will appear here",
+    "exploreProducts": "Explore Products",
+    "failedToRemove": "Failed to remove from favorites",
+    "pleaseLoginToAdd": "Please log in to add items to cart",
+    "failedToAddToCart": "Failed to add item to cart",
+    "adminDashboard": "Admin Dashboard",
+    "adminControls": "Admin Controls",
+    "userManagement": "User Management",
+    "viewAndManageUsers": "View and manage users",
+    "productManagement": "Product Management",
+    "manageProducts": "Add, edit or remove products",
+    "orderManagement": "Order Management",
+    "viewAndProcessOrders": "View and process orders",
+    "currentBalance": "Current Balance",
+    "cashbackInfo": "1% Cashback on all purchases",
+    "addMoney": "Add Money",
+    "transactionHistory": "Transaction History",
+    "transactionsCount": "{count} transactions",
+    "@transactionsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "noTransactions": "No transactions yet",
+    "transactionsWillAppear": "Your transaction history will appear here",
+    "moneyAdded": "Money added successfully",
+    "errorAddingBalance": "Error adding balance: {error}",
+    "@errorAddingBalance": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "addMoneyToWallet": "Add Money to Wallet",
+    "amount": "Amount",
+    "selectCard": "Select Card",
+    "useCard": "Use Saved Card",
+    "enterValidAmount": "Please enter a valid amount",
+    "fillCardDetails": "Please fill all card details correctly",
+    "cardNumberError": "Card number must be 16 digits",
+    "invalidCardNumber": "Invalid card number",
+    "onlyLettersAllowed": "Only letters allowed",
+    "useMMYYFormat": "Use MM/YY format",
+    "invalidCVV": "Invalid CVV",
+    "amountMustBeGreater": "Amount must be greater than 0",
+    "maximumAmount": "Maximum amount is ₺10,000",
+    "invalidAmount": "Invalid amount",
+    "cardSaved": "Card saved successfully",
+    "errorSavingCard": "Error saving card: {error}",
+    "@errorSavingCard": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "transactionDetails": "Transaction Details",
+    "type": "Type",
+    "deposit": "Deposit",
+    "purchase": "Purchase",
+    "date": "Date",
+    "status": "Status",
+    "method": "Method",
+    "reference": "Reference",
+    "description": "Description",
+    "orderHistory": "Order History",
+    "yourOrders": "Your Orders",
+    "ordersCount": "{count} orders",
+    "@ordersCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "filterByStatus": "Filter by Status",
+    "allOrders": "All",
+    "pending": "Pending",
+    "preparing": "Preparing",
+    "onDelivery": "On Delivery",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled",
+    "noOrdersWithStatus": "No orders with '{status}' status",
+    "@noOrdersWithStatus": {
+        "placeholders": {
+            "status": {
+                "type": "String"
+            }
+        }
+    },
+    "tryDifferentFilter": "Try selecting a different filter",
+    "orderNumber": "Order #{number}",
+    "@orderNumber": {
+        "placeholders": {
+            "number": {
+                "type": "String"
+            }
+        }
+    },
+    "items": "Items:",
+    "quantity": "Qty: {count} × ₺{price}",
+    "@quantity": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "price": {
+                "type": "String"
+            }
+        }
+    },
+    "itemTotal": "Item Total: ₺{amount}",
+    "@itemTotal": {
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "trackingNumber": "Tracking Number:",
+    "shippingAddress": "Shipping Address:",
+    "noAddressProvided": "No address provided",
+    "paymentMethod": "Payment Method:",
+    "notSpecified": "Not specified",
+    "reorder": "Reorder",
+    "cancelOrder": "Cancel Order",
+    "confirmCancelOrder": "Are you sure you want to cancel this order?",
+    "orderCancelled": "Order cancelled successfully",
+    "failedToCancelOrder": "Failed to cancel order: {error}",
+    "@failedToCancelOrder": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "rateProduct": "Rate this product",
+    "alreadyReviewed": "Already reviewed",
+    "canReviewAfterDelivery": "Can review after delivery",
+    "selectRating": "Select Rating",
+    "poor": "Poor",
+    "fair": "Fair",
+    "good": "Good",
+    "veryGood": "Very Good",
+    "excellent": "Excellent",
+    "writeReview": "Write your review (optional)",
+    "submitReview": "Submit Review",
+    "thankYouForReview": "Thank you for your review!",
+    "failedToSubmitReview": "Failed to submit review",
+    "productNoLongerAvailable": "Product is no longer available",
+    "errorCheckingAvailability": "Error checking product availability. Please try again.",
+    "tryAgain": "TRY AGAIN",
+    "noOrdersYet": "No orders yet",
+    "yourOrderHistoryWillAppearHere": "Your order history will appear here",
+    "startShopping": "START SHOPPING",
+    "somethingWentWrong": "Something went wrong",
+    "orderPrefix": "Order #",
+    "itemsLabel": "Items:",
+    "quantityPrefix": "Qty:",
+    "itemTotalPrefix": "Item Total:",
+    "shippingAddressLabel": "Shipping Address:",
+    "defaultShippingAddress": "Default Shipping Address",
+    "paymentMethodLabel": "Payment Method:",
+    "cardPayment": "Card",
+    "reorderButton": "Reorder",
+    "dateFormat": "MMM dd, yyyy - HH:mm",
+    "totalPrefix": "Total: ₺{amount}",
+    "@totalPrefix": {
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "productNotFound": "Product not found",
+    "inStock": "{count} in stock",
+    "@inStock": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "addedToCartMessage": "{name} x{quantity} added to cart",
+    "@addedToCartMessage": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "quantity": {
+                "type": "int"
+            }
+        }
+    },
+    "mustBeLoggedIn": "You must be logged in to add to cart",
+    "cannotAddMoreThanStock": "Cannot add more than available stock ({count})",
+    "@cannotAddMoreThanStock": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "productDescription": "Product Description",
+    "specifications": "Specifications",
+    "customerReviews": "Customer Reviews",
+    "noReviewsYet": "No reviews yet",
+    "couldNotLoadReviews": "Could not load reviews",
+    "anonymous": "Anonymous",
+    "quantity": "Quantity",
+    "failedToUpdateFavorites": "Failed to update favorites",
+    "pleaseLoginToAddFavorites": "Please log in to add favorites",
+    "justNow": "Just now",
+    "minutesAgo": "{count} minutes ago",
+    "@minutesAgo": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "hoursAgo": "{count} hours ago",
+    "@hoursAgo": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    }
+} 
