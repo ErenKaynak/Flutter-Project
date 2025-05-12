@@ -1,7 +1,7 @@
 class APIConfig {
   // OpenRouter API configuration
   static const String ApiKey =
-      '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';
+      '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';
   static const String openRouterUrl =
       'https://openrouter.ai/api/v1/chat/completions';
 
@@ -12,7 +12,7 @@ class APIConfig {
       'Authorization': 'Bearer $ApiKey',
       'HTTP-Referer': 'https://github.com/OpenRouterTeam/openrouter-examples',
       'X-Title': 'Flutter E-commerce App',
-      'OpenRouter-Bypass-Cache': 'true'
+      'OpenRouter-Bypass-Cache': 'true',
     };
   }
 
