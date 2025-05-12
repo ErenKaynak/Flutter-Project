@@ -427,6 +427,31 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
+  String _getCategoryTranslation(String categoryKey, AppLocalizations l10n) {
+    switch (categoryKey) {
+      case "All":
+        return l10n.categoryAll;
+      case "CPU's":
+        return l10n.categoryCPU;
+      case "GPU's":
+        return l10n.categoryGPU;
+      case "RAM's":
+        return l10n.categoryRAM;
+      case "Motherboards":
+        return l10n.categoryMotherboard;
+      case "Storage":
+        return l10n.categoryStorage;
+      case "Cases":
+        return l10n.categoryCase;
+      case "PSU":
+        return l10n.categoryPSU;
+      case "Pre-Built":
+        return l10n.categoryPreBuilt;
+      default:
+        return categoryKey;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
@@ -993,6 +1018,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final translatedLabel = _getCategoryTranslation(label, l10n);
 
     return GestureDetector(
       onTap: onTap,
@@ -1070,7 +1096,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
           SizedBox(height: 8),
           Text(
-            label,
+            translatedLabel,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               color: isDark
@@ -1103,7 +1129,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ? l10n.searchProducts
                 : (_selectedCategory == "All"
                     ? l10n.bestDeals
-                    : _selectedCategory),
+                    : _getCategoryTranslation(_selectedCategory, l10n)),
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           Text(
