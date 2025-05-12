@@ -910,7 +910,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       children: [
                         Icon(Icons.arrow_upward, size: 20),
                         SizedBox(width: 8),
-                        Text('Price: Low to High'),
+                        Text(l10n.priceLowToHigh),
                       ],
                     ),
                   ),
@@ -920,7 +920,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       children: [
                         Icon(Icons.arrow_downward, size: 20),
                         SizedBox(width: 8),
-                        Text('Price: High to Low'),
+                        Text(l10n.priceHighToLow),
                       ],
                     ),
                   ),
@@ -930,7 +930,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       children: [
                         Icon(Icons.sort_by_alpha, size: 20),
                         SizedBox(width: 8),
-                        Text('Name: A to Z'),
+                        Text(l10n.nameAToZ),
                       ],
                     ),
                   ),
@@ -940,7 +940,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       children: [
                         Icon(Icons.sort_by_alpha, size: 20),
                         SizedBox(width: 8),
-                        Text('Name: Z to A'),
+                        Text(l10n.nameZToA),
                       ],
                     ),
                   ),
