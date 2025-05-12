@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as Math;
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:engineering_project/assets/AI/api_config.dart';
 
 class AdminProducts extends StatefulWidget {
   const AdminProducts({super.key});
@@ -211,6 +214,55 @@ class _AdminProductsState extends State<AdminProducts> {
                     labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
                     enabledBorder: UnderlineInputBorder(
                       borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(Icons.auto_fix_high),
+                      onPressed: () async {
+                        if (nameController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please enter a product name first')),
+                          );
+                          return;
+                        }
+
+                        try {
+                          final response = await http.post(
+                            Uri.parse(APIConfig.openRouterUrl),
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': 'Bearer ${APIConfig.ApiKey}',
+                              'HTTP-Referer': 'http://localhost:62630',
+                              'X-Title': 'AI Description Generator',
+                            },
+                            body: jsonEncode({
+                              'model': 'openai/gpt-3.5-turbo',
+                              'messages': [
+                                {
+                                  'role': 'system',
+                                  'content': 'You are a professional product description writer. Create a concise, informative description for computer hardware products. Focus on key features and benefits. Keep it under 200 characters.'
+                                },
+                                {
+                                  'role': 'user',
+                                  'content': 'Generate a product description for: ${nameController.text}'
+                                },
+                              ],
+                            }),
+                          );
+
+                          if (response.statusCode == 200) {
+                            final data = jsonDecode(response.body);
+                            final description = data['choices'][0]['message']['content'];
+                            descriptionController.text = description.trim();
+                          } else {
+                            throw Exception('Failed to generate description');
+                          }
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error generating description: $e')),
+                          );
+                        }
+                      },
+                      tooltip: 'Generate Description',
                     ),
                   ),
                   maxLines: 4,

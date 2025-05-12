@@ -4,6 +4,7 @@ import 'package:engineering_project/assets/AI/api_config.dart';
 import 'package:engineering_project/assets/components/cart_manager.dart';
 import 'package:engineering_project/models/product.dart';
 import 'package:engineering_project/pages/cart_page.dart';
+import 'package:engineering_project/pages/theme_notifier.dart';
 import 'package:engineering_project/screens/cart_screen.dart';
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
+import 'package:firebase_storage/firebase_storage.dart';
 
 enum SpecialColorTheme { red, blue, green }
 
@@ -215,54 +217,58 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
   @override
   Widget build(BuildContext context) {
-    // Add this at the start of build method
     _debugAdminStatus();
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeColor =
-        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+    // Get the theme notifier using Consumer instead of Provider.of
+    return Consumer<ThemeNotifier>(
+      builder: (context, themeNotifier, child) {
+        final isDark = themeNotifier.isDarkMode;
+        final themeColor = themeNotifier.isSpecialModeActive 
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+            : Colors.red;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Assistant Tommy'),
-        backgroundColor:
-            isDark
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Assistant Tommy'),
+            backgroundColor: isDark 
                 ? Colors.black
-                : (_selectedTheme != null
-                    ? getThemeColor(_selectedTheme!)
-                    : Theme.of(context).primaryColor),
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark ? Colors.black : Colors.grey[50],
-              ),
-              child:
-                  _messages.isEmpty
-                      ? _buildConversationStarters() // Show starters when no messages
-                      : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _messages.length,
-                        itemBuilder: (context, index) {
-                          return _buildMessage(_messages[index]);
-                        },
-                      ),
-            ),
+                : themeColor,
+            elevation: 0,
           ),
-          if (_isTyping) _buildTypingIndicator(),
-          _buildImageUploadField(), // Add this line
-        ],
-      ),
+          body: Column(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.black : Colors.grey[50],
+                  ),
+                  child:
+                      _messages.isEmpty
+                          ? _buildConversationStarters() // Show starters when no messages
+                          : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _messages.length,
+                            itemBuilder: (context, index) {
+                              return _buildMessage(_messages[index]);
+                            },
+                          ),
+                ),
+              ),
+              if (_isTyping) _buildTypingIndicator(),
+              _buildImageUploadField(), // Add this line
+            ],
+          ),
+        );
+      },
     );
   }
 
   Widget _buildConversationStarters() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeColor =
-        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
 
     return Center(
       child: Container(
@@ -347,9 +353,11 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
   }
 
   Widget _buildTypingIndicator() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeColor =
-        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -406,9 +414,11 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
   }
 
   Widget _buildMessage(ChatMessage message) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeColor =
-        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
 
     // Clean up any code formatting from the response
     String cleanText = message.text.replaceAll(RegExp(r'```[\w]*\n|```'), '')  // Remove code block markers
@@ -578,15 +588,15 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
           : [];
 
       final response = await http.post(
-        Uri.parse(_openRouterUrl),
+        Uri.parse(APIConfig.openRouterUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${_openRouterApiKey}',
-          'HTTP-Referer': 'http://localhost',
+          'Authorization': 'Bearer ${APIConfig.ApiKey}',
+          'HTTP-Referer': 'http://localhost:62630',
           'X-Title': 'AI Chat Assistant',
         },
         body: jsonEncode({
-          'model': 'deepseek/deepseek-prover-v2:free',
+          'model': 'openai/gpt-3.5-turbo',  // Changed model to more stable one
           'messages': [
             {'role': 'system', 'content': systemPrompt},
             {'role': 'user', 'content': message},
@@ -594,25 +604,36 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
         }),
       );
 
+      print('API Response Status: ${response.statusCode}');
+      print('API Response Body: ${response.body}');
+
       if (response.statusCode != 200) {
         throw Exception('API request failed with status: ${response.statusCode}');
       }
 
       final data = jsonDecode(response.body);
-      String aiResponse = data['choices'][0]['message']['content'] as String;
       
-      // Simplified cleanup - only remove extra whitespace and normalize line breaks
+      // Add null checks and error handling
+      if (data == null) {
+        throw Exception('API response was null');
+      }
+      
+      if (!data.containsKey('choices') || data['choices'] == null || !(data['choices'] is List) || data['choices'].isEmpty) {
+        throw Exception('Invalid API response format: missing or invalid choices');
+      }
+
+      final firstChoice = data['choices'][0];
+      if (!firstChoice.containsKey('message') || !firstChoice['message'].containsKey('content')) {
+        throw Exception('Invalid message format in API response');
+      }
+
+      String aiResponse = firstChoice['message']['content'] as String;
+      
+      // Clean up response
       aiResponse = aiResponse
           .trim()
-          .replaceAll(RegExp(r'\n{2,}'), '\n')  // Replace multiple line breaks with single
-          .replaceAll(RegExp(r'\s{2,}'), ' ');  // Replace multiple spaces with single
-
-      if (aiResponse.isEmpty) {
-        return (
-          'I apologize, but I couldn\'t generate a proper response. Please try asking your question again.',
-          recommendations,
-        );
-      }
+          .replaceAll(RegExp(r'\n{2,}'), '\n')
+          .replaceAll(RegExp(r'\s{2,}'), ' ');
 
       return (aiResponse, recommendations);
     } catch (e, stackTrace) {
@@ -910,9 +931,11 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
   // Add this method to show the confirmation dialog
   void _showAddToCartDialog(List<Product> products) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeColor =
-        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
 
     showDialog(
       context: context,
@@ -1204,35 +1227,51 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
   }
 
   Future<void> _checkAdminStatus() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() {
-        _isAdmin = false;
-      });
-      return;
-    }
-
+    print('Checking admin status...'); // Debug print
     try {
-      // Listen to real-time updates of user's role
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('No user logged in'); // Debug print
+        setState(() => _isAdmin = false);
+        return;
+      }
+
+      print('Current user ID: ${user.uid}'); // Debug print
+
+      // Get the user document
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      print('User document data: ${userDoc.data()}'); // Debug print
+
+      if (mounted) {
+        setState(() {
+          // Check if the role is admin
+          _isAdmin = userDoc.exists && userDoc.data()?['role'] == 'admin';
+          print('Setting admin status to: $_isAdmin'); // Debug print
+        });
+      }
+
+      // Set up real-time listener for role changes
       FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .snapshots()
-          .listen((snapshot) {
-            if (mounted) {
-              setState(() {
-                // Check role field instead of isAdmin
-                _isAdmin = snapshot.data()?['role'] == 'admin';
-                print('Admin status updated: $_isAdmin');
-                print('User role: ${snapshot.data()?['role']}');
-              });
-            }
+          .listen((doc) {
+        if (mounted) {
+          setState(() {
+            _isAdmin = doc.exists && doc.data()?['role'] == 'admin';
+            print('Admin status updated from listener: $_isAdmin'); // Debug print
           });
+        }
+      });
     } catch (e) {
       print('Error checking admin status: $e');
-      setState(() {
-        _isAdmin = false;
-      });
+      if (mounted) {
+        setState(() => _isAdmin = false);
+      }
     }
   }
 
@@ -1254,6 +1293,17 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
   // Add this method to the _AIChatScreenState class
   void _showAddProductDialog() {
+    print('Showing add product dialog'); // Debug print
+    print('Current admin status: $_isAdmin'); // Debug print
+
+    if (!_isAdmin) {
+      print('User is not admin, showing error message'); // Debug print
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Only admin users can add products')),
+      );
+      return;
+    }
+
     final TextEditingController nameController = TextEditingController();
     final TextEditingController priceController = TextEditingController();
     final TextEditingController stockController = TextEditingController();
@@ -1261,949 +1311,366 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
     String? selectedCategory;
     String? mainImagePath;
     List<String> additionalImagePaths = [];
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeColor =
-        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
 
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setState) {
+            final themeNotifier = Provider.of<ThemeNotifier>(context);
+            final isDark = themeNotifier.isDarkMode;
+            final themeColor = themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                : Colors.red;
+
             return Dialog(
-              backgroundColor: Colors.transparent,
+              backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Container(
-                constraints: BoxConstraints(maxWidth: 400),
+                width: MediaQuery.of(context).size.width * 0.8,
+                padding: EdgeInsets.all(20),
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Container(
-                        padding: EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.grey.shade800 : Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
+                      Text(
+                        'Add New Product',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      ),
+                      SizedBox(height: 20),
+                      _buildTextField(
+                        controller: nameController,
+                        label: 'Product Name',
+                        isDark: isDark,
+                        prefixIcon: Icons.inventory_2,
+                      ),
+                      SizedBox(height: 12),
+                      _buildTextField(
+                        controller: priceController,
+                        label: 'Price',
+                        isDark: isDark,
+                        keyboardType: TextInputType.number,
+                        prefixIcon: Icons.attach_money,
+                      ),
+                      SizedBox(height: 12),
+                      _buildTextField(
+                        controller: stockController,
+                        label: 'Stock',
+                        isDark: isDark,
+                        keyboardType: TextInputType.number,
+                        prefixIcon: Icons.warehouse,
+                      ),
+                      SizedBox(height: 12),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Row(
                           children: [
-                            Text(
-                              'Add New Product',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : Colors.black87,
-                              ),
+                            Icon(
+                              Icons.category,
+                              color: isDark ? themeColor.shade200 : themeColor,
                             ),
-                            SizedBox(height: 20),
-                            // Main Image Selection
-                            Container(
-                              height: 200,
-                              decoration: BoxDecoration(
-                                color:
-                                    isDark
-                                        ? Colors.grey.shade700
-                                        : Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(15),
-                                border: Border.all(
-                                  color: themeColor.withOpacity(0.5),
-                                  width: 2,
-                                ),
-                              ),
-                              child:
-                                  mainImagePath != null
-                                      ? Stack(
-                                        children: [
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              13,
-                                            ),
-                                            child: Image.network(
-                                              mainImagePath!,
-                                              width: double.infinity,
-                                              height: double.infinity,
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                          Positioned(
-                                            top: 8,
-                                            right: 8,
-                                            child: IconButton(
-                                              icon: Icon(
-                                                Icons.delete,
-                                                color: Colors.red,
-                                              ),
-                                              onPressed: () {
-                                                setState(
-                                                  () => mainImagePath = null,
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                      : InkWell(
-                                        onTap: () async {
-                                          final imageUrl =
-                                              await _pickAndUploadImage();
-                                          if (imageUrl != null) {
-                                            setState(
-                                              () => mainImagePath = imageUrl,
-                                            );
-                                          }
-                                        },
-                                        child: Center(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.add_photo_alternate,
-                                                size: 40,
-                                                color: themeColor,
-                                              ),
-                                              SizedBox(height: 8),
-                                              Text(
-                                                'Add Main Image',
-                                                style: TextStyle(
-                                                  color: themeColor,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                            ),
-                            SizedBox(height: 16),
-                            // Additional Images
-                            Container(
-                              height: 100,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: max(
-                                  3,
-                                  additionalImagePaths.length,
-                                ), // Use max to show at least 3 slots
-                                itemBuilder: (context, index) {
-                                  final hasImage =
-                                      index < additionalImagePaths.length;
-                                  return Container(
-                                    width: 100,
-                                    margin: EdgeInsets.only(right: 8),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          isDark
-                                              ? Colors.grey.shade700
-                                              : Colors.grey.shade200,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: themeColor.withOpacity(0.5),
-                                      ),
-                                    ),
-                                    child:
-                                        hasImage
-                                            ? Stack(
-                                              children: [
-                                                ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(9),
-                                                  child: Image.network(
-                                                    additionalImagePaths[index],
-                                                    width: double.infinity,
-                                                    height: double.infinity,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder:
-                                                        (
-                                                          context,
-                                                          error,
-                                                          stackTrace,
-                                                        ) => Center(
-                                                          child: Icon(
-                                                            Icons.error,
-                                                            color: Colors.red,
-                                                          ),
-                                                        ),
-                                                  ),
-                                                ),
-                                                Positioned(
-                                                  top: 4,
-                                                  right: 4,
-                                                  child: IconButton(
-                                                    icon: Icon(
-                                                      Icons.delete,
-                                                      color: Colors.red,
-                                                      size: 20,
-                                                    ),
-                                                    onPressed: () {
-                                                      setState(() {
-                                                        additionalImagePaths
-                                                            .removeAt(index);
-                                                      });
-                                                    },
-                                                  ),
-                                                ),
-                                              ],
-                                            )
-                                            : InkWell(
-                                              onTap: () async {
-                                                final imageUrl =
-                                                    await _pickAndUploadImage();
-                                                if (imageUrl != null) {
-                                                  setState(() {
-                                                    additionalImagePaths.add(
-                                                      imageUrl,
-                                                    );
-                                                  });
-                                                }
-                                              },
-                                              child: Center(
-                                                child: Icon(
-                                                  Icons.add_photo_alternate,
-                                                  color: themeColor,
-                                                ),
-                                              ),
-                                            ),
-                                  );
-                                },
-                              ),
-                            ),
-                            SizedBox(height: 16),
-                            // Product Details Fields
-                            _buildTextField(
-                              controller: nameController,
-                              label: 'Product Name',
-                              isDark: isDark,
-                            ),
-                            SizedBox(height: 12),
-                            _buildTextField(
-                              controller: priceController,
-                              label: 'Price (TRY)',
-                              keyboardType: TextInputType.number,
-                              isDark: isDark,
-                            ),
-                            SizedBox(height: 12),
-                            _buildTextField(
-                              controller: stockController,
-                              label: 'Stock Quantity',
-                              keyboardType: TextInputType.number,
-                              isDark: isDark,
-                            ),
-                            SizedBox(height: 12),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                color:
-                                    isDark
-                                        ? Colors.grey.shade700
-                                        : Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color:
-                                      isDark
-                                          ? Colors.grey.shade600
-                                          : Colors.grey.shade300,
-                                ),
-                              ),
+                            SizedBox(width: 8),
+                            Expanded(
                               child: FutureBuilder<List<String>>(
                                 future: _fetchCategories(),
                                 builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return Center(
-                                      child: CircularProgressIndicator(),
-                                    );
+                                  if (!snapshot.hasData) {
+                                    return CircularProgressIndicator();
                                   }
-
-                                  final categories =
-                                      snapshot.data ??
-                                      [
-                                        "CPU's",
-                                        "GPU's",
-                                        "RAM's",
-                                        "Storage",
-                                        "Motherboards",
-                                        "Cases",
-                                        "PSUs",
-                                      ];
-
-                                  // Check if selectedCategory exists in the categories list
-                                  if (selectedCategory != null &&
-                                      !categories.contains(selectedCategory)) {
-                                    // If category doesn't exist anymore, reset selection to null
-                                    selectedCategory = null;
-                                  }
-
                                   return DropdownButtonHideUnderline(
                                     child: DropdownButton<String>(
                                       value: selectedCategory,
+                                      hint: Text(
+                                        'Select Category',
+                                        style: TextStyle(
+                                          color: isDark ? Colors.white70 : Colors.black87,
+                                        ),
+                                      ),
                                       isExpanded: true,
-                                      hint: Text('Select Category'),
-                                      items:
-                                          categories.map((String category) {
-                                            return DropdownMenuItem(
-                                              value: category,
-                                              child: Text(category),
-                                            );
-                                          }).toList(),
-                                      onChanged: (String? newValue) {
-                                        setState(
-                                          () => selectedCategory = newValue,
+                                      dropdownColor: isDark ? Colors.grey.shade800 : Colors.white,
+                                      items: snapshot.data!.map((String category) {
+                                        return DropdownMenuItem<String>(
+                                          value: category,
+                                          child: Text(
+                                            category,
+                                            style: TextStyle(
+                                              color: isDark ? Colors.white : Colors.black87,
+                                            ),
+                                          ),
                                         );
+                                      }).toList(),
+                                      onChanged: (String? newValue) {
+                                        setState(() {
+                                          selectedCategory = newValue;
+                                        });
                                       },
                                     ),
                                   );
                                 },
                               ),
                             ),
-                            SizedBox(height: 12),
-                            _buildTextField(
-                              controller: descriptionController,
-                              label: 'Description',
-                              maxLines: 3,
-                              isDark: isDark,
-                            ),
                           ],
                         ),
                       ),
-                      SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text('Cancel'),
+                      SizedBox(height: 12),
+                      _buildTextField(
+                        controller: descriptionController,
+                        label: 'Description',
+                        isDark: isDark,
+                        maxLines: 3,
+                        prefixIcon: Icons.description,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            Icons.auto_fix_high,
+                            color: isDark ? themeColor.shade200 : themeColor,
                           ),
-                          SizedBox(width: 8),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: themeColor,
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            onPressed: () async {
-                              if (_validateProductInput(
-                                nameController.text,
-                                priceController.text,
-                                stockController.text,
-                                selectedCategory,
-                                mainImagePath,
-                              )) {
-                                await _saveProduct(
-                                  nameController.text,
-                                  double.parse(priceController.text),
-                                  int.parse(stockController.text),
-                                  selectedCategory!,
-                                  descriptionController.text,
-                                  mainImagePath!,
-                                  additionalImagePaths,
-                                );
-                                Navigator.pop(context);
+                          onPressed: () async {
+                            if (nameController.text.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter a product name first')),
+                              );
+                              return;
+                            }
+
+                            try {
+                              final response = await http.post(
+                                Uri.parse(APIConfig.openRouterUrl),
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': 'Bearer ${APIConfig.ApiKey}',
+                                  'HTTP-Referer': 'http://localhost:62630',
+                                  'X-Title': 'AI Description Generator',
+                                },
+                                body: jsonEncode({
+                                  'model': 'openai/gpt-3.5-turbo',
+                                  'messages': [
+                                    {
+                                      'role': 'system',
+                                      'content': 'You are a professional product description writer. Create a concise, informative description for computer hardware products. Focus on key features and benefits. Keep it under 200 characters.'
+                                    },
+                                    {
+                                      'role': 'user',
+                                      'content': 'Generate a product description for: ${nameController.text}'
+                                    },
+                                  ],
+                                }),
+                              );
+
+                              if (response.statusCode == 200) {
+                                final data = jsonDecode(response.body);
+                                final description = data['choices'][0]['message']['content'];
+                                descriptionController.text = description.trim();
+                              } else {
+                                throw Exception('Failed to generate description');
                               }
-                            },
-                            child: Text('Add Product'),
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error generating description: $e')),
+                              );
+                            }
+                          },
+                          tooltip: 'Generate AI Description',
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      // Main Image Section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Main Image',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // Add these helper methods to _AIChatScreenState
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    bool isDark = false,
-    TextInputType? keyboardType,
-    int maxLines = 1,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
-        ),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        maxLines: maxLines,
-        decoration: InputDecoration(
-          labelText: label,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          border: InputBorder.none,
-        ),
-      ),
-    );
-  }
-
-  Future<String?> _pickAndUploadImage() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? pickedImage = await picker.pickImage(
-        source: ImageSource.gallery,
-      );
-
-      if (pickedImage != null) {
-        if (kIsWeb) {
-          return await _uploadProductImage(pickedImage);
-        } else {
-          return await _uploadProductImage(File(pickedImage.path));
-        }
-      }
-      return null;
-    } catch (e) {
-      print('Error picking/uploading image: $e');
-      return null;
-    }
-  }
-
-  bool _validateProductInput(
-    String name,
-    String price,
-    String stock,
-    String? category,
-    String? mainImage,
-  ) {
-    if (name.isEmpty ||
-        price.isEmpty ||
-        stock.isEmpty ||
-        category == null ||
-        mainImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Please fill in all required fields and add a main image',
-          ),
-        ),
-      );
-      return false;
-    }
-
-    if (double.tryParse(price) == null || int.tryParse(stock) == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter valid price and stock numbers')),
-      );
-      return false;
-    }
-
-    return true;
-  }
-
-  Future<void> _saveProduct(
-    String name,
-    double price,
-    int stock,
-    String category,
-    String description,
-    String mainImage,
-    List<String> additionalImages,
-  ) async {
-    try {
-      final product = {
-        'name': name,
-        'price': price,
-        'stock': stock,
-        'category': category,
-        'description': description,
-        'imagePath': mainImage,
-        'images': [mainImage, ...additionalImages],
-        'createdAt': FieldValue.serverTimestamp(),
-      };
-
-      await FirebaseFirestore.instance.collection('products').add(product);
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Product added successfully')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error adding product: $e')));
-      }
-    }
-  }
-
-  // First, add this method to search for products by name
-  Future<List<Product>> _searchProducts(String query) async {
-    try {
-      final lowerQuery = query.toLowerCase();
-      final snapshot =
-          await FirebaseFirestore.instance.collection('products').get();
-
-      return snapshot.docs
-          .map((doc) {
-            final data = doc.data();
-            return Product(
-              id: doc.id,
-              name: data['name'] as String,
-              price: (data['price'] as num).toDouble(),
-              category: data['category'] as String,
-              description: data['description'] as String? ?? '',
-              imageUrl: data['imagePath'] as String? ?? '',
-              images: List<String>.from(
-                data['images'] ?? [],
-              ), // Properly cast images array
-              stock: data['stock'] as int? ?? 0,
-            );
-          })
-          .where((product) => product.name.toLowerCase().contains(lowerQuery))
-          .toList();
-    } catch (e) {
-      print('Error searching products: $e');
-      return [];
-    }
-  }
-
-  // Add this method to show the product search dialog
-  void _showProductSearchDialog() {
-    final TextEditingController searchController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Search Product to Update'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: searchController,
-                decoration: InputDecoration(
-                  labelText: 'Product Name',
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.search),
-                ),
-              ),
-              SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () async {
-                  final products = await _searchProducts(searchController.text);
-                  Navigator.pop(context);
-                  if (products.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('No products found')),
-                    );
-                  } else {
-                    _showProductSelectionDialog(products);
-                  }
-                },
-                child: Text('Search'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // Add this method to show the product selection dialog
-  void _showProductSelectionDialog(List<Product> products) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Select Product to Update'),
-          content: Container(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                final product = products[index];
-                return ListTile(
-                  leading:
-                      product.imageUrl.isNotEmpty
-                          ? Image.network(
-                            product.imageUrl,
-                            width: 50,
-                            height: 50,
-                            fit: BoxFit.cover,
-                          )
-                          : Icon(Icons.image_not_supported),
-                  title: Text(product.name),
-                  subtitle: Text('₺${product.price.toStringAsFixed(2)}'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showUpdateProductDialog(product);
-                  },
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // Update this method in _AIChatScreenState class
-  void _showUpdateProductDialog(Product product) {
-    final TextEditingController nameController = TextEditingController(
-      text: product.name,
-    );
-    final TextEditingController priceController = TextEditingController(
-      text: product.price.toString(),
-    );
-    final TextEditingController stockController = TextEditingController(
-      text: product.stock.toString(),
-    );
-    final TextEditingController descriptionController = TextEditingController(
-      text: product.description,
-    );
-    String? selectedCategory = product.category;
-    String mainImagePath = product.imageUrl;
-    List<String> additionalImagePaths = List.from(product.images)..remove(
-      product.imageUrl,
-    ); // Remove main image since it's already shown in mainImagePath
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeColor =
-        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Dialog(
-              backgroundColor: Colors.transparent,
-              child: Container(
-                constraints: BoxConstraints(maxWidth: 400),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.grey.shade800 : Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      SizedBox(height: 8),
+                      Center(
+                        child: Stack(
                           children: [
-                            Text(
-                              'Update Product',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : Colors.black87,
-                              ),
-                            ),
-                            SizedBox(height: 20),
-                            // Main Image Selection
                             Container(
-                              height: 200,
+                              width: 100,
+                              height: 100,
                               decoration: BoxDecoration(
-                                color:
-                                    isDark
-                                        ? Colors.grey.shade700
-                                        : Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(15),
+                                color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: themeColor.withOpacity(0.5),
-                                  width: 2,
                                 ),
                               ),
-                              child:
-                                  mainImagePath.isNotEmpty
-                                      ? Stack(
-                                        children: [
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              13,
-                                            ),
-                                            child: Image.network(
-                                              mainImagePath,
-                                              width: double.infinity,
-                                              height: double.infinity,
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                          Positioned(
-                                            top: 8,
-                                            right: 8,
-                                            child: IconButton(
-                                              icon: Icon(
-                                                Icons.edit,
-                                                color: Colors.white,
-                                              ),
-                                              onPressed: () async {
-                                                final imageUrl =
-                                                    await _pickAndUploadImage();
-                                                if (imageUrl != null) {
-                                                  setState(
-                                                    () =>
-                                                        mainImagePath =
-                                                            imageUrl,
-                                                  );
-                                                }
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                      : InkWell(
-                                        onTap: () async {
-                                          final imageUrl =
-                                              await _pickAndUploadImage();
-                                          if (imageUrl != null) {
-                                            setState(
-                                              () => mainImagePath = imageUrl,
-                                            );
-                                          }
-                                        },
-                                        child: Center(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.add_photo_alternate,
-                                                size: 40,
-                                                color: themeColor,
-                                              ),
-                                              SizedBox(height: 8),
-                                              Text(
-                                                'Update Main Image',
-                                                style: TextStyle(
-                                                  color: themeColor,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
+                              child: mainImagePath != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(9),
+                                      child: Image.network(
+                                        mainImagePath!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => Center(
+                                          child: Icon(
+                                            Icons.error,
+                                            color: Colors.red,
                                           ),
                                         ),
                                       ),
-                            ),
-                            SizedBox(height: 16),
-                            // Additional Images
-                            Container(
-                              height: 100,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: max(
-                                  3,
-                                  additionalImagePaths.length,
-                                ), // Use max to show at least 3 slots
-                                itemBuilder: (context, index) {
-                                  final hasImage =
-                                      index < additionalImagePaths.length;
-                                  return Container(
-                                    width: 100,
-                                    margin: EdgeInsets.only(right: 8),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          isDark
-                                              ? Colors.grey.shade700
-                                              : Colors.grey.shade200,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: themeColor.withOpacity(0.5),
+                                    )
+                                  : IconButton(
+                                      icon: Icon(
+                                        Icons.add_photo_alternate,
+                                        color: themeColor,
+                                        size: 32,
                                       ),
-                                    ),
-                                    child:
-                                        hasImage
-                                            ? Stack(
-                                              children: [
-                                                ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(9),
-                                                  child: Image.network(
-                                                    additionalImagePaths[index],
-                                                    width: double.infinity,
-                                                    height: double.infinity,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder:
-                                                        (
-                                                          context,
-                                                          error,
-                                                          stackTrace,
-                                                        ) => Center(
-                                                          child: Icon(
-                                                            Icons.error,
-                                                            color: Colors.red,
-                                                          ),
-                                                        ),
-                                                  ),
-                                                ),
-                                                Positioned(
-                                                  top: 4,
-                                                  right: 4,
-                                                  child: IconButton(
-                                                    icon: Icon(
-                                                      Icons.delete,
-                                                      color: Colors.red,
-                                                      size: 20,
-                                                    ),
-                                                    onPressed: () {
-                                                      setState(() {
-                                                        additionalImagePaths
-                                                            .removeAt(index);
-                                                      });
-                                                    },
-                                                  ),
-                                                ),
-                                              ],
-                                            )
-                                            : InkWell(
-                                              onTap: () async {
-                                                final imageUrl =
-                                                    await _pickAndUploadImage();
-                                                if (imageUrl != null) {
-                                                  setState(() {
-                                                    additionalImagePaths.add(
-                                                      imageUrl,
-                                                    );
-                                                  });
-                                                }
-                                              },
-                                              child: Center(
-                                                child: Icon(
-                                                  Icons.add_photo_alternate,
-                                                  color: themeColor,
-                                                ),
-                                              ),
-                                            ),
-                                  );
-                                },
-                              ),
-                            ),
-                            SizedBox(height: 16),
-                            // Product Details Fields
-                            _buildTextField(
-                              controller: nameController,
-                              label: 'Product Name',
-                              isDark: isDark,
-                            ),
-                            SizedBox(height: 12),
-                            _buildTextField(
-                              controller: priceController,
-                              label: 'Price (TRY)',
-                              keyboardType: TextInputType.number,
-                              isDark: isDark,
-                            ),
-                            SizedBox(height: 12),
-                            _buildTextField(
-                              controller: stockController,
-                              label: 'Stock Quantity',
-                              keyboardType: TextInputType.number,
-                              isDark: isDark,
-                            ),
-                            SizedBox(height: 12),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                color:
-                                    isDark
-                                        ? Colors.grey.shade700
-                                        : Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color:
-                                      isDark
-                                          ? Colors.grey.shade600
-                                          : Colors.grey.shade300,
-                                ),
-                              ),
-                              child: FutureBuilder<List<String>>(
-                                future: _fetchCategories(),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return Center(
-                                      child: CircularProgressIndicator(),
-                                    );
-                                  }
-
-                                  final categories =
-                                      snapshot.data ??
-                                      [
-                                        "CPU's",
-                                        "GPU's",
-                                        "RAM's",
-                                        "Storage",
-                                        "Motherboards",
-                                        "Cases",
-                                        "PSUs",
-                                      ];
-
-                                  // Check if selectedCategory exists in the categories list
-                                  if (selectedCategory != null &&
-                                      !categories.contains(selectedCategory)) {
-                                    // If category doesn't exist anymore, reset selection to null
-                                    selectedCategory = null;
-                                  }
-
-                                  return DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: selectedCategory,
-                                      isExpanded: true,
-                                      hint: Text('Select Category'),
-                                      items:
-                                          categories.map((String category) {
-                                            return DropdownMenuItem(
-                                              value: category,
-                                              child: Text(category),
-                                            );
-                                          }).toList(),
-                                      onChanged: (String? newValue) {
-                                        setState(
-                                          () => selectedCategory = newValue,
-                                        );
+                                      onPressed: () async {
+                                        final imageUrl = await _pickAndUploadImage();
+                                        if (imageUrl != null) {
+                                          setState(() {
+                                            mainImagePath = imageUrl;
+                                          });
+                                        }
                                       },
                                     ),
-                                  );
-                                },
+                            ),
+                            if (mainImagePath != null)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: IconButton(
+                                  icon: Icon(
+                                    Icons.close,
+                                    color: Colors.red,
+                                    size: 20,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      mainImagePath = null;
+                                    });
+                                  },
+                                ),
                               ),
-                            ),
-                            SizedBox(height: 12),
-                            _buildTextField(
-                              controller: descriptionController,
-                              label: 'Description',
-                              maxLines: 3,
-                              isDark: isDark,
-                            ),
                           ],
                         ),
                       ),
                       SizedBox(height: 16),
+                      // Additional Images Section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Additional Images',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Row(
+                            children: List.generate(3, (index) {
+                              final hasImage = index < additionalImagePaths.length;
+                              return Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                child: Stack(
+                                  children: [
+                                    Container(
+                                      width: 100,
+                                      height: 100,
+                                      decoration: BoxDecoration(
+                                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: themeColor.withOpacity(0.5),
+                                        ),
+                                      ),
+                                      child: hasImage
+                                          ? ClipRRect(
+                                              borderRadius: BorderRadius.circular(9),
+                                              child: Image.network(
+                                                additionalImagePaths[index],
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error, stackTrace) => Center(
+                                                  child: Icon(
+                                                    Icons.error,
+                                                    color: Colors.red,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                          : IconButton(
+                                              icon: Icon(
+                                                Icons.add_photo_alternate,
+                                                color: themeColor,
+                                                size: 32,
+                                              ),
+                                              onPressed: () async {
+                                                final imageUrl = await _pickAndUploadImage();
+                                                if (imageUrl != null) {
+                                                  setState(() {
+                                                    if (index >= additionalImagePaths.length) {
+                                                      additionalImagePaths.add(imageUrl);
+                                                    } else {
+                                                      additionalImagePaths[index] = imageUrl;
+                                                    }
+                                                  });
+                                                }
+                                              },
+                                            ),
+                                    ),
+                                    if (hasImage)
+                                      Positioned(
+                                        right: 0,
+                                        top: 0,
+                                        child: IconButton(
+                                          icon: Icon(
+                                            Icons.close,
+                                            color: Colors.red,
+                                            size: 20,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              additionalImagePaths.removeAt(index);
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: Text('Cancel'),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
                           ),
                           SizedBox(width: 8),
                           ElevatedButton(
@@ -2220,42 +1687,37 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                             ),
                             onPressed: () async {
                               try {
+                                if (mainImagePath?.isEmpty ?? true) {
+                                  throw Exception('Main image is required');
+                                }
+
                                 final updatedProduct = {
                                   'name': nameController.text,
                                   'price': double.parse(priceController.text),
                                   'stock': int.parse(stockController.text),
                                   'category': selectedCategory,
                                   'description': descriptionController.text,
-                                  'imagePath': mainImagePath,
-                                  'images': [
-                                    mainImagePath,
-                                    ...additionalImagePaths,
-                                  ],
+                                  'imagePath': mainImagePath!,
+                                  'images': [mainImagePath, ...additionalImagePaths],
                                   'updatedAt': FieldValue.serverTimestamp(),
                                 };
 
                                 await FirebaseFirestore.instance
                                     .collection('products')
-                                    .doc(product.id)
+                                    .doc(_currentProductId)
                                     .update(updatedProduct);
 
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Product updated successfully',
-                                    ),
-                                  ),
+                                  SnackBar(content: Text('Product updated successfully')),
                                 );
                               } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error updating product: $e'),
-                                  ),
+                                  SnackBar(content: Text('Error updating product: $e')),
                                 );
                               }
                             },
-                            child: Text('Update Product'),
+                            child: Text('Update'),
                           ),
                         ],
                       ),
@@ -2272,9 +1734,11 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
   // Update the _uploadProductImage method to handle image URL returns
   Widget _buildImageUploadField() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeColor =
-        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
 
     return Container(
       decoration: BoxDecoration(
@@ -2379,9 +1843,11 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
   // Add this method to _AIChatScreenState class
   void _showManageCategoriesDialog() {
     final TextEditingController categoryController = TextEditingController();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeColor =
-        _selectedTheme != null ? getThemeColor(_selectedTheme!) : Colors.red;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
 
     showDialog(
       context: context,
@@ -2552,6 +2018,672 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
     return productsSnapshot.docs.isNotEmpty;
   }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    bool isDark = false,
+    TextInputType? keyboardType,
+    int maxLines = 1,
+    Widget? suffixIcon,
+    IconData? prefixIcon,
+  }) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+        ),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(
+            color: isDark ? Colors.white70 : Colors.black87,
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          border: InputBorder.none,
+          suffixIcon: suffixIcon,
+          prefixIcon: prefixIcon != null ? Icon(
+            prefixIcon,
+            color: isDark ? themeColor.shade200 : themeColor,
+          ) : null,
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _pickAndUploadImage() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? pickedImage = await picker.pickImage(
+        source: ImageSource.gallery,
+      );
+
+      if (pickedImage != null) {
+        if (kIsWeb) {
+          return await _uploadProductImage(pickedImage);
+        } else {
+          return await _uploadProductImage(File(pickedImage.path));
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error picking/uploading image: $e');
+      return null;
+    }
+  }
+
+  bool _validateProductInput(
+    String name,
+    String price,
+    String stock,
+    String? category,
+    String? mainImage,
+  ) {
+    if (name.isEmpty ||
+        price.isEmpty ||
+        stock.isEmpty ||
+        category == null ||
+        mainImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please fill in all required fields and add a main image',
+          ),
+        ),
+      );
+      return false;
+    }
+
+    if (double.tryParse(price) == null || int.tryParse(stock) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter valid price and stock numbers')),
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<void> _saveProduct(
+    String name,
+    double price,
+    int stock,
+    String category,
+    String description,
+    String mainImage,
+    List<String> additionalImages,
+  ) async {
+    try {
+      final product = {
+        'name': name,
+        'price': price,
+        'stock': stock,
+        'category': category,
+        'description': description,
+        'imagePath': mainImage,
+        'images': [mainImage, ...additionalImages],
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      await FirebaseFirestore.instance.collection('products').add(product);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Product added successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding product: $e')),
+        );
+      }
+    }
+  }
+
+  void _showProductSearchDialog() {
+    final TextEditingController searchController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Search Product to Update'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: searchController,
+                decoration: InputDecoration(
+                  labelText: 'Product Name',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.search),
+                ),
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () async {
+                  final products = await _searchProducts(searchController.text);
+                  Navigator.pop(context);
+                  if (products.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('No products found')),
+                    );
+                  } else {
+                    _showProductSelectionDialog(products);
+                  }
+                },
+                child: Text('Search'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<List<Product>> _searchProducts(String query) async {
+    try {
+      final lowerQuery = query.toLowerCase();
+      final snapshot = await FirebaseFirestore.instance.collection('products').get();
+
+      return snapshot.docs
+          .map((doc) {
+            final data = doc.data();
+            return Product(
+              id: doc.id,
+              name: data['name'] as String,
+              price: (data['price'] as num).toDouble(),
+              category: data['category'] as String,
+              description: data['description'] as String? ?? '',
+              imageUrl: data['imagePath'] as String? ?? '',
+              images: List<String>.from(data['images'] ?? []),
+              stock: data['stock'] as int? ?? 0,
+            );
+          })
+          .where((product) => product.name.toLowerCase().contains(lowerQuery))
+          .toList();
+    } catch (e) {
+      print('Error searching products: $e');
+      return [];
+    }
+  }
+
+  void _showProductSelectionDialog(List<Product> products) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Select Product to Update'),
+          content: Container(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: products.length,
+              itemBuilder: (context, index) {
+                final product = products[index];
+                return ListTile(
+                  leading: product.imageUrl.isNotEmpty
+                      ? Image.network(
+                          product.imageUrl,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                        )
+                      : Icon(Icons.image_not_supported),
+                  title: Text(product.name),
+                  subtitle: Text('₺${product.price.toStringAsFixed(2)}'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showUpdateProductDialog(product);
+                  },
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showUpdateProductDialog(Product productToUpdate) {
+    final TextEditingController nameController = TextEditingController(text: productToUpdate.name);
+    final TextEditingController priceController = TextEditingController(text: productToUpdate.price.toString());
+    final TextEditingController stockController = TextEditingController(text: productToUpdate.stock.toString());
+    final TextEditingController descriptionController = TextEditingController(text: productToUpdate.description);
+    String? selectedCategory = productToUpdate.category;
+    String? mainImagePath = productToUpdate.imageUrl;  // Make it nullable
+    List<String> additionalImagePaths = List.from(productToUpdate.images)..remove(productToUpdate.imageUrl);
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final themeNotifier = Provider.of<ThemeNotifier>(context);
+            final isDark = themeNotifier.isDarkMode;
+            final themeColor = themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                : Colors.red;
+
+            return Dialog(
+              backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.8,
+                padding: EdgeInsets.all(20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Update Product',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      _buildTextField(
+                        controller: nameController,
+                        label: 'Product Name',
+                        isDark: isDark,
+                        prefixIcon: Icons.inventory_2,
+                      ),
+                      SizedBox(height: 12),
+                      _buildTextField(
+                        controller: priceController,
+                        label: 'Price',
+                        isDark: isDark,
+                        keyboardType: TextInputType.number,
+                        prefixIcon: Icons.attach_money,
+                      ),
+                      SizedBox(height: 12),
+                      _buildTextField(
+                        controller: stockController,
+                        label: 'Stock',
+                        isDark: isDark,
+                        keyboardType: TextInputType.number,
+                        prefixIcon: Icons.warehouse,
+                      ),
+                      SizedBox(height: 12),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.category,
+                              color: isDark ? themeColor.shade200 : themeColor,
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: FutureBuilder<List<String>>(
+                                future: _fetchCategories(),
+                                builder: (context, snapshot) {
+                                  if (!snapshot.hasData) {
+                                    return CircularProgressIndicator();
+                                  }
+                                  return DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: selectedCategory,
+                                      hint: Text(
+                                        'Select Category',
+                                        style: TextStyle(
+                                          color: isDark ? Colors.white70 : Colors.black87,
+                                        ),
+                                      ),
+                                      isExpanded: true,
+                                      dropdownColor: isDark ? Colors.grey.shade800 : Colors.white,
+                                      items: snapshot.data!.map((String category) {
+                                        return DropdownMenuItem<String>(
+                                          value: category,
+                                          child: Text(
+                                            category,
+                                            style: TextStyle(
+                                              color: isDark ? Colors.white : Colors.black87,
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (String? newValue) {
+                                        setState(() {
+                                          selectedCategory = newValue;
+                                        });
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      _buildTextField(
+                        controller: descriptionController,
+                        label: 'Description',
+                        isDark: isDark,
+                        maxLines: 3,
+                        prefixIcon: Icons.description,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            Icons.auto_fix_high,
+                            color: isDark ? themeColor.shade200 : themeColor,
+                          ),
+                          onPressed: () async {
+                            if (nameController.text.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter a product name first')),
+                              );
+                              return;
+                            }
+
+                            try {
+                              final response = await http.post(
+                                Uri.parse(APIConfig.openRouterUrl),
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': 'Bearer ${APIConfig.ApiKey}',
+                                  'HTTP-Referer': 'http://localhost:62630',
+                                  'X-Title': 'AI Description Generator',
+                                },
+                                body: jsonEncode({
+                                  'model': 'openai/gpt-3.5-turbo',
+                                  'messages': [
+                                    {
+                                      'role': 'system',
+                                      'content': 'You are a professional product description writer. Create a concise, informative description for computer hardware products. Focus on key features and benefits. Keep it under 200 characters.'
+                                    },
+                                    {
+                                      'role': 'user',
+                                      'content': 'Generate a product description for: ${nameController.text}'
+                                    },
+                                  ],
+                                }),
+                              );
+
+                              if (response.statusCode == 200) {
+                                final data = jsonDecode(response.body);
+                                final description = data['choices'][0]['message']['content'];
+                                descriptionController.text = description.trim();
+                              } else {
+                                throw Exception('Failed to generate description');
+                              }
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error generating description: $e')),
+                              );
+                            }
+                          },
+                          tooltip: 'Generate AI Description',
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      // Main Image Section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Main Image',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Stack(
+                        children: [
+                          Container(
+                            width: 150,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: themeColor.withOpacity(0.5),
+                              ),
+                            ),
+                            child: mainImagePath != null
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(9),
+                                    child: Image.network(
+                                      mainImagePath!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => Center(
+                                        child: Icon(
+                                          Icons.error,
+                                          color: Colors.red,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : IconButton(
+                                    icon: Icon(
+                                      Icons.add_photo_alternate,
+                                      color: themeColor,
+                                      size: 36,
+                                    ),
+                                    onPressed: () async {
+                                      final imageUrl = await _pickAndUploadImage();
+                                      if (imageUrl != null) {
+                                        setState(() {
+                                          mainImagePath = imageUrl;
+                                        });
+                                      }
+                                    },
+                                  ),
+                          ),
+                          if (mainImagePath != null)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: IconButton(
+                                icon: Icon(
+                                  Icons.close,
+                                  color: Colors.red,
+                                  size: 24,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    mainImagePath = null;
+                                  });
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
+                      SizedBox(height: 16),
+                      // Additional Images Section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Additional Images',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Row(
+                            children: List.generate(3, (index) {
+                              final hasImage = index < additionalImagePaths.length;
+                              return Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                child: Stack(
+                                  children: [
+                                    Container(
+                                      width: 100,
+                                      height: 100,
+                                      decoration: BoxDecoration(
+                                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: themeColor.withOpacity(0.5),
+                                        ),
+                                      ),
+                                      child: hasImage
+                                          ? ClipRRect(
+                                              borderRadius: BorderRadius.circular(9),
+                                              child: Image.network(
+                                                additionalImagePaths[index],
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error, stackTrace) => Center(
+                                                  child: Icon(
+                                                    Icons.error,
+                                                    color: Colors.red,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                          : IconButton(
+                                              icon: Icon(
+                                                Icons.add_photo_alternate,
+                                                color: themeColor,
+                                                size: 32,
+                                              ),
+                                              onPressed: () async {
+                                                final imageUrl = await _pickAndUploadImage();
+                                                if (imageUrl != null) {
+                                                  setState(() {
+                                                    if (index >= additionalImagePaths.length) {
+                                                      additionalImagePaths.add(imageUrl);
+                                                    } else {
+                                                      additionalImagePaths[index] = imageUrl;
+                                                    }
+                                                  });
+                                                }
+                                              },
+                                            ),
+                                    ),
+                                    if (hasImage)
+                                      Positioned(
+                                        right: 0,
+                                        top: 0,
+                                        child: IconButton(
+                                          icon: Icon(
+                                            Icons.close,
+                                            color: Colors.red,
+                                            size: 20,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              additionalImagePaths.removeAt(index);
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: themeColor,
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () async {
+                              if (_validateProductInput(
+                                nameController.text,
+                                priceController.text,
+                                stockController.text,
+                                selectedCategory,
+                                mainImagePath,
+                              )) {
+                                try {
+                                  if (mainImagePath?.isEmpty ?? true) {
+                                    throw Exception('Main image is required');
+                                  }
+
+                                  final updatedProduct = {
+                                    'name': nameController.text,
+                                    'price': double.parse(priceController.text),
+                                    'stock': int.parse(stockController.text),
+                                    'category': selectedCategory,
+                                    'description': descriptionController.text,
+                                    'imagePath': mainImagePath!,
+                                    'images': [mainImagePath, ...additionalImagePaths],
+                                    'updatedAt': FieldValue.serverTimestamp(),
+                                  };
+
+                                  await FirebaseFirestore.instance
+                                      .collection('products')
+                                      .doc(productToUpdate.id)
+                                      .update(updatedProduct);
+
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Product updated successfully')),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error updating product: $e')),
+                                  );
+                                }
+                              }
+                            },
+                            child: Text('Update'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
 class ChatMessage {
@@ -2586,6 +2718,6 @@ class Product {
     required this.description,
     required this.imageUrl,
     this.images = const [],
-    required this.stock, // Make sure stock is required
+    required this.stock,
   });
 }
