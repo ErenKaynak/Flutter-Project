@@ -11,12 +11,64 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:engineering_project/providers/language_provider.dart';
 
 import 'theme_notifier.dart';
 import 'address_screen.dart';
 import 'past_orders_page.dart';
 import 'welcome_screen.dart';
 import '../admin-panel/admin_main.dart';
+
+class LanguageSelector extends StatelessWidget {
+  const LanguageSelector({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final languageProvider = Provider.of<LanguageProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
+    return PopupMenuButton<String>(
+      icon: Icon(
+        Icons.language,
+        color: isDark ? Colors.white : Colors.black87,
+      ),
+      onSelected: (String languageCode) {
+        languageProvider.changeLanguage(languageCode);
+      },
+      itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(
+          value: 'en',
+          child: Row(
+            children: [
+              Text('🇬🇧 '),
+              Text(l10n.english),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'tr',
+          child: Row(
+            children: [
+              Text('🇹🇷 '),
+              Text(l10n.turkish),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'ar',
+          child: Row(
+            children: [
+              Text('🇸🇦 '),
+              Text(l10n.arabic),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -497,6 +549,7 @@ class _ProfilePageState extends State<ProfilePage> {
             borderRadius: BorderRadius.all(Radius.circular(15)),
           ),
           elevation: 10,
+          leading: const LanguageSelector(),
           title: Text(
             l10n.profile,
             style: TextStyle(
@@ -760,6 +813,7 @@ class _ProfilePageState extends State<ProfilePage> {
           borderRadius: BorderRadius.all(Radius.circular(15)),
         ),
         elevation: 10,
+        leading: const LanguageSelector(),
         title: GestureDetector(
           onTap: _handleProfileTitleTap,
           child: Text(
