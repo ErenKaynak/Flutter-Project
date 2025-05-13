@@ -71,18 +71,12 @@ class _AIChatScreenState extends State<AIChatScreen>
     'updateProduct',
   ];
 
-  final String systemPrompt = '''
-You are a knowledgeable PC hardware assistant in the selling app. Help users with PC builds using only available components if they ask you to.
-- If the user initate a small talk or a conversation, respond in a friendly manner.
-- Make your responses short and concise if user didnt ask detailed information.
-- Only recommend products that we have in stock
-- Focus on compatibility between components
-- Consider the user's budget
-- If we don't have a specific component, suggest alternatives from our inventory
-- Don't mention or suggest products we don't have in stock
-- If the user asks for a specific brand, try to recommend that brand if we have it in stock
-- If the user asks for a specific use case (gaming, work, etc.), tailor your recommendations accordingly
-''';
+  /*final String systemPrompt = '''
+You are a knowledgeable assistant who can help with PC hardware and other topics.
+- Respond naturally to user queries
+- Keep responses concise but helpful
+- Adapt your tone to match the user's style
+''';*/
 
   @override
   void initState() {
@@ -126,11 +120,6 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
   Future<void> _handleSubmitted(String text, {File? image}) async {
     if (text.trim().isEmpty && image == null) return;
 
-    if (!_isLocalAIAvailable) {
-      _showLocalAIError();
-      return;
-    }
-
     setState(() {
       if (text.isNotEmpty) {
         _messages.add(ChatMessage(text: text, isUser: true));
@@ -140,36 +129,24 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
     });
 
     try {
-      if (text.toLowerCase().contains('add new product') ||
-          text.toLowerCase().contains('update product')) {
-        await _handleProductCreation(text);
-      } else {
-        final response = await LocalAIService.getChatCompletion(text, systemPrompt);
-        final recommendations = await _getProductRecommendations(text, {
-          'cpu_brand': text.toLowerCase().contains('intel') ? 'intel' : 'amd',
-          'use_case': text.toLowerCase().contains('gaming') ? 'gaming' : 'work',
-        });
-
-        _addMessage(
-          ChatMessage(
-            text: response,
-            isUser: false,
-            recommendedProducts: recommendations.isNotEmpty ? recommendations : null,
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error in _handleSubmitted: $e');
-      _addMessage(
-        ChatMessage(
-          text: 'An error occurred while processing your request. Please try again.',
-          isUser: false,
-        ),
+      // Get a more natural response from LocalAIService
+      final response = await LocalAIService.getChatCompletion(
+        text,
+        // Use a more flexible system prompt
+        'You are a helpful PC hardware assistant. Respond naturally to user queries.'
       );
-    } finally {
-      setState(() {
-        _isTyping = false;
-      });
+
+      // Add the response with proper formatting
+      _addMessage(ChatMessage(
+        text: response,
+        isUser: false,
+      ));
+    } catch (e) {
+      print('Error in chat response: $e');
+      _addMessage(ChatMessage(
+        text: 'Sorry, I encountered an error. Please try again.',
+        isUser: false,
+      ));
     }
   }
 
