@@ -1,6 +1,8 @@
 import 'dart:io';
 
-import 'package:engineering_project/assets/AI/api_config.dart';
+import 'package:engineering_project/assets/AI/local_ai_config.dart';
+import 'package:engineering_project/assets/AI/local_ai_service.dart';
+import 'package:engineering_project/assets/AI/imgur_config.dart';
 import 'package:engineering_project/assets/components/cart_manager.dart';
 import 'package:engineering_project/models/product.dart';
 import 'package:engineering_project/pages/cart_page.dart';
@@ -52,9 +54,11 @@ class _AIChatScreenState extends State<AIChatScreen>
   final TextEditingController _messageController = TextEditingController();
   final List<ChatMessage> _messages = [];
   bool _isTyping = false;
-  DateTime? _lastRequestTime;
+  bool _isLocalAIAvailable = false;
   String? _userProfileImage;
-  bool _isAIEnabled = true;
+  bool _isAdmin = false;
+  String? _currentProductId;
+  SpecialColorTheme? _selectedTheme;
 
   AnimationController? _typingAnimation;
 
@@ -62,7 +66,6 @@ class _AIChatScreenState extends State<AIChatScreen>
     'I need assistance',
     'Recommend me the cheapest PC build',
     'Looking for a gaming PC build',
-    // Admin-only starters will be shown conditionally
     'Add new product',
     'Update product',
   ];
@@ -80,19 +83,6 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 - If the user asks for a specific use case (gaming, work, etc.), tailor your recommendations accordingly
 ''';
 
-  // OpenRouter Configuration
-  static const String _openRouterApiKey =
-      APIConfig.ApiKey; // Replace with your key
-  static const String _openRouterUrl =
-      'https://openrouter.ai/api/v1/chat/completions';
-
-  // Mevcut değişkenlerin yanına ekleyin
-  SpecialColorTheme? _selectedTheme;
-
-  // Add these variables in _AIChatScreenState class
-  String? _currentProductId;
-  bool _isAdmin = false;
-
   @override
   void initState() {
     super.initState();
@@ -101,11 +91,85 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
       duration: const Duration(milliseconds: 600),
     )..repeat();
 
-    _testFirebaseConnection();
+    _checkLocalAIAvailability();
     _loadUserProfile();
-    _checkAIAvailability();
-    _loadSelectedTheme();
     _checkAdminStatus();
+  }
+
+  Future<void> _checkLocalAIAvailability() async {
+    final isAvailable = await LocalAIService.isAvailable();
+    setState(() {
+      _isLocalAIAvailable = isAvailable;
+    });
+
+    if (!isAvailable) {
+      _showLocalAIError();
+    }
+  }
+
+  void _showLocalAIError() {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Local AI is not available. Please make sure LM Studio is running.'),
+          duration: Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Retry',
+            onPressed: _checkLocalAIAvailability,
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleSubmitted(String text, {File? image}) async {
+    if (text.trim().isEmpty && image == null) return;
+
+    if (!_isLocalAIAvailable) {
+      _showLocalAIError();
+      return;
+    }
+
+    setState(() {
+      if (text.isNotEmpty) {
+        _messages.add(ChatMessage(text: text, isUser: true));
+      }
+      _messageController.clear();
+      _isTyping = true;
+    });
+
+    try {
+      if (text.toLowerCase().contains('add new product') ||
+          text.toLowerCase().contains('update product')) {
+        await _handleProductCreation(text);
+      } else {
+        final response = await LocalAIService.getChatCompletion(text, systemPrompt);
+        final recommendations = await _getProductRecommendations(text, {
+          'cpu_brand': text.toLowerCase().contains('intel') ? 'intel' : 'amd',
+          'use_case': text.toLowerCase().contains('gaming') ? 'gaming' : 'work',
+        });
+
+        _addMessage(
+          ChatMessage(
+            text: response,
+            isUser: false,
+            recommendedProducts: recommendations.isNotEmpty ? recommendations : null,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error in _handleSubmitted: $e');
+      _addMessage(
+        ChatMessage(
+          text: 'An error occurred while processing your request. Please try again.',
+          isUser: false,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isTyping = false;
+      });
+    }
   }
 
   @override
@@ -123,7 +187,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
         .listen((doc) {
           if (mounted) {
             setState(() {
-              _isAIEnabled =
+              _isLocalAIAvailable =
                   doc.exists ? (doc.data()?['isEnabled'] ?? true) : true;
             });
           }
@@ -147,7 +211,6 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
   void dispose() {
     _typingAnimation?.dispose();
     _messageController.dispose();
-    _currentProductId = null;
     super.dispose();
   }
 
@@ -169,24 +232,6 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
       } catch (e) {
         print('Error loading user profile: $e');
       }
-    }
-  }
-
-  Future<void> _checkAIAvailability() async {
-    try {
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('settings')
-              .doc('ai_settings')
-              .get();
-
-      if (mounted) {
-        setState(() {
-          _isAIEnabled = doc.exists ? (doc.data()?['isEnabled'] ?? true) : true;
-        });
-      }
-    } catch (e) {
-      print('Error checking AI availability: $e');
     }
   }
 
@@ -484,166 +529,6 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
         ],
       ),
     );
-  }
-
-  Future<void> _handleSubmitted(String text, {File? image}) async {
-    if (text.trim().isEmpty && image == null) return;
-
-    setState(() {
-      if (text.isNotEmpty) {
-        _messages.add(ChatMessage(text: text, isUser: true));
-      }
-      _messageController.clear();
-      _isTyping = true;
-    });
-
-    try {
-      if (_currentProductId != null && image != null) {
-        setState(() {
-          _messages.add(ChatMessage(text: 'Uploading image...', isUser: true));
-        });
-
-        final imageUrl = await _uploadProductImage(image);
-        if (imageUrl != null) {
-          await FirebaseFirestore.instance
-              .collection('products')
-              .doc(_currentProductId)
-              .update({
-                'imagePath': imageUrl,
-                'images': FieldValue.arrayUnion([imageUrl]),
-              });
-
-          _addMessage(
-            ChatMessage(
-              text: 'Image uploaded and added to the product successfully!',
-              isUser: false,
-            ),
-          );
-
-          // Reset product creation state
-          setState(() {
-            _currentProductId = null;
-          });
-          return;
-        } else {
-          _addMessage(
-            ChatMessage(
-              text: 'Failed to upload image. Please try again.',
-              isUser: false,
-            ),
-          );
-          return;
-        }
-      }
-
-      if (text.toLowerCase().contains('add new product') ||
-          text.toLowerCase().contains('update product')) {
-        await _handleProductCreation(text);
-      } else {
-        final (response, recommendations) = await _getAIResponse(text);
-        _addMessage(
-          ChatMessage(
-            text: response,
-            isUser: false,
-            recommendedProducts:
-                recommendations.isNotEmpty ? recommendations : null,
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error in _handleSubmitted: $e');
-      _addMessage(
-        ChatMessage(
-          text: 'An error occurred. Please try again.',
-          isUser: false,
-        ),
-      );
-    } finally {
-      setState(() {
-        _isTyping = false;
-      });
-    }
-  }
-
-  Future<(String, List<Product>)> _getAIResponse(String message) async {
-    if (!_isAIEnabled) {
-      return Future.value((
-        'I\'m currently on vacation!! Try to talk to me later :P',
-        <Product>[],
-      ));
-    }
-
-    try {
-      bool shouldRecommend = message.toLowerCase().contains('recommend') ||
-          message.toLowerCase().contains('pc build') ||
-          message.toLowerCase().contains('build') ||
-          message.toLowerCase().contains('suggest') ||
-          message.toLowerCase().contains('looking for');
-
-      final List<Product> recommendations = shouldRecommend
-          ? await _getProductRecommendations(message, {
-              'cpu_brand': message.toLowerCase().contains('intel') ? 'intel' : 'amd',
-              'use_case': message.toLowerCase().contains('gaming') ? 'gaming' : 'work',
-            })
-          : [];
-
-      final response = await http.post(
-        Uri.parse(APIConfig.openRouterUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${APIConfig.ApiKey}',
-          'HTTP-Referer': 'http://localhost:62630',
-          'X-Title': 'AI Chat Assistant',
-        },
-        body: jsonEncode({
-          'model': 'openai/gpt-3.5-turbo',  // Changed model to more stable one
-          'messages': [
-            {'role': 'system', 'content': systemPrompt},
-            {'role': 'user', 'content': message},
-          ],
-        }),
-      );
-
-      print('API Response Status: ${response.statusCode}');
-      print('API Response Body: ${response.body}');
-
-      if (response.statusCode != 200) {
-        throw Exception('API request failed with status: ${response.statusCode}');
-      }
-
-      final data = jsonDecode(response.body);
-      
-      // Add null checks and error handling
-      if (data == null) {
-        throw Exception('API response was null');
-      }
-      
-      if (!data.containsKey('choices') || data['choices'] == null || !(data['choices'] is List) || data['choices'].isEmpty) {
-        throw Exception('Invalid API response format: missing or invalid choices');
-      }
-
-      final firstChoice = data['choices'][0];
-      if (!firstChoice.containsKey('message') || !firstChoice['message'].containsKey('content')) {
-        throw Exception('Invalid message format in API response');
-      }
-
-      String aiResponse = firstChoice['message']['content'] as String;
-      
-      // Clean up response
-      aiResponse = aiResponse
-          .trim()
-          .replaceAll(RegExp(r'\n{2,}'), '\n')
-          .replaceAll(RegExp(r'\s{2,}'), ' ');
-
-      return (aiResponse, recommendations);
-    } catch (e, stackTrace) {
-      print('Error in API request: $e');
-      print('Stack trace: $stackTrace');
-      return (
-        'I apologize, but I encountered an error. Please try again in a moment.',
-        <Product>[],
-      );
-    }
   }
 
   void _addToCart(Product product) async {
@@ -1035,44 +920,30 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
       if (kIsWeb) {
         if (imageSource is XFile) {
-          // Handle XFile for web
           imageBytes = await imageSource.readAsBytes();
         } else if (imageSource is File) {
-          // Handle File for web
           imageBytes = await imageSource.readAsBytes();
         } else {
           throw Exception('Unsupported image source type for web');
         }
       } else {
         if (imageSource is File) {
-          // Handle File for mobile
           imageBytes = await imageSource.readAsBytes();
         } else if (imageSource is XFile) {
-          // Handle XFile for mobile
           imageBytes = await imageSource.readAsBytes();
         } else {
           throw Exception('Unsupported image source type for mobile');
         }
       }
 
-      // Check image size
       if (imageBytes.length > 10 * 1024 * 1024) {
         throw Exception('Image size exceeds 10MB limit');
       }
 
       final base64Image = base64Encode(imageBytes);
-
-      // Update the API endpoint to use HTTPS
       final response = await http.post(
-        Uri.parse('https://api.imgur.com/3/image'),
-        headers: {
-          'Authorization': 'Client-ID ${APIConfig.imgurClientId}',
-          'Content-Type': 'application/json',
-          // Add CORS headers for web
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST',
-          'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-        },
+        Uri.parse(ImgurConfig.uploadEndpoint),
+        headers: ImgurConfig.getHeaders(),
         body: jsonEncode({'image': base64Image, 'type': 'base64'}),
       );
 
@@ -1447,42 +1318,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                               return;
                             }
 
-                            try {
-                              final response = await http.post(
-                                Uri.parse(APIConfig.openRouterUrl),
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                  'Authorization': 'Bearer ${APIConfig.ApiKey}',
-                                  'HTTP-Referer': 'http://localhost:62630',
-                                  'X-Title': 'AI Description Generator',
-                                },
-                                body: jsonEncode({
-                                  'model': 'openai/gpt-3.5-turbo',
-                                  'messages': [
-                                    {
-                                      'role': 'system',
-                                      'content': 'You are a professional product description writer. Create a concise, informative description for computer hardware products. Focus on key features and benefits. Keep it under 200 characters.'
-                                    },
-                                    {
-                                      'role': 'user',
-                                      'content': 'Generate a product description for: ${nameController.text}'
-                                    },
-                                  ],
-                                }),
-                              );
-
-                              if (response.statusCode == 200) {
-                                final data = jsonDecode(response.body);
-                                final description = data['choices'][0]['message']['content'];
-                                descriptionController.text = description.trim();
-                              } else {
-                                throw Exception('Failed to generate description');
-                              }
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Error generating description: $e')),
-                              );
-                            }
+                            await _generateAIDescription(descriptionController, nameController.text);
                           },
                           tooltip: 'Generate AI Description',
                         ),
@@ -1686,35 +1522,43 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                               ),
                             ),
                             onPressed: () async {
-                              try {
-                                if (mainImagePath?.isEmpty ?? true) {
-                                  throw Exception('Main image is required');
+                              if (_validateProductInput(
+                                nameController.text,
+                                priceController.text,
+                                stockController.text,
+                                selectedCategory,
+                                mainImagePath,
+                              )) {
+                                try {
+                                  if (mainImagePath?.isEmpty ?? true) {
+                                    throw Exception('Main image is required');
+                                  }
+
+                                  final updatedProduct = {
+                                    'name': nameController.text,
+                                    'price': double.parse(priceController.text),
+                                    'stock': int.parse(stockController.text),
+                                    'category': selectedCategory,
+                                    'description': descriptionController.text,
+                                    'imagePath': mainImagePath!,
+                                    'images': [mainImagePath, ...additionalImagePaths],
+                                    'updatedAt': FieldValue.serverTimestamp(),
+                                  };
+
+                                  await FirebaseFirestore.instance
+                                      .collection('products')
+                                      .doc(_currentProductId)
+                                      .update(updatedProduct);
+
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Product updated successfully')),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error updating product: $e')),
+                                  );
                                 }
-
-                                final updatedProduct = {
-                                  'name': nameController.text,
-                                  'price': double.parse(priceController.text),
-                                  'stock': int.parse(stockController.text),
-                                  'category': selectedCategory,
-                                  'description': descriptionController.text,
-                                  'imagePath': mainImagePath!,
-                                  'images': [mainImagePath, ...additionalImagePaths],
-                                  'updatedAt': FieldValue.serverTimestamp(),
-                                };
-
-                                await FirebaseFirestore.instance
-                                    .collection('products')
-                                    .doc(_currentProductId)
-                                    .update(updatedProduct);
-
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Product updated successfully')),
-                                );
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error updating product: $e')),
-                                );
                               }
                             },
                             child: Text('Update'),
@@ -2401,42 +2245,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                               return;
                             }
 
-                            try {
-                              final response = await http.post(
-                                Uri.parse(APIConfig.openRouterUrl),
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                  'Authorization': 'Bearer ${APIConfig.ApiKey}',
-                                  'HTTP-Referer': 'http://localhost:62630',
-                                  'X-Title': 'AI Description Generator',
-                                },
-                                body: jsonEncode({
-                                  'model': 'openai/gpt-3.5-turbo',
-                                  'messages': [
-                                    {
-                                      'role': 'system',
-                                      'content': 'You are a professional product description writer. Create a concise, informative description for computer hardware products. Focus on key features and benefits. Keep it under 200 characters.'
-                                    },
-                                    {
-                                      'role': 'user',
-                                      'content': 'Generate a product description for: ${nameController.text}'
-                                    },
-                                  ],
-                                }),
-                              );
-
-                              if (response.statusCode == 200) {
-                                final data = jsonDecode(response.body);
-                                final description = data['choices'][0]['message']['content'];
-                                descriptionController.text = description.trim();
-                              } else {
-                                throw Exception('Failed to generate description');
-                              }
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Error generating description: $e')),
-                              );
-                            }
+                            await _generateAIDescription(descriptionController, nameController.text);
                           },
                           tooltip: 'Generate AI Description',
                         ),
@@ -2683,6 +2492,28 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
         );
       },
     );
+  }
+
+  Future<void> _generateAIDescription(TextEditingController descriptionController, String productName) async {
+    if (productName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a product name first')),
+      );
+      return;
+    }
+
+    try {
+      final response = await LocalAIService.getChatCompletion(
+        'Generate a product description for: $productName',
+        'You are a professional product description writer. Create a concise, informative description for computer hardware products. Focus on key features and benefits. Keep it under 200 characters.'
+      );
+      
+      descriptionController.text = response.trim();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error generating description: $e')),
+      );
+    }
   }
 }
 

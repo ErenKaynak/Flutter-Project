@@ -1,20 +1,30 @@
+import 'package:engineering_project/assets/components/cart_manager.dart';
 import 'package:engineering_project/pages/cart_page.dart' as CartPage;
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:engineering_project/pages/search_page.dart';
 import 'package:engineering_project/pages/theme_notifier.dart';
-import 'package:engineering_project/assets/components/cart_manager.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(debugShowCheckedModeBanner: false, home: HomePage());
+  }
+}
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
-
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -30,20 +40,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final CartManager _cartManager = CartManager();
   final Map<String, AnimationController> _animationControllers = {};
   String? _userProfilePicture;
+
   final Map<String, AnimationController> _colorAnimationControllers = {};
   final Map<String, Animation<Color?>> _colorAnimations = {};
   final Map<String, AnimationController> _tickAnimationControllers = {};
   final Map<String, Animation<double>> _tickAnimations = {};
   final Map<String, bool> _isAddingToCartMap = {};
+
   bool _isDisposed = false;
-  String _userName = "";
-  bool _isInitialized = false;
+  String _userName = "Guest";
 
   @override
   void initState() {
     super.initState();
     _cartManager.loadCart();
     _cartManager.addListener(_updateUI);
+    _getUserProfile();
+    _loadCategories();
     _searchController.addListener(() {
       if (mounted) {
         setState(() {
@@ -51,26 +64,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         });
       }
     });
-  }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_isInitialized) {
-      _isInitialized = true;
-      _getUserProfile();
-      _loadCategories();
-      _loadInitialData();
-    }
+    _loadInitialData();
   }
 
   Future<void> _loadCategories() async {
     try {
-      final snapshot =
-          await FirebaseFirestore.instance
-              .collection('categories')
-              .orderBy('order')
-              .get();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('categories')
+          .orderBy('name')
+          .get();
+
       if (mounted) {
         setState(() {
           categories =
@@ -91,12 +95,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Future<void> _loadInitialData() async {
     if (!mounted) return;
+
     setState(() {
       _isLoading = true;
     });
+
     try {
       await fetchProducts();
       await fetchFavorites();
+
       if (mounted && !_isDisposed) {
         setState(() {
           _isLoading = false;
@@ -123,8 +130,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _isDisposed = true;
     _searchController.dispose();
     _cartManager.removeListener(_updateUI);
+
     _colorAnimationControllers.forEach((_, controller) => controller.dispose());
     _tickAnimationControllers.forEach((_, controller) => controller.dispose());
+
     super.dispose();
   }
 
@@ -132,25 +141,33 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       setState(() {
-        _userName = AppLocalizations.of(context)!.guestUser;
+        _userName = "Guest";
         _userProfilePicture = null;
       });
       return;
     }
+
     try {
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
       final profileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
+
       if (mounted) {
         setState(() {
-          _userName = userDoc.data()?['name'] ?? AppLocalizations.of(context)!.guestUser;
-          _userProfilePicture = profileImageUrl.isNotEmpty ? profileImageUrl : null;
+          _userName = userDoc.data()?['name'] ?? 'User';
+          _userProfilePicture =
+              profileImageUrl.isNotEmpty ? profileImageUrl : null;
         });
       }
     } catch (e) {
       print('Error fetching user profile: $e');
       if (mounted) {
         setState(() {
-          _userName = AppLocalizations.of(context)!.guestUser;
+          _userName = "User";
           _userProfilePicture = null;
         });
       }
@@ -158,65 +175,96 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _initializeAnimationControllers() {
-    _colorAnimationControllers.forEach((_, controller) => controller.dispose());
-    _tickAnimationControllers.forEach((_, controller) => controller.dispose());
-    _colorAnimationControllers.clear();
-    _colorAnimations.clear();
-    _tickAnimationControllers.clear();
-    _tickAnimations.clear();
-    _isAddingToCartMap.clear();
-    if (!mounted) return;
-    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
-    for (var product in products) {
-      final productId = product['id'];
-      final colorController = AnimationController(
-        vsync: this,
-        duration: Duration(milliseconds: 300),
-      );
-      _colorAnimationControllers[productId] = colorController;
-      _colorAnimations[productId] = ColorTween(
-        begin: themeNotifier.isSpecialModeActive
-            ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-            : Colors.red.shade400,
-        end: Colors.green.shade500,
-      ).animate(colorController);
-      final tickController = AnimationController(
-        vsync: this,
-        duration: Duration(milliseconds: 500),
-      );
-      _tickAnimationControllers[productId] = tickController;
-      _tickAnimations[productId] = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(parent: tickController, curve: Curves.elasticOut),
-      );
-      _isAddingToCartMap[productId] = false;
+    try {
+      // Dispose existing controllers
+      _colorAnimationControllers.forEach((_, controller) => controller.dispose());
+      _tickAnimationControllers.forEach((_, controller) => controller.dispose());
+      
+      // Clear all maps
+      _colorAnimationControllers.clear();
+      _colorAnimations.clear();
+      _tickAnimationControllers.clear();
+      _tickAnimations.clear();
+      _isAddingToCartMap.clear();
+  
+      if (!mounted) return;
+  
+      final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+  
+      for (var product in products) {
+        final productId = product['id'];
+        if (productId == null) continue;
+  
+        // Initialize color animation
+        final colorController = AnimationController(
+          vsync: this,
+          duration: Duration(milliseconds: 300),
+        );
+        _colorAnimationControllers[productId] = colorController;
+  
+        _colorAnimations[productId] = ColorTween(
+          begin: themeNotifier.isBlackMode 
+              ? Theme.of(context).colorScheme.secondary
+              : Colors.red.shade400,
+          end: Colors.green.shade500,
+        ).animate(colorController);
+  
+        // Initialize tick animation
+        final tickController = AnimationController(
+          vsync: this,
+          duration: Duration(milliseconds: 500),
+        );
+        _tickAnimationControllers[productId] = tickController;
+  
+        _tickAnimations[productId] = Tween<double>(
+          begin: 0.0,
+          end: 1.0,
+        ).animate(CurvedAnimation(
+          parent: tickController,
+          curve: Curves.elasticOut,
+        ));
+  
+        _isAddingToCartMap[productId] = false;
+      }
+    } catch (e) {
+      print('Error initializing animation controllers: $e');
     }
   }
 
   Future<void> fetchProducts() async {
-    final l10n = AppLocalizations.of(context)!;
     if (!mounted) return;
+
     try {
-      final QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('products').get();
+      final QuerySnapshot snapshot =
+          await FirebaseFirestore.instance.collection('products').get();
+
       final List<Map<String, dynamic>> loadedProducts = [];
+
       snapshot.docs.forEach((doc) {
         final data = doc.data() as Map<String, dynamic>;
+
+        print('Product: ${data['name']}, Image path: ${data['imagePath']}');
         String priceString = data['price']?.toString() ?? '0';
+
         loadedProducts.add({
           'id': doc.id,
-          'name': data['name'] ?? l10n.loading,
+          'name': data['name'] ?? 'Unknown Product',
           'price': priceString,
-          'category': data['category'] ?? l10n.allCategories,
+          'category': data['category'] ?? 'Uncategorized',
           'image': data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-          'description': data['description'] ?? l10n.loading,
+          'description': data['description'] ?? 'No description available',
           'stock': data['stock'] ?? 0,
-          'averageRating': data['averageRating']?.toDouble() ?? 0.0,
+          'averageRating': (data['averageRating'] ?? 0.0).toDouble(),
           'ratingCount': data['ratingCount'] ?? 0,
         });
       });
+
       if (!mounted) return;
+
       setState(() {
         products = loadedProducts;
       });
+
       _initializeAnimationControllers();
     } catch (error) {
       print('Error fetching products: $error');
@@ -234,16 +282,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         }
         return;
       }
+
       final favoritesSnapshot =
           await FirebaseFirestore.instance
               .collection('favorites')
               .doc(user.uid)
               .collection('userFavorites')
               .get();
+
       final List<String> loadedFavorites = [];
       favoritesSnapshot.docs.forEach((doc) {
         loadedFavorites.add(doc.id);
       });
+
       if (mounted) {
         setState(() {
           favoriteProductIds = loadedFavorites;
@@ -272,10 +323,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     MaterialPageRoute(builder: (context) => LoginPage()),
                   );
                 },
-                child: const Text(
-                  'SIGN IN',
-                  style: TextStyle(color: Colors.white),
-                ),
+                child: const Text('SIGN IN', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -285,14 +333,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       );
       return;
     }
+
     final productId = product['id'];
     final isFavorite = favoriteProductIds.contains(productId);
+
     try {
       final favRef = FirebaseFirestore.instance
           .collection('favorites')
           .doc(user.uid)
           .collection('userFavorites')
           .doc(productId);
+
       if (isFavorite) {
         await favRef.delete();
         if (mounted) {
@@ -373,100 +424,132 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _navigateToProductDetail(Map<String, dynamic> product) {
+    if (!mounted) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ProductDetailPage(productId: product['id']),
+        builder: (context) => ProductDetailPage(productId: product["id"]),
       ),
     );
   }
 
   Future<void> _addToCart(Map<String, dynamic> product) async {
-    final l10n = AppLocalizations.of(context)!;
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.pleaseSignIn)),
-      );
-      return;
-    }
-
     if (_isAddingToCartMap[product['id']] == true) return;
 
-    setState(() {
-      _isAddingToCartMap[product['id']] = true;
-    });
+    _isAddingToCartMap[product['id']] = true;
+
+    _colorAnimationControllers[product['id']]?.forward();
+    await Future.delayed(Duration(milliseconds: 200));
+    _tickAnimationControllers[product['id']]?.forward();
 
     try {
-      await _cartManager.addToCart(product);
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Please log in to add items to cart'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        _resetAnimations(product['id']);
+        return;
+      }
+
+      final cartRef = FirebaseFirestore.instance
+          .collection('cart')
+          .doc(user.uid)
+          .collection('userCart')
+          .doc(product['id']);
+
+      final docSnapshot = await cartRef.get();
+
+      if (docSnapshot.exists) {
+        final currentQuantity = docSnapshot.data()?['quantity'] ?? 1;
+        final newQuantity = (currentQuantity + 1).clamp(1, 10);
+        await cartRef.update({'quantity': newQuantity});
+      } else {
+        await cartRef.set({
+          'name': product['name'],
+          'price': product['price'],
+          'imagePath': product['image'],
+          'quantity': 1,
+        });
+      }
+
       if (mounted) {
-        _colorAnimationControllers[product['id']]?.forward();
-        _tickAnimationControllers[product['id']]?.forward();
-        final message = l10n.addedToCart.toString().replaceFirst('{productName}', product['name']);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
+          SnackBar(
+            content: Text('${product["name"]} added to cart'),
+            duration: Duration(seconds: 2),
+            action: SnackBarAction(
+              label: 'VIEW CART',
+              onPressed: () {
+                if (mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CartPage.CartPage(),
+                    ),
+                  );
+                }
+              },
+            ),
+          ),
         );
       }
+
+      await Future.delayed(Duration(seconds: 1));
+      if (mounted) {
+        _resetAnimations(product['id']);
+      }
     } catch (e) {
-      print('Error adding to cart: $e');
+      print('Error adding item to cart: $e');
+      _resetAnimations(product['id']);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.errorAddingToCart)),
+          SnackBar(
+            content: Text('Failed to add item to cart'),
+            duration: Duration(seconds: 2),
+          ),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isAddingToCartMap[product['id']] = false;
-        });
-        Future.delayed(Duration(seconds: 1), () {
-          _colorAnimationControllers[product['id']]?.reverse();
-          _tickAnimationControllers[product['id']]?.reverse();
-        });
-      }
+      _isAddingToCartMap[product['id']] = false;
     }
   }
 
-  String _getCategoryTranslation(String categoryKey, AppLocalizations l10n) {
-    switch (categoryKey) {
-      case "All":
-        return l10n.categoryAll;
-      case "CPU's":
-        return l10n.categoryCPU;
-      case "GPU's":
-        return l10n.categoryGPU;
-      case "RAM's":
-        return l10n.categoryRAM;
-      case "Motherboards":
-        return l10n.categoryMotherboard;
-      case "Storage":
-        return l10n.categoryStorage;
-      case "Cases":
-        return l10n.categoryCase;
-      case "PSU":
-        return l10n.categoryPSU;
-      case "Pre-Built":
-        return l10n.categoryPreBuilt;
-      default:
-        return categoryKey;
+  void _resetAnimations(String productId) {
+    final colorController = _colorAnimationControllers[productId];
+    final tickController = _tickAnimationControllers[productId];
+
+    if (colorController?.isAnimating ?? false) {
+      colorController?.stop();
+    }
+    if (tickController?.isAnimating ?? false) {
+      tickController?.stop();
+    }
+    colorController?.reset();
+    tickController?.reset();
+
+    if (mounted) {
+      setState(() {
+        _isAddingToCartMap[productId] = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor:
-              themeNotifier.isSpecialModeActive
-                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-                  : isDark
-                  ? Colors.black
-                  : Colors.white,
+          backgroundColor: isDark ? Colors.black : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(15)),
           ),
@@ -477,7 +560,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               controller: _searchController,
               style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               decoration: InputDecoration(
-                hintText: l10n.searchProducts,
+                hintText: "Search products",
                 hintStyle: TextStyle(
                   color: isDark ? Colors.grey[400] : Colors.grey[600],
                 ),
@@ -485,14 +568,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 filled: true,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color:
-                        themeNotifier.isSpecialModeActive
-                            ? themeNotifier
-                                .getThemeColor(themeNotifier.specialTheme)
-                                .withOpacity(0.5)
-                            : Colors.red.withOpacity(0.5),
-                  ),
+                  borderSide: BorderSide.none,
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -523,7 +599,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             color: isDark ? Colors.grey[400] : Colors.grey[600],
                             size: 20,
                           ),
-                          onPressed: () => _searchController.clear(),
+                          onPressed: () {
+                            _searchController.clear();
+                          },
                         )
                         : null,
               ),
@@ -534,16 +612,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               alignment: Alignment.center,
               children: [
                 IconButton(
-                  icon: Icon(
-                    Icons.shopping_cart,
-                    color:
-                        isDark
-                            ? Colors.white
-                            : (themeNotifier.isSpecialModeActive
-                                ? Colors
-                                    .white // White in special mode
-                                : Colors.grey[800]), // Default color otherwise
-                  ),
+                  icon: Icon(Icons.shopping_cart),
                   onPressed: () {
                     if (mounted) {
                       Navigator.push(
@@ -563,10 +632,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       padding: EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color:
-                            themeNotifier.isSpecialModeActive
-                                ? themeNotifier.getThemeColor(
-                                  themeNotifier.specialTheme,
-                                )
+                            themeNotifier.isBlackMode
+                                ? Theme.of(context).colorScheme.secondary
                                 : Colors.red,
                         shape: BoxShape.circle,
                       ),
@@ -594,155 +661,115 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   onRefresh: _loadInitialData,
                   child: CustomScrollView(
                     slivers: [
-                      if (_searchQuery.isEmpty) ...[
-                        SliverToBoxAdapter(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(16.0),
-                                margin: EdgeInsets.all(10.0),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors:
-                                        Theme.of(context).brightness ==
-                                                Brightness.dark
-                                            ? [
-                                              themeNotifier.isSpecialModeActive
-                                                  ? themeNotifier
-                                                      .getThemeColor(
-                                                        themeNotifier
-                                                            .specialTheme,
-                                                      )
-                                                      .shade900
-                                                  : Colors.red.shade900,
-                                              Colors.black54,
-                                            ]
-                                            : [
-                                              themeNotifier.isSpecialModeActive
-                                                  ? themeNotifier
-                                                      .getThemeColor(
-                                                        themeNotifier
-                                                            .specialTheme,
-                                                      )
-                                                      .shade500
-                                                  : Colors.red.shade500,
-                                              themeNotifier.isSpecialModeActive
-                                                  ? themeNotifier
-                                                      .getThemeColor(
-                                                        themeNotifier
-                                                            .specialTheme,
-                                                      )
-                                                      .shade100
-                                                  : Colors.red.shade100,
-                                            ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(16.0),
+                              margin: EdgeInsets.all(10.0),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors:
+                                      themeNotifier.isBlackMode
+                                          ? [
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.secondary,
+                                            Colors.grey.shade900,
+                                          ]
+                                          : (isDark
+                                              ? [
+                                                Colors.red.shade900,
+                                                Colors.grey.shade900,
+                                              ]
+                                              : [
+                                                Colors.red.shade500,
+                                                Colors.red.shade100,
+                                              ]),
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        isDark
+                                            ? Colors.black26
+                                            : Colors.black12,
+                                    blurRadius: 5,
+                                    offset: Offset(0, 2),
                                   ),
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          Theme.of(context).brightness ==
-                                                  Brightness.dark
-                                              ? Colors.black26
-                                              : Colors.black12,
-                                      blurRadius: 5,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 30,
-                                      backgroundColor:
-                                          Theme.of(context).brightness ==
-                                                  Brightness.dark
-                                              ? (themeNotifier
-                                                      .isSpecialModeActive
-                                                  ? themeNotifier
-                                                      .getThemeColor(
-                                                        themeNotifier
-                                                            .specialTheme,
-                                                      )
-                                                      .shade700
-                                                  : Colors.red.shade700)
-                                              : (themeNotifier
-                                                      .isSpecialModeActive
-                                                  ? themeNotifier
-                                                      .getThemeColor(
-                                                        themeNotifier
-                                                            .specialTheme,
-                                                      )
-                                                      .shade300
-                                                  : Colors.red.shade300),
-                                      backgroundImage:
-                                          _userProfilePicture != null &&
-                                                  _userProfilePicture!
-                                                      .isNotEmpty
-                                              ? NetworkImage(
-                                                _userProfilePicture!,
-                                              )
-                                              : null,
-                                      child:
-                                          _userProfilePicture == null ||
-                                                  _userProfilePicture!.isEmpty
-                                              ? Icon(
-                                                Icons.person,
-                                                size: 36,
-                                                color: Colors.white,
-                                              )
-                                              : null,
-                                    ),
-                                    SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            l10n.welcome,
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              color:
-                                                  Theme.of(
-                                                            context,
-                                                          ).brightness ==
-                                                          Brightness.dark
-                                                      ? Colors.grey[400]
-                                                      : Colors.black54,
-                                            ),
-                                          ),
-                                          Text(
-                                            _userName,
-                                            style: TextStyle(
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.bold,
-                                              color:
-                                                  Theme.of(
-                                                            context,
-                                                          ).brightness ==
-                                                          Brightness.dark
-                                                      ? Colors.white
-                                                      : Colors.black87,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                ],
                               ),
-                              _buildBannerSection(),
-                              SizedBox(height: 10),
-                              _buildCategoriesHeader(),
-                              _buildCategoriesRow(),
-                            ],
-                          ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 30,
+                                    backgroundColor:
+                                        themeNotifier.isBlackMode
+                                            ? Theme.of(
+                                              context,
+                                            ).colorScheme.secondary
+                                            : (isDark
+                                                ? Colors.red.shade700
+                                                : Colors.red.shade300),
+                                    backgroundImage:
+                                        _userProfilePicture != null &&
+                                                _userProfilePicture!.isNotEmpty
+                                            ? NetworkImage(_userProfilePicture!)
+                                            : null,
+                                    child:
+                                        _userProfilePicture == null ||
+                                                _userProfilePicture!.isEmpty
+                                            ? Icon(
+                                              Icons.person,
+                                              size: 36,
+                                              color: Colors.white,
+                                            )
+                                            : null,
+                                  ),
+                                  SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Welcome",
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color:
+                                                isDark
+                                                    ? Colors.grey[400]
+                                                    : Colors.black54,
+                                          ),
+                                        ),
+                                        Text(
+                                          _userName,
+                                          style: TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            color:
+                                                isDark
+                                                    ? Colors.white
+                                                    : Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            _buildBannerSection(),
+                            SizedBox(height: 10),
+                            _buildCategoriesHeader(),
+                            _buildCategoriesRow(),
+                            _buildProductsHeader(),
+                          ],
                         ),
-                      ],
-                      SliverToBoxAdapter(child: _buildProductsHeader()),
+                      ),
                       _buildProductsGrid(),
                     ],
                   ),
@@ -753,7 +780,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildBannerSection() {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final l10n = AppLocalizations.of(context)!;
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 10),
       height: 180,
@@ -782,27 +809,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors:
-                      Theme.of(context).brightness == Brightness.dark
+                      themeNotifier.isBlackMode
                           ? [
-                            themeNotifier.isSpecialModeActive
-                                ? themeNotifier
-                                    .getThemeColor(themeNotifier.specialTheme)
-                                    .shade900
-                                : Colors.red.shade900,
+                            Theme.of(context).colorScheme.secondary,
                             Colors.black54,
                           ]
-                          : [
-                            themeNotifier.isSpecialModeActive
-                                ? themeNotifier
-                                    .getThemeColor(themeNotifier.specialTheme)
-                                    .shade500
-                                : Colors.red.shade500,
-                            themeNotifier.isSpecialModeActive
-                                ? themeNotifier
-                                    .getThemeColor(themeNotifier.specialTheme)
-                                    .shade100
-                                : Colors.red.shade100,
-                          ],
+                          : (Theme.of(context).brightness == Brightness.dark
+                              ? [Colors.red.shade900, Colors.black54]
+                              : [Colors.red.shade500, Colors.red.shade100]),
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -815,7 +829,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    l10n.specialOffers,
+                    'Special Offers',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -824,20 +838,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    l10n.specialOffersDescription,
+                    'Get up to 20% off on selected products',
                     style: TextStyle(fontSize: 16, color: Colors.white),
                   ),
                   SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {},
                     child: Text(
-                      l10n.shopNow,
+                      'Shop Now',
                       style: TextStyle(
-                        color: themeNotifier.isSpecialModeActive
-                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-                            : (Theme.of(context).brightness == Brightness.dark
+                        color:
+                            Theme.of(context).brightness == Brightness.dark
                                 ? Colors.white
-                                : Colors.red),
+                                : Colors.red,
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
@@ -845,7 +858,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           Theme.of(context).brightness == Brightness.dark
                               ? Colors.grey.shade900
                               : Colors.white,
-                      foregroundColor: Colors.red.shade700,
+                      foregroundColor:
+                          themeNotifier.isBlackMode
+                              ? Theme.of(context).colorScheme.secondary
+                              : Colors.red.shade700,
                     ),
                   ),
                 ],
@@ -859,14 +875,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildCategoriesHeader() {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final l10n = AppLocalizations.of(context)!;
+
     return Padding(
       padding: EdgeInsets.all(10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            l10n.categories,
+            "Categories",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           PopupMenuButton<String>(
@@ -877,19 +893,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   Icons.sort,
                   size: 20,
                   color:
-                      themeNotifier.isSpecialModeActive
-                          ? themeNotifier.getThemeColor(
-                            themeNotifier.specialTheme,
-                          )
+                      themeNotifier.isBlackMode
+                          ? Theme.of(context).colorScheme.secondary
                           : Colors.red.shade700,
                 ),
                 SizedBox(width: 4),
                 Text(
-                  l10n.sort,
+                  "Sort",
                   style: TextStyle(
-                    color: themeNotifier.isSpecialModeActive
-                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-                        : Colors.red.shade700,
+                    color:
+                        themeNotifier.isBlackMode
+                            ? Theme.of(context).colorScheme.secondary
+                            : Colors.red.shade700,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -935,7 +950,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       children: [
                         Icon(Icons.arrow_upward, size: 20),
                         SizedBox(width: 8),
-                        Text(l10n.priceLowToHigh),
+                        Text('Price: Low to High'),
                       ],
                     ),
                   ),
@@ -945,7 +960,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       children: [
                         Icon(Icons.arrow_downward, size: 20),
                         SizedBox(width: 8),
-                        Text(l10n.priceHighToLow),
+                        Text('Price: High to Low'),
                       ],
                     ),
                   ),
@@ -955,7 +970,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       children: [
                         Icon(Icons.sort_by_alpha, size: 20),
                         SizedBox(width: 8),
-                        Text(l10n.nameAToZ),
+                        Text('Name: A to Z'),
                       ],
                     ),
                   ),
@@ -965,7 +980,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       children: [
                         Icon(Icons.sort_by_alpha, size: 20),
                         SizedBox(width: 8),
-                        Text(l10n.nameZToA),
+                        Text('Name: Z to A'),
                       ],
                     ),
                   ),
@@ -982,20 +997,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       padding: EdgeInsets.symmetric(horizontal: 10),
       child: Row(
         children: [
-          ...categories.map(
-            (category) => Row(
-              children: [
-                _buildCategoryCircle(
-                  category['name'],
-                  category['iconPath'],
-                  _selectedCategory == category['name'],
-                  () => _selectCategory(category['name']),
-                  false,
+          ...categories
+              .map(
+                (category) => Row(
+                  children: [
+                    _buildCategoryCircle(
+                      category['name'],
+                      category['iconPath'],
+                      _selectedCategory == category['name'],
+                      () => _selectCategory(category['name']),
+                      false,
+                    ),
+                    SizedBox(width: 15),
+                  ],
                 ),
-                SizedBox(width: 15),
-              ],
-            ),
-          ),
+              )
+              .toList(),
           _buildCategoryCircle(
             "All",
             'lib/assets/Images/all-icon.png',
@@ -1015,10 +1032,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     VoidCallback onTap,
     bool isAsset,
   ) {
-    final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final translatedLabel = _getCategoryTranslation(label, l10n);
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return GestureDetector(
       onTap: onTap,
@@ -1029,87 +1044,88 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             height: 70,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isDark
-                  ? (isSelected
-                      ? (themeNotifier.isSpecialModeActive
-                          ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900
-                          : Colors.red.shade900)
-                      : Colors.grey.shade800)
-                  : (isSelected
-                      ? (themeNotifier.isSpecialModeActive
-                          ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade50
-                          : Colors.red.shade50)
-                      : Colors.grey.shade200),
-              border: isSelected
-                  ? Border.all(
-                      color: isDark
-                          ? (themeNotifier.isSpecialModeActive
-                              ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
-                              : Colors.red.shade700)
-                          : (themeNotifier.isSpecialModeActive
-                              ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
-                              : Colors.red.shade400),
-                      width: 2,
-                    )
-                  : null,
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: themeNotifier.isSpecialModeActive
-                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).withOpacity(0.5)
-                            : (isDark
-                                ? Colors.red.shade900.withOpacity(0.5)
-                                : Colors.red.shade400.withOpacity(0.5)),
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ]
-                  : null,
+              color:
+                  isDark
+                      ? (isSelected
+                          ? (themeNotifier.isBlackMode
+                              ? Theme.of(context).colorScheme.secondary
+                              : Colors.red.shade900)
+                          : Colors.grey.shade800)
+                      : (isSelected
+                          ? Colors.red.shade50
+                          : Colors.grey.shade200),
+              border:
+                  isSelected
+                      ? Border.all(
+                        color:
+                            isDark
+                                ? (themeNotifier.isBlackMode
+                                    ? Theme.of(context).colorScheme.secondary
+                                    : Colors.red.shade700)
+                                : Colors.red.shade400,
+                        width: 2,
+                      )
+                      : null,
+              boxShadow:
+                  isSelected
+                      ? [
+                        BoxShadow(
+                          color:
+                              isDark
+                                  ? (themeNotifier.isBlackMode
+                                      ? Theme.of(
+                                        context,
+                                      ).colorScheme.secondary.withOpacity(0.5)
+                                      : Colors.red.shade900.withOpacity(0.5))
+                                  : Colors.red.shade300.withOpacity(0.5),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                      : null,
             ),
             padding: EdgeInsets.all(10),
-            child: isAsset
-                ? Image.asset(
-                    imagePath,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(
-                        Icons.category,
-                        color: isDark ? Colors.white70 : Colors.grey,
-                      );
-                    },
-                  )
-                : ColorFiltered(
-                    colorFilter: isDark
-                        ? ColorFilter.mode(Colors.white70, BlendMode.srcIn)
-                        : ColorFilter.mode(Colors.black, BlendMode.srcIn),
-                    child: Image.network(
+            child:
+                isAsset
+                    ? Image.asset(
                       imagePath,
                       fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(
-                          Icons.category,
-                          color: isDark ? Colors.white70 : Colors.grey,
-                        );
-                      },
+                      color: isDark ? Colors.white60 : null,
+                    )
+                    : ColorFiltered(
+                      colorFilter:
+                          isDark
+                              ? ColorFilter.mode(
+                                Colors.white70,
+                                BlendMode.srcIn,
+                              )
+                              : ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                      child: Image.network(
+                        imagePath,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          print('Error loading category image: $error');
+                          return Icon(
+                            Icons.category,
+                            color: isDark ? Colors.white70 : Colors.grey,
+                          );
+                        },
+                      ),
                     ),
-                  ),
           ),
           SizedBox(height: 8),
           Text(
-            translatedLabel,
+            label,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isDark
-                  ? (isSelected
-                      ? (themeNotifier.isSpecialModeActive
-                          ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
-                          : Colors.red.shade400)
-                      : Colors.white70)
-                  : (isSelected
-                      ? (themeNotifier.isSpecialModeActive
-                          ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-                          : Colors.red)
-                      : Colors.black),
+              color:
+                  isDark
+                      ? (isSelected
+                          ? (themeNotifier.isBlackMode
+                              ? Theme.of(context).colorScheme.secondary
+                              : Colors.red.shade400)
+                          : Colors.white70)
+                      : (isSelected ? Colors.red : Colors.black),
             ),
           ),
         ],
@@ -1118,7 +1134,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildProductsHeader() {
-    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.all(10),
       child: Row(
@@ -1126,14 +1141,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         children: [
           Text(
             _searchQuery.isNotEmpty
-                ? l10n.searchProducts
+                ? "Search Results"
                 : (_selectedCategory == "All"
-                    ? l10n.bestDeals
-                    : _getCategoryTranslation(_selectedCategory, l10n)),
+                    ? "Best Deals"
+                    : _selectedCategory),
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           Text(
-            "${filteredProducts.length} ${l10n.products}",
+            "${filteredProducts.length} products",
             style: TextStyle(color: Colors.grey[600]),
           ),
         ],
@@ -1142,7 +1157,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildProductsGrid() {
-    final l10n = AppLocalizations.of(context)!;
     if (filteredProducts.isEmpty) {
       return SliverToBoxAdapter(
         child: Center(
@@ -1154,14 +1168,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 Icon(Icons.search_off, size: 70, color: Colors.grey),
                 SizedBox(height: 16),
                 Text(
-                  l10n.noProductsFound,
+                  "No products found",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
                 Text(
                   _searchQuery.isNotEmpty
-                      ? l10n.tryDifferentSearch
-                      : l10n.tryDifferentCategory,
+                      ? "Try a different search term"
+                      : "Try selecting a different category",
                   style: TextStyle(color: Colors.grey[600]),
                 ),
               ],
@@ -1178,322 +1192,295 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           crossAxisCount: 2,
           crossAxisSpacing: 10,
           mainAxisSpacing: 15,
-          childAspectRatio: 0.65,
+          childAspectRatio: 0.6,
         ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final product = filteredProducts[index];
-            final int stock = product["stock"] is int ? product["stock"] : 0;
-            final bool isOutOfStock = stock <= 0;
-            final bool isFavorite = favoriteProductIds.contains(product['id']);
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final product = filteredProducts[index];
+          final int stock = product["stock"] is int ? product["stock"] : 0;
+          final bool isOutOfStock = stock <= 0;
+          final bool isFavorite = favoriteProductIds.contains(product['id']);
 
-            if (!_animationControllers.containsKey(product['id']) &&
-                mounted &&
-                !_isDisposed) {
-              _animationControllers[product['id']] = AnimationController(
-                vsync: this,
-                duration: Duration(milliseconds: 300),
-              );
-            }
-
-            final animationController = _animationControllers[product['id']];
-            if (animationController == null) return Container();
-
-            return GestureDetector(
-              onTap: () => _navigateToProductDetail(product),
-              child: Card(
-                elevation: 3,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.grey.shade800
-                    : Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Flexible(
-                      flex: 3,
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.grey.shade900
-                              : Colors.grey[200],
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                        ),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Center(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                                child: _buildProductImage(product),
-                              ),
-                            ),
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: _buildFavoriteButton(product['id'], isFavorite),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Flexible(
-                      flex: 2,
-                      child: Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      product["name"],
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Flexible(
-                                    child: Text(
-                                      "₺${product["price"]}",
-                                      style: TextStyle(
-                                        color: Colors.green.shade700,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  SizedBox(height: 6),
-                                  _buildRatingBar(product),
-                                ],
-                              ),
-                            ),
-                            _buildAddToCartButton(product, isOutOfStock, animationController),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          if (!_animationControllers.containsKey(product['id']) &&
+              mounted &&
+              !_isDisposed) {
+            _animationControllers[product['id']] = AnimationController(
+              vsync: this,
+              duration: Duration(seconds: 2),
             );
-          },
-          childCount: filteredProducts.length,
-        ),
+          }
+
+          final animationController = _animationControllers[product['id']];
+          if (animationController == null) {
+            return Container();
+          }
+
+          return _buildProductCard(
+            product: product,
+            isOutOfStock: isOutOfStock,
+            isFavorite: isFavorite,
+            animationController: animationController,
+          );
+        }, childCount: filteredProducts.length),
       ),
     );
   }
 
-  Widget _buildProductImage(Map<String, dynamic> product) {
-    if (product["image"].startsWith('http') || product["image"].startsWith('https')) {
-      return Image.network(
-        product["image"],
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        errorBuilder: (context, error, stackTrace) => Image.asset(
-          'lib/assets/Images/placeholder.png',
-          fit: BoxFit.cover,
-        ),
-      );
-    } else {
-      return Image.asset(
-        product["image"],
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        errorBuilder: (context, error, stackTrace) => Icon(
-          Icons.image_not_supported,
-          size: 40,
-          color: Colors.grey[400],
-        ),
-      );
-    }
-  }
-
-  Widget _buildFavoriteButton(String productId, bool isFavorite) {
+  Widget _buildProductCard({
+    required Map<String, dynamic> product,
+    required bool isOutOfStock,
+    required bool isFavorite,
+    required AnimationController animationController,
+  }) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    return Container(
-      padding: EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
-        shape: BoxShape.circle,
-      ),
-      child: GestureDetector(
-        onTap: () => _toggleFavorite(productId),
-        child: Icon(
-          isFavorite ? Icons.favorite : Icons.favorite_border,
-          color: themeNotifier.isSpecialModeActive
-              ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-              : Colors.red,
-          size: 20,
-        ),
-      ),
-    );
-  }
+    final double averageRating = product['averageRating'] ?? 0.0;
+    final int ratingCount = product['ratingCount'] ?? 0;
 
-  Widget _buildRatingBar(Map<String, dynamic> product) {
-    return Flexible(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          ...List.generate(5, (index) {
-            double rating = product["averageRating"] ?? 0.0;
-            return Icon(
-              index < rating.floor()
-                  ? Icons.star
-                  : (index < rating ? Icons.star_half : Icons.star_border),
-              color: Colors.yellow.shade700,
-              size: 16,
-            );
-          }),
-          SizedBox(width: 4),
-          Text(
-            '(${product["ratingCount"] ?? 0})',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAddToCartButton(
-    Map<String, dynamic> product,
-    bool isOutOfStock,
-    AnimationController animationController,
-  ) {
-    final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final l10n = AppLocalizations.of(context)!;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
-      child: SizedBox(
-        width: double.infinity,
-        height: 36,
-        child: AnimatedBuilder(
-          animation: Listenable.merge([
-            _colorAnimationControllers[product['id']]!,
-            _tickAnimationControllers[product['id']]!,
-          ]),
-          builder: (context, child) {
-            return ElevatedButton(
-              onPressed: isOutOfStock || _isAddingToCartMap[product['id']] == true
-                  ? null
-                  : () => _addToCart(product),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _colorAnimations[product['id']]?.value ??
-                    (themeNotifier.isSpecialModeActive
-                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
-                        : Colors.red.shade400),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                elevation: 2,
-                padding: EdgeInsets.symmetric(horizontal: 8),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Opacity(
-                    opacity: 1.0 - (_colorAnimationControllers[product['id']]?.value ?? 0.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.shopping_cart_outlined, size: 16, color: Colors.white),
-                        SizedBox(width: 4),
-                        Text(
-                          isOutOfStock ? l10n.outOfStock : l10n.addToCart,
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+    return GestureDetector(
+      onTap: () => _navigateToProductDetail(product),
+      child: Card(
+        elevation: 3,
+        color:
+            Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade800
+                : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
+          height: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Flexible(
+                flex: 3,
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color:
+                        Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade900
+                            : Colors.grey[200],
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(12),
                     ),
                   ),
-                  if ((_colorAnimationControllers[product['id']]?.value ?? 0.0) > 0)
-                    Transform.scale(
-                      scale: _tickAnimations[product['id']]?.value ?? 0.0,
-                      child: Icon(Icons.check, color: Colors.white, size: 24),
-                    ),
-                ],
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Center(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(12),
+                          ),
+                          child:
+                              (product["image"].startsWith('http') ||
+                                      product["image"].startsWith('https'))
+                                  ? Image.network(
+                                    product["image"],
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Image.asset(
+                                        'lib/assets/Images/placeholder.png',
+                                        fit: BoxFit.cover,
+                                      );
+                                    },
+                                  )
+                                  : Image.asset(
+                                    product["image"],
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(
+                                        Icons.image_not_supported,
+                                        size: 40,
+                                        color: Colors.grey[400],
+                                      );
+                                    },
+                                  ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.8),
+                            shape: BoxShape.circle,
+                          ),
+                          child: GestureDetector(
+                            onTap: () => toggleFavorite(product),
+                            child: Icon(
+                              isFavorite
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              color:
+                                  themeNotifier.isBlackMode
+                                      ? Theme.of(context).colorScheme.secondary
+                                      : Colors.red,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            );
-          },
+              Flexible(
+                flex: 2,
+                child: Container(
+                  padding: EdgeInsets.all(10.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              product["name"],
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: true,
+                            ),
+                            if (ratingCount > 0) ...[
+                              SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  ...List.generate(5, (index) {
+                                    return Icon(
+                                      index < averageRating.round()
+                                          ? Icons.star
+                                          : Icons.star_border,
+                                      color: Colors.amber,
+                                      size: 14,
+                                    );
+                                  }),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    '($ratingCount)',
+                                    style: TextStyle(
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            SizedBox(height: 4),
+                            Text(
+                              "₺${product["price"]}",
+                              style: TextStyle(
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 40,
+                        child: AnimatedBuilder(
+                          animation: Listenable.merge([
+                            _colorAnimationControllers[product['id']]!,
+                            _tickAnimationControllers[product['id']]!,
+                          ]),
+                          builder: (context, child) {
+                            return ElevatedButton(
+                              onPressed:
+                                  isOutOfStock ||
+                                          _isAddingToCartMap[product['id']] ==
+                                              true
+                                      ? null
+                                      : () => _addToCart(product),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    _colorAnimations[product['id']]?.value,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                elevation: 2,
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Opacity(
+                                    opacity:
+                                        1.0 -
+                                        (_colorAnimationControllers[product['id']]
+                                                ?.value ??
+                                            0.0),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        if (!isOutOfStock)
+                                          Icon(Icons.shopping_cart, size: 16),
+                                        if (!isOutOfStock) SizedBox(width: 8),
+                                        Text(
+                                          isOutOfStock
+                                              ? "OUT OF STOCK"
+                                              : "ADD TO CART",
+                                          style: TextStyle(
+                                            fontSize: isOutOfStock ? 12 : 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.visible,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if ((_colorAnimationControllers[product['id']]
+                                              ?.value ??
+                                          0.0) >
+                                      0)
+                                    Transform.scale(
+                                      scale:
+                                          _tickAnimations[product['id']]
+                                              ?.value ??
+                                          0.0,
+                                      child: Icon(
+                                        Icons.check,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  Future<void> _toggleFavorite(String productId) async {
-    final l10n = AppLocalizations.of(context)!;
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.pleaseSignIn)),
-      );
-      return;
-    }
-
-    try {
-      final isFavorite = favoriteProductIds.contains(productId);
-      if (isFavorite) {
-        await FirebaseFirestore.instance
-            .collection('favorites')
-            .doc(user.uid)
-            .collection('userFavorites')
-            .doc(productId)
-            .delete();
-        if (mounted) {
-          setState(() {
-            favoriteProductIds.remove(productId);
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.removedFromFavorites)),
-          );
-        }
-      } else {
-        await FirebaseFirestore.instance
-            .collection('favorites')
-            .doc(user.uid)
-            .collection('userFavorites')
-            .doc(productId)
-            .set({'timestamp': FieldValue.serverTimestamp()});
-        if (mounted) {
-          setState(() {
-            favoriteProductIds.add(productId);
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.addedToFavorites)),
-          );
-        }
-      }
-    } catch (e) {
-      print('Error toggling favorite: $e');
-    }
   }
 }
 
 class FavoritesPage extends StatefulWidget {
   final Function onFavoritesChanged;
-  const FavoritesPage({Key? key, required this.onFavoritesChanged})
-    : super(key: key);
+
+  FavoritesPage({required this.onFavoritesChanged});
 
   @override
   _FavoritesPageState createState() => _FavoritesPageState();
@@ -1519,12 +1506,14 @@ class _FavoritesPageState extends State<FavoritesPage> {
         });
         return;
       }
+
       final favoritesSnapshot =
           await FirebaseFirestore.instance
               .collection('favorites')
               .doc(user.uid)
               .collection('userFavorites')
               .get();
+
       final List<Map<String, dynamic>> loadedFavorites = [];
       favoritesSnapshot.docs.forEach((doc) {
         final data = doc.data();
@@ -1538,6 +1527,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
           'stock': data['stock'] ?? 0,
         });
       });
+
       setState(() {
         favorites = loadedFavorites;
         _isLoading = false;
@@ -1554,21 +1544,25 @@ class _FavoritesPageState extends State<FavoritesPage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
+
       await FirebaseFirestore.instance
           .collection('favorites')
           .doc(user.uid)
           .collection('userFavorites')
           .doc(productId)
           .delete();
+
       setState(() {
         favorites.removeWhere((product) => product['id'] == productId);
       });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Removed from favorites'),
           duration: Duration(seconds: 2),
         ),
       );
+
       widget.onFavoritesChanged();
     } catch (e) {
       print('Error removing from favorites: $e');
@@ -1583,6 +1577,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return Scaffold(
       appBar: AppBar(title: Text('My Favorites')),
       body:
@@ -1628,34 +1624,42 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                   width: 50,
                                   height: 50,
                                   fit: BoxFit.cover,
-                                  errorBuilder:
-                                      (context, error, stackTrace) =>
-                                          Image.asset(
-                                            'lib/assets/Images/placeholder.png',
-                                            width: 50,
-                                            height: 50,
-                                            fit: BoxFit.cover,
-                                          ),
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Image.asset(
+                                      'lib/assets/Images/placeholder.png',
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                    );
+                                  },
                                 )
                                 : Image.asset(
                                   product["image"],
                                   width: 50,
                                   height: 50,
                                   fit: BoxFit.cover,
-                                  errorBuilder:
-                                      (context, error, stackTrace) => Icon(
-                                        Icons.image_not_supported,
-                                        size: 30,
-                                      ),
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.image_not_supported,
+                                      size: 30,
+                                    );
+                                  },
                                 ),
                       ),
                       title: Text(
                         product["name"],
                         style: TextStyle(fontWeight: FontWeight.bold),
+                        // Updated line
                       ),
                       subtitle: Text("₺${product["price"]}"),
                       trailing: IconButton(
-                        icon: Icon(Icons.favorite, color: Colors.red),
+                        icon: Icon(
+                          Icons.favorite,
+                          color:
+                              themeNotifier.isBlackMode
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Colors.red,
+                        ),
                         onPressed: () => removeFromFavorites(product["id"]),
                       ),
                       onTap: () {
@@ -1678,6 +1682,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
 class CartManager extends ChangeNotifier {
   List<CartItem> _items = [];
+
   List<CartItem> get items => _items;
   int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
 
@@ -1716,6 +1721,7 @@ class CartManager extends ChangeNotifier {
   Future<void> loadCart() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
+
     try {
       final snapshot =
           await FirebaseFirestore.instance
@@ -1723,6 +1729,7 @@ class CartManager extends ChangeNotifier {
               .doc(user.uid)
               .collection('userCart')
               .get();
+
       _items =
           snapshot.docs.map((doc) {
             final data = doc.data();
@@ -1735,6 +1742,7 @@ class CartManager extends ChangeNotifier {
               quantity: data['quantity'] ?? 1,
             );
           }).toList();
+
       notifyListeners();
     } catch (e) {
       print('Error loading cart: $e');
@@ -1744,16 +1752,19 @@ class CartManager extends ChangeNotifier {
   Future<void> saveCart() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
+
     try {
       final batch = FirebaseFirestore.instance.batch();
       final cartRef = FirebaseFirestore.instance
           .collection('cart')
           .doc(user.uid)
           .collection('userCart');
+
       final existingItems = await cartRef.get();
       for (var doc in existingItems.docs) {
         batch.delete(doc.reference);
       }
+
       for (var item in _items) {
         final docRef = cartRef.doc(item.id);
         batch.set(docRef, {
@@ -1763,38 +1774,10 @@ class CartManager extends ChangeNotifier {
           'quantity': item.quantity,
         });
       }
+
       await batch.commit();
     } catch (e) {
       print('Error saving cart: $e');
-    }
-  }
-
-  Future<void> addToCart(Map<String, dynamic> product) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    try {
-      final cartRef = FirebaseFirestore.instance
-          .collection('cart')
-          .doc(user.uid)
-          .collection('userCart')
-          .doc(product['id']);
-      final docSnapshot = await cartRef.get();
-      if (docSnapshot.exists) {
-        final currentQuantity = docSnapshot.data()?['quantity'] ?? 1;
-        final newQuantity = (currentQuantity + 1).clamp(1, 10);
-        await cartRef.update({'quantity': newQuantity});
-      } else {
-        await cartRef.set({
-          'name': product['name'],
-          'price': product['price'],
-          'imagePath': product['image'],
-          'quantity': 1,
-        });
-      }
-      notifyListeners();
-    } catch (e) {
-      print('Error adding item to cart: $e');
     }
   }
 }
