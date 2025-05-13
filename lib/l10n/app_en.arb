@@ -644,5 +644,13 @@
     "tommyHiding": "Tommy is hiding in the closet !",
     "close": "Close",
     "photoUploader": "Photo Uploader",
-    "configureAppSettings": "Configure app settings"
+    "configureAppSettings": "Configure app settings",
+    "ratingCount": "{count} ratings",
+    "@ratingCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    }
 }

@@ -640,7 +640,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                             }),
                             SizedBox(width: 6),
                             Text(
-                              "$averageRating ($totalRatings değerlendirme)",
+                              "$averageRating (${AppLocalizations.of(context)!.ratingCount(totalRatings)})",
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey.shade600,

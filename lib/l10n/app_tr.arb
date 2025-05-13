@@ -540,5 +540,13 @@
     "tommyHiding": "Tommy dolabında saklanıyor !",
     "close": "Kapat",
     "photoUploader": "Fotoğraf Yükleyici",
-    "configureAppSettings": "Uygulama ayarlarını yapılandır"
+    "configureAppSettings": "Uygulama ayarlarını yapılandır",
+    "ratingCount": "{count} değerlendirme",
+    "@ratingCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    }
 } 

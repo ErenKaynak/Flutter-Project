@@ -523,5 +523,13 @@
     "tommyHiding": "تومي مختبئ في الخزانة !",
     "close": "إغلاق",
     "photoUploader": "رفع الصور",
-    "configureAppSettings": "تكوين إعدادات التطبيق"
+    "configureAppSettings": "تكوين إعدادات التطبيق",
+    "ratingCount": "{count} تقييم",
+    "@ratingCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    }
 } 

@@ -1164,4 +1164,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get configureAppSettings => 'Uygulama ayarlarını yapılandır';
+
+  @override
+  String ratingCount(int count) {
+    return '$count değerlendirme';
+  }
 }

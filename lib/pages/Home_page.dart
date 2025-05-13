@@ -10,6 +10,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -190,6 +191,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (!mounted) return;
   
       final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+      final specialColor = themeNotifier.isSpecialModeActive 
+          ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+          : null;
   
       for (var product in products) {
         final productId = product['id'];
@@ -203,9 +207,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         _colorAnimationControllers[productId] = colorController;
   
         _colorAnimations[productId] = ColorTween(
-          begin: themeNotifier.isBlackMode 
-              ? Theme.of(context).colorScheme.secondary
-              : Colors.red.shade400,
+          begin: themeNotifier.isSpecialModeActive
+              ? specialColor
+              : (themeNotifier.isBlackMode 
+                  ? Theme.of(context).colorScheme.secondary
+                  : Colors.red.shade400),
           end: Colors.green.shade500,
         ).animate(colorController);
   
@@ -314,7 +320,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             children: [
               const Icon(Icons.info_outline, color: Colors.white),
               const SizedBox(width: 8),
-              const Text('You need to sign in to continue'),
+              Text(AppLocalizations.of(context)!.pleaseSignIn),
               const Spacer(),
               TextButton(
                 onPressed: () {
@@ -323,7 +329,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     MaterialPageRoute(builder: (context) => LoginPage()),
                   );
                 },
-                child: const Text('SIGN IN', style: TextStyle(color: Colors.white)),
+                child: Text(AppLocalizations.of(context)!.signIn, style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -352,7 +358,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Removed from favorites'),
+              content: Text(AppLocalizations.of(context)!.removedFromFavorites),
               duration: Duration(seconds: 1),
             ),
           );
@@ -373,7 +379,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Added to favorites'),
+              content: Text(AppLocalizations.of(context)!.addedToFavorites),
               duration: Duration(seconds: 1),
             ),
           );
@@ -384,7 +390,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update favorites'),
+            content: Text(AppLocalizations.of(context)!.failedToUpdateFavorites),
             duration: Duration(seconds: 2),
           ),
         );
@@ -449,7 +455,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Please log in to add items to cart'),
+              content: Text(AppLocalizations.of(context)!.pleaseLoginToAdd),
               duration: Duration(seconds: 2),
             ),
           );
@@ -482,10 +488,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${product["name"]} added to cart'),
+            content: Text(AppLocalizations.of(context)!.addedToCartMessage(product["name"], 1)),
             duration: Duration(seconds: 2),
             action: SnackBarAction(
-              label: 'VIEW CART',
+              label: AppLocalizations.of(context)!.viewCart,
               onPressed: () {
                 if (mounted) {
                   Navigator.push(
@@ -511,7 +517,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to add item to cart'),
+            content: Text(AppLocalizations.of(context)!.failedToAddToCart),
             duration: Duration(seconds: 2),
           ),
         );
@@ -545,6 +551,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final specialColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : null;
 
     return SafeArea(
       child: Scaffold(
@@ -560,7 +569,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               controller: _searchController,
               style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               decoration: InputDecoration(
-                hintText: "Search products",
+                hintText: AppLocalizations.of(context)!.searchProducts,
                 hintStyle: TextStyle(
                   color: isDark ? Colors.grey[400] : Colors.grey[600],
                 ),
@@ -591,19 +600,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   horizontal: 16,
                 ),
                 alignLabelWithHint: true,
-                suffixIcon:
-                    _searchQuery.isNotEmpty
-                        ? IconButton(
-                          icon: Icon(
-                            Icons.clear,
-                            color: isDark ? Colors.grey[400] : Colors.grey[600],
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            _searchController.clear();
-                          },
-                        )
-                        : null,
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.clear,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                        },
+                      )
+                    : null,
               ),
             ),
           ),
@@ -631,10 +639,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     child: Container(
                       padding: EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color:
-                            themeNotifier.isBlackMode
+                        color: themeNotifier.isSpecialModeActive
+                            ? specialColor
+                            : (themeNotifier.isBlackMode
                                 ? Theme.of(context).colorScheme.secondary
-                                : Colors.red,
+                                : Colors.red),
                         shape: BoxShape.circle,
                       ),
                       constraints: BoxConstraints(minWidth: 16, minHeight: 16),
@@ -670,23 +679,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               margin: EdgeInsets.all(10.0),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors:
-                                      themeNotifier.isBlackMode
+                                  colors: themeNotifier.isSpecialModeActive
+                                      ? [
+                                          specialColor ?? Colors.red,
+                                          isDark ? Colors.grey.shade900 : Colors.grey.shade100,
+                                        ]
+                                      : (themeNotifier.isBlackMode
                                           ? [
-                                            Theme.of(
-                                              context,
-                                            ).colorScheme.secondary,
-                                            Colors.grey.shade900,
-                                          ]
+                                              Theme.of(context).colorScheme.secondary,
+                                              Colors.grey.shade900,
+                                            ]
                                           : (isDark
                                               ? [
-                                                Colors.red.shade900,
-                                                Colors.grey.shade900,
-                                              ]
+                                                  Colors.red.shade900,
+                                                  Colors.grey.shade900,
+                                                ]
                                               : [
-                                                Colors.red.shade500,
-                                                Colors.red.shade100,
-                                              ]),
+                                                  Colors.red.shade500,
+                                                  Colors.red.shade100,
+                                                ])),
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
@@ -707,10 +718,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                   CircleAvatar(
                                     radius: 30,
                                     backgroundColor:
-                                        themeNotifier.isBlackMode
-                                            ? Theme.of(
-                                              context,
-                                            ).colorScheme.secondary
+                                        themeNotifier.isSpecialModeActive
+                                            ? specialColor
                                             : (isDark
                                                 ? Colors.red.shade700
                                                 : Colors.red.shade300),
@@ -736,7 +745,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          "Welcome",
+                                          AppLocalizations.of(context)!.welcome,
                                           style: TextStyle(
                                             fontSize: 16,
                                             color:
@@ -780,22 +789,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildBannerSection() {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final specialColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 10),
       height: 180,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        color:
-            Theme.of(context).brightness == Brightness.dark
-                ? Colors.grey.shade800
-                : Colors.blue.shade100,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.grey.shade800
+            : Colors.blue.shade100,
         boxShadow: [
           BoxShadow(
-            color:
-                Theme.of(context).brightness == Brightness.dark
-                    ? Colors.black26
-                    : Colors.black12,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black26
+                : Colors.black12,
             blurRadius: 4,
             offset: Offset(0, 2),
           ),
@@ -808,15 +819,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors:
-                      themeNotifier.isBlackMode
+                  colors: themeNotifier.isSpecialModeActive
+                      ? [
+                          specialColor ?? Colors.red,
+                          isDark ? Colors.grey.shade900 : Colors.grey.shade100,
+                        ]
+                      : (themeNotifier.isBlackMode
                           ? [
-                            Theme.of(context).colorScheme.secondary,
-                            Colors.black54,
-                          ]
+                              Theme.of(context).colorScheme.secondary,
+                              Colors.black54,
+                            ]
                           : (Theme.of(context).brightness == Brightness.dark
                               ? [Colors.red.shade900, Colors.black54]
-                              : [Colors.red.shade500, Colors.red.shade100]),
+                              : [Colors.red.shade500, Colors.red.shade100])),
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -829,7 +844,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Special Offers',
+                    AppLocalizations.of(context)!.specialOffers,
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -838,30 +853,31 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Get up to 20% off on selected products',
+                    AppLocalizations.of(context)!.specialOffersDescription,
                     style: TextStyle(fontSize: 16, color: Colors.white),
                   ),
                   SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {},
                     child: Text(
-                      'Shop Now',
+                      AppLocalizations.of(context)!.shopNow,
                       style: TextStyle(
-                        color:
-                            Theme.of(context).brightness == Brightness.dark
+                        color: themeNotifier.isSpecialModeActive
+                            ? specialColor
+                            : (Theme.of(context).brightness == Brightness.dark
                                 ? Colors.white
-                                : Colors.red,
+                                : Colors.red),
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          Theme.of(context).brightness == Brightness.dark
-                              ? Colors.grey.shade900
-                              : Colors.white,
-                      foregroundColor:
-                          themeNotifier.isBlackMode
+                      backgroundColor: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade900
+                          : Colors.white,
+                      foregroundColor: themeNotifier.isSpecialModeActive
+                          ? specialColor
+                          : (themeNotifier.isBlackMode
                               ? Theme.of(context).colorScheme.secondary
-                              : Colors.red.shade700,
+                              : Colors.red.shade700),
                     ),
                   ),
                 ],
@@ -875,6 +891,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildCategoriesHeader() {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final specialColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : null;
 
     return Padding(
       padding: EdgeInsets.all(10),
@@ -882,7 +901,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            "Categories",
+            AppLocalizations.of(context)!.categories,
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           PopupMenuButton<String>(
@@ -892,19 +911,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 Icon(
                   Icons.sort,
                   size: 20,
-                  color:
-                      themeNotifier.isBlackMode
+                  color: themeNotifier.isSpecialModeActive
+                      ? specialColor
+                      : (themeNotifier.isBlackMode
                           ? Theme.of(context).colorScheme.secondary
-                          : Colors.red.shade700,
+                          : Colors.red.shade700),
                 ),
                 SizedBox(width: 4),
                 Text(
-                  "Sort",
+                  AppLocalizations.of(context)!.sort,
                   style: TextStyle(
-                    color:
-                        themeNotifier.isBlackMode
+                    color: themeNotifier.isSpecialModeActive
+                        ? specialColor
+                        : (themeNotifier.isBlackMode
                             ? Theme.of(context).colorScheme.secondary
-                            : Colors.red.shade700,
+                            : Colors.red.shade700),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -950,7 +971,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       children: [
                         Icon(Icons.arrow_upward, size: 20),
                         SizedBox(width: 8),
-                        Text('Price: Low to High'),
+                        Text(AppLocalizations.of(context)!.priceLowToHigh),
                       ],
                     ),
                   ),
@@ -960,7 +981,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       children: [
                         Icon(Icons.arrow_downward, size: 20),
                         SizedBox(width: 8),
-                        Text('Price: High to Low'),
+                        Text(AppLocalizations.of(context)!.priceHighToLow),
                       ],
                     ),
                   ),
@@ -970,7 +991,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       children: [
                         Icon(Icons.sort_by_alpha, size: 20),
                         SizedBox(width: 8),
-                        Text('Name: A to Z'),
+                        Text(AppLocalizations.of(context)!.nameAToZ),
                       ],
                     ),
                   ),
@@ -980,7 +1001,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       children: [
                         Icon(Icons.sort_by_alpha, size: 20),
                         SizedBox(width: 8),
-                        Text('Name: Z to A'),
+                        Text(AppLocalizations.of(context)!.nameZToA),
                       ],
                     ),
                   ),
@@ -1034,6 +1055,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final specialColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : null;
 
     return GestureDetector(
       onTap: onTap,
@@ -1044,88 +1068,86 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             height: 70,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color:
-                  isDark
-                      ? (isSelected
-                          ? (themeNotifier.isBlackMode
+              color: isDark
+                  ? (isSelected
+                      ? (themeNotifier.isSpecialModeActive
+                          ? specialColor
+                          : (themeNotifier.isBlackMode
                               ? Theme.of(context).colorScheme.secondary
-                              : Colors.red.shade900)
-                          : Colors.grey.shade800)
-                      : (isSelected
-                          ? Colors.red.shade50
-                          : Colors.grey.shade200),
-              border:
-                  isSelected
-                      ? Border.all(
-                        color:
-                            isDark
-                                ? (themeNotifier.isBlackMode
-                                    ? Theme.of(context).colorScheme.secondary
-                                    : Colors.red.shade700)
-                                : Colors.red.shade400,
-                        width: 2,
-                      )
-                      : null,
-              boxShadow:
-                  isSelected
-                      ? [
-                        BoxShadow(
-                          color:
-                              isDark
-                                  ? (themeNotifier.isBlackMode
-                                      ? Theme.of(
-                                        context,
-                                      ).colorScheme.secondary.withOpacity(0.5)
-                                      : Colors.red.shade900.withOpacity(0.5))
-                                  : Colors.red.shade300.withOpacity(0.5),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                      : null,
+                              : Colors.red.shade900))
+                      : Colors.grey.shade800)
+                  : (isSelected
+                      ? Colors.red.shade50
+                      : Colors.grey.shade200),
+              border: isSelected
+                  ? Border.all(
+                      color: isDark
+                          ? (themeNotifier.isSpecialModeActive
+                              ? specialColor ?? Colors.red
+                              : (themeNotifier.isBlackMode
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Colors.red.shade700))
+                          : Colors.red.shade400,
+                      width: 2,
+                    )
+                  : null,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: isDark
+                            ? (themeNotifier.isSpecialModeActive
+                                ? (specialColor ?? Colors.red).withOpacity(0.5)
+                                : (themeNotifier.isBlackMode
+                                    ? Theme.of(context).colorScheme.secondary.withOpacity(0.5)
+                                    : Colors.red.shade900.withOpacity(0.5)))
+                            : Colors.red.shade300.withOpacity(0.5),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
             ),
             padding: EdgeInsets.all(10),
-            child:
-                isAsset
-                    ? Image.asset(
+            child: isAsset
+                ? Image.asset(
+                    imagePath,
+                    fit: BoxFit.contain,
+                    color: isDark ? Colors.white60 : null,
+                  )
+                : ColorFiltered(
+                    colorFilter: isDark
+                        ? ColorFilter.mode(
+                            Colors.white70,
+                            BlendMode.srcIn,
+                          )
+                        : ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                    child: Image.network(
                       imagePath,
                       fit: BoxFit.contain,
-                      color: isDark ? Colors.white60 : null,
-                    )
-                    : ColorFiltered(
-                      colorFilter:
-                          isDark
-                              ? ColorFilter.mode(
-                                Colors.white70,
-                                BlendMode.srcIn,
-                              )
-                              : ColorFilter.mode(Colors.black, BlendMode.srcIn),
-                      child: Image.network(
-                        imagePath,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          print('Error loading category image: $error');
-                          return Icon(
-                            Icons.category,
-                            color: isDark ? Colors.white70 : Colors.grey,
-                          );
-                        },
-                      ),
+                      errorBuilder: (context, error, stackTrace) {
+                        print('Error loading category image: $error');
+                        return Icon(
+                          Icons.category,
+                          color: isDark ? Colors.white70 : Colors.grey,
+                        );
+                      },
                     ),
+                  ),
           ),
           SizedBox(height: 8),
           Text(
             label,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color:
-                  isDark
-                      ? (isSelected
-                          ? (themeNotifier.isBlackMode
+              color: isDark
+                  ? (isSelected
+                      ? (themeNotifier.isSpecialModeActive
+                          ? specialColor
+                          : (themeNotifier.isBlackMode
                               ? Theme.of(context).colorScheme.secondary
-                              : Colors.red.shade400)
-                          : Colors.white70)
-                      : (isSelected ? Colors.red : Colors.black),
+                              : Colors.red.shade400))
+                      : Colors.white70)
+                  : (isSelected ? Colors.red : Colors.black),
             ),
           ),
         ],
@@ -1141,14 +1163,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         children: [
           Text(
             _searchQuery.isNotEmpty
-                ? "Search Results"
+                ? AppLocalizations.of(context)!.searchProducts
                 : (_selectedCategory == "All"
-                    ? "Best Deals"
+                    ? AppLocalizations.of(context)!.bestDeals
                     : _selectedCategory),
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           Text(
-            "${filteredProducts.length} products",
+            AppLocalizations.of(context)!.products(filteredProducts.length),
             style: TextStyle(color: Colors.grey[600]),
           ),
         ],
@@ -1168,14 +1190,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 Icon(Icons.search_off, size: 70, color: Colors.grey),
                 SizedBox(height: 16),
                 Text(
-                  "No products found",
+                  AppLocalizations.of(context)!.noProductsFound,
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
                 Text(
                   _searchQuery.isNotEmpty
-                      ? "Try a different search term"
-                      : "Try selecting a different category",
+                      ? AppLocalizations.of(context)!.tryDifferentSearch
+                      : AppLocalizations.of(context)!.tryDifferentCategory,
                   style: TextStyle(color: Colors.grey[600]),
                 ),
               ],
@@ -1232,6 +1254,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     required AnimationController animationController,
   }) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final specialColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : null;
     final double averageRating = product['averageRating'] ?? 0.0;
     final int ratingCount = product['ratingCount'] ?? 0;
 
@@ -1239,10 +1264,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       onTap: () => _navigateToProductDetail(product),
       child: Card(
         elevation: 3,
-        color:
-            Theme.of(context).brightness == Brightness.dark
-                ? Colors.grey.shade800
-                : Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.grey.shade800
+            : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Container(
           height: double.infinity,
@@ -1254,10 +1278,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color:
-                        Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey.shade900
-                            : Colors.grey[200],
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade900
+                        : Colors.grey[200],
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(12),
                     ),
@@ -1270,34 +1293,33 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           borderRadius: BorderRadius.vertical(
                             top: Radius.circular(12),
                           ),
-                          child:
-                              (product["image"].startsWith('http') ||
-                                      product["image"].startsWith('https'))
-                                  ? Image.network(
-                                    product["image"],
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Image.asset(
-                                        'lib/assets/Images/placeholder.png',
-                                        fit: BoxFit.cover,
-                                      );
-                                    },
-                                  )
-                                  : Image.asset(
-                                    product["image"],
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Icon(
-                                        Icons.image_not_supported,
-                                        size: 40,
-                                        color: Colors.grey[400],
-                                      );
-                                    },
-                                  ),
+                          child: (product["image"].startsWith('http') ||
+                                  product["image"].startsWith('https'))
+                              ? Image.network(
+                                  product["image"],
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Image.asset(
+                                      'lib/assets/Images/placeholder.png',
+                                      fit: BoxFit.cover,
+                                    );
+                                  },
+                                )
+                              : Image.asset(
+                                  product["image"],
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.image_not_supported,
+                                      size: 40,
+                                      color: Colors.grey[400],
+                                    );
+                                  },
+                                ),
                         ),
                       ),
                       Positioned(
@@ -1312,13 +1334,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           child: GestureDetector(
                             onTap: () => toggleFavorite(product),
                             child: Icon(
-                              isFavorite
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
-                              color:
-                                  themeNotifier.isBlackMode
+                              isFavorite ? Icons.favorite : Icons.favorite_border,
+                              color: themeNotifier.isSpecialModeActive
+                                  ? specialColor
+                                  : (themeNotifier.isBlackMode
                                       ? Theme.of(context).colorScheme.secondary
-                                      : Colors.red,
+                                      : Colors.red),
                               size: 20,
                             ),
                           ),
@@ -1350,32 +1371,35 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               overflow: TextOverflow.ellipsis,
                               softWrap: true,
                             ),
-                            if (ratingCount > 0) ...[
-                              SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  ...List.generate(5, (index) {
+                            SizedBox(height: 4),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: List.generate(5, (index) {
                                     return Icon(
-                                      index < averageRating.round()
+                                      index < (product['averageRating'] ?? 0).round()
                                           ? Icons.star
                                           : Icons.star_border,
                                       color: Colors.amber,
                                       size: 14,
                                     );
                                   }),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    '($ratingCount)',
-                                    style: TextStyle(
-                                      color: Theme.of(context).brightness == Brightness.dark
-                                          ? Colors.grey[400]
-                                          : Colors.grey[600],
-                                      fontSize: 12,
-                                    ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  product['ratingCount'] > 0
+                                      ? AppLocalizations.of(context)!.ratingCount(product['ratingCount'])
+                                      : AppLocalizations.of(context)!.noReviewsYet,
+                                  style: TextStyle(
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                                    fontSize: 12,
                                   ),
-                                ],
-                              ),
-                            ],
+                                ),
+                              ],
+                            ),
                             SizedBox(height: 4),
                             Text(
                               "₺${product["price"]}",
@@ -1399,15 +1423,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           ]),
                           builder: (context, child) {
                             return ElevatedButton(
-                              onPressed:
-                                  isOutOfStock ||
-                                          _isAddingToCartMap[product['id']] ==
-                                              true
-                                      ? null
-                                      : () => _addToCart(product),
+                              onPressed: isOutOfStock ||
+                                      _isAddingToCartMap[product['id']] == true
+                                  ? null
+                                  : () => _addToCart(product),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    _colorAnimations[product['id']]?.value,
+                                backgroundColor: _colorAnimations[product['id']]?.value ??
+                                    (themeNotifier.isSpecialModeActive
+                                        ? specialColor
+                                        : (themeNotifier.isBlackMode
+                                            ? Theme.of(context).colorScheme.secondary
+                                            : Colors.red)),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
@@ -1418,22 +1444,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 alignment: Alignment.center,
                                 children: [
                                   Opacity(
-                                    opacity:
-                                        1.0 -
+                                    opacity: 1.0 -
                                         (_colorAnimationControllers[product['id']]
                                                 ?.value ??
                                             0.0),
                                     child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         if (!isOutOfStock)
                                           Icon(Icons.shopping_cart, size: 16),
                                         if (!isOutOfStock) SizedBox(width: 8),
                                         Text(
                                           isOutOfStock
-                                              ? "OUT OF STOCK"
-                                              : "ADD TO CART",
+                                              ? AppLocalizations.of(context)!.outOfStock
+                                              : AppLocalizations.of(context)!.addToCart,
                                           style: TextStyle(
                                             fontSize: isOutOfStock ? 12 : 14,
                                             fontWeight: FontWeight.bold,
@@ -1449,9 +1473,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                           0.0) >
                                       0)
                                     Transform.scale(
-                                      scale:
-                                          _tickAnimations[product['id']]
-                                              ?.value ??
+                                      scale: _tickAnimations[product['id']]?.value ??
                                           0.0,
                                       child: Icon(
                                         Icons.check,

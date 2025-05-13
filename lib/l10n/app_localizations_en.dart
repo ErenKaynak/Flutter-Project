@@ -1164,4 +1164,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get configureAppSettings => 'Configure app settings';
+
+  @override
+  String ratingCount(int count) {
+    return '$count ratings';
+  }
 }

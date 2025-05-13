@@ -1164,4 +1164,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get configureAppSettings => 'تكوين إعدادات التطبيق';
+
+  @override
+  String ratingCount(int count) {
+    return '$count تقييم';
+  }
 }

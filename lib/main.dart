@@ -16,6 +16,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:engineering_project/providers/cart_provider.dart';
 import 'package:engineering_project/providers/language_provider.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 
 
 void main() async {

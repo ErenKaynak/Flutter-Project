@@ -2274,6 +2274,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Configure app settings'**
   String get configureAppSettings;
+
+  /// No description provided for @ratingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} ratings'**
+  String ratingCount(int count);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
