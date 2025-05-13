@@ -26,6 +26,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 
 enum SpecialColorTheme { red, blue, green }
 
@@ -63,11 +64,11 @@ class _AIChatScreenState extends State<AIChatScreen>
   AnimationController? _typingAnimation;
 
   final List<String> _conversationStarters = [
-    'I need assistance',
-    'Recommend me the cheapest PC build',
-    'Looking for a gaming PC build',
-    'Add new product',
-    'Update product',
+    'iNeedAssistance',
+    'recommendCheapestPC',
+    'lookingForGamingPC',
+    'addNewProduct',
+    'updateProduct',
   ];
 
   final String systemPrompt = '''
@@ -263,6 +264,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
   @override
   Widget build(BuildContext context) {
     _debugAdminStatus();
+    final l10n = AppLocalizations.of(context)!;
 
     // Get the theme notifier using Consumer instead of Provider.of
     return Consumer<ThemeNotifier>(
@@ -274,7 +276,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Assistant Tommy'),
+            title: Text(l10n.aiChatTitle),
             backgroundColor: isDark 
                 ? Colors.black
                 : themeColor,
@@ -314,6 +316,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
     final themeColor = themeNotifier.isSpecialModeActive 
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : Colors.red;
+    final l10n = AppLocalizations.of(context)!;
 
     return Center(
       child: Container(
@@ -344,7 +347,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
             ),
             SizedBox(height: 16),
             Text(
-              'How can I help you today?',
+              l10n.howCanIHelp,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -358,17 +361,35 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
               runSpacing: 12,
               children:
                   _getFilteredStarters().map((starter) {
+                    String localizedText = '';
+                    switch (starter) {
+                      case 'iNeedAssistance':
+                        localizedText = l10n.iNeedAssistance;
+                        break;
+                      case 'recommendCheapestPC':
+                        localizedText = l10n.recommendCheapestPC;
+                        break;
+                      case 'lookingForGamingPC':
+                        localizedText = l10n.lookingForGamingPC;
+                        break;
+                      case 'addNewProduct':
+                        localizedText = l10n.addNewProduct;
+                        break;
+                      case 'updateProduct':
+                        localizedText = l10n.updateProduct;
+                        break;
+                    }
                     return ElevatedButton(
                       onPressed: () {
-                        if (starter == 'Add new product') {
+                        if (starter == 'addNewProduct') {
                           _showAddProductDialog();
-                        } else if (starter == 'I need assistance') {
+                        } else if (starter == 'iNeedAssistance') {
                           _launchWhatsApp();
-                        } else if (starter == 'Update product') {
+                        } else if (starter == 'updateProduct') {
                           _showProductSearchDialog();
                         } else {
-                          _messageController.text = starter;
-                          _handleSubmitted(starter);
+                          _messageController.text = localizedText;
+                          _handleSubmitted(localizedText);
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -384,7 +405,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                         ),
                       ),
                       child: Text(
-                        starter,
+                        localizedText,
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 16),
                       ),
@@ -532,16 +553,17 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
   }
 
   void _addToCart(Product product) async {
+    final l10n = AppLocalizations.of(context)!;
     final user = FirebaseAuth.instance.currentUser;
+    
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please login to add items to cart')),
+        SnackBar(content: Text(l10n.pleaseSignIn)),
       );
       return;
     }
 
     try {
-      // Convert Product to CartItem format
       final cartItem = {
         'id': product.id,
         'name': product.name,
@@ -550,7 +572,6 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
         'quantity': 1,
       };
 
-      // Add to Firestore cart collection
       await FirebaseFirestore.instance
           .collection('cart')
           .doc(user.uid)
@@ -558,23 +579,27 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
           .doc(product.id)
           .set(cartItem);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${product.name} added to cart'),
-          action: SnackBarAction(
-            label: 'VIEW CART',
-            onPressed: () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (context) => const CartPage()));
-            },
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.addedToCart(product.name)),
+            action: SnackBarAction(
+              label: l10n.viewCart,
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const CartPage()),
+                );
+              },
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error adding to cart: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.errorAddingToCart)),
+        );
+      }
     }
   }
 
@@ -1092,7 +1117,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
   void _addMessage(ChatMessage message) {
     setState(() {
-      _messages.add(message); // Add to end instead of insert at 0
+      _messages.add(message);
       _isTyping = false;
     });
   }
@@ -1164,13 +1189,11 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
   // Add this method to the _AIChatScreenState class
   void _showAddProductDialog() {
-    print('Showing add product dialog'); // Debug print
-    print('Current admin status: $_isAdmin'); // Debug print
+    final l10n = AppLocalizations.of(context)!;
 
     if (!_isAdmin) {
-      print('User is not admin, showing error message'); // Debug print
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Only admin users can add products')),
+        SnackBar(content: Text(l10n.adminOnly)),
       );
       return;
     }
@@ -1194,6 +1217,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
             final themeColor = themeNotifier.isSpecialModeActive 
                 ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
                 : Colors.red;
+            final l10n = AppLocalizations.of(context)!;
 
             return Dialog(
               backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
@@ -1209,7 +1233,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Add New Product',
+                        l10n.addNewProduct,
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -1219,14 +1243,14 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                       SizedBox(height: 20),
                       _buildTextField(
                         controller: nameController,
-                        label: 'Product Name',
+                        label: l10n.productName,
                         isDark: isDark,
                         prefixIcon: Icons.inventory_2,
                       ),
                       SizedBox(height: 12),
                       _buildTextField(
                         controller: priceController,
-                        label: 'Price',
+                        label: l10n.price,
                         isDark: isDark,
                         keyboardType: TextInputType.number,
                         prefixIcon: Icons.attach_money,
@@ -1234,7 +1258,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                       SizedBox(height: 12),
                       _buildTextField(
                         controller: stockController,
-                        label: 'Stock',
+                        label: l10n.stock,
                         isDark: isDark,
                         keyboardType: TextInputType.number,
                         prefixIcon: Icons.warehouse,
@@ -1267,7 +1291,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                                     child: DropdownButton<String>(
                                       value: selectedCategory,
                                       hint: Text(
-                                        'Select Category',
+                                        l10n.selectCategory,
                                         style: TextStyle(
                                           color: isDark ? Colors.white70 : Colors.black87,
                                         ),
@@ -1301,7 +1325,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                       SizedBox(height: 12),
                       _buildTextField(
                         controller: descriptionController,
-                        label: 'Description',
+                        label: l10n.productDescription,
                         isDark: isDark,
                         maxLines: 3,
                         prefixIcon: Icons.description,
@@ -1313,23 +1337,22 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                           onPressed: () async {
                             if (nameController.text.isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Please enter a product name first')),
+                                SnackBar(content: Text(l10n.pleaseEnterProductName)),
                               );
                               return;
                             }
 
                             await _generateAIDescription(descriptionController, nameController.text);
                           },
-                          tooltip: 'Generate AI Description',
+                          tooltip: l10n.generateAIDescription,
                         ),
                       ),
                       SizedBox(height: 16),
-                      // Main Image Section
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Main Image',
+                            l10n.mainImage,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: isDark ? Colors.white : Colors.black87,
@@ -1402,12 +1425,11 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                         ),
                       ),
                       SizedBox(height: 16),
-                      // Additional Images Section
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Additional Images',
+                            l10n.additionalImages,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: isDark ? Colors.white : Colors.black87,
@@ -1502,7 +1524,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                           TextButton(
                             onPressed: () => Navigator.pop(context),
                             child: Text(
-                              'Cancel',
+                              l10n.cancel,
                               style: TextStyle(
                                 color: isDark ? Colors.white70 : Colors.black87,
                               ),
@@ -1513,13 +1535,6 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                             style: ElevatedButton.styleFrom(
                               backgroundColor: themeColor,
                               foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
                             ),
                             onPressed: () async {
                               if (_validateProductInput(
@@ -1531,7 +1546,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                               )) {
                                 try {
                                   if (mainImagePath?.isEmpty ?? true) {
-                                    throw Exception('Main image is required');
+                                    throw Exception(l10n.imageRequired);
                                   }
 
                                   final updatedProduct = {
@@ -1552,16 +1567,16 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
                                   Navigator.pop(context);
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Product updated successfully')),
+                                    SnackBar(content: Text(l10n.productUpdated)),
                                   );
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error updating product: $e')),
+                                    SnackBar(content: Text(l10n.errorUpdatingProduct(e.toString()))),
                                   );
                                 }
                               }
                             },
-                            child: Text('Update'),
+                            child: Text(l10n.update),
                           ),
                         ],
                       ),
@@ -1583,6 +1598,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
     final themeColor = themeNotifier.isSpecialModeActive 
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : Colors.red;
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       decoration: BoxDecoration(
@@ -1605,7 +1621,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                 child: TextField(
                   controller: _messageController,
                   decoration: InputDecoration(
-                    hintText: 'Ask Me Anything...',
+                    hintText: l10n.askMeAnything,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25),
                       borderSide: BorderSide.none,
@@ -1646,11 +1662,13 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
   // Add this method to handle image messages
   void _handleImageMessage(String? imageUrl) {
+    final l10n = AppLocalizations.of(context)!;
+    
     if (imageUrl != null) {
       setState(() {
         _messages.add(
           ChatMessage(
-            text: 'Image uploaded: $imageUrl\n${_messageController.text}',
+            text: '${l10n.addFromUrl}: $imageUrl\n${_messageController.text}',
             isUser: true,
           ),
         );
@@ -1934,6 +1952,8 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
     String? category,
     String? mainImage,
   ) {
+    final l10n = AppLocalizations.of(context)!;
+
     if (name.isEmpty ||
         price.isEmpty ||
         stock.isEmpty ||
@@ -1941,9 +1961,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
         mainImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Please fill in all required fields and add a main image',
-          ),
+          content: Text(l10n.fillAllFields),
         ),
       );
       return false;
@@ -1951,7 +1969,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
     if (double.tryParse(price) == null || int.tryParse(stock) == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter valid price and stock numbers')),
+        SnackBar(content: Text(l10n.somethingWentWrong)),
       );
       return false;
     }
@@ -1998,19 +2016,20 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
   void _showProductSearchDialog() {
     final TextEditingController searchController = TextEditingController();
+    final l10n = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Search Product to Update'),
+          title: Text(l10n.searchProduct),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: searchController,
                 decoration: InputDecoration(
-                  labelText: 'Product Name',
+                  labelText: l10n.productName,
                   border: OutlineInputBorder(),
                   suffixIcon: Icon(Icons.search),
                 ),
@@ -2022,13 +2041,13 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                   Navigator.pop(context);
                   if (products.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('No products found')),
+                      SnackBar(content: Text(l10n.noProductsFound)),
                     );
                   } else {
                     _showProductSelectionDialog(products);
                   }
                 },
-                child: Text('Search'),
+                child: Text(l10n.searchProducts),
               ),
             ],
           ),
@@ -2037,39 +2056,14 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
     );
   }
 
-  Future<List<Product>> _searchProducts(String query) async {
-    try {
-      final lowerQuery = query.toLowerCase();
-      final snapshot = await FirebaseFirestore.instance.collection('products').get();
-
-      return snapshot.docs
-          .map((doc) {
-            final data = doc.data();
-            return Product(
-              id: doc.id,
-              name: data['name'] as String,
-              price: (data['price'] as num).toDouble(),
-              category: data['category'] as String,
-              description: data['description'] as String? ?? '',
-              imageUrl: data['imagePath'] as String? ?? '',
-              images: List<String>.from(data['images'] ?? []),
-              stock: data['stock'] as int? ?? 0,
-            );
-          })
-          .where((product) => product.name.toLowerCase().contains(lowerQuery))
-          .toList();
-    } catch (e) {
-      print('Error searching products: $e');
-      return [];
-    }
-  }
-
   void _showProductSelectionDialog(List<Product> products) {
+    final l10n = AppLocalizations.of(context)!;
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Select Product to Update'),
+          title: Text(l10n.selectProductToUpdate),
           content: Container(
             width: double.maxFinite,
             child: ListView.builder(
@@ -2107,7 +2101,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
     final TextEditingController stockController = TextEditingController(text: productToUpdate.stock.toString());
     final TextEditingController descriptionController = TextEditingController(text: productToUpdate.description);
     String? selectedCategory = productToUpdate.category;
-    String? mainImagePath = productToUpdate.imageUrl;  // Make it nullable
+    String? mainImagePath = productToUpdate.imageUrl;
     List<String> additionalImagePaths = List.from(productToUpdate.images)..remove(productToUpdate.imageUrl);
 
     showDialog(
@@ -2121,6 +2115,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
             final themeColor = themeNotifier.isSpecialModeActive 
                 ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
                 : Colors.red;
+            final l10n = AppLocalizations.of(context)!;
 
             return Dialog(
               backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
@@ -2136,7 +2131,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Update Product',
+                        l10n.updateProduct,
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -2146,14 +2141,14 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                       SizedBox(height: 20),
                       _buildTextField(
                         controller: nameController,
-                        label: 'Product Name',
+                        label: l10n.productName,
                         isDark: isDark,
                         prefixIcon: Icons.inventory_2,
                       ),
                       SizedBox(height: 12),
                       _buildTextField(
                         controller: priceController,
-                        label: 'Price',
+                        label: l10n.price,
                         isDark: isDark,
                         keyboardType: TextInputType.number,
                         prefixIcon: Icons.attach_money,
@@ -2161,7 +2156,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                       SizedBox(height: 12),
                       _buildTextField(
                         controller: stockController,
-                        label: 'Stock',
+                        label: l10n.stock,
                         isDark: isDark,
                         keyboardType: TextInputType.number,
                         prefixIcon: Icons.warehouse,
@@ -2194,7 +2189,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                                     child: DropdownButton<String>(
                                       value: selectedCategory,
                                       hint: Text(
-                                        'Select Category',
+                                        l10n.selectCategory,
                                         style: TextStyle(
                                           color: isDark ? Colors.white70 : Colors.black87,
                                         ),
@@ -2228,7 +2223,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                       SizedBox(height: 12),
                       _buildTextField(
                         controller: descriptionController,
-                        label: 'Description',
+                        label: l10n.productDescription,
                         isDark: isDark,
                         maxLines: 3,
                         prefixIcon: Icons.description,
@@ -2247,16 +2242,15 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
                             await _generateAIDescription(descriptionController, nameController.text);
                           },
-                          tooltip: 'Generate AI Description',
+                          tooltip: l10n.generateAIDescription,
                         ),
                       ),
                       SizedBox(height: 16),
-                      // Main Image Section
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Main Image',
+                            l10n.mainImage,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: isDark ? Colors.white : Colors.black87,
@@ -2327,12 +2321,11 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                         ],
                       ),
                       SizedBox(height: 16),
-                      // Additional Images Section
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Additional Images',
+                            l10n.additionalImages,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: isDark ? Colors.white : Colors.black87,
@@ -2427,7 +2420,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                           TextButton(
                             onPressed: () => Navigator.pop(context),
                             child: Text(
-                              'Cancel',
+                              l10n.cancel,
                               style: TextStyle(
                                 color: isDark ? Colors.white70 : Colors.black87,
                               ),
@@ -2449,7 +2442,7 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
                               )) {
                                 try {
                                   if (mainImagePath?.isEmpty ?? true) {
-                                    throw Exception('Main image is required');
+                                    throw Exception(l10n.imageRequired);
                                   }
 
                                   final updatedProduct = {
@@ -2470,16 +2463,16 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
 
                                   Navigator.pop(context);
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Product updated successfully')),
+                                    SnackBar(content: Text(l10n.productUpdated)),
                                   );
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error updating product: $e')),
+                                    SnackBar(content: Text(l10n.errorUpdatingProduct(e.toString()))),
                                   );
                                 }
                               }
                             },
-                            child: Text('Update'),
+                            child: Text(l10n.update),
                           ),
                         ],
                       ),
@@ -2495,9 +2488,11 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
   }
 
   Future<void> _generateAIDescription(TextEditingController descriptionController, String productName) async {
+    final l10n = AppLocalizations.of(context)!;
+    
     if (productName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a product name first')),
+        SnackBar(content: Text(l10n.pleaseEnterProductName)),
       );
       return;
     }
@@ -2511,8 +2506,35 @@ You are a knowledgeable PC hardware assistant in the selling app. Help users wit
       descriptionController.text = response.trim();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error generating description: $e')),
+        SnackBar(content: Text(l10n.errorGeneratingDescription(e.toString()))),
       );
+    }
+  }
+
+  Future<List<Product>> _searchProducts(String query) async {
+    try {
+      final lowerQuery = query.toLowerCase();
+      final snapshot = await FirebaseFirestore.instance.collection('products').get();
+
+      return snapshot.docs
+          .map((doc) {
+            final data = doc.data();
+            return Product(
+              id: doc.id,
+              name: data['name'] as String,
+              price: (data['price'] as num).toDouble(),
+              category: data['category'] as String,
+              description: data['description'] as String? ?? '',
+              imageUrl: data['imagePath'] as String? ?? '',
+              images: List<String>.from(data['images'] ?? []),
+              stock: data['stock'] as int? ?? 0,
+            );
+          })
+          .where((product) => product.name.toLowerCase().contains(lowerQuery))
+          .toList();
+    } catch (e) {
+      print('Error searching products: $e');
+      return [];
     }
   }
 }

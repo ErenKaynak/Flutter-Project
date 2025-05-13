@@ -8,7 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:engineering_project/pages/cart_page.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 
 class CheckoutPage extends StatefulWidget {
   final double subtotal;

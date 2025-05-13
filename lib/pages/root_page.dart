@@ -7,7 +7,7 @@ import 'search_page.dart' as FavoritesPage;
 import 'home_page.dart' as HomePage;
 import 'package:engineering_project/assets/components/auth_service.dart';
 import 'theme_notifier.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 
 // Import or create an admin page
 class AdminPage extends StatefulWidget {

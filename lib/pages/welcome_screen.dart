@@ -1,10 +1,11 @@
+import 'package:engineering_project/l10n/app_localizations.dart';
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/register_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:engineering_project/providers/language_provider.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
 import 'theme_notifier.dart';
 
 class WelcomeScreen extends StatelessWidget {

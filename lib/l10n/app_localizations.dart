@@ -100,7 +100,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
-  /// **'Engineering Project'**
+  /// **'Paradise PC Parts'**
   String get appTitle;
 
   /// No description provided for @welcome.
@@ -1219,49 +1219,49 @@ abstract class AppLocalizations {
   /// **'Failed to add item to cart'**
   String get failedToAddToCart;
 
-  /// No description provided for @adminDashboard.
+  /// Title for the admin dashboard
   ///
   /// In en, this message translates to:
   /// **'Admin Dashboard'**
   String get adminDashboard;
 
-  /// No description provided for @adminControls.
+  /// Title for admin controls section
   ///
   /// In en, this message translates to:
   /// **'Admin Controls'**
   String get adminControls;
 
-  /// No description provided for @userManagement.
+  /// Title for user management section
   ///
   /// In en, this message translates to:
   /// **'User Management'**
   String get userManagement;
 
-  /// No description provided for @viewAndManageUsers.
+  /// Description for user management section
   ///
   /// In en, this message translates to:
   /// **'View and manage users'**
   String get viewAndManageUsers;
 
-  /// No description provided for @productManagement.
+  /// Title for product management section
   ///
   /// In en, this message translates to:
   /// **'Product Management'**
   String get productManagement;
 
-  /// No description provided for @manageProducts.
+  /// Description for product management section
   ///
   /// In en, this message translates to:
-  /// **'Add, edit or remove products'**
+  /// **'Manage products'**
   String get manageProducts;
 
-  /// No description provided for @orderManagement.
+  /// Title for order management section
   ///
   /// In en, this message translates to:
   /// **'Order Management'**
   String get orderManagement;
 
-  /// No description provided for @viewAndProcessOrders.
+  /// Description for order management section
   ///
   /// In en, this message translates to:
   /// **'View and process orders'**
@@ -2130,6 +2130,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Update'**
   String get update;
+
+  /// No description provided for @stockRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{stock} items remaining'**
+  String stockRemaining(int stock);
+
+  /// No description provided for @updateStock.
+  ///
+  /// In en, this message translates to:
+  /// **'Update stock for {productName}'**
+  String updateStock(String productName);
+
+  /// No description provided for @newStockAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'New Stock Amount'**
+  String get newStockAmount;
+
+  /// No description provided for @enterNewStockAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter new stock amount'**
+  String get enterNewStockAmount;
+
+  /// No description provided for @pleaseEnterValidNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid number'**
+  String get pleaseEnterValidNumber;
+
+  /// No description provided for @checkingStockLevels.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking stock levels...'**
+  String get checkingStockLevels;
+
+  /// No description provided for @lowStockAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Stock Alerts'**
+  String get lowStockAlerts;
+
+  /// No description provided for @noLowStockProducts.
+  ///
+  /// In en, this message translates to:
+  /// **'No products with low stock'**
+  String get noLowStockProducts;
+
+  /// No description provided for @lowStockProductsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} products with low stock'**
+  String lowStockProductsCount(int count);
+
+  /// No description provided for @promoCodes.
+  ///
+  /// In en, this message translates to:
+  /// **'Promo Codes'**
+  String get promoCodes;
+
+  /// No description provided for @createPromocodesAndDiscounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Promocodes and Discounts'**
+  String get createPromocodesAndDiscounts;
+
+  /// No description provided for @salesStatistics.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales Statistics'**
+  String get salesStatistics;
+
+  /// No description provided for @viewSalesAnalytics.
+  ///
+  /// In en, this message translates to:
+  /// **'View sales analytics and charts'**
+  String get viewSalesAnalytics;
+
+  /// No description provided for @assistantTommySettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant Tommy\'s Settings'**
+  String get assistantTommySettings;
+
+  /// No description provided for @configureTommyAvailability.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure Tommy\'s availability'**
+  String get configureTommyAvailability;
+
+  /// No description provided for @enableAssistantTommy.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Assistant Tommy'**
+  String get enableAssistantTommy;
+
+  /// No description provided for @tommyAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Tommy is currently available'**
+  String get tommyAvailable;
+
+  /// No description provided for @tommyDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Tommy is currently disabled'**
+  String get tommyDisabled;
+
+  /// No description provided for @hideTommy.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Tommy'**
+  String get hideTommy;
+
+  /// No description provided for @allEyesOnTommy.
+  ///
+  /// In en, this message translates to:
+  /// **'All Eyes On Tommy !'**
+  String get allEyesOnTommy;
+
+  /// No description provided for @tommyHiding.
+  ///
+  /// In en, this message translates to:
+  /// **'Tommy is hiding in the closet !'**
+  String get tommyHiding;
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
+  /// No description provided for @photoUploader.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo Uploader'**
+  String get photoUploader;
+
+  /// No description provided for @configureAppSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure app settings'**
+  String get configureAppSettings;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

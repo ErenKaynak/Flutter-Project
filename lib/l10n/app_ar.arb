@@ -444,7 +444,7 @@
     "failedToRemove": "فشل في الإزالة",
     "failedToAddToCart": "فشل في الإضافة إلى السلة",
     "adminDashboard": "لوحة تحكم المسؤول",
-    "adminControls": "تحكم المسؤول",
+    "adminControls": "أدوات المسؤول",
     "userManagement": "إدارة المستخدمين",
     "viewAndManageUsers": "عرض وإدارة المستخدمين",
     "productManagement": "إدارة المنتجات",
@@ -478,5 +478,50 @@
     "selectProductToUpdate": "اختر منتجاً للتحديث",
     "imageRequired": "الصورة مطلوبة",
     "productUpdated": "تم تحديث المنتج",
-    "errorUpdatingProduct": "خطأ في تحديث المنتج"
+    "errorUpdatingProduct": "خطأ في تحديث المنتج",
+    "stockRemaining": "باقي {stock} قطعة",
+    "@stockRemaining": {
+        "placeholders": {
+            "stock": {
+                "type": "int"
+            }
+        }
+    },
+    "updateStock": "تحديث المخزون لـ {productName}",
+    "@updateStock": {
+        "placeholders": {
+            "productName": {
+                "type": "String"
+            }
+        }
+    },
+    "newStockAmount": "كمية المخزون الجديدة",
+    "enterNewStockAmount": "أدخل كمية المخزون الجديدة",
+    "pleaseEnterValidNumber": "الرجاء إدخال رقم صحيح",
+    "checkingStockLevels": "جاري التحقق من مستويات المخزون...",
+    "lowStockAlerts": "تنبيهات المخزون المنخفض",
+    "noLowStockProducts": "لا توجد منتجات بمخزون منخفض",
+    "lowStockProductsCount": "{count} منتج بمخزون منخفض",
+    "@lowStockProductsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "promoCodes": "رموز الخصم",
+    "createPromocodesAndDiscounts": "إنشاء رموز وخصومات ترويجية",
+    "salesStatistics": "إحصائيات المبيعات",
+    "viewSalesAnalytics": "عرض تحليلات ورسوم بيانية للمبيعات",
+    "assistantTommySettings": "إعدادات المساعد تومي",
+    "configureTommyAvailability": "تكوين توفر تومي",
+    "enableAssistantTommy": "تفعيل المساعد تومي",
+    "tommyAvailable": "تومي متاح حالياً",
+    "tommyDisabled": "تومي معطل حالياً",
+    "hideTommy": "إخفاء تومي",
+    "allEyesOnTommy": "كل العيون على تومي !",
+    "tommyHiding": "تومي مختبئ في الخزانة !",
+    "close": "إغلاق",
+    "photoUploader": "رفع الصور",
+    "configureAppSettings": "تكوين إعدادات التطبيق"
 } 

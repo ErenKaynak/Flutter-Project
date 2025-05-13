@@ -6,7 +6,7 @@ import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:engineering_project/pages/cart_page.dart';
 import 'package:engineering_project/pages/theme_notifier.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 
 class FavoritesPage extends StatefulWidget {
   final Function? onFavoritesChanged;

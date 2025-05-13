@@ -10,7 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import 'package:engineering_project/pages/theme_notifier.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 
 class CartItem {
   final String id;

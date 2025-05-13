@@ -9,7 +9,7 @@ import 'package:engineering_project/assets/components/cart_manager.dart'
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 
 class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({Key? key}) : super(key: key);

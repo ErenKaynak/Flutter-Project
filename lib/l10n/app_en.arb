@@ -297,13 +297,37 @@
     "pleaseLoginToAdd": "Please log in to add items to cart",
     "failedToAddToCart": "Failed to add item to cart",
     "adminDashboard": "Admin Dashboard",
+    "@adminDashboard": {
+        "description": "Title for the admin dashboard"
+    },
     "adminControls": "Admin Controls",
+    "@adminControls": {
+        "description": "Title for admin controls section"
+    },
     "userManagement": "User Management",
+    "@userManagement": {
+        "description": "Title for user management section"
+    },
     "viewAndManageUsers": "View and manage users",
+    "@viewAndManageUsers": {
+        "description": "Description for user management section"
+    },
     "productManagement": "Product Management",
-    "manageProducts": "Add, edit or remove products",
+    "@productManagement": {
+        "description": "Title for product management section"
+    },
+    "manageProducts": "Manage products",
+    "@manageProducts": {
+        "description": "Description for product management section"
+    },
     "orderManagement": "Order Management",
+    "@orderManagement": {
+        "description": "Title for order management section"
+    },
     "viewAndProcessOrders": "View and process orders",
+    "@viewAndProcessOrders": {
+        "description": "Description for order management section"
+    },
     "currentBalance": "Current Balance",
     "cashbackInfo": "1% Cashback on all purchases",
     "addMoney": "Add Money",
@@ -575,5 +599,50 @@
     "price": "Price",
     "stock": "Stock",
     "selectCategory": "Select Category",
-    "update": "Update"
-} 
+    "update": "Update",
+    "stockRemaining": "{stock} items remaining",
+    "@stockRemaining": {
+        "placeholders": {
+            "stock": {
+                "type": "int"
+            }
+        }
+    },
+    "updateStock": "Update stock for {productName}",
+    "@updateStock": {
+        "placeholders": {
+            "productName": {
+                "type": "String"
+            }
+        }
+    },
+    "newStockAmount": "New Stock Amount",
+    "enterNewStockAmount": "Enter new stock amount",
+    "pleaseEnterValidNumber": "Please enter a valid number",
+    "checkingStockLevels": "Checking stock levels...",
+    "lowStockAlerts": "Low Stock Alerts",
+    "noLowStockProducts": "No products with low stock",
+    "lowStockProductsCount": "{count} products with low stock",
+    "@lowStockProductsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "promoCodes": "Promo Codes",
+    "createPromocodesAndDiscounts": "Create Promocodes and Discounts",
+    "salesStatistics": "Sales Statistics",
+    "viewSalesAnalytics": "View sales analytics and charts",
+    "assistantTommySettings": "Assistant Tommy's Settings",
+    "configureTommyAvailability": "Configure Tommy's availability",
+    "enableAssistantTommy": "Enable Assistant Tommy",
+    "tommyAvailable": "Tommy is currently available",
+    "tommyDisabled": "Tommy is currently disabled",
+    "hideTommy": "Hide Tommy",
+    "allEyesOnTommy": "All Eyes On Tommy !",
+    "tommyHiding": "Tommy is hiding in the closet !",
+    "close": "Close",
+    "photoUploader": "Photo Uploader",
+    "configureAppSettings": "Configure app settings"
+}

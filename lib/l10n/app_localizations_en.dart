@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Engineering Project';
+  String get appTitle => 'Paradise PC Parts';
 
   @override
   String get welcome => 'Welcome';
@@ -613,7 +613,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get productManagement => 'Product Management';
 
   @override
-  String get manageProducts => 'Add, edit or remove products';
+  String get manageProducts => 'Manage products';
 
   @override
   String get orderManagement => 'Order Management';
@@ -1086,4 +1086,82 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get update => 'Update';
+
+  @override
+  String stockRemaining(int stock) {
+    return '$stock items remaining';
+  }
+
+  @override
+  String updateStock(String productName) {
+    return 'Update stock for $productName';
+  }
+
+  @override
+  String get newStockAmount => 'New Stock Amount';
+
+  @override
+  String get enterNewStockAmount => 'Enter new stock amount';
+
+  @override
+  String get pleaseEnterValidNumber => 'Please enter a valid number';
+
+  @override
+  String get checkingStockLevels => 'Checking stock levels...';
+
+  @override
+  String get lowStockAlerts => 'Low Stock Alerts';
+
+  @override
+  String get noLowStockProducts => 'No products with low stock';
+
+  @override
+  String lowStockProductsCount(int count) {
+    return '$count products with low stock';
+  }
+
+  @override
+  String get promoCodes => 'Promo Codes';
+
+  @override
+  String get createPromocodesAndDiscounts => 'Create Promocodes and Discounts';
+
+  @override
+  String get salesStatistics => 'Sales Statistics';
+
+  @override
+  String get viewSalesAnalytics => 'View sales analytics and charts';
+
+  @override
+  String get assistantTommySettings => 'Assistant Tommy\'s Settings';
+
+  @override
+  String get configureTommyAvailability => 'Configure Tommy\'s availability';
+
+  @override
+  String get enableAssistantTommy => 'Enable Assistant Tommy';
+
+  @override
+  String get tommyAvailable => 'Tommy is currently available';
+
+  @override
+  String get tommyDisabled => 'Tommy is currently disabled';
+
+  @override
+  String get hideTommy => 'Hide Tommy';
+
+  @override
+  String get allEyesOnTommy => 'All Eyes On Tommy !';
+
+  @override
+  String get tommyHiding => 'Tommy is hiding in the closet !';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get photoUploader => 'Photo Uploader';
+
+  @override
+  String get configureAppSettings => 'Configure app settings';
 }

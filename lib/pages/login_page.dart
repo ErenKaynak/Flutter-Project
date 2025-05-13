@@ -9,7 +9,7 @@ import 'package:engineering_project/admin-panel/admin_root.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 
 class LoginPage extends StatefulWidget {
   LoginPage({super.key});

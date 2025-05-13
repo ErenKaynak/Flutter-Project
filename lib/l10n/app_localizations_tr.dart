@@ -9,7 +9,7 @@ class AppLocalizationsTr extends AppLocalizations {
   AppLocalizationsTr([String locale = 'tr']) : super(locale);
 
   @override
-  String get appTitle => 'Mühendislik Projesi';
+  String get appTitle => 'Paradise PC Bileşenleri';
 
   @override
   String get welcome => 'Hoş Geldiniz';
@@ -1086,4 +1086,82 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get update => 'Güncelle';
+
+  @override
+  String stockRemaining(int stock) {
+    return '$stock ürün kaldı';
+  }
+
+  @override
+  String updateStock(String productName) {
+    return '$productName için stok güncelle';
+  }
+
+  @override
+  String get newStockAmount => 'Yeni Stok Miktarı';
+
+  @override
+  String get enterNewStockAmount => 'Yeni stok miktarını girin';
+
+  @override
+  String get pleaseEnterValidNumber => 'Lütfen geçerli bir sayı girin';
+
+  @override
+  String get checkingStockLevels => 'Stok seviyeleri kontrol ediliyor...';
+
+  @override
+  String get lowStockAlerts => 'Düşük Stok Uyarıları';
+
+  @override
+  String get noLowStockProducts => 'Düşük stoklu ürün yok';
+
+  @override
+  String lowStockProductsCount(int count) {
+    return '$count ürün düşük stokta';
+  }
+
+  @override
+  String get promoCodes => 'Promosyon Kodları';
+
+  @override
+  String get createPromocodesAndDiscounts => 'Promosyon Kodları ve İndirimler Oluştur';
+
+  @override
+  String get salesStatistics => 'Satış İstatistikleri';
+
+  @override
+  String get viewSalesAnalytics => 'Satış analizlerini ve grafiklerini görüntüle';
+
+  @override
+  String get assistantTommySettings => 'Tommy Asistan Ayarları';
+
+  @override
+  String get configureTommyAvailability => 'Tommy\'nin kullanılabilirliğini yapılandır';
+
+  @override
+  String get enableAssistantTommy => 'Tommy Asistanı Etkinleştir';
+
+  @override
+  String get tommyAvailable => 'Tommy şu anda kullanılabilir';
+
+  @override
+  String get tommyDisabled => 'Tommy şu anda devre dışı';
+
+  @override
+  String get hideTommy => 'Tommy\'yi Gizle';
+
+  @override
+  String get allEyesOnTommy => 'Tüm Gözler Tommy\'de !';
+
+  @override
+  String get tommyHiding => 'Tommy dolabında saklanıyor !';
+
+  @override
+  String get close => 'Kapat';
+
+  @override
+  String get photoUploader => 'Fotoğraf Yükleyici';
+
+  @override
+  String get configureAppSettings => 'Uygulama ayarlarını yapılandır';
 }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:engineering_project/assets/components/notification_service.dart';
 import 'package:engineering_project/assets/components/theme_data.dart';
 import 'package:engineering_project/firebase_options.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 import 'package:engineering_project/pages/root_page.dart';
 import 'package:engineering_project/pages/theme_notifier.dart';
 import 'package:engineering_project/pages/welcome_screen.dart';
@@ -13,7 +14,6 @@ import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:engineering_project/providers/cart_provider.dart';
 import 'package:engineering_project/providers/language_provider.dart';
 

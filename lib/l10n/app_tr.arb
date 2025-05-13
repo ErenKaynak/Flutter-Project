@@ -493,5 +493,52 @@
     "addedToCartMessage": "Sepete eklendi",
     "mustBeLoggedIn": "Giriş yapmalısınız",
     "pleaseLoginToAddFavorites": "Favorilere eklemek için lütfen giriş yapın",
-    "justNow": "Az önce"
+    "justNow": "Az önce",
+    "stockRemaining": "{stock} ürün kaldı",
+    "@stockRemaining": {
+        "placeholders": {
+            "stock": {
+                "type": "int"
+            }
+        }
+    },
+    "updateStock": "{productName} için stok güncelle",
+    "@updateStock": {
+        "placeholders": {
+            "productName": {
+                "type": "String"
+            }
+        }
+    },
+    "newStockAmount": "Yeni Stok Miktarı",
+    "enterNewStockAmount": "Yeni stok miktarını girin",
+    "pleaseEnterValidNumber": "Lütfen geçerli bir sayı girin",
+    "adminDashboard": "Yönetici Paneli",
+    "adminControls": "Yönetici Kontrolleri",
+    "checkingStockLevels": "Stok seviyeleri kontrol ediliyor...",
+    "lowStockAlerts": "Düşük Stok Uyarıları",
+    "noLowStockProducts": "Düşük stoklu ürün yok",
+    "lowStockProductsCount": "{count} ürün düşük stokta",
+    "@lowStockProductsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "promoCodes": "Promosyon Kodları",
+    "createPromocodesAndDiscounts": "Promosyon Kodları ve İndirimler Oluştur",
+    "salesStatistics": "Satış İstatistikleri",
+    "viewSalesAnalytics": "Satış analizlerini ve grafiklerini görüntüle",
+    "assistantTommySettings": "Tommy Asistan Ayarları",
+    "configureTommyAvailability": "Tommy'nin kullanılabilirliğini yapılandır",
+    "enableAssistantTommy": "Tommy Asistanı Etkinleştir",
+    "tommyAvailable": "Tommy şu anda kullanılabilir",
+    "tommyDisabled": "Tommy şu anda devre dışı",
+    "hideTommy": "Tommy'yi Gizle",
+    "allEyesOnTommy": "Tüm Gözler Tommy'de !",
+    "tommyHiding": "Tommy dolabında saklanıyor !",
+    "close": "Kapat",
+    "photoUploader": "Fotoğraf Yükleyici",
+    "configureAppSettings": "Uygulama ayarlarını yapılandır"
 } 

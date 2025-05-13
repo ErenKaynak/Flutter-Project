@@ -1,10 +1,10 @@
+import 'package:engineering_project/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({Key? key}) : super(key: key);

@@ -7,7 +7,7 @@ import 'package:engineering_project/models/localized_product.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final String productId;

@@ -9,7 +9,7 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get appTitle => 'مشروع هندسي';
+  String get appTitle => 'قطع غيار كمبيوتر الفردوس';
 
   @override
   String get welcome => 'مرحباً';
@@ -601,7 +601,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adminDashboard => 'لوحة تحكم المسؤول';
 
   @override
-  String get adminControls => 'تحكم المسؤول';
+  String get adminControls => 'أدوات المسؤول';
 
   @override
   String get userManagement => 'إدارة المستخدمين';
@@ -1086,4 +1086,82 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get update => 'تحديث';
+
+  @override
+  String stockRemaining(int stock) {
+    return 'باقي $stock قطعة';
+  }
+
+  @override
+  String updateStock(String productName) {
+    return 'تحديث المخزون لـ $productName';
+  }
+
+  @override
+  String get newStockAmount => 'كمية المخزون الجديدة';
+
+  @override
+  String get enterNewStockAmount => 'أدخل كمية المخزون الجديدة';
+
+  @override
+  String get pleaseEnterValidNumber => 'الرجاء إدخال رقم صحيح';
+
+  @override
+  String get checkingStockLevels => 'جاري التحقق من مستويات المخزون...';
+
+  @override
+  String get lowStockAlerts => 'تنبيهات المخزون المنخفض';
+
+  @override
+  String get noLowStockProducts => 'لا توجد منتجات بمخزون منخفض';
+
+  @override
+  String lowStockProductsCount(int count) {
+    return '$count منتج بمخزون منخفض';
+  }
+
+  @override
+  String get promoCodes => 'رموز الخصم';
+
+  @override
+  String get createPromocodesAndDiscounts => 'إنشاء رموز وخصومات ترويجية';
+
+  @override
+  String get salesStatistics => 'إحصائيات المبيعات';
+
+  @override
+  String get viewSalesAnalytics => 'عرض تحليلات ورسوم بيانية للمبيعات';
+
+  @override
+  String get assistantTommySettings => 'إعدادات المساعد تومي';
+
+  @override
+  String get configureTommyAvailability => 'تكوين توفر تومي';
+
+  @override
+  String get enableAssistantTommy => 'تفعيل المساعد تومي';
+
+  @override
+  String get tommyAvailable => 'تومي متاح حالياً';
+
+  @override
+  String get tommyDisabled => 'تومي معطل حالياً';
+
+  @override
+  String get hideTommy => 'إخفاء تومي';
+
+  @override
+  String get allEyesOnTommy => 'كل العيون على تومي !';
+
+  @override
+  String get tommyHiding => 'تومي مختبئ في الخزانة !';
+
+  @override
+  String get close => 'إغلاق';
+
+  @override
+  String get photoUploader => 'رفع الصور';
+
+  @override
+  String get configureAppSettings => 'تكوين إعدادات التطبيق';
 }

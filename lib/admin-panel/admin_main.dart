@@ -9,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../pages/theme_notifier.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -38,6 +39,7 @@ class _AdminPageState extends State<AdminPage> {
     final themeColor = themeNotifier.isSpecialModeActive 
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : Colors.red;
+    final l10n = AppLocalizations.of(context)!;
 
     return ListView.builder(
       shrinkWrap: true,
@@ -62,7 +64,7 @@ class _AdminPageState extends State<AdminPage> {
             ),
           ),
           subtitle: Text(
-            'Stock remaining: $stock',
+            l10n.stockRemaining(stock),
             style: TextStyle(
               color: stock == 0 ? themeColor : (isDark ? Colors.white70 : Colors.black54),
             ),
@@ -75,20 +77,21 @@ class _AdminPageState extends State<AdminPage> {
 
   void _showUpdateStockDialog(BuildContext context, String productId, String productName, int currentStock) {
     final TextEditingController stockController = TextEditingController(text: currentStock.toString());
+    final l10n = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Update Stock for $productName'),
+        title: Text(l10n.updateStock(productName)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: stockController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'New Stock Amount',
-                hintText: 'Enter new stock amount',
+              decoration: InputDecoration(
+                labelText: l10n.newStockAmount,
+                hintText: l10n.enterNewStockAmount,
               ),
             ),
           ],
@@ -96,7 +99,7 @@ class _AdminPageState extends State<AdminPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -109,11 +112,11 @@ class _AdminPageState extends State<AdminPage> {
                 Navigator.pop(context);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a valid number')),
+                  SnackBar(content: Text(l10n.pleaseEnterValidNumber)),
                 );
               }
             },
-            child: const Text('Update'),
+            child: Text(l10n.update),
           ),
         ],
       ),
@@ -122,7 +125,8 @@ class _AdminPageState extends State<AdminPage> {
 
   void _showAISettingsDialog(BuildContext context) {
     bool isAIEnabled = true;
-    bool isFloatingButtonVisible = true; // Changed default to true
+    bool isFloatingButtonVisible = true;
+    final l10n = AppLocalizations.of(context)!;
 
     FirebaseFirestore.instance
         .collection('settings')
@@ -140,16 +144,16 @@ class _AdminPageState extends State<AdminPage> {
           return StatefulBuilder(
             builder: (context, setState) {
               return AlertDialog(
-                title: const Text('Assistant Tommy\'s Settings'),
+                title: Text(l10n.assistantTommySettings),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     SwitchListTile(
-                      title: const Text('Enable Assistant Tommy'),
+                      title: Text(l10n.enableAssistantTommy),
                       subtitle: Text(
                         isAIEnabled 
-                            ? 'Tommy is currently available' 
-                            : 'Tommy is currently disabled'
+                            ? l10n.tommyAvailable 
+                            : l10n.tommyDisabled
                       ),
                       value: isAIEnabled,
                       onChanged: (bool value) {
@@ -158,11 +162,11 @@ class _AdminPageState extends State<AdminPage> {
                       },
                     ),
                     SwitchListTile(
-                      title: const Text('Hide Tommy'),
+                      title: Text(l10n.hideTommy),
                       subtitle: Text(
                         isFloatingButtonVisible 
-                            ? 'All Eyes On Tommy !' 
-                            : 'Tommy is hiding in the closet !'
+                            ? l10n.allEyesOnTommy 
+                            : l10n.tommyHiding
                       ),
                       value: !isFloatingButtonVisible,
                       onChanged: (bool value) {
@@ -175,7 +179,7 @@ class _AdminPageState extends State<AdminPage> {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
+                    child: Text(l10n.close),
                   ),
                 ],
               );
@@ -207,11 +211,12 @@ class _AdminPageState extends State<AdminPage> {
     final themeColor = themeNotifier.isSpecialModeActive 
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : Colors.red;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
-        title: const Text("Admin Dashboard"),
+        title: Text(l10n.adminDashboard),
         backgroundColor: themeColor,
         elevation: isDark ? 0 : 2,
       ),
@@ -221,7 +226,7 @@ class _AdminPageState extends State<AdminPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Admin Controls",
+              l10n.adminControls,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -251,8 +256,8 @@ class _AdminPageState extends State<AdminPage> {
                   stream: lowStockProducts,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                      return const ListTile(
-                        subtitle: Text("Checking stock levels..."),
+                      return ListTile(
+                        subtitle: Text(l10n.checkingStockLevels),
                       );
                     }
 
@@ -279,14 +284,14 @@ class _AdminPageState extends State<AdminPage> {
                               color: isDark ? Colors.orange.shade400 : Colors.orange.shade700,
                             ),
                           ),
-                          title: const Text(
-                            "Low Stock Alerts",
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          title: Text(
+                            l10n.lowStockAlerts,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
                             products.isEmpty
-                                ? "No products low on stock"
-                                : "${products.length} product${products.length == 1 ? '' : 's'} low on stock",
+                                ? l10n.noLowStockProducts
+                                : l10n.lowStockProductsCount(products.length),
                             style: TextStyle(
                               color: products.isNotEmpty ? Colors.orange : null,
                             ),
@@ -309,8 +314,8 @@ class _AdminPageState extends State<AdminPage> {
 
             _buildAdminCard(
               icon: Icons.people,
-              title: "User Management",
-              subtitle: "View and manage users",
+              title: l10n.userManagement,
+              subtitle: l10n.viewAndManageUsers,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const AdminUsersPage()),
@@ -321,8 +326,8 @@ class _AdminPageState extends State<AdminPage> {
 
             _buildAdminCard(
               icon: Icons.inventory_2,
-              title: "Product Management",
-              subtitle: "Add, edit or remove products",
+              title: l10n.productManagement,
+              subtitle: l10n.manageProducts,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const AdminProducts()),
@@ -333,8 +338,8 @@ class _AdminPageState extends State<AdminPage> {
 
             _buildAdminCard(
               icon: Icons.shopping_cart,
-              title: "Order Management",
-              subtitle: "View and process orders",
+              title: l10n.orderManagement,
+              subtitle: l10n.viewAndProcessOrders,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const OrderManagementPage()),
@@ -345,8 +350,8 @@ class _AdminPageState extends State<AdminPage> {
 
             _buildAdminCard(
               icon: Icons.account_balance_wallet_rounded,
-              title: "Promo Codes",
-              subtitle: "Create Promocodes and Discounts",
+              title: l10n.promoCodes,
+              subtitle: l10n.createPromocodesAndDiscounts,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const DiscountAdminPage()),
@@ -357,8 +362,8 @@ class _AdminPageState extends State<AdminPage> {
 
             _buildAdminCard(
               icon: Icons.analytics,
-              title: "Sales Statistics",
-              subtitle: "View sales analytics and charts",
+              title: l10n.salesStatistics,
+              subtitle: l10n.viewSalesAnalytics,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const AdminStatisticsPage()),
@@ -370,7 +375,7 @@ class _AdminPageState extends State<AdminPage> {
             const SizedBox(height: 20),
 
             Text(
-              "Admin Settings",
+              l10n.settings,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -387,8 +392,8 @@ class _AdminPageState extends State<AdminPage> {
                 height: 24,
                 fit: BoxFit.contain,
               ),
-              title: "Assistant Tommy's Settings",
-              subtitle: "Configure Tommy's availability",
+              title: l10n.assistantTommySettings,
+              subtitle: l10n.configureTommyAvailability,
               onTap: () => _showAISettingsDialog(context),
             ),
 
@@ -396,8 +401,8 @@ class _AdminPageState extends State<AdminPage> {
 
             _buildAdminCard(
               icon: Icons.settings,
-              title: "App Settings",
-              subtitle: "Configure application settings",
+              title: l10n.settings,
+              subtitle: l10n.configureAppSettings,
               onTap: () {
                 showModalBottomSheet(
                   context: context,
@@ -408,7 +413,7 @@ class _AdminPageState extends State<AdminPage> {
                       children: [
                         ListTile(
                           leading: const Icon(Icons.category),
-                          title: const Text('Category Management'),
+                          title: Text(l10n.categories),
                           onTap: () {
                             Navigator.pop(context);
                             Navigator.push(
@@ -421,7 +426,7 @@ class _AdminPageState extends State<AdminPage> {
                         ),
                         ListTile(
                           leading: const Icon(Icons.add_photo_alternate_outlined),
-                          title: const Text('Photo Uploader'),
+                          title: Text(l10n.photoUploader),
                           onTap: () {
                             Navigator.pop(context);
                             Navigator.push(
@@ -432,19 +437,6 @@ class _AdminPageState extends State<AdminPage> {
                             );
                           },
                         ),
-                        /*ListTile(
-                          leading: const Icon(Icons.notifications),
-                          title: const Text('Send Notifications'),
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const AdminNotificationPage(),
-                              ),
-                            );
-                          },
-                        ),*/
                       ],
                     ),
                   ),
