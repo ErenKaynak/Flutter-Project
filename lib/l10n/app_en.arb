@@ -1,10 +1,10 @@
 {
-    "appTitle": "Engineering Project",
+    "appTitle": "Paradise PC Parts",
     "welcome": "Welcome",
     "login": "Login",
     "signIn": "Sign In",
     "register": "Register",
-    "guest": "Continue as Guest",
+    "guest": "Continue as Guest", 
     "email": "Email",
     "password": "Password",
     "confirmPassword": "Confirm Password",
