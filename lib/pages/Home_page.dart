@@ -11,7 +11,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
-import 'dart:async';  // Add this import for StreamSubscription
+import 'dart:async'; // Add this import for StreamSubscription
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,10 +55,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // Category selection
   String selectedCategory = "All";
   final List<String> categoriesList = [
-    "CPU's", 
-    "GPU's", 
-    "RAM's", 
-    "Storage", 
+    "CPU's",
+    "GPU's",
+    "RAM's",
+    "Storage",
     "Motherboards",
     "Cases",
     "PSU"
@@ -167,11 +167,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
 
     try {
-      final userDoc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
 
       final profileImageUrl = userDoc.data()?['profileImageUrl'] ?? '';
 
@@ -196,50 +195,52 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void _initializeAnimationControllers() {
     try {
       // Dispose existing controllers
-      _colorAnimationControllers.forEach((_, controller) => controller.dispose());
-      _tickAnimationControllers.forEach((_, controller) => controller.dispose());
-      
+      _colorAnimationControllers
+          .forEach((_, controller) => controller.dispose());
+      _tickAnimationControllers
+          .forEach((_, controller) => controller.dispose());
+
       // Clear all maps
       _colorAnimationControllers.clear();
       _colorAnimations.clear();
       _tickAnimationControllers.clear();
       _tickAnimations.clear();
       _isAddingToCartMap.clear();
-  
+
       if (!mounted) return;
-  
+
       final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
-      final specialColor = themeNotifier.isSpecialModeActive 
+      final specialColor = themeNotifier.isSpecialModeActive
           ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
           : null;
-  
+
       for (var product in products) {
         final productId = product['id'];
         if (productId == null) continue;
-  
+
         // Initialize color animation
         final colorController = AnimationController(
           vsync: this,
           duration: Duration(milliseconds: 300),
         );
         _colorAnimationControllers[productId] = colorController;
-  
+
         _colorAnimations[productId] = ColorTween(
           begin: themeNotifier.isSpecialModeActive
               ? specialColor
-              : (themeNotifier.isBlackMode 
+              : (themeNotifier.isBlackMode
                   ? Theme.of(context).colorScheme.secondary
                   : Colors.red.shade400),
           end: Colors.green.shade500,
         ).animate(colorController);
-  
+
         // Initialize tick animation
         final tickController = AnimationController(
           vsync: this,
           duration: Duration(milliseconds: 500),
         );
         _tickAnimationControllers[productId] = tickController;
-  
+
         _tickAnimations[productId] = Tween<double>(
           begin: 0.0,
           end: 1.0,
@@ -247,7 +248,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           parent: tickController,
           curve: Curves.elasticOut,
         ));
-  
+
         _isAddingToCartMap[productId] = false;
       }
     } catch (e) {
@@ -307,12 +308,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         return;
       }
 
-      final favoritesSnapshot =
-          await FirebaseFirestore.instance
-              .collection('favorites')
-              .doc(user.uid)
-              .collection('userFavorites')
-              .get();
+      final favoritesSnapshot = await FirebaseFirestore.instance
+          .collection('favorites')
+          .doc(user.uid)
+          .collection('userFavorites')
+          .get();
 
       final List<String> loadedFavorites = [];
       favoritesSnapshot.docs.forEach((doc) {
@@ -347,7 +347,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     MaterialPageRoute(builder: (context) => LoginPage()),
                   );
                 },
-                child: Text(AppLocalizations.of(context)!.signIn, style: TextStyle(color: Colors.white)),
+                child: Text(AppLocalizations.of(context)!.signIn,
+                    style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -408,7 +409,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.failedToUpdateFavorites),
+            content:
+                Text(AppLocalizations.of(context)!.failedToUpdateFavorites),
             duration: Duration(seconds: 2),
           ),
         );
@@ -422,11 +424,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           .where(
             (product) =>
                 product["name"].toString().toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ||
+                      _searchQuery.toLowerCase(),
+                    ) ||
                 product["description"].toString().toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ),
+                      _searchQuery.toLowerCase(),
+                    ),
           )
           .toList();
     } else if (_selectedCategory == "All") {
@@ -506,7 +508,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.addedToCartMessage(product["name"], 1)),
+            content: Text(AppLocalizations.of(context)!
+                .addedToCartMessage(product["name"], 1)),
             duration: Duration(seconds: 2),
             action: SnackBarAction(
               label: AppLocalizations.of(context)!.viewCart,
@@ -592,7 +595,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final specialColor = themeNotifier.isSpecialModeActive 
+    final specialColor = themeNotifier.isSpecialModeActive
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : null;
 
@@ -704,133 +707,131 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             SizedBox(width: 20),
           ],
         ),
-        body:
-            _isLoading
-                ? Center(child: CircularProgressIndicator())
-                : RefreshIndicator(
-                  onRefresh: _loadInitialData,
-                  child: CustomScrollView(
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(16.0),
-                              margin: EdgeInsets.all(10.0),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: themeNotifier.isSpecialModeActive
-                                      ? [
-                                          specialColor ?? Colors.red,
-                                          isDark ? Colors.grey.shade900 : Colors.grey.shade100,
-                                        ]
-                                      : (themeNotifier.isBlackMode
-                                          ? [
-                                              Theme.of(context).colorScheme.secondary,
-                                              Colors.grey.shade900,
-                                            ]
-                                          : (isDark
-                                              ? [
-                                                  Colors.red.shade900,
-                                                  Colors.grey.shade900,
-                                                ]
-                                              : [
-                                                  Colors.red.shade500,
-                                                  Colors.red.shade100,
-                                                ])),
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color:
+        body: _isLoading
+            ? Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _loadInitialData,
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(16.0),
+                            margin: EdgeInsets.all(10.0),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: themeNotifier.isSpecialModeActive
+                                    ? [
+                                        specialColor ?? Colors.red,
                                         isDark
-                                            ? Colors.black26
-                                            : Colors.black12,
-                                    blurRadius: 5,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
+                                            ? Colors.grey.shade900
+                                            : Colors.grey.shade100,
+                                      ]
+                                    : (themeNotifier.isBlackMode
+                                        ? [
+                                            Theme.of(context)
+                                                .colorScheme
+                                                .secondary,
+                                            Colors.grey.shade900,
+                                          ]
+                                        : (isDark
+                                            ? [
+                                                Colors.red.shade900,
+                                                Colors.grey.shade900,
+                                              ]
+                                            : [
+                                                Colors.red.shade500,
+                                                Colors.red.shade100,
+                                              ])),
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 30,
-                                    backgroundColor:
-                                        themeNotifier.isSpecialModeActive
-                                            ? specialColor
-                                            : (isDark
-                                                ? Colors.red.shade700
-                                                : Colors.red.shade300),
-                                    backgroundImage:
-                                        _userProfilePicture != null &&
-                                                _userProfilePicture!.isNotEmpty
-                                            ? NetworkImage(_userProfilePicture!)
-                                            : null,
-                                    child:
-                                        _userProfilePicture == null ||
-                                                _userProfilePicture!.isEmpty
-                                            ? Icon(
-                                              Icons.person,
-                                              size: 36,
-                                              color: Colors.white,
-                                            )
-                                            : null,
-                                  ),
-                                  SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          AppLocalizations.of(context)!.welcome,
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color:
-                                                isDark
-                                                    ? Colors.grey[400]
-                                                    : Colors.black54,
-                                          ),
-                                        ),
-                                        Text(
-                                          _userName,
-                                          style: TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.bold,
-                                            color:
-                                                isDark
-                                                    ? Colors.white
-                                                    : Colors.black87,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      isDark ? Colors.black26 : Colors.black12,
+                                  blurRadius: 5,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
                             ),
-                            _buildBannerSection(),
-                            SizedBox(height: 10),
-                            _buildCategoriesHeader(),
-                            _buildCategoriesRow(),
-                            _buildProductsHeader(),
-                          ],
-                        ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 30,
+                                  backgroundColor:
+                                      themeNotifier.isSpecialModeActive
+                                          ? specialColor
+                                          : (isDark
+                                              ? Colors.red.shade700
+                                              : Colors.red.shade300),
+                                  backgroundImage:
+                                      _userProfilePicture != null &&
+                                              _userProfilePicture!.isNotEmpty
+                                          ? NetworkImage(_userProfilePicture!)
+                                          : null,
+                                  child: _userProfilePicture == null ||
+                                          _userProfilePicture!.isEmpty
+                                      ? Icon(
+                                          Icons.person,
+                                          size: 36,
+                                          color: Colors.white,
+                                        )
+                                      : null,
+                                ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        AppLocalizations.of(context)!.welcome,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: isDark
+                                              ? Colors.grey[400]
+                                              : Colors.black54,
+                                        ),
+                                      ),
+                                      Text(
+                                        _userName,
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark
+                                              ? Colors.white
+                                              : Colors.black87,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _buildBannerSection(),
+                          SizedBox(height: 10),
+                          _buildCategoriesHeader(),
+                          _buildCategoriesRow(),
+                          _buildProductsHeader(),
+                        ],
                       ),
-                      _buildProductsGrid(),
-                    ],
-                  ),
+                    ),
+                    _buildProductsGrid(),
+                  ],
                 ),
+              ),
       ),
     );
   }
 
   Widget _buildBannerSection() {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final specialColor = themeNotifier.isSpecialModeActive 
+    final specialColor = themeNotifier.isSpecialModeActive
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : null;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -911,9 +912,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.grey.shade900
-                          : Colors.white,
+                      backgroundColor:
+                          Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey.shade900
+                              : Colors.white,
                       foregroundColor: themeNotifier.isSpecialModeActive
                           ? specialColor
                           : (themeNotifier.isBlackMode
@@ -932,7 +934,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildCategoriesHeader() {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final specialColor = themeNotifier.isSpecialModeActive 
+    final specialColor = themeNotifier.isSpecialModeActive
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : null;
 
@@ -1004,49 +1006,48 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 }
               });
             },
-            itemBuilder:
-                (BuildContext context) => <PopupMenuEntry<String>>[
-                  PopupMenuItem<String>(
-                    value: 'price_asc',
-                    child: Row(
-                      children: [
-                        Icon(Icons.arrow_upward, size: 20),
-                        SizedBox(width: 8),
-                        Text(AppLocalizations.of(context)!.priceLowToHigh),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'price_desc',
-                    child: Row(
-                      children: [
-                        Icon(Icons.arrow_downward, size: 20),
-                        SizedBox(width: 8),
-                        Text(AppLocalizations.of(context)!.priceHighToLow),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'name_asc',
-                    child: Row(
-                      children: [
-                        Icon(Icons.sort_by_alpha, size: 20),
-                        SizedBox(width: 8),
-                        Text(AppLocalizations.of(context)!.nameAToZ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'name_desc',
-                    child: Row(
-                      children: [
-                        Icon(Icons.sort_by_alpha, size: 20),
-                        SizedBox(width: 8),
-                        Text(AppLocalizations.of(context)!.nameZToA),
-                      ],
-                    ),
-                  ),
-                ],
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              PopupMenuItem<String>(
+                value: 'price_asc',
+                child: Row(
+                  children: [
+                    Icon(Icons.arrow_upward, size: 20),
+                    SizedBox(width: 8),
+                    Text(AppLocalizations.of(context)!.priceLowToHigh),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'price_desc',
+                child: Row(
+                  children: [
+                    Icon(Icons.arrow_downward, size: 20),
+                    SizedBox(width: 8),
+                    Text(AppLocalizations.of(context)!.priceHighToLow),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'name_asc',
+                child: Row(
+                  children: [
+                    Icon(Icons.sort_by_alpha, size: 20),
+                    SizedBox(width: 8),
+                    Text(AppLocalizations.of(context)!.nameAToZ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'name_desc',
+                child: Row(
+                  children: [
+                    Icon(Icons.sort_by_alpha, size: 20),
+                    SizedBox(width: 8),
+                    Text(AppLocalizations.of(context)!.nameZToA),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1059,20 +1060,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       padding: EdgeInsets.symmetric(horizontal: 10),
       child: Row(
         children: [
-          ...categories.map(
-            (category) => Row(
-              children: [
-                _buildCategoryCircle(
-                  category['name'],
-                  category['iconPath'],
-                  _selectedCategory == category['name'],
-                  () => _selectCategory(category['name']),
-                  false,
+          ...categories
+              .map(
+                (category) => Row(
+                  children: [
+                    _buildCategoryCircle(
+                      category['name'],
+                      category['iconPath'],
+                      _selectedCategory == category['name'],
+                      () => _selectCategory(category['name']),
+                      false,
+                    ),
+                    SizedBox(width: 15),
+                  ],
                 ),
-                SizedBox(width: 15),
-              ],
-            ),
-          ).toList(),
+              )
+              .toList(),
           _buildCategoryCircle(
             "All",
             'lib/assets/Images/all-icon.png',
@@ -1094,7 +1097,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final specialColor = themeNotifier.isSpecialModeActive 
+    final specialColor = themeNotifier.isSpecialModeActive
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : null;
 
@@ -1115,9 +1118,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               ? Theme.of(context).colorScheme.secondary
                               : Colors.red.shade900))
                       : Colors.grey.shade800)
-                  : (isSelected
-                      ? Colors.red.shade50
-                      : Colors.grey.shade200),
+                  : (isSelected ? Colors.red.shade50 : Colors.grey.shade200),
               border: isSelected
                   ? Border.all(
                       color: isDark
@@ -1137,7 +1138,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             ? (themeNotifier.isSpecialModeActive
                                 ? (specialColor ?? Colors.red).withOpacity(0.5)
                                 : (themeNotifier.isBlackMode
-                                    ? Theme.of(context).colorScheme.secondary.withOpacity(0.5)
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .secondary
+                                        .withOpacity(0.5)
                                     : Colors.red.shade900.withOpacity(0.5)))
                             : Colors.red.shade300.withOpacity(0.5),
                         blurRadius: 8,
@@ -1293,7 +1297,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     required AnimationController animationController,
   }) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final specialColor = themeNotifier.isSpecialModeActive 
+    final specialColor = themeNotifier.isSpecialModeActive
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : null;
     final double averageRating = product['averageRating'] ?? 0.0;
@@ -1373,7 +1377,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           child: GestureDetector(
                             onTap: () => toggleFavorite(product),
                             child: Icon(
-                              isFavorite ? Icons.favorite : Icons.favorite_border,
+                              isFavorite
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
                               color: themeNotifier.isSpecialModeActive
                                   ? specialColor
                                   : (themeNotifier.isBlackMode
@@ -1420,7 +1426,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                   children: [
                                     ...List.generate(5, (index) {
                                       return Icon(
-                                        index < (product['averageRating'] ?? 0).round()
+                                        index <
+                                                (product['averageRating'] ?? 0)
+                                                    .round()
                                             ? Icons.star
                                             : Icons.star_border,
                                         color: Colors.amber,
@@ -1431,7 +1439,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                     Text(
                                       '(${product['ratingCount'] ?? 0})',
                                       style: TextStyle(
-                                        color: Theme.of(context).brightness == Brightness.dark
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
                                             ? Colors.grey[400]
                                             : Colors.grey[600],
                                         fontSize: 12,
@@ -1470,12 +1479,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                   ? null
                                   : () => _addToCart(product),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _colorAnimations[product['id']]?.value ??
-                                    (themeNotifier.isSpecialModeActive
-                                        ? specialColor
-                                        : (themeNotifier.isBlackMode
-                                            ? Theme.of(context).colorScheme.secondary
-                                            : Colors.red)),
+                                backgroundColor:
+                                    _colorAnimations[product['id']]?.value ??
+                                        (themeNotifier.isSpecialModeActive
+                                            ? specialColor
+                                            : (themeNotifier.isBlackMode
+                                                ? Theme.of(context)
+                                                    .colorScheme
+                                                    .secondary
+                                                : Colors.red)),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
@@ -1487,19 +1499,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 children: [
                                   Opacity(
                                     opacity: 1.0 -
-                                        (_colorAnimationControllers[product['id']]
+                                        (_colorAnimationControllers[
+                                                    product['id']]
                                                 ?.value ??
                                             0.0),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         if (!isOutOfStock)
-                                          Icon(Icons.shopping_cart, size: 16),
+                                          Icon(Icons.shopping_cart,
+                                              size: 16, color: Colors.white),
                                         if (!isOutOfStock) SizedBox(width: 8),
                                         Text(
                                           isOutOfStock
-                                              ? AppLocalizations.of(context)!.outOfStock
-                                              : AppLocalizations.of(context)!.addToCart,
+                                              ? AppLocalizations.of(context)!
+                                                  .outOfStock
+                                              : AppLocalizations.of(context)!
+                                                  .addToCart,
                                           style: TextStyle(
                                             fontSize: isOutOfStock ? 12 : 14,
                                             fontWeight: FontWeight.bold,
@@ -1515,7 +1532,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                           0.0) >
                                       0)
                                     Transform.scale(
-                                      scale: _tickAnimations[product['id']]?.value ??
+                                      scale: _tickAnimations[product['id']]
+                                              ?.value ??
                                           0.0,
                                       child: Icon(
                                         Icons.check,
@@ -1571,12 +1589,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
         return;
       }
 
-      final favoritesSnapshot =
-          await FirebaseFirestore.instance
-              .collection('favorites')
-              .doc(user.uid)
-              .collection('userFavorites')
-              .get();
+      final favoritesSnapshot = await FirebaseFirestore.instance
+          .collection('favorites')
+          .doc(user.uid)
+          .collection('userFavorites')
+          .get();
 
       final List<Map<String, dynamic>> loadedFavorites = [];
       favoritesSnapshot.docs.forEach((doc) {
@@ -1645,45 +1662,43 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
     return Scaffold(
       appBar: AppBar(title: Text('My Favorites')),
-      body:
-          _isLoading
-              ? Center(child: CircularProgressIndicator())
-              : favorites.isEmpty
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : favorites.isEmpty
               ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.favorite_border, size: 70, color: Colors.grey),
-                    SizedBox(height: 16),
-                    Text(
-                      "No favorites yet",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.favorite_border, size: 70, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        "No favorites yet",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      "Items you favorite will appear here",
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              )
+                      SizedBox(height: 8),
+                      Text(
+                        "Items you favorite will appear here",
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                )
               : ListView.builder(
-                padding: EdgeInsets.all(10),
-                itemCount: favorites.length,
-                itemBuilder: (context, index) {
-                  final product = favorites[index];
-                  return Card(
-                    margin: EdgeInsets.only(bottom: 10),
-                    child: ListTile(
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child:
-                            (product["image"].startsWith('http') ||
-                                    product["image"].startsWith('https'))
-                                ? Image.network(
+                  padding: EdgeInsets.all(10),
+                  itemCount: favorites.length,
+                  itemBuilder: (context, index) {
+                    final product = favorites[index];
+                    return Card(
+                      margin: EdgeInsets.only(bottom: 10),
+                      child: ListTile(
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: (product["image"].startsWith('http') ||
+                                  product["image"].startsWith('https'))
+                              ? Image.network(
                                   product["image"],
                                   width: 50,
                                   height: 50,
@@ -1697,7 +1712,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                     );
                                   },
                                 )
-                                : Image.asset(
+                              : Image.asset(
                                   product["image"],
                                   width: 50,
                                   height: 50,
@@ -1709,37 +1724,35 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                     );
                                   },
                                 ),
-                      ),
-                      title: Text(
-                        product["name"],
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                        // Updated line
-                      ),
-                      subtitle: Text("₺${product["price"]}"),
-                      trailing: IconButton(
-                        icon: Icon(
-                          Icons.favorite,
-                          color:
-                              themeNotifier.isBlackMode
-                                  ? Theme.of(context).colorScheme.secondary
-                                  : Colors.red,
                         ),
-                        onPressed: () => removeFromFavorites(product["id"]),
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) =>
-                                    ProductDetailPage(productId: product["id"]),
+                        title: Text(
+                          product["name"],
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                          // Updated line
+                        ),
+                        subtitle: Text("₺${product["price"]}"),
+                        trailing: IconButton(
+                          icon: Icon(
+                            Icons.favorite,
+                            color: themeNotifier.isBlackMode
+                                ? Theme.of(context).colorScheme.secondary
+                                : Colors.red,
                           ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
+                          onPressed: () => removeFromFavorites(product["id"]),
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ProductDetailPage(productId: product["id"]),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }
@@ -1787,25 +1800,22 @@ class CartManager extends ChangeNotifier {
     if (user == null) return;
 
     try {
-      final snapshot =
-          await FirebaseFirestore.instance
-              .collection('cart')
-              .doc(user.uid)
-              .collection('userCart')
-              .get();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('cart')
+          .doc(user.uid)
+          .collection('userCart')
+          .get();
 
-      _items =
-          snapshot.docs.map((doc) {
-            final data = doc.data();
-            return CartItem(
-              id: doc.id,
-              name: data['name'] ?? 'Unknown Product',
-              price: double.tryParse(data['price']?.toString() ?? '0') ?? 0.0,
-              imagePath:
-                  data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-              quantity: data['quantity'] ?? 1,
-            );
-          }).toList();
+      _items = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return CartItem(
+          id: doc.id,
+          name: data['name'] ?? 'Unknown Product',
+          price: double.tryParse(data['price']?.toString() ?? '0') ?? 0.0,
+          imagePath: data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
+          quantity: data['quantity'] ?? 1,
+        );
+      }).toList();
 
       notifyListeners();
     } catch (e) {
