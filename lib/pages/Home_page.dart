@@ -11,6 +11,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
+import 'dart:async';  // Add this import for StreamSubscription
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,13 +66,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   String selectedFilterCategory = "All";
 
+  // Change from late to nullable
+  StreamSubscription<QuerySnapshot>? _categoriesSubscription;
+
   @override
   void initState() {
     super.initState();
     _cartManager.loadCart();
     _cartManager.addListener(_updateUI);
     _getUserProfile();
-    _loadCategories();
+    _setupCategoriesListener();
     _searchController.addListener(() {
       if (mounted) {
         setState(() {
@@ -83,13 +87,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _loadInitialData();
   }
 
-  Future<void> _loadCategories() async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('categories')
-          .orderBy('name')
-          .get();
-
+  void _setupCategoriesListener() {
+    _categoriesSubscription = FirebaseFirestore.instance
+        .collection('categories')
+        .orderBy('order')
+        .snapshots()
+        .listen((snapshot) {
       if (mounted) {
         setState(() {
           categories = snapshot.docs.map((doc) {
@@ -98,13 +101,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               'id': doc.id,
               'name': data['name'] ?? 'Unnamed Category',
               'iconPath': data['iconPath'] ?? '',
+              'order': data['order'] ?? 999999,
             };
           }).toList();
         });
       }
-    } catch (e) {
-      print('Error loading categories: $e');
-    }
+    }, onError: (error) {
+      print('Error in categories stream: $error');
+    });
   }
 
   Future<void> _loadInitialData() async {
@@ -144,6 +148,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _isDisposed = true;
     _searchController.dispose();
     _cartManager.removeListener(_updateUI);
+    _categoriesSubscription?.cancel(); // Safe call with null check
 
     _colorAnimationControllers.forEach((_, controller) => controller.dispose());
     _tickAnimationControllers.forEach((_, controller) => controller.dispose());
