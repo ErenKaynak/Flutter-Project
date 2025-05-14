@@ -1248,7 +1248,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           crossAxisCount: 2,
           crossAxisSpacing: 10,
           mainAxisSpacing: 15,
-          childAspectRatio: 0.6,
+          childAspectRatio: 0.55,
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
           final product = filteredProducts[index];
@@ -1396,7 +1396,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              product["name"],
+                              product["name"].length > 17
+                                  ? product["name"].substring(0, 17) + '...'
+                                  : product["name"],
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
@@ -1435,7 +1437,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 SizedBox(height: 2),
                               ],
                             ),
-                            SizedBox(height: 4),
+                            SizedBox(height: 2),
                             Text(
                               "₺${product["price"]}",
                               style: TextStyle(
@@ -1447,7 +1449,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           ],
                         ),
                       ),
-                      SizedBox(height: 8),
+                      SizedBox(height: 0),
                       SizedBox(
                         width: double.infinity,
                         height: 40,
