@@ -85,7 +85,7 @@ class _AdminProductsState extends State<AdminProducts> {
 
   Future<String> _generateDescription(String productName, String category, String language) async {
     try {
-      // Simplified prompt structure
+      // Simplified prompt structure for English
       String basePrompt = '''Generate a concise technical description for this computer component:
 Product: $productName
 Category: $category
@@ -96,30 +96,41 @@ Requirements:
 - Focus on key technical specifications
 - Use professional terminology
 - Include compatibility information
+- 
 - Mention key features''';
-
-      // Add language instruction at the end
-      String languageInstruction = '';
-      switch (language) {
-        case 'tr':
-          languageInstruction = 'Translate to Turkish (Türkçe). Use proper technical terms and Turkish grammar.';
-          break;
-        case 'ar':
-          languageInstruction = 'Translate to Arabic (العربية). Use proper technical terms and Arabic grammar.';
-          break;
-        default:
-          languageInstruction = 'Write in English using standard technical terms.';
-      }
-
-      final completePrompt = '$basePrompt\n\n$languageInstruction';
 
       // Add timeout handling
       final response = await Future.any([
-        LocalAIService.getChatCompletion(completePrompt, 'You are a technical writer.'),
+        LocalAIService.getChatCompletion(basePrompt, 'You are a technical writer.'),
         Future.delayed(const Duration(seconds: 15)).then((_) => throw TimeoutException('Description generation timed out')),
       ]);
 
-      return response.trim();
+      final englishDescription = response.trim();
+
+      // If English is requested, return it directly
+      if (language == 'en') {
+        return englishDescription;
+      }
+
+      // For other languages, translate the English description
+      String translationPrompt = '';
+      switch (language) {
+        case 'tr':
+          translationPrompt = 'Translate this technical description to Turkish (Türkçe). Maintain technical accuracy and proper Turkish grammar:\n\n$englishDescription';
+          break;
+        case 'ar':
+          translationPrompt = 'Translate this technical description to Arabic (العربية). Maintain technical accuracy and proper Arabic grammar:\n\n$englishDescription';
+          break;
+        default:
+          return englishDescription;
+      }
+
+      final translatedResponse = await Future.any([
+        LocalAIService.getChatCompletion(translationPrompt, 'You are a professional translator specializing in technical content.'),
+        Future.delayed(const Duration(seconds: 15)).then((_) => throw TimeoutException('Translation timed out')),
+      ]);
+
+      return translatedResponse.trim();
     } catch (e) {
       print('Error generating description: $e');
       return _generateQuickFallback(productName, category, language);
@@ -203,20 +214,20 @@ Requirements:
         ),
       );
 
-      // Generate descriptions concurrently
-      final results = await Future.wait([
-        _generateDescription(nameController.text, selectedCategory, 'en'),
-        _generateDescription(nameController.text, selectedCategory, 'tr'),
-        _generateDescription(nameController.text, selectedCategory, 'ar'),
-      ], eagerError: true);
+      // First generate English description
+      final englishDescription = await _generateDescription(nameController.text, selectedCategory, 'en');
+      
+      // Then translate to Turkish and Arabic
+      final turkishDescription = await _generateDescription(nameController.text, selectedCategory, 'tr');
+      final arabicDescription = await _generateDescription(nameController.text, selectedCategory, 'ar');
 
       if (mounted) {
         Navigator.pop(context); // Hide loading dialog
         
         // Update text controllers
-        descriptionControllers['en']!.text = results[0];
-        descriptionControllers['tr']!.text = results[1];
-        descriptionControllers['ar']!.text = results[2];
+        descriptionControllers['en']!.text = englishDescription;
+        descriptionControllers['tr']!.text = turkishDescription;
+        descriptionControllers['ar']!.text = arabicDescription;
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Descriptions generated successfully')),

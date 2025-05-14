@@ -51,6 +51,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   bool _isDisposed = false;
   String _userName = "Guest";
 
+  // Category selection
+  String selectedCategory = "All";
+  final List<String> categoriesList = [
+    "CPU's", 
+    "GPU's", 
+    "RAM's", 
+    "Storage", 
+    "Motherboards",
+    "Cases",
+    "PSU"
+  ];
+
+  String selectedFilterCategory = "All";
+
   @override
   void initState() {
     super.initState();
@@ -78,15 +92,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
       if (mounted) {
         setState(() {
-          categories =
-              snapshot.docs.map((doc) {
-                final data = doc.data();
-                return {
-                  'id': doc.id,
-                  'name': data['name'] ?? 'Unnamed Category',
-                  'iconPath': data['iconPath'] ?? '',
-                };
-              }).toList();
+          categories = snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'id': doc.id,
+              'name': data['name'] ?? 'Unnamed Category',
+              'iconPath': data['iconPath'] ?? '',
+            };
+          }).toList();
         });
       }
     } catch (e) {
@@ -544,6 +557,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       setState(() {
         _isAddingToCartMap[productId] = false;
       });
+    }
+  }
+
+  String _getLocalizedCategoryName(String category, BuildContext context) {
+    switch (category) {
+      case "All":
+        return AppLocalizations.of(context)!.categoryAll;
+      case "CPU's":
+        return AppLocalizations.of(context)!.categoryCPU;
+      case "GPU's":
+        return AppLocalizations.of(context)!.categoryGPU;
+      case "RAM's":
+        return AppLocalizations.of(context)!.categoryRAM;
+      case "Storage":
+        return AppLocalizations.of(context)!.categoryStorage;
+      case "Motherboards":
+        return AppLocalizations.of(context)!.categoryMotherboard;
+      case "Cases":
+        return AppLocalizations.of(context)!.categoryCase;
+      case "PSU":
+        return AppLocalizations.of(context)!.categoryPSU;
+      default:
+        return category;
     }
   }
 
@@ -1018,22 +1054,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       padding: EdgeInsets.symmetric(horizontal: 10),
       child: Row(
         children: [
-          ...categories
-              .map(
-                (category) => Row(
-                  children: [
-                    _buildCategoryCircle(
-                      category['name'],
-                      category['iconPath'],
-                      _selectedCategory == category['name'],
-                      () => _selectCategory(category['name']),
-                      false,
-                    ),
-                    SizedBox(width: 15),
-                  ],
+          ...categories.map(
+            (category) => Row(
+              children: [
+                _buildCategoryCircle(
+                  category['name'],
+                  category['iconPath'],
+                  _selectedCategory == category['name'],
+                  () => _selectCategory(category['name']),
+                  false,
                 ),
-              )
-              .toList(),
+                SizedBox(width: 15),
+              ],
+            ),
+          ).toList(),
           _buildCategoryCircle(
             "All",
             'lib/assets/Images/all-icon.png',
@@ -1136,7 +1170,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
           SizedBox(height: 8),
           Text(
-            label,
+            _getLocalizedCategoryName(label, context),
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               color: isDark
@@ -1376,28 +1410,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  children: List.generate(5, (index) {
-                                    return Icon(
-                                      index < (product['averageRating'] ?? 0).round()
-                                          ? Icons.star
-                                          : Icons.star_border,
-                                      color: Colors.amber,
-                                      size: 14,
-                                    );
-                                  }),
+                                  children: [
+                                    ...List.generate(5, (index) {
+                                      return Icon(
+                                        index < (product['averageRating'] ?? 0).round()
+                                            ? Icons.star
+                                            : Icons.star_border,
+                                        color: Colors.amber,
+                                        size: 14,
+                                      );
+                                    }),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      '(${product['ratingCount'] ?? 0})',
+                                      style: TextStyle(
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 SizedBox(height: 2),
-                                Text(
-                                  product['ratingCount'] > 0
-                                      ? AppLocalizations.of(context)!.ratingCount(product['ratingCount'])
-                                      : AppLocalizations.of(context)!.noReviewsYet,
-                                  style: TextStyle(
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.grey[400]
-                                        : Colors.grey[600],
-                                    fontSize: 12,
-                                  ),
-                                ),
                               ],
                             ),
                             SizedBox(height: 4),
