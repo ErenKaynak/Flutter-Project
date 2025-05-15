@@ -1104,6 +1104,12 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             themeNotifier,
                           ),
+                          buildButton(
+                            l10n.reportBug,
+                            Icons.bug_report,
+                            () => _showBugReportDialog(),
+                            themeNotifier,
+                          ),
                         ],
                       ),
                     ),
@@ -1465,6 +1471,81 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  void _showBugReportDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    final TextEditingController titleController = TextEditingController();
+    final TextEditingController descriptionController = TextEditingController();
+    final user = FirebaseAuth.instance.currentUser;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.reportBug),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(
+                  labelText: l10n.bugTitle,
+                  hintText: l10n.enterBugTitle,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  labelText: l10n.bugDescription,
+                  hintText: l10n.describeBugInDetail,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (titleController.text.trim().isEmpty || 
+                  descriptionController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.pleaseEnterBugDetails)),
+                );
+                return;
+              }
+
+              try {
+                await FirebaseFirestore.instance.collection('bug_reports').add({
+                  'userId': user?.uid,
+                  'userEmail': user?.email,
+                  'title': titleController.text.trim(),
+                  'description': descriptionController.text.trim(),
+                  'status': 'pending',
+                  'createdAt': FieldValue.serverTimestamp(),
+                  'updatedAt': FieldValue.serverTimestamp(),
+                });
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.bugReportSubmitted)),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.errorSubmittingBugReport)),
+                );
+              }
+            },
+            child: Text(l10n.save)),
         ],
       ),
     );

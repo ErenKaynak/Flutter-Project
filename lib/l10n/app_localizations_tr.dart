@@ -1169,4 +1169,61 @@ class AppLocalizationsTr extends AppLocalizations {
   String ratingCount(int count) {
     return '$count değerlendirme';
   }
+
+  @override
+  String get reportBug => 'Hata Bildir';
+
+  @override
+  String get bugReports => 'Hata Raporları';
+
+  @override
+  String get viewAndManageBugReports => 'Hata raporlarını görüntüle ve yönet';
+
+  @override
+  String get bugTitle => 'Hata Başlığı';
+
+  @override
+  String get enterBugTitle => 'Hata için bir başlık girin';
+
+  @override
+  String get bugDescription => 'Hata Açıklaması';
+
+  @override
+  String get describeBugInDetail => 'Lütfen hatayı detaylı bir şekilde açıklayın';
+
+  @override
+  String get pleaseEnterBugDetails => 'Lütfen başlık ve açıklama giriniz';
+
+  @override
+  String get bugReportSubmitted => 'Hata raporu başarıyla gönderildi';
+
+  @override
+  String get errorSubmittingBugReport => 'Hata raporu gönderilirken bir sorun oluştu';
+
+  @override
+  String get reportedBy => 'Bildiren';
+
+  @override
+  String get reportedOn => 'Bildirim Tarihi';
+
+  @override
+  String get inProgress => 'İşleniyor';
+
+  @override
+  String get resolved => 'Çözüldü';
+
+  @override
+  String get dismissed => 'Reddedildi';
+
+  @override
+  String get markAsInProgress => 'İşleniyor Olarak İşaretle';
+
+  @override
+  String get markAsResolved => 'Çözüldü Olarak İşaretle';
+
+  @override
+  String get dismiss => 'Reddet';
+
+  @override
+  String get noBugReports => 'Hata raporu bulunamadı';
 }

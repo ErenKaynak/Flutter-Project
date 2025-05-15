@@ -548,5 +548,26 @@
                 "type": "int"
             }
         }
-    }
+    },
+    "reportBug": "Hata Bildir",
+    "bugReports": "Hata Raporları",
+    "viewAndManageBugReports": "Hata raporlarını görüntüle ve yönet",
+    "bugTitle": "Hata Başlığı",
+    "enterBugTitle": "Hata için bir başlık girin",
+    "bugDescription": "Hata Açıklaması",
+    "describeBugInDetail": "Lütfen hatayı detaylı bir şekilde açıklayın",
+    "pleaseEnterBugDetails": "Lütfen başlık ve açıklama giriniz",
+    "bugReportSubmitted": "Hata raporu başarıyla gönderildi",
+    "errorSubmittingBugReport": "Hata raporu gönderilirken bir sorun oluştu",
+    "reportedBy": "Bildiren",
+    "reportedOn": "Bildirim Tarihi",
+    "anonymous": "Anonim",
+    "pending": "Beklemede",
+    "inProgress": "İşleniyor",
+    "resolved": "Çözüldü",
+    "dismissed": "Reddedildi",
+    "markAsInProgress": "İşleniyor Olarak İşaretle",
+    "markAsResolved": "Çözüldü Olarak İşaretle",
+    "dismiss": "Reddet",
+    "noBugReports": "Hata raporu bulunamadı"
 } 

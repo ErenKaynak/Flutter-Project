@@ -2280,6 +2280,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} ratings'**
   String ratingCount(int count);
+
+  /// No description provided for @reportBug.
+  ///
+  /// In en, this message translates to:
+  /// **'Report Bug'**
+  String get reportBug;
+
+  /// No description provided for @bugReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Bug Reports'**
+  String get bugReports;
+
+  /// No description provided for @viewAndManageBugReports.
+  ///
+  /// In en, this message translates to:
+  /// **'View and manage bug reports'**
+  String get viewAndManageBugReports;
+
+  /// No description provided for @bugTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bug Title'**
+  String get bugTitle;
+
+  /// No description provided for @enterBugTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a title for the bug'**
+  String get enterBugTitle;
+
+  /// No description provided for @bugDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Bug Description'**
+  String get bugDescription;
+
+  /// No description provided for @describeBugInDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Please describe the bug in detail'**
+  String get describeBugInDetail;
+
+  /// No description provided for @pleaseEnterBugDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter both title and description'**
+  String get pleaseEnterBugDetails;
+
+  /// No description provided for @bugReportSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Bug report submitted successfully'**
+  String get bugReportSubmitted;
+
+  /// No description provided for @errorSubmittingBugReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Error submitting bug report'**
+  String get errorSubmittingBugReport;
+
+  /// No description provided for @reportedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Reported by'**
+  String get reportedBy;
+
+  /// No description provided for @reportedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Reported on'**
+  String get reportedOn;
+
+  /// No description provided for @inProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In Progress'**
+  String get inProgress;
+
+  /// No description provided for @resolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
+  String get resolved;
+
+  /// No description provided for @dismissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismissed'**
+  String get dismissed;
+
+  /// No description provided for @markAsInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as In Progress'**
+  String get markAsInProgress;
+
+  /// No description provided for @markAsResolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as Resolved'**
+  String get markAsResolved;
+
+  /// No description provided for @dismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get dismiss;
+
+  /// No description provided for @noBugReports.
+  ///
+  /// In en, this message translates to:
+  /// **'No bug reports found'**
+  String get noBugReports;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

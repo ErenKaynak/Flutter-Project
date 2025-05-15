@@ -531,5 +531,25 @@
                 "type": "int"
             }
         }
-    }
+    },
+    "reportBug": "الإبلاغ عن خطأ",
+    "bugReports": "تقارير الأخطاء",
+    "viewAndManageBugReports": "عرض وإدارة تقارير الأخطاء",
+    "bugTitle": "عنوان الخطأ",
+    "enterBugTitle": "أدخل عنواناً للخطأ",
+    "bugDescription": "وصف الخطأ",
+    "describeBugInDetail": "يرجى وصف الخطأ بالتفصيل",
+    "pleaseEnterBugDetails": "يرجى إدخال العنوان والوصف",
+    "bugReportSubmitted": "تم إرسال تقرير الخطأ بنجاح",
+    "errorSubmittingBugReport": "حدث خطأ أثناء إرسال التقرير",
+    "reportedBy": "تم الإبلاغ بواسطة",
+    "reportedOn": "تاريخ الإبلاغ",
+    "pending": "قيد الانتظار",
+    "inProgress": "قيد المعالجة",
+    "resolved": "تم الحل",
+    "dismissed": "تم الرفض",
+    "markAsInProgress": "تحديد كقيد المعالجة",
+    "markAsResolved": "تحديد كتم الحل",
+    "dismiss": "رفض",
+    "noBugReports": "لا توجد تقارير أخطاء"
 } 

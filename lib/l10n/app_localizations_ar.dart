@@ -1169,4 +1169,61 @@ class AppLocalizationsAr extends AppLocalizations {
   String ratingCount(int count) {
     return '$count تقييم';
   }
+
+  @override
+  String get reportBug => 'الإبلاغ عن خطأ';
+
+  @override
+  String get bugReports => 'تقارير الأخطاء';
+
+  @override
+  String get viewAndManageBugReports => 'عرض وإدارة تقارير الأخطاء';
+
+  @override
+  String get bugTitle => 'عنوان الخطأ';
+
+  @override
+  String get enterBugTitle => 'أدخل عنواناً للخطأ';
+
+  @override
+  String get bugDescription => 'وصف الخطأ';
+
+  @override
+  String get describeBugInDetail => 'يرجى وصف الخطأ بالتفصيل';
+
+  @override
+  String get pleaseEnterBugDetails => 'يرجى إدخال العنوان والوصف';
+
+  @override
+  String get bugReportSubmitted => 'تم إرسال تقرير الخطأ بنجاح';
+
+  @override
+  String get errorSubmittingBugReport => 'حدث خطأ أثناء إرسال التقرير';
+
+  @override
+  String get reportedBy => 'تم الإبلاغ بواسطة';
+
+  @override
+  String get reportedOn => 'تاريخ الإبلاغ';
+
+  @override
+  String get inProgress => 'قيد المعالجة';
+
+  @override
+  String get resolved => 'تم الحل';
+
+  @override
+  String get dismissed => 'تم الرفض';
+
+  @override
+  String get markAsInProgress => 'تحديد كقيد المعالجة';
+
+  @override
+  String get markAsResolved => 'تحديد كتم الحل';
+
+  @override
+  String get dismiss => 'رفض';
+
+  @override
+  String get noBugReports => 'لا توجد تقارير أخطاء';
 }

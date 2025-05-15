@@ -5,6 +5,7 @@ import 'package:engineering_project/admin-panel/admin_photoUploader.dart';
 import 'package:engineering_project/admin-panel/admin_products.dart';
 import 'package:engineering_project/admin-panel/admin_user.dart';
 import 'package:engineering_project/admin-panel/admin_statistics.dart';
+import 'package:engineering_project/admin-panel/admin_bug_reports.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -372,7 +373,17 @@ class _AdminPageState extends State<AdminPage> {
 
             const SizedBox(height: 10),
 
-            const SizedBox(height: 20),
+            _buildAdminCard(
+              icon: Icons.bug_report,
+              title: l10n.bugReports,
+              subtitle: l10n.viewAndManageBugReports,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const BugReportsPage()),
+              ),
+            ),
+
+            const SizedBox(height: 10),
 
             Text(
               l10n.settings,

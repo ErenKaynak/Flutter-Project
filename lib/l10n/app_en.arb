@@ -652,5 +652,26 @@
                 "type": "int"
             }
         }
-    }
+    },
+    "reportBug": "Report Bug",
+    "bugReports": "Bug Reports",
+    "viewAndManageBugReports": "View and manage bug reports",
+    "bugTitle": "Bug Title",
+    "enterBugTitle": "Enter a title for the bug",
+    "bugDescription": "Bug Description",
+    "describeBugInDetail": "Please describe the bug in detail",
+    "pleaseEnterBugDetails": "Please enter both title and description",
+    "bugReportSubmitted": "Bug report submitted successfully",
+    "errorSubmittingBugReport": "Error submitting bug report",
+    "reportedBy": "Reported by",
+    "reportedOn": "Reported on",
+    "anonymous": "Anonymous",
+    "pending": "Pending",
+    "inProgress": "In Progress",
+    "resolved": "Resolved",
+    "dismissed": "Dismissed",
+    "markAsInProgress": "Mark as In Progress",
+    "markAsResolved": "Mark as Resolved",
+    "dismiss": "Dismiss",
+    "noBugReports": "No bug reports found"
 }

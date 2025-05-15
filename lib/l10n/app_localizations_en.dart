@@ -1169,4 +1169,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String ratingCount(int count) {
     return '$count ratings';
   }
+
+  @override
+  String get reportBug => 'Report Bug';
+
+  @override
+  String get bugReports => 'Bug Reports';
+
+  @override
+  String get viewAndManageBugReports => 'View and manage bug reports';
+
+  @override
+  String get bugTitle => 'Bug Title';
+
+  @override
+  String get enterBugTitle => 'Enter a title for the bug';
+
+  @override
+  String get bugDescription => 'Bug Description';
+
+  @override
+  String get describeBugInDetail => 'Please describe the bug in detail';
+
+  @override
+  String get pleaseEnterBugDetails => 'Please enter both title and description';
+
+  @override
+  String get bugReportSubmitted => 'Bug report submitted successfully';
+
+  @override
+  String get errorSubmittingBugReport => 'Error submitting bug report';
+
+  @override
+  String get reportedBy => 'Reported by';
+
+  @override
+  String get reportedOn => 'Reported on';
+
+  @override
+  String get inProgress => 'In Progress';
+
+  @override
+  String get resolved => 'Resolved';
+
+  @override
+  String get dismissed => 'Dismissed';
+
+  @override
+  String get markAsInProgress => 'Mark as In Progress';
+
+  @override
+  String get markAsResolved => 'Mark as Resolved';
+
+  @override
+  String get dismiss => 'Dismiss';
+
+  @override
+  String get noBugReports => 'No bug reports found';
 }
