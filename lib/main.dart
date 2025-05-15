@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:engineering_project/assets/components/notification_service.dart';
 import 'package:engineering_project/assets/components/theme_data.dart';
 import 'package:engineering_project/firebase_options.dart';
@@ -18,6 +18,31 @@ import 'package:engineering_project/providers/cart_provider.dart';
 import 'package:engineering_project/providers/language_provider.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
 
+const String _kSpecialModeActiveKey = 'special_mode_active';
+const String _kSpecialThemeKey = 'special_theme';
+
+Future<void> loadSpecialModePreferences(ThemeNotifier themeNotifier) async {
+  final prefs = await SharedPreferences.getInstance();
+  bool isSpecialModeActive = prefs.getBool(_kSpecialModeActiveKey) ?? false;
+  
+  if (isSpecialModeActive) {
+    String? themeName = prefs.getString(_kSpecialThemeKey);
+    if (themeName != null) {
+      try {
+        final loadedTheme = SpecialTheme.values.firstWhere(
+          (e) => e.toString() == themeName,
+          orElse: () => SpecialTheme.none,
+        );
+        themeNotifier.setSpecialTheme(loadedTheme);
+      } catch (e) {
+        print("Error parsing saved theme: $e");
+        themeNotifier.setSpecialTheme(SpecialTheme.none);
+      }
+    }
+  } else {
+    themeNotifier.setSpecialTheme(SpecialTheme.none);
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,10 +66,16 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
+  // Create theme notifier instance
+  final themeNotifier = ThemeNotifier();
+  
+  // Load special mode preferences
+  await loadSpecialModePreferences(themeNotifier);
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ThemeNotifier()),
+        ChangeNotifierProvider.value(value: themeNotifier),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
       ],

@@ -711,119 +711,127 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ? Center(child: CircularProgressIndicator())
             : RefreshIndicator(
                 onRefresh: _loadInitialData,
-                child: CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(16.0),
-                            margin: EdgeInsets.all(10.0),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: themeNotifier.isSpecialModeActive
-                                    ? [
-                                        specialColor ?? Colors.red,
-                                        isDark
-                                            ? Colors.grey.shade900
-                                            : Colors.grey.shade100,
-                                      ]
-                                    : (themeNotifier.isBlackMode
-                                        ? [
-                                            Theme.of(context)
-                                                .colorScheme
-                                                .secondary,
-                                            Colors.grey.shade900,
-                                          ]
-                                        : (isDark
-                                            ? [
-                                                Colors.red.shade900,
-                                                Colors.grey.shade900,
-                                              ]
-                                            : [
-                                                Colors.red.shade500,
-                                                Colors.red.shade100,
-                                              ])),
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color:
-                                      isDark ? Colors.black26 : Colors.black12,
-                                  blurRadius: 5,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
+                child: _searchQuery.isNotEmpty
+                    ? CustomScrollView(
+                        slivers: [
+                          SliverToBoxAdapter(
+                              child: _buildProductsHeader()),
+                          _buildProductsGrid(),
+                        ],
+                      )
+                    : CustomScrollView(
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                CircleAvatar(
-                                  radius: 30,
-                                  backgroundColor:
-                                      themeNotifier.isSpecialModeActive
-                                          ? specialColor
-                                          : (isDark
-                                              ? Colors.red.shade700
-                                              : Colors.red.shade300),
-                                  backgroundImage:
-                                      _userProfilePicture != null &&
-                                              _userProfilePicture!.isNotEmpty
-                                          ? NetworkImage(_userProfilePicture!)
-                                          : null,
-                                  child: _userProfilePicture == null ||
-                                          _userProfilePicture!.isEmpty
-                                      ? Icon(
-                                          Icons.person,
-                                          size: 36,
-                                          color: Colors.white,
-                                        )
-                                      : null,
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        AppLocalizations.of(context)!.welcome,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: isDark
-                                              ? Colors.grey[400]
-                                              : Colors.black54,
-                                        ),
+                                Container(
+                                  padding: EdgeInsets.all(16.0),
+                                  margin: EdgeInsets.all(10.0),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: themeNotifier.isSpecialModeActive
+                                          ? [
+                                              specialColor ?? Colors.red,
+                                              isDark
+                                                  ? Colors.grey.shade900
+                                                  : Colors.grey.shade100,
+                                            ]
+                                          : (themeNotifier.isBlackMode
+                                              ? [
+                                                  Theme.of(context)
+                                                      .colorScheme
+                                                      .secondary,
+                                                  Colors.grey.shade900,
+                                                ]
+                                              : (isDark
+                                                  ? [
+                                                      Colors.red.shade900,
+                                                      Colors.grey.shade900,
+                                                    ]
+                                                  : [
+                                                      Colors.red.shade500,
+                                                      Colors.red.shade100,
+                                                    ])),
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            isDark ? Colors.black26 : Colors.black12,
+                                        blurRadius: 5,
+                                        offset: Offset(0, 2),
                                       ),
-                                      Text(
-                                        _userName,
-                                        style: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark
-                                              ? Colors.white
-                                              : Colors.black87,
+                                    ],
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 30,
+                                        backgroundColor:
+                                            themeNotifier.isSpecialModeActive
+                                                ? specialColor
+                                                : (isDark
+                                                    ? Colors.red.shade700
+                                                    : Colors.red.shade300),
+                                        backgroundImage:
+                                            _userProfilePicture != null &&
+                                                    _userProfilePicture!.isNotEmpty
+                                                ? NetworkImage(_userProfilePicture!)
+                                                : null,
+                                        child: _userProfilePicture == null ||
+                                                _userProfilePicture!.isEmpty
+                                            ? Icon(
+                                                Icons.person,
+                                                size: 36,
+                                                color: Colors.white,
+                                              )
+                                            : null,
+                                      ),
+                                      SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              AppLocalizations.of(context)!.welcome,
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                color: isDark
+                                                    ? Colors.grey[400]
+                                                    : Colors.black54,
+                                              ),
+                                            ),
+                                            Text(
+                                              _userName,
+                                              style: TextStyle(
+                                                fontSize: 24,
+                                                fontWeight: FontWeight.bold,
+                                                color: isDark
+                                                    ? Colors.white
+                                                    : Colors.black87,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
+                                _buildBannerSection(),
+                                SizedBox(height: 10),
+                                _buildCategoriesHeader(),
+                                _buildCategoriesRow(),
+                                _buildProductsHeader(),
                               ],
                             ),
                           ),
-                          _buildBannerSection(),
-                          SizedBox(height: 10),
-                          _buildCategoriesHeader(),
-                          _buildCategoriesRow(),
-                          _buildProductsHeader(),
+                          _buildProductsGrid(),
                         ],
                       ),
-                    ),
-                    _buildProductsGrid(),
-                  ],
-                ),
               ),
       ),
     );

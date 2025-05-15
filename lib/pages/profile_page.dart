@@ -12,12 +12,18 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
 import 'package:engineering_project/providers/language_provider.dart';
+import 'package:confetti/confetti.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:math';
 
 import 'theme_notifier.dart';
 import 'address_screen.dart';
 import 'past_orders_page.dart';
 import 'welcome_screen.dart';
 import '../admin-panel/admin_main.dart';
+
+const String _kSpecialModeActiveKey = 'special_mode_active';
+const String _kSpecialThemeKey = 'special_theme';
 
 class LanguageSelector extends StatelessWidget {
   const LanguageSelector({Key? key}) : super(key: key);
@@ -94,30 +100,15 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _showSpecialModeToggle = false;
   bool isColorPickerVisible = false;
 
+  late ConfettiController _confettiController;
+
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _checkAISettings();
     fetchProfileData();
-  }
-
-  Future<void> _checkAISettings() async {
-    try {
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('settings')
-              .doc('ai_settings')
-              .get();
-
-      if (mounted) {
-        setState(() {
-          _showFloatingButton =
-              doc.exists && (doc.data()?['showFloatingButton'] ?? true);
-        });
-      }
-    } catch (e) {
-      print('Error checking AI settings: $e');
-    }
+    _loadSpecialModePreferences();
   }
 
   @override
@@ -137,17 +128,43 @@ class _ProfilePageState extends State<ProfilePage> {
         });
   }
 
+  Future<void> _checkAISettings() async {
+    try {
+      final doc =
+          await FirebaseFirestore.instance.collection('settings').doc('ai_settings').get();
+
+      if (mounted) {
+        setState(() {
+          _showFloatingButton =
+              doc.exists && (doc.data()?['showFloatingButton'] ?? true);
+        });
+      }
+    } catch (e) {
+      print('Error checking AI settings: $e');
+    }
+  }
+
   void _handleProfileTitleTap() {
     setState(() {
       _tapCount++;
       if (_tapCount >= 3) {
-        _showSpecialModeToggle = true;
-        final themeNotifier = Provider.of<ThemeNotifier>(
-          context,
-          listen: false,
-        );
-        isColorPickerVisible = themeNotifier.isSpecialModeActive;
-        _tapCount = 0;
+        final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false); 
+        _showSpecialModeToggle = true; // Always show toggle when condition met
+        
+        // If special mode is already active from a previous session, show colors immediately
+        if (themeNotifier.isSpecialModeActive) {
+          isColorPickerVisible = true;
+          print("Profile title tapped 3 times. Special mode was already active. Showing color picker.");
+        } else {
+          // If not active, the switch will handle showing the color picker when turned on.
+          // isColorPickerVisible will be false initially if mode wasn't active.
+           print("Profile title tapped 3 times. Special mode not active. Toggle is now visible.");
+        }
+
+        _tapCount = 0; // Reset tap count
+        print("Profile title tapped 3 times. Playing confetti.");
+        _confettiController.play();
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context)!.specialMode),
@@ -564,241 +581,7 @@ class _ProfilePageState extends State<ProfilePage> {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 24,
-                    horizontal: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors:
-                          isDark
-                              ? [
-                                themeNotifier.isSpecialModeActive
-                                    ? themeNotifier
-                                        .getThemeColor(
-                                          themeNotifier.specialTheme,
-                                        )
-                                        .shade900
-                                    : Colors.red.shade900,
-                                themeNotifier.isSpecialModeActive
-                                    ? themeNotifier
-                                        .getThemeColor(
-                                          themeNotifier.specialTheme,
-                                        )
-                                        .shade900
-                                    : Colors.grey.shade900,
-                              ]
-                              : [
-                                themeNotifier.isSpecialModeActive
-                                    ? themeNotifier
-                                        .getThemeColor(
-                                          themeNotifier.specialTheme,
-                                        )
-                                        .shade500
-                                    : Colors.red.shade500,
-                                themeNotifier.isSpecialModeActive
-                                    ? themeNotifier
-                                        .getThemeColor(
-                                          themeNotifier.specialTheme,
-                                        )
-                                        .shade100
-                                    : Colors.red.shade100,
-                              ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isDark ? Colors.black26 : Colors.black12,
-                        blurRadius: 5,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: CircleAvatar(
-                          radius: 50,
-                          backgroundColor:
-                              isDark ? Colors.grey[800] : Colors.white,
-                          child: Icon(
-                            Icons.person_outline,
-                            size: 60,
-                            color: isDark ? Colors.white54 : Colors.grey[400],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        l10n.welcome,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                              offset: Offset(0, 1),
-                              blurRadius: 3,
-                              color: Color.fromARGB(130, 0, 0, 0),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        l10n.signInToAccess,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.grey.shade900 : Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isDark ? Colors.black26 : Colors.black12,
-                        blurRadius: 5,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.lock_outline,
-                            color:
-                                themeNotifier.isSpecialModeActive
-                                    ? themeNotifier.getThemeColor(
-                                      themeNotifier.specialTheme,
-                                    )
-                                    : Colors.red.shade700,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            l10n.authentication,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => LoginPage(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              isDark
-                                  ? (themeNotifier.isSpecialModeActive
-                                      ? themeNotifier
-                                          .getThemeColor(
-                                            themeNotifier.specialTheme,
-                                          )
-                                          .shade900
-                                      : Colors.red.shade900)
-                                  : (themeNotifier.isSpecialModeActive
-                                      ? themeNotifier
-                                          .getThemeColor(
-                                            themeNotifier.specialTheme,
-                                          )
-                                          .shade400
-                                      : Colors.red.shade400),
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size.fromHeight(50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: Text(
-                          l10n.signIn,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => RegisterPage(),
-                            ),
-                          );
-                        },
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                            color:
-                                themeNotifier.isSpecialModeActive
-                                    ? themeNotifier
-                                        .getThemeColor(
-                                          themeNotifier.specialTheme,
-                                        )
-                                        .shade400
-                                    : Colors.red.shade400,
-                            width: 2,
-                          ),
-                          minimumSize: const Size.fromHeight(50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          l10n.createAccount,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color:
-                                themeNotifier.isSpecialModeActive
-                                    ? themeNotifier
-                                        .getThemeColor(
-                                          themeNotifier.specialTheme,
-                                        )
-                                        .shade400
-                                    : Colors.red.shade400,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                // ... existing code for non-logged-in user ...
               ],
             ),
           ),
@@ -806,545 +589,577 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: appBarColor,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(15)),
-        ),
-        elevation: 10,
-        leading: const LanguageSelector(),
-        title: GestureDetector(
-          onTap: _handleProfileTitleTap,
-          child: Text(
-            l10n.profile,
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.bold,
+    // For logged-in user
+    return Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            backgroundColor: appBarColor,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(15)),
             ),
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.edit,
-              color: isDark ? Colors.white : Colors.black87,
+            elevation: 10,
+            leading: const LanguageSelector(),
+            title: GestureDetector(
+              onTap: _handleProfileTitleTap,
+              child: Text(
+                l10n.profile,
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-            onPressed: _showEditProfileDialog,
+            centerTitle: true,
+            actions: [
+              IconButton(
+                icon: Icon(
+                  Icons.edit,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+                onPressed: _showEditProfileDialog,
+              ),
+            ],
           ),
-        ],
-      ),
-      backgroundColor: backgroundColor,
-      body:
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : isUploading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 24,
-                        horizontal: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors:
-                              isDark
-                                  ? [
-                                    themeNotifier.isSpecialModeActive
-                                        ? themeNotifier
-                                            .getThemeColor(
-                                              themeNotifier.specialTheme,
-                                            )
-                                            .shade900
-                                        : Colors.red.shade900,
-                                    themeNotifier.isSpecialModeActive
-                                        ? themeNotifier
-                                            .getThemeColor(
-                                              themeNotifier.specialTheme,
-                                            )
-                                            .shade900
-                                        : Colors.grey.shade900,
-                                  ]
-                                  : [
-                                    themeNotifier.isSpecialModeActive
-                                        ? themeNotifier
-                                            .getThemeColor(
-                                              themeNotifier.specialTheme,
-                                            )
-                                            .shade500
-                                        : Colors.red.shade500,
-                                    themeNotifier.isSpecialModeActive
-                                        ? themeNotifier
-                                            .getThemeColor(
-                                              themeNotifier.specialTheme,
-                                            )
-                                            .shade100
-                                        : Colors.red.shade100,
-                                  ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: outlineColor, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDark ? Colors.black26 : Colors.black12,
-                            blurRadius: 5,
-                            offset: const Offset(0, 2),
+          backgroundColor: backgroundColor,
+          body:
+              isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : isUploading
+                  ? const Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 24,
+                            horizontal: 16,
                           ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          GestureDetector(
-                            onTap: _changeProfilePicture,
-                            child: Stack(
-                              alignment: Alignment.bottomRight,
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 3,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.2),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                  child: CircleAvatar(
-                                    radius: 60,
-                                    backgroundImage:
-                                        imageUrl != null && imageUrl!.isNotEmpty
-                                            ? NetworkImage(imageUrl!)
-                                            : const AssetImage(
-                                                  'lib/assets/Images/default_avatar.png',
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors:
+                                  isDark
+                                      ? [
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
                                                 )
-                                                as ImageProvider,
+                                                .shade900
+                                            : Colors.red.shade900,
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade900
+                                            : Colors.grey.shade900,
+                                      ]
+                                      : [
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade500
+                                            : Colors.red.shade500,
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade100
+                                            : Colors.red.shade100,
+                                      ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: outlineColor, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isDark ? Colors.black26 : Colors.black12,
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: _changeProfilePicture,
+                                child: Stack(
+                                  alignment: Alignment.bottomRight,
+                                  children: [
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 3,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.2),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 3),
+                                          ),
+                                        ],
+                                      ),
+                                      child: CircleAvatar(
+                                        radius: 60,
+                                        backgroundImage:
+                                            imageUrl != null && imageUrl!.isNotEmpty
+                                                ? NetworkImage(imageUrl!)
+                                                : const AssetImage(
+                                                      'lib/assets/Images/default_avatar.png',
+                                                    )
+                                                    as ImageProvider,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            isDark
+                                                ? Colors.white
+                                                : themeNotifier.isSpecialModeActive
+                                                ? themeNotifier.getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                : Colors.red.shade700,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color:
+                                              isDark ? Colors.black : Colors.white,
+                                          width: 2,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.3),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Icon(
+                                        Icons.camera_alt,
+                                        size: 20,
+                                        color: isDark ? Colors.black : Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                (name?.isNotEmpty == true ||
+                                        surname?.isNotEmpty == true)
+                                    ? '$name $surname'.trim()
+                                    : l10n.addYourName,
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  shadows: [
+                                    Shadow(
+                                      offset: Offset(0, 1),
+                                      blurRadius: 3,
+                                      color: Color.fromARGB(130, 0, 0, 0),
+                                    ),
+                                  ],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              if (role == 'admin') ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.4),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    l10n.admin,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey.shade900 : Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: outlineColor, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isDark ? Colors.black26 : Colors.black12,
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.settings,
                                     color:
-                                        isDark
-                                            ? Colors.white
-                                            : themeNotifier.isSpecialModeActive
+                                        themeNotifier.isSpecialModeActive
                                             ? themeNotifier.getThemeColor(
                                               themeNotifier.specialTheme,
                                             )
                                             : Colors.red.shade700,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color:
-                                          isDark ? Colors.black : Colors.white,
-                                      width: 2,
+                                    size: 22,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    l10n.accountSettings,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
                                     ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.3),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              Divider(
+                                color: outlineColor,
+                                thickness: 1,
+                                height: 32,
+                              ),
+                              if (role == 'admin')
+                                buildButton(
+                                  l10n.adminPanel,
+                                  Icons.admin_panel_settings,
+                                  () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const AdminPage(),
                                       ),
-                                    ],
-                                  ),
-                                  child: Icon(
-                                    Icons.camera_alt,
-                                    size: 20,
-                                    color: isDark ? Colors.black : Colors.white,
-                                  ),
+                                    );
+                                  },
+                                  themeNotifier,
                                 ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            (name?.isNotEmpty == true ||
-                                    surname?.isNotEmpty == true)
-                                ? '$name $surname'.trim()
-                                : l10n.addYourName,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(0, 1),
-                                  blurRadius: 3,
-                                  color: Color.fromARGB(130, 0, 0, 0),
-                                ),
-                              ],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          if (role == 'admin') ...[
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.4),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Text(
-                                l10n.admin,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.grey.shade900 : Colors.white,
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: outlineColor, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDark ? Colors.black26 : Colors.black12,
-                            blurRadius: 5,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.settings,
-                                color:
-                                    themeNotifier.isSpecialModeActive
-                                        ? themeNotifier.getThemeColor(
-                                          themeNotifier.specialTheme,
-                                        )
-                                        : Colors.red.shade700,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                l10n.accountSettings,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : Colors.black87,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Divider(
-                            color: outlineColor,
-                            thickness: 1,
-                            height: 32,
-                          ),
-                          if (role == 'admin')
-                            buildButton(
-                              l10n.adminPanel,
-                              Icons.admin_panel_settings,
-                              () {
+                              buildButton(l10n.myAddresses, Icons.location_on, () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => const AdminPage(),
+                                    builder: (_) => AddressScreen(),
                                   ),
                                 );
-                              },
-                              themeNotifier,
-                            ),
-                          buildButton(l10n.myAddresses, Icons.location_on, () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AddressScreen(),
-                              ),
-                            );
-                          }, themeNotifier),
-                          buildButton(l10n.myOrders, Icons.history, () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const OrderHistoryPage(),
-                              ),
-                            );
-                          }, themeNotifier),
-                          buildButton(
-                            l10n.myWallet,
-                            Icons.account_balance_wallet,
-                            () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const WalletPage(),
-                              ),
-                            ),
-                            themeNotifier,
-                          ),
-                          buildButton(
-                            l10n.reportBug,
-                            Icons.bug_report,
-                            () => _showBugReportDialog(),
-                            themeNotifier,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.grey.shade900 : Colors.white,
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: outlineColor, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDark ? Colors.black26 : Colors.black12,
-                            blurRadius: 5,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.palette,
-                                color:
-                                    themeNotifier.isSpecialModeActive
-                                        ? themeNotifier.getThemeColor(
-                                          themeNotifier.specialTheme,
-                                        )
-                                        : Colors.red.shade700,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                l10n.appearance,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : Colors.black87,
+                              }, themeNotifier),
+                              buildButton(l10n.myOrders, Icons.history, () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const OrderHistoryPage(),
+                                  ),
+                                );
+                              }, themeNotifier),
+                              buildButton(
+                                l10n.myWallet,
+                                Icons.account_balance_wallet,
+                                () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const WalletPage(),
+                                  ),
                                 ),
+                                themeNotifier,
+                              ),
+                              buildButton(
+                                l10n.reportBug,
+                                Icons.bug_report,
+                                () => _showBugReportDialog(),
+                                themeNotifier,
                               ),
                             ],
                           ),
-                          Divider(
-                            color: outlineColor,
-                            thickness: 1,
-                            height: 32,
-                          ),
-                          _buildThemeToggle(
-                            l10n.darkMode,
-                            Icons.brightness_6,
-                            isDarkMode,
-                            (_) => themeNotifier.toggleTheme(),
-                            isDark,
-                          ),
-                          if (_showSpecialModeToggle)
-                            _buildThemeToggle(
-                              l10n.specialMode,
-                              Icons.color_lens,
-                              isColorPickerVisible,
-                              (val) {
-                                setState(() {
-                                  isColorPickerVisible = val;
-                                  if (!val) {
-                                    themeNotifier.setSpecialTheme(
-                                      SpecialTheme.none,
-                                    );
-                                  }
-                                });
-                              },
-                              isDark,
-                            ),
-                          if (isColorPickerVisible)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 16.0),
-                              child: Wrap(
-                                spacing: 16,
-                                children:
-                                    SpecialTheme.values
-                                        .where(
-                                          (theme) => theme != SpecialTheme.none,
-                                        )
-                                        .map((theme) {
-                                          final color = themeNotifier
-                                              .getThemeColor(theme);
-                                          return GestureDetector(
-                                            onTap: () {
-                                              setState(() {
-                                                themeNotifier.setSpecialTheme(
-                                                  theme,
-                                                );
-                                                _showSpecialModeToggle = false;
-                                                isColorPickerVisible = false;
-                                              });
-                                            },
-                                            child: CircleAvatar(
-                                              backgroundColor: color,
-                                              radius: 24,
-                                              child:
-                                                  themeNotifier.specialTheme ==
-                                                          theme
-                                                      ? const Icon(
-                                                        Icons.check,
-                                                        color: Colors.white,
-                                                      )
-                                                      : null,
-                                            ),
-                                          );
-                                        })
-                                        .toList(),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildReferralCode(),
-                    const SizedBox(height: 24),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          await FirebaseAuth.instance.signOut();
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (_) => WelcomeScreen()),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              isDark
-                                  ? (themeNotifier.isSpecialModeActive
-                                      ? themeNotifier
-                                          .getThemeColor(
-                                            themeNotifier.specialTheme,
-                                          )
-                                          .shade900
-                                      : Colors.red.shade900)
-                                  : (themeNotifier.isSpecialModeActive
-                                      ? themeNotifier
-                                          .getThemeColor(
-                                            themeNotifier.specialTheme,
-                                          )
-                                          .shade700
-                                      : Colors.red.shade700),
-                          foregroundColor: Colors.white,
+                        ),
+                        const SizedBox(height: 24),
+                        Container(
                           padding: const EdgeInsets.all(16),
-                          shape: RoundedRectangleBorder(
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey.shade900 : Colors.white,
                             borderRadius: BorderRadius.circular(15),
-                          ),
-                          elevation: 4,
-                        ),
-                        child: Text(
-                          l10n.signOut,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-      floatingActionButton:
-          _showFloatingButton
-              ? Container(
-                height: 70,
-                width: 70,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors:
-                        isDark
-                            ? [
-                              themeNotifier.isSpecialModeActive
-                                  ? themeNotifier
-                                      .getThemeColor(themeNotifier.specialTheme)
-                                      .shade900
-                                  : Colors.red.shade900,
-                              themeNotifier.isSpecialModeActive
-                                  ? themeNotifier
-                                      .getThemeColor(themeNotifier.specialTheme)
-                                      .shade800
-                                  : Colors.red.shade800,
-                            ]
-                            : [
-                              themeNotifier.isSpecialModeActive
-                                  ? themeNotifier
-                                      .getThemeColor(themeNotifier.specialTheme)
-                                      .shade500
-                                  : Colors.red.shade500,
-                              themeNotifier.isSpecialModeActive
-                                  ? themeNotifier
-                                      .getThemeColor(themeNotifier.specialTheme)
-                                      .shade400
-                                  : Colors.red.shade400,
+                            border: Border.all(color: outlineColor, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isDark ? Colors.black26 : Colors.black12,
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
+                              ),
                             ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.palette,
+                                    color:
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier.getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            : Colors.red.shade700,
+                                    size: 22,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    l10n.appearance,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Divider(
+                                color: outlineColor,
+                                thickness: 1,
+                                height: 32,
+                              ),
+                              _buildThemeToggle(
+                                l10n.darkMode,
+                                Icons.brightness_6,
+                                isDarkMode,
+                                (_) => themeNotifier.toggleTheme(),
+                                isDark,
+                              ),
+                              if (_showSpecialModeToggle)
+                                _buildThemeToggle(
+                                  l10n.specialMode,
+                                  Icons.color_lens,
+                                  themeNotifier.isSpecialModeActive,
+                                  (val) {
+                                    setState(() {
+                                      isColorPickerVisible = val;
+                                      final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+                                      if (!val) {
+                                        themeNotifier.setSpecialTheme(SpecialTheme.none);
+                                        _saveSpecialTheme(SpecialTheme.none);
+                                        _saveSpecialModeActiveState(false);
+                                        print("Special Mode Toggled OFF. Saved state: active=false, theme=none.");
+                                      } else {
+                                        _saveSpecialModeActiveState(true);
+                                        print("Special Mode Toggled ON. Saved state: active=true. Waiting for theme selection.");
+                                      }
+                                    });
+                                  },
+                                  isDark,
+                                ),
+                              if (isColorPickerVisible)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 16.0),
+                                  child: Wrap(
+                                    spacing: 16,
+                                    children:
+                                        SpecialTheme.values
+                                            .where(
+                                              (theme) => theme != SpecialTheme.none,
+                                            )
+                                            .map((theme) {
+                                              final color = themeNotifier
+                                                  .getThemeColor(theme);
+                                              return GestureDetector(
+                                                onTap: () {
+                                                  print("Color circle tapped. Theme: $theme");
+                                                  final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+                                                  themeNotifier.setSpecialTheme(theme);
+                                                  _saveSpecialTheme(theme);
+                                                  _saveSpecialModeActiveState(true);
+                                                  print("Color selected: $theme. Saved state: active=true, theme=$theme.");
+
+                                                  setState(() {
+                                                    _showSpecialModeToggle = false;
+                                                    isColorPickerVisible = false;
+                                                  });
+                                                },
+                                                child: CircleAvatar(
+                                                  backgroundColor: color,
+                                                  radius: 24,
+                                                  child:
+                                                      themeNotifier.specialTheme ==
+                                                              theme
+                                                          ? const Icon(
+                                                            Icons.check,
+                                                            color: Colors.white,
+                                                          )
+                                                          : null,
+                                                ),
+                                              );
+                                            })
+                                            .toList(),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        _buildReferralCode(),
+                        const SizedBox(height: 24),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              await FirebaseAuth.instance.signOut();
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (_) => WelcomeScreen()),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  isDark
+                                      ? (themeNotifier.isSpecialModeActive
+                                          ? themeNotifier
+                                              .getThemeColor(
+                                                themeNotifier.specialTheme,
+                                              )
+                                              .shade900
+                                          : Colors.red.shade900)
+                                      : (themeNotifier.isSpecialModeActive
+                                          ? themeNotifier
+                                              .getThemeColor(
+                                                themeNotifier.specialTheme,
+                                              )
+                                              .shade700
+                                          : Colors.red.shade700),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.all(16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              elevation: 4,
+                            ),
+                            child: Text(
+                              l10n.signOut,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: FloatingActionButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AIChatScreen(),
+                  ),
+          floatingActionButton:
+              _showFloatingButton
+                  ? Container(
+                    height: 70,
+                    width: 70,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors:
+                            isDark
+                                ? [
+                                  themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(themeNotifier.specialTheme)
+                                          .shade900
+                                      : Colors.red.shade900,
+                                  themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(themeNotifier.specialTheme)
+                                          .shade800
+                                      : Colors.red.shade800,
+                                ]
+                                : [
+                                  themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(themeNotifier.specialTheme)
+                                          .shade500
+                                      : Colors.red.shade500,
+                                  themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(themeNotifier.specialTheme)
+                                          .shade400
+                                      : Colors.red.shade400,
+                                ],
                       ),
-                    );
-                  },
-                  elevation: 0,
-                  backgroundColor: Colors.transparent,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Image.asset(
-                      'lib/assets/Images/Mascot/mascot-head.png',
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.cover,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-              )
-              : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+                    child: FloatingActionButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AIChatScreen(),
+                          ),
+                        );
+                      },
+                      elevation: 0,
+                      backgroundColor: Colors.transparent,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Image.asset(
+                          'lib/assets/Images/Mascot/mascot-head.png',
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  )
+                  : null,
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        ),
+        Align(
+          alignment: Alignment.topCenter,
+          child: ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirection: pi / 2,
+            emissionFrequency: 0.05,
+            numberOfParticles: 50,
+            gravity: 0.15,
+            shouldLoop: false,
+            colors: const [
+              Colors.green, Colors.blue, Colors.pink, Colors.orange, Colors.purple, Colors.yellow
+            ],
+            particleDrag: 0.05,
+            maxBlastForce: 30,
+            minBlastForce: 10,
+          ),
+        ),
+      ],
     );
   }
 
@@ -1549,5 +1364,55 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     );
+  }
+
+  Future<void> _loadSpecialModePreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+
+    // Load special mode active state
+    bool isSpecialModeActive = prefs.getBool(_kSpecialModeActiveKey) ?? false;
+    if (isSpecialModeActive) {
+      // Load the actual theme if mode was active
+      String? themeName = prefs.getString(_kSpecialThemeKey);
+      SpecialTheme loadedTheme = SpecialTheme.none;
+      if (themeName != null) {
+        try {
+          loadedTheme = SpecialTheme.values.firstWhere((e) => e.toString() == themeName);
+        } catch (e) {
+          print("Error parsing saved theme: $e");
+          loadedTheme = SpecialTheme.none; // Default to none on error
+        }
+      }
+      themeNotifier.setSpecialTheme(loadedTheme); // This also updates isSpecialModeActive in notifier
+      if (loadedTheme != SpecialTheme.none) {
+         if (mounted) {
+          setState(() {
+            _showSpecialModeToggle = true; // Show the toggle if a theme was active
+            isColorPickerVisible = true; // Show colors if a theme was active
+          });
+        }
+      }
+    } else {
+      // Ensure special mode is off in notifier if not persisted as active
+      themeNotifier.setSpecialTheme(SpecialTheme.none);
+    }
+    // No need to explicitly call _saveSpecialModeActiveState or _saveSpecialTheme here as we are loading
+  }
+
+  Future<void> _saveSpecialModeActiveState(bool isActive) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kSpecialModeActiveKey, isActive);
+  }
+
+  Future<void> _saveSpecialTheme(SpecialTheme theme) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kSpecialThemeKey, theme.toString());
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
   }
 }
