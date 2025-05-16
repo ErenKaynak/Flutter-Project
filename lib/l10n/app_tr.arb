@@ -569,5 +569,28 @@
     "markAsInProgress": "İşleniyor Olarak İşaretle",
     "markAsResolved": "Çözüldü Olarak İşaretle",
     "dismiss": "Reddet",
-    "noBugReports": "Hata raporu bulunamadı"
+    "noBugReports": "Hata raporu bulunamadı",
+    "requestRefund": "İade Talep Et",
+    "confirmRefundRequest": "Bu sipariş için iade talep etmek istediğinizden emin misiniz?",
+    "refundRequestSubmitted": "İade talebi başarıyla gönderildi",
+    "failedToRequestRefund": "İade talebi gönderilemedi: {error}",
+    "@failedToRequestRefund": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "refundRequested": "İade Talep Edildi",
+    "refunded": "İade Edildi",
+    "processRefund": "İadeyi İşle",
+    "refundProcessed": "İade başarıyla işlendi",
+    "failedToProcessRefund": "İade işlenemedi: {error}",
+    "@failedToProcessRefund": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    }
 } 

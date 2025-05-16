@@ -10,6 +10,9 @@ import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 
 class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({Key? key}) : super(key: key);
@@ -31,6 +34,8 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   static const String STATUS_ON_DELIVERY = 'On Delivery';
   static const String STATUS_DELIVERED = 'Delivered';
   static const String STATUS_CANCELLED = 'Cancelled';
+  static const String STATUS_REFUND_REQUESTED = 'Refund Requested';
+  static const String STATUS_REFUNDED = 'Refunded';
 
   // Define standard status values to match admin page
   List<String> _standardStatuses(AppLocalizations l10n) => [
@@ -39,6 +44,8 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     STATUS_PREPARING,
     STATUS_ON_DELIVERY,
     STATUS_DELIVERED,
+    STATUS_REFUND_REQUESTED,
+    STATUS_REFUNDED,
     STATUS_CANCELLED,
   ];
 
@@ -54,6 +61,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         return l10n.onDelivery;
       case STATUS_DELIVERED:
         return l10n.delivered;
+      case STATUS_REFUND_REQUESTED:
+        return l10n.refundRequested;
+      case STATUS_REFUNDED:
+        return l10n.refunded;
       case STATUS_CANCELLED:
         return l10n.cancelled;
       default:
@@ -780,10 +791,9 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         color: Theme.of(context).cardColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side:
-              isDark
-                  ? BorderSide(color: Colors.grey.shade800)
-                  : BorderSide.none,
+          side: isDark
+              ? BorderSide(color: Colors.grey.shade800)
+              : BorderSide.none,
         ),
         child: ExpansionTile(
           maintainState: false,
@@ -905,7 +915,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                           ),
                         ),
                       ),
-                      if (order['status'] == 'Pending')
+                      if (order['status'] == STATUS_PENDING)
                         OutlinedButton.icon(
                           onPressed: () {
                             _handleCancelOrder(order);
@@ -915,6 +925,22 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,
                             side: const BorderSide(color: Colors.red),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                          ),
+                        ),
+                      if (order['status'] == STATUS_DELIVERED)
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            _handleRefundRequest(order);
+                          },
+                          icon: const Icon(Icons.money_off),
+                          label: Text(l10n.requestRefund),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.orange,
+                            side: const BorderSide(color: Colors.orange),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 8,
@@ -959,6 +985,14 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         iconData = Icons.local_shipping;
         break;
       case STATUS_DELIVERED:
+        badgeColor = Colors.green;
+        iconData = Icons.check_circle;
+        break;
+      case STATUS_REFUND_REQUESTED:
+        badgeColor = Colors.orange;
+        iconData = Icons.money_off;
+        break;
+      case STATUS_REFUNDED:
         badgeColor = Colors.green;
         iconData = Icons.check_circle;
         break;
@@ -1218,6 +1252,160 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(l10n.failedToCancelOrder(error.toString())),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _handleRefundRequest(Map<String, dynamic> order) async {
+    final l10n = AppLocalizations.of(context)!;
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    TextEditingController reasonController = TextEditingController();
+    List<XFile> selectedImages = [];
+    List<String> uploadedImageUrls = [];
+    bool isUploading = false;
+
+    Future<void> pickImages() async {
+      final ImagePicker picker = ImagePicker();
+      final List<XFile>? images = await picker.pickMultiImage();
+      if (images != null && images.isNotEmpty) {
+        selectedImages = images;
+      }
+    }
+
+    Future<List<String>> uploadImages(List<XFile> images) async {
+      List<String> urls = [];
+      for (var image in images) {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('refund_images/${order['id']}_${DateTime.now().millisecondsSinceEpoch}_${image.name}');
+        await storageRef.putData(await image.readAsBytes());
+        final url = await storageRef.getDownloadURL();
+        urls.add(url);
+      }
+      return urls;
+    }
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+          title: Text(l10n.requestRefund),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.confirmRefundRequest),
+                const SizedBox(height: 16),
+                Text(
+                  '${l10n.orderTotal}: ₺${order['total'].toString()}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: reasonController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: l10n is AppLocalizations ? 'Reason for refund' : 'Reason for refund',
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Add images (optional'),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ...selectedImages.map((img) => Image.network(
+                      kIsWeb ? img.path : img.path,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                    )),
+                    IconButton(
+                      icon: Icon(Icons.add_a_photo, color: Theme.of(context).primaryColor),
+                      onPressed: () async {
+                        await pickImages();
+                        setState(() {});
+                      },
+                    ),
+                  ],
+                ),
+                if (isUploading) ...[
+                  const SizedBox(height: 16),
+                  Center(child: CircularProgressIndicator()),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: isUploading
+                  ? null
+                  : () async {
+                      if (reasonController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Please provide a reason for your refund request.')),
+                        );
+                        return;
+                      }
+                      setState(() => isUploading = true);
+                      if (selectedImages.isNotEmpty) {
+                        uploadedImageUrls = await uploadImages(selectedImages);
+                      }
+                      setState(() => isUploading = false);
+                      Navigator.pop(context, true);
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: themeNotifier.isSpecialModeActive
+                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                    : Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(l10n.requestRefund),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .doc(order['id'])
+            .update({
+          'status': STATUS_REFUND_REQUESTED,
+          'refundReason': reasonController.text.trim(),
+          'refundImages': uploadedImageUrls,
+        });
+        await _fetchOrders();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.refundRequestSubmitted),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.failedToRequestRefund(error.toString())),
               backgroundColor: Colors.red,
             ),
           );

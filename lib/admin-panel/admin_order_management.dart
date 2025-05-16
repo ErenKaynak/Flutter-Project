@@ -16,7 +16,7 @@ class OrderManagementPage extends StatefulWidget {
 
 class _OrderManagementPageState extends State<OrderManagementPage> {
   String _selectedFilter = 'All';
-  final List<String> _statusFilters = ['All', 'Pending', 'Preparing', 'On Delivery', 'Delivered', 'Cancelled'];
+  final List<String> _statusFilters = ['All', 'Pending', 'Preparing', 'On Delivery', 'Delivered', 'Refund Requested', 'Refunded', 'Cancelled'];
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isLoading = true;
@@ -265,6 +265,84 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
     }
   }
 
+  Future<void> _processRefund(String orderId, Map<String, dynamic> orderData) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Process Refund'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to process the refund for this order?'),
+            const SizedBox(height: 16),
+            Text(
+              'Order Total: ₺${(orderData['totalAmount'] ?? orderData['total'] ?? 0.0).toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Customer: ${orderData['customerName'] ?? 'N/A'}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'Email: ${orderData['customerEmail'] ?? 'N/A'}',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('PROCESS REFUND'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        // Update order status to Refunded
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .doc(orderId)
+            .update({'status': 'Refunded'});
+
+        // If the order has a userId, update the user's order as well
+        if (orderData.containsKey('userId') && orderData['userId'] != null) {
+          final userId = orderData['userId'];
+          try {
+            await FirebaseFirestore.instance
+                .collection('orders')
+                .doc(userId)
+                .collection('userOrders')
+                .doc(orderId)
+                .update({'status': 'Refunded'});
+          } catch (e) {
+            print('Error updating user order status: $e');
+          }
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Refund processed successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to process refund: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -312,54 +390,137 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                       ),
                     ],
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.red.shade900 : Colors.red.shade300,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.local_shipping_outlined,
-                    size: 30,
-                    color: Colors.white,
-                  ),
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                dividerColor: Colors.transparent,
+              ),
+              child: ExpansionTile(
+                initiallyExpanded: true,
+                title: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.red.shade900 : Colors.red.shade300,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.local_shipping_outlined,
+                        size: 30,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance.collection('orders').snapshots(),
+                        builder: (context, snapshot) {
+                          final orderCount = snapshot.data?.docs.length ?? 0;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Orders Overview",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: isDark ? Colors.grey[400] : Colors.black54,
+                                ),
+                              ),
+                              Text(
+                                "$orderCount Orders",
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance.collection('orders').snapshots(),
-                    builder: (context, snapshot) {
-                      final orderCount = snapshot.data?.docs.length ?? 0;
-                      final pendingOrders = snapshot.data?.docs
-                          .where((doc) => doc['status'] == 'Pending')
-                          .length ?? 0;
-                      
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Orders Overview",
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: isDark ? Colors.grey[400] : Colors.black54,
-                            ),
-                          ),
-                          Text(
-                            "$orderCount Orders ($pendingOrders Pending)",
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance.collection('orders').snapshots(),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) return _buildStatItem(
+                              icon: Icons.pending_actions,
+                              count: 0,
+                              label: 'Pending Orders',
+                              color: Colors.orange,
+                            );
+
+                            final pendingCount = snapshot.data!.docs.where((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              return data['status'] == 'Pending';
+                            }).length;
+
+                            return _buildStatItem(
+                              icon: Icons.pending_actions,
+                              count: pendingCount,
+                              label: 'Pending Orders',
+                              color: Colors.orange,
+                            );
+                          },
+                        ),
+                        StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance.collection('orders').snapshots(),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) return _buildStatItem(
+                              icon: Icons.cancel_outlined,
+                              count: 0,
+                              label: 'Cancelled Orders',
+                              color: Colors.red,
+                            );
+
+                            final cancelledCount = snapshot.data!.docs.where((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              return data['status'] == 'Cancelled';
+                            }).length;
+
+                            return _buildStatItem(
+                              icon: Icons.cancel_outlined,
+                              count: cancelledCount,
+                              label: 'Cancelled Orders',
+                              color: Colors.red,
+                            );
+                          },
+                        ),
+                        StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance.collection('orders').snapshots(),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) return _buildStatItem(
+                              icon: Icons.money_off,
+                              count: 0,
+                              label: 'Refund Requests',
+                              color: Colors.orange,
+                            );
+
+                            final refundRequestCount = snapshot.data!.docs.where((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              return data['status'] == 'Refund Requested';
+                            }).length;
+
+                            return _buildStatItem(
+                              icon: Icons.money_off,
+                              count: refundRequestCount,
+                              label: 'Refund Requests',
+                              color: Colors.orange,
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
@@ -797,6 +958,11 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
     final isActive = currentStatus == buttonStatus;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
+    // Don't show refund button if order is not in Refund Requested status
+    if (buttonStatus == 'Refunded' && currentStatus != 'Refund Requested') {
+      return const SizedBox.shrink();
+    }
+    
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: isActive
@@ -814,7 +980,29 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      onPressed: isActive ? null : () => _updateOrderStatus(orderId, buttonStatus),
+      onPressed: isActive ? null : () {
+        if (buttonStatus == 'Refunded') {
+          FirebaseFirestore.instance
+              .collection('orders')
+              .doc(orderId)
+              .get()
+              .then((doc) {
+                if (doc.exists) {
+                  _processRefund(orderId, doc.data() as Map<String, dynamic>);
+                }
+              })
+              .catchError((e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to get order data: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              });
+        } else {
+          _updateOrderStatus(orderId, buttonStatus);
+        }
+      },
       child: Text(buttonStatus),
     );
   }
@@ -829,6 +1017,10 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
         return Colors.purple;
       case 'Delivered':
         return Colors.green;
+      case 'Refund Requested':
+        return Colors.orange;
+      case 'Refunded':
+        return Colors.green;
       case 'Cancelled':
         return Colors.red;
       default:
@@ -838,5 +1030,68 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
   
   int min(int a, int b) {
     return a < b ? a : b;
+  }
+
+  Widget _buildStatItem({
+    required IconData icon,
+    required int count,
+    required String label,
+    required Color color,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedFilter = label.replaceAll(' Orders', '');
+          if (label == 'Refund Requests') {
+            _selectedFilter = 'Refund Requested';
+          }
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: _selectedFilter == label.replaceAll(' Orders', '') || 
+                 (label == 'Refund Requests' && _selectedFilter == 'Refund Requested')
+              ? color.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 24,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              count.toString(),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.grey[400] : Colors.black54,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

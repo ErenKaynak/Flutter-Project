@@ -1226,4 +1226,38 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get noBugReports => 'Hata raporu bulunamadı';
+
+  @override
+  String get requestRefund => 'İade Talep Et';
+
+  @override
+  String get confirmRefundRequest => 'Bu sipariş için iade talep etmek istediğinizden emin misiniz?';
+
+  @override
+  String get orderTotal => 'Sipariş Toplamı';
+
+  @override
+  String get refundRequestSubmitted => 'İade talebi başarıyla gönderildi';
+
+  @override
+  String failedToRequestRefund(String error) {
+    return 'İade talebi gönderilemedi: $error';
+  }
+
+  @override
+  String get refundRequested => 'İade Talep Edildi';
+
+  @override
+  String get refunded => 'İade Edildi';
+
+  @override
+  String get processRefund => 'İadeyi İşle';
+
+  @override
+  String get refundProcessed => 'İade başarıyla işlendi';
+
+  @override
+  String failedToProcessRefund(String error) {
+    return 'İade işlenemedi: $error';
+  }
 }

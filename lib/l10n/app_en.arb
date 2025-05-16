@@ -673,5 +673,29 @@
     "markAsInProgress": "Mark as In Progress",
     "markAsResolved": "Mark as Resolved",
     "dismiss": "Dismiss",
-    "noBugReports": "No bug reports found"
+    "noBugReports": "No bug reports found",
+    "requestRefund": "Request Refund",
+    "confirmRefundRequest": "Are you sure you want to request a refund for this order?",
+    "orderTotal": "Order Total",
+    "refundRequestSubmitted": "Refund request submitted successfully",
+    "failedToRequestRefund": "Failed to request refund: {error}",
+    "@failedToRequestRefund": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "refundRequested": "Refund Requested",
+    "refunded": "Refunded",
+    "processRefund": "Process Refund",
+    "refundProcessed": "Refund processed successfully",
+    "failedToProcessRefund": "Failed to process refund: {error}",
+    "@failedToProcessRefund": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    }
 }

@@ -2394,6 +2394,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No bug reports found'**
   String get noBugReports;
+
+  /// No description provided for @requestRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Request Refund'**
+  String get requestRefund;
+
+  /// No description provided for @confirmRefundRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to request a refund for this order?'**
+  String get confirmRefundRequest;
+
+  /// No description provided for @orderTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Total'**
+  String get orderTotal;
+
+  /// No description provided for @refundRequestSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund request submitted successfully'**
+  String get refundRequestSubmitted;
+
+  /// No description provided for @failedToRequestRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to request refund: {error}'**
+  String failedToRequestRefund(String error);
+
+  /// No description provided for @refundRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund Requested'**
+  String get refundRequested;
+
+  /// No description provided for @refunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunded'**
+  String get refunded;
+
+  /// No description provided for @processRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Process Refund'**
+  String get processRefund;
+
+  /// No description provided for @refundProcessed.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund processed successfully'**
+  String get refundProcessed;
+
+  /// No description provided for @failedToProcessRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to process refund: {error}'**
+  String failedToProcessRefund(String error);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

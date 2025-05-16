@@ -1226,4 +1226,38 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get noBugReports => 'لا توجد تقارير أخطاء';
+
+  @override
+  String get requestRefund => 'Request Refund';
+
+  @override
+  String get confirmRefundRequest => 'Are you sure you want to request a refund for this order?';
+
+  @override
+  String get orderTotal => 'إجمالي الطلب';
+
+  @override
+  String get refundRequestSubmitted => 'Refund request submitted successfully';
+
+  @override
+  String failedToRequestRefund(String error) {
+    return 'Failed to request refund: $error';
+  }
+
+  @override
+  String get refundRequested => 'Refund Requested';
+
+  @override
+  String get refunded => 'Refunded';
+
+  @override
+  String get processRefund => 'Process Refund';
+
+  @override
+  String get refundProcessed => 'Refund processed successfully';
+
+  @override
+  String failedToProcessRefund(String error) {
+    return 'Failed to process refund: $error';
+  }
 }
