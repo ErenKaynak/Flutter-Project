@@ -16,7 +16,14 @@ class OrderManagementPage extends StatefulWidget {
 
 class _OrderManagementPageState extends State<OrderManagementPage> {
   String _selectedFilter = 'All';
-  final List<String> _statusFilters = ['All', 'Pending', 'Preparing', 'On Delivery', 'Delivered', 'Refund Requested', 'Refunded', 'Cancelled'];
+  final List<String> _statusFilters = ['All', 'Pending', 'Preparing', 'On Delivery', 'Delivered', 'Refunds', 'Cancelled'];
+  final List<String> _refundStatuses = [
+    'Refund Requested',
+    'Refund In Review',
+    'Refund Approved',
+    'Refund Declined',
+    'Refunded',
+  ];
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isLoading = true;
@@ -39,6 +46,8 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
 
   Future<void> _updateOrderStatus(String orderId, String newStatus) async {
     try {
+      print('Starting order status update for order: $orderId, new status: $newStatus');
+      
       final orderDoc = await FirebaseFirestore.instance
           .collection('orders')
           .doc(orderId)
@@ -49,26 +58,168 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
       }
       
       final orderData = orderDoc.data() as Map<String, dynamic>;
+      print('Order data: $orderData');
       
+      // --- REFUND LOGIC ---
+      if ((newStatus == 'Refund Approved' || newStatus == 'Refunded') && 
+          orderData.containsKey('userId') && 
+          orderData['userId'] != null) {
+        print('Processing refund for order: $orderId');
+        final userId = orderData['userId'];
+        double totalAmount = (orderData['totalAmount'] ?? orderData['total'] ?? 0.0).toDouble();
+        double shippingCost = (orderData['shippingCost'] ?? 0.0).toDouble();
+        final double refundAmount = totalAmount - shippingCost;
+        final List<dynamic> items = orderData['items'] ?? [];
+        
+        print('Refund details:');
+        print('User ID: $userId');
+        print('Refund Amount: $refundAmount');
+        print('Items: $items');
+        
+        final batch = FirebaseFirestore.instance.batch();
+
+        // --- Cashback reversal logic ---
+        double cashbackToReverse = 0.0;
+        try {
+          final txQuery = await FirebaseFirestore.instance
+              .collection('wallet_transactions')
+              .where('user_id', isEqualTo: userId)
+              .where('order_id', isEqualTo: orderId)
+              .where('type', isEqualTo: 'purchase')
+              .limit(1)
+              .get();
+          if (txQuery.docs.isNotEmpty) {
+            final txData = txQuery.docs.first.data();
+            cashbackToReverse = (txData['cashback'] ?? 0.0).toDouble();
+            print('Found cashback to reverse: $cashbackToReverse');
+          }
+        } catch (e) {
+          print('Error finding cashback for reversal: $e');
+        }
+        // --- End cashback reversal logic ---
+
+        // Refund to wallet
+        final walletRef = FirebaseFirestore.instance.collection('wallets').doc(userId);
+        print('Updating wallet for user: $userId');
+        
+        // First check if wallet exists
+        final walletDoc = await walletRef.get();
+        if (!walletDoc.exists) {
+          print('Creating new wallet for user: $userId');
+          batch.set(walletRef, {
+            'balance': refundAmount - cashbackToReverse,
+            'last_transaction': FieldValue.serverTimestamp(),
+            'user_id': userId,
+          });
+        } else {
+          print('Updating existing wallet for user: $userId');
+          batch.update(walletRef, {
+            'balance': FieldValue.increment(refundAmount - cashbackToReverse),
+            'last_transaction': FieldValue.serverTimestamp(),
+          });
+        }
+
+        // Log wallet transaction (refund)
+        final transactionRef = FirebaseFirestore.instance.collection('wallet_transactions').doc();
+        print('Creating wallet transaction record');
+        batch.set(transactionRef, {
+          'user_id': userId,
+          'amount': refundAmount,
+          'type': 'refund',
+          'timestamp': FieldValue.serverTimestamp(),
+          'method': 'order_refund',
+          'status': 'completed',
+          'reference': 'Order #$orderId',
+          'order_id': orderId,
+          'description': 'Refund for Order #$orderId',
+        });
+
+        // Log cashback reversal transaction if needed
+        if (cashbackToReverse > 0) {
+          final cashbackTxRef = FirebaseFirestore.instance.collection('wallet_transactions').doc();
+          batch.set(cashbackTxRef, {
+            'user_id': userId,
+            'amount': -cashbackToReverse,
+            'type': 'cashback_reversal',
+            'timestamp': FieldValue.serverTimestamp(),
+            'method': 'cashback_reversal',
+            'status': 'completed',
+            'reference': 'Order #$orderId',
+            'order_id': orderId,
+            'description': 'Cashback reversal for Order #$orderId',
+          });
+        }
+
+        // Update product stock
+        print('Updating product stock');
+        for (final item in items) {
+          final productId = item['id'];
+          final quantity = item['quantity'] ?? 1;
+          if (productId != null && quantity != null) {
+            print('Updating stock for product: $productId, quantity: $quantity');
+            final productRef = FirebaseFirestore.instance.collection('products').doc(productId);
+            batch.update(productRef, {
+              'stock': FieldValue.increment(quantity),
+            });
+          }
+        }
+
+        // Update order status
+        print('Updating order status');
+        final orderRef = FirebaseFirestore.instance.collection('orders').doc(orderId);
+        batch.update(orderRef, {'status': newStatus});
+
+        // Update user order status if exists
+        print('Updating user order status');
+        final userOrderRef = FirebaseFirestore.instance.collection('orders').doc(userId).collection('userOrders').doc(orderId);
+        batch.update(userOrderRef, {'status': newStatus});
+
+        print('Committing batch operations');
+        await batch.commit();
+        print('Batch operations completed successfully');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Order status updated to $newStatus, refund processed.')),
+        );
+        return;
+      }
+      // --- END REFUND LOGIC ---
+      
+      // Update main order first
       await FirebaseFirestore.instance
           .collection('orders')
           .doc(orderId)
           .update({'status': newStatus});
       
+      // Update user's order if userId exists
       if (orderData.containsKey('userId') && orderData['userId'] != null) {
         final userId = orderData['userId'];
         
         try {
-          await FirebaseFirestore.instance
+          // First, try to get the user's orders collection
+          final userOrdersCollection = FirebaseFirestore.instance
               .collection('orders')
               .doc(userId)
-              .collection('userOrders')
-              .doc(orderId)
-              .update({'status': newStatus});
+              .collection('userOrders');
+              
+          // Create the user's order document with all necessary data
+          await userOrdersCollection.doc(orderId).set({
+            'status': newStatus,
+            'orderId': orderId,
+            'timestamp': orderData['timestamp'],
+            'totalAmount': orderData['totalAmount'] ?? orderData['total'],
+            'items': orderData['items'],
+            'customerName': orderData['customerName'],
+            'customerEmail': orderData['customerEmail'],
+            'customerPhone': orderData['customerPhone'],
+            'shippingAddress': orderData['shippingAddress'],
+            'trackingNumber': orderData['trackingNumber'],
+          }, SetOptions(merge: true));
           
-          print('Updated status in user orders: $userId, orderId: $orderId');
+          print('Successfully updated user order: $userId, orderId: $orderId');
         } catch (e) {
-          print('Error updating user order status: $e');
+          print('Error updating user order: $e');
+          // Continue even if user order update fails
         }
       }
       
@@ -76,6 +227,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
         SnackBar(content: Text('Order status updated to $newStatus')),
       );
     } catch (e) {
+      print('Error in _updateOrderStatus: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to update order status: $e')),
       );
@@ -618,11 +770,17 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
             child: StreamBuilder<QuerySnapshot>(
               stream: _selectedFilter == 'All'
                   ? FirebaseFirestore.instance.collection('orders').orderBy('timestamp', descending: true).snapshots()
-                  : FirebaseFirestore.instance
-                      .collection('orders')
-                      .where('status', isEqualTo: _selectedFilter)
-                      .orderBy('timestamp', descending: true)
-                      .snapshots(),
+                  : _selectedFilter == 'Refunds'
+                      ? FirebaseFirestore.instance
+                          .collection('orders')
+                          .where('status', whereIn: _refundStatuses)
+                          .orderBy('timestamp', descending: true)
+                          .snapshots()
+                      : FirebaseFirestore.instance
+                          .collection('orders')
+                          .where('status', isEqualTo: _selectedFilter)
+                          .orderBy('timestamp', descending: true)
+                          .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}'));
@@ -785,6 +943,81 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                                   ),
                                   const SizedBox(height: 8),
                                   _buildCustomerInfo(data),
+                                  // Show refund info if status is in _refundStatuses
+                                  if (_refundStatuses.contains(status)) ...[
+                                    const SizedBox(height: 16),
+                                    Text('Refund Request Details:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                                    const SizedBox(height: 8),
+                                    if (data['refundReason'] != null && data['refundReason'].toString().isNotEmpty)
+                                      Text('Reason: ${data['refundReason']}', style: TextStyle(fontSize: 15)),
+                                    if (data['refundImages'] != null && (data['refundImages'] as List).isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      SizedBox(
+                                        height: 80,
+                                        child: ListView.builder(
+                                          scrollDirection: Axis.horizontal,
+                                          itemCount: (data['refundImages'] as List).length,
+                                          itemBuilder: (context, imgIdx) {
+                                            final imgUrl = (data['refundImages'] as List)[imgIdx];
+                                            return Padding(
+                                              padding: const EdgeInsets.only(right: 8.0),
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(8.0),
+                                                child: Image.network(
+                                                  imgUrl,
+                                                  height: 80,
+                                                  width: 80,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return Container(
+                                                      height: 80,
+                                                      width: 80,
+                                                      color: Colors.grey.shade200,
+                                                      child: const Icon(Icons.broken_image),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 16),
+                                    Text('Refund Handling:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Row(
+                                        children: [
+                                          _buildRefundStatusChip('Refund Requested', status),
+                                          const SizedBox(width: 8),
+                                          _buildRefundStatusChip('Refund In Review', status),
+                                          const SizedBox(width: 8),
+                                          _buildRefundStatusChip('Refund Approved', status),
+                                          const SizedBox(width: 8),
+                                          _buildRefundStatusChip('Refund Declined', status),
+                                          const SizedBox(width: 8),
+                                          _buildRefundStatusChip('Refunded', status),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    // Show clickable refund handling buttons for admin
+                                    SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Row(
+                                        children: [
+                                          _buildStatusButton(orderId, 'Refund In Review', status),
+                                          const SizedBox(width: 8),
+                                          _buildStatusButton(orderId, 'Refund Approved', status),
+                                          const SizedBox(width: 8),
+                                          _buildStatusButton(orderId, 'Refund Declined', status),
+                                          const SizedBox(width: 8),
+                                          _buildStatusButton(orderId, 'Refunded', status),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 16),
                                   const Text(
                                     'Change Order Status:',
@@ -980,29 +1213,11 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      onPressed: isActive ? null : () {
-        if (buttonStatus == 'Refunded') {
-          FirebaseFirestore.instance
-              .collection('orders')
-              .doc(orderId)
-              .get()
-              .then((doc) {
-                if (doc.exists) {
-                  _processRefund(orderId, doc.data() as Map<String, dynamic>);
-                }
-              })
-              .catchError((e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to get order data: $e'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              });
-        } else {
-          _updateOrderStatus(orderId, buttonStatus);
-        }
-      },
+      onPressed: isActive
+          ? null
+          : () {
+              _updateOrderStatus(orderId, buttonStatus);
+            },
       child: Text(buttonStatus),
     );
   }
@@ -1019,8 +1234,14 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
         return Colors.green;
       case 'Refund Requested':
         return Colors.orange;
-      case 'Refunded':
+      case 'Refund In Review':
+        return Colors.blue;
+      case 'Refund Approved':
         return Colors.green;
+      case 'Refund Declined':
+        return Colors.red;
+      case 'Refunded':
+        return Colors.green.shade700;
       case 'Cancelled':
         return Colors.red;
       default:
@@ -1092,6 +1313,22 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRefundStatusChip(String chipStatus, String currentStatus) {
+    final isActive = chipStatus == currentStatus;
+    Color color = _getStatusColor(chipStatus);
+    return Chip(
+      label: Text(
+        chipStatus,
+        style: TextStyle(
+          color: isActive ? Colors.white : color,
+          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      backgroundColor: isActive ? color : color.withOpacity(0.15),
+      side: isActive ? BorderSide(color: color, width: 2) : null,
     );
   }
 }

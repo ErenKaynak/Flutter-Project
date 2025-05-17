@@ -419,8 +419,10 @@ class _WalletPageState extends State<WalletPage> {
                                   itemCount: _transactions.length,
                                   itemBuilder: (context, index) {
                                     final transaction = _transactions[index];
-                                    final bool isDeposit =
-                                        transaction['type'] == 'deposit';
+                                    final String type = transaction['type'] ?? '';
+                                    final bool isDeposit = type == 'deposit';
+                                    final bool isRefund = type == 'refund';
+                                    final bool isCashbackReversal = type == 'cashback_reversal';
 
                                     return Card(
                                       elevation: 2,
@@ -453,41 +455,34 @@ class _WalletPageState extends State<WalletPage> {
                                               Container(
                                                 padding: EdgeInsets.all(12),
                                                 decoration: BoxDecoration(
-                                                  color:
-                                                      isDeposit
-                                                          ? Colors.green
-                                                              .withOpacity(0.1)
-                                                          : (themeNotifier
-                                                                  .isSpecialModeActive
-                                                              ? themeNotifier
-                                                                  .getThemeColor(
-                                                                    themeNotifier
-                                                                        .specialTheme,
-                                                                  )
-                                                                  .withOpacity(
-                                                                    0.1,
-                                                                  )
-                                                              : Colors.red
-                                                                  .withOpacity(
-                                                                    0.1,
-                                                                  )),
+                                                  color: isDeposit
+                                                      ? Colors.green.withOpacity(0.1)
+                                                      : isRefund
+                                                          ? Colors.blue.withOpacity(0.1)
+                                                          : isCashbackReversal
+                                                              ? Colors.orange.withOpacity(0.1)
+                                                              : (themeNotifier.isSpecialModeActive
+                                                                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme).withOpacity(0.1)
+                                                                  : Colors.red.withOpacity(0.1)),
                                                   shape: BoxShape.circle,
                                                 ),
                                                 child: Icon(
                                                   isDeposit
                                                       ? Icons.add
-                                                      : Icons.shopping_bag,
-                                                  color:
-                                                      isDeposit
-                                                          ? Colors.green
-                                                          : (themeNotifier
-                                                                  .isSpecialModeActive
-                                                              ? themeNotifier
-                                                                  .getThemeColor(
-                                                                    themeNotifier
-                                                                        .specialTheme,
-                                                                  )
-                                                              : Colors.red),
+                                                      : isRefund
+                                                          ? Icons.reply
+                                                          : isCashbackReversal
+                                                              ? Icons.undo
+                                                              : Icons.shopping_bag,
+                                                  color: isDeposit
+                                                      ? Colors.green
+                                                      : isRefund
+                                                          ? Colors.blue
+                                                          : isCashbackReversal
+                                                              ? Colors.orange
+                                                              : (themeNotifier.isSpecialModeActive
+                                                                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                                                  : Colors.red),
                                                 ),
                                               ),
                                               SizedBox(width: 16),
@@ -499,12 +494,19 @@ class _WalletPageState extends State<WalletPage> {
                                                     Text(
                                                       isDeposit
                                                           ? l10n.deposit
-                                                          : (transaction['description'] ??
-                                                              l10n.purchase),
+                                                          : isRefund
+                                                              ? l10n.refunded
+                                                              : isCashbackReversal
+                                                                  ? 'Cashback Reversal'
+                                                                  : (transaction['description'] ?? l10n.purchase),
                                                       style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold,
+                                                        fontWeight: FontWeight.bold,
                                                         fontSize: 16,
+                                                        color: isRefund
+                                                            ? Colors.blue
+                                                            : isCashbackReversal
+                                                                ? Colors.orange
+                                                                : null,
                                                       ),
                                                     ),
                                                     SizedBox(height: 4),
@@ -517,13 +519,19 @@ class _WalletPageState extends State<WalletPage> {
                                                         fontSize: 13,
                                                       ),
                                                     ),
-                                                    if (transaction['reference'] !=
-                                                        null)
+                                                    if (isRefund && transaction['reference'] != null)
                                                       Text(
                                                         transaction['reference'],
                                                         style: TextStyle(
-                                                          color:
-                                                              Colors.grey[600],
+                                                          color: Colors.blue,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    if (!isRefund && transaction['reference'] != null)
+                                                      Text(
+                                                        transaction['reference'],
+                                                        style: TextStyle(
+                                                          color: Colors.grey[600],
                                                           fontSize: 12,
                                                         ),
                                                       ),
@@ -535,28 +543,30 @@ class _WalletPageState extends State<WalletPage> {
                                                     CrossAxisAlignment.end,
                                                 children: [
                                                   Text(
-                                                    '${isDeposit ? '+' : '-'}₺${transaction['amount'].abs().toStringAsFixed(2)}',
+                                                    isDeposit
+                                                        ? '+₺${transaction['amount'].abs().toStringAsFixed(2)}'
+                                                        : isRefund
+                                                            ? '+₺${transaction['amount'].abs().toStringAsFixed(2)}'
+                                                            : isCashbackReversal
+                                                                ? '-₺${transaction['amount'].abs().toStringAsFixed(2)}'
+                                                                : '-₺${transaction['amount'].abs().toStringAsFixed(2)}',
                                                     style: TextStyle(
-                                                      color:
-                                                          isDeposit
-                                                              ? Colors.green
-                                                              : (themeNotifier
-                                                                      .isSpecialModeActive
-                                                                  ? themeNotifier
-                                                                      .getThemeColor(
-                                                                        themeNotifier
-                                                                            .specialTheme,
-                                                                      )
-                                                                  : Colors.red),
-                                                      fontWeight:
-                                                          FontWeight.bold,
+                                                      color: isDeposit
+                                                          ? Colors.green
+                                                          : isRefund
+                                                              ? Colors.blue
+                                                              : isCashbackReversal
+                                                                  ? Colors.orange
+                                                                  : (themeNotifier.isSpecialModeActive
+                                                                      ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                                                      : Colors.red),
+                                                      fontWeight: FontWeight.bold,
                                                       fontSize: 16,
                                                     ),
                                                   ),
                                                   if (transaction['cashback'] !=
                                                           null &&
-                                                      transaction['cashback'] >
-                                                          0)
+                                                      transaction['cashback'] > 0)
                                                     Text(
                                                       '+₺${transaction['cashback'].toStringAsFixed(2)} cashback',
                                                       style: TextStyle(
@@ -592,7 +602,10 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   Widget _buildTransactionDetails(Map<String, dynamic> transaction) {
-    final bool isDeposit = transaction['type'] == 'deposit';
+    final String type = transaction['type'] ?? '';
+    final bool isDeposit = type == 'deposit';
+    final bool isRefund = type == 'refund';
+    final bool isCashbackReversal = type == 'cashback_reversal';
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final l10n = AppLocalizations.of(context)!;
 
@@ -607,10 +620,16 @@ class _WalletPageState extends State<WalletPage> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           SizedBox(height: 20),
-          _detailRow(l10n.type, isDeposit ? l10n.deposit : l10n.purchase),
+          _detailRow(l10n.type, isDeposit ? l10n.deposit : isRefund ? l10n.refunded : isCashbackReversal ? 'Cashback Reversal' : l10n.purchase),
           _detailRow(
             l10n.amount,
-            '₺${transaction['amount'].abs().toStringAsFixed(2)}',
+            isDeposit
+                ? '+₺${transaction['amount'].abs().toStringAsFixed(2)}'
+                : isRefund
+                    ? '+₺${transaction['amount'].abs().toStringAsFixed(2)}'
+                    : isCashbackReversal
+                        ? '-₺${transaction['amount'].abs().toStringAsFixed(2)}'
+                        : '-₺${transaction['amount'].abs().toStringAsFixed(2)}',
           ),
           if (transaction['cashback'] != null && transaction['cashback'] > 0)
             _detailRow(
@@ -628,7 +647,7 @@ class _WalletPageState extends State<WalletPage> {
           ),
           if (transaction['reference'] != null)
             _detailRow(l10n.reference, transaction['reference']),
-          if (transaction['description'] != null)
+          if ((isRefund || isCashbackReversal) && transaction['description'] != null)
             _detailRow(l10n.description, transaction['description']),
         ],
       ),

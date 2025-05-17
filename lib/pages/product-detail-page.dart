@@ -238,6 +238,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     }
 
     try {
+      setState(() => _isAddingToCart = true);
+      
       final cartRef = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -255,14 +257,31 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             content: Text(l10n.cannotAddMoreThanStock(availableStock)),
           ),
         );
+        setState(() => _isAddingToCart = false);
         return;
       }
 
+      // Start the success animation
+      _colorAnimationController.forward();
+      _tickAnimationController.forward();
+
+      // Add to cart with all necessary product data
       await cartRef.set({
         'productId': widget.productId,
         'quantity': newQuantity,
         'addedAt': FieldValue.serverTimestamp(),
+        'name': productData?.name,
+        'price': productData?.price,
+        'imageUrl': productData?.imageUrl,
+        'category': productData?.category,
       }, SetOptions(merge: true));
+
+      // Reset animations after a delay
+      Future.delayed(Duration(seconds: 2), () {
+        if (mounted) {
+          _resetAnimations();
+        }
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -280,6 +299,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       );
     } catch (e) {
       print("❌ Error adding to cart: $e");
+      setState(() => _isAddingToCart = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.failedToAddToCart)),
       );
@@ -451,7 +471,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     child: Hero(
                       tag: 'product-${widget.productId}',
                       child: Image.network(
-                        images[selectedQuantity - 1],
+                        images[0],
                         fit: BoxFit.contain,
                         errorBuilder:
                             (_, __, ___) => Icon(

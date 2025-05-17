@@ -992,6 +992,18 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         badgeColor = Colors.orange;
         iconData = Icons.money_off;
         break;
+      case 'Refund In Review':
+        badgeColor = Colors.blue;
+        iconData = Icons.money_off;
+        break;
+      case 'Refund Approved':
+        badgeColor = Colors.green;
+        iconData = Icons.money;
+        break;
+      case 'Refund Declined':
+        badgeColor = Colors.red;
+        iconData = Icons.money_off;
+        break;
       case STATUS_REFUNDED:
         badgeColor = Colors.green;
         iconData = Icons.check_circle;

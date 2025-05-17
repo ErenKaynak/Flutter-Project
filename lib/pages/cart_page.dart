@@ -33,7 +33,7 @@ class CartItem {
       id: doc.id,
       name: data['name'] ?? 'Unknown Product',
       price: data['price']?.toString() ?? '0',
-      image: data['imagePath'] ?? '',
+      image: data['imageUrl'] ?? '',
       quantity: data['quantity'] ?? 1,
     );
   }
@@ -43,7 +43,7 @@ class CartItem {
       'id': id,
       'name': name,
       'price': price,
-      'imagePath': image,
+      'imageUrl': image,
       'quantity': quantity,
     };
   }
@@ -92,9 +92,9 @@ class CartManager {
     await _cartSubscription?.cancel();
 
     _cartSubscription = _firestore
-        .collection('cart')
+        .collection('users')
         .doc(user.uid)
-        .collection('userCart')
+        .collection('cart')
         .snapshots()
         .listen(
           (snapshot) {
@@ -117,9 +117,9 @@ class CartManager {
 
     try {
       final docRef = _firestore
-          .collection('cart')
+          .collection('users')
           .doc(user.uid)
-          .collection('userCart')
+          .collection('cart')
           .doc(id);
 
       final doc = await docRef.get();
@@ -137,9 +137,9 @@ class CartManager {
 
     try {
       await _firestore
-          .collection('cart')
+          .collection('users')
           .doc(user.uid)
-          .collection('userCart')
+          .collection('cart')
           .doc(id)
           .delete();
     } catch (_) {}
@@ -151,9 +151,9 @@ class CartManager {
 
     try {
       final cartRef = _firestore
-          .collection('cart')
+          .collection('users')
           .doc(user.uid)
-          .collection('userCart');
+          .collection('cart');
 
       final batch = _firestore.batch();
       final docs = await cartRef.get();

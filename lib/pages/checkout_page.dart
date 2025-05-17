@@ -428,9 +428,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     try {
       bool paymentSuccess = false;
+      String? createdOrderId;
 
       if (_selectedPaymentMethod == 'Wallet') {
-        paymentSuccess = await _processWalletPayment(total);
+        final orderRef = FirebaseFirestore.instance.collection('orders').doc();
+        createdOrderId = orderRef.id;
+        paymentSuccess = await _processWalletPayment(total, createdOrderId);
       } else if (_selectedPaymentMethod == 'Credit Card') {
         paymentSuccess = await _processCreditCardPayment(total);
       }
@@ -440,7 +443,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
         if (user == null) throw Exception('User not logged in');
 
         final batch = FirebaseFirestore.instance.batch();
-        final orderRef = FirebaseFirestore.instance.collection('orders').doc();
+        final orderRef = createdOrderId != null
+            ? FirebaseFirestore.instance.collection('orders').doc(createdOrderId)
+            : FirebaseFirestore.instance.collection('orders').doc();
 
         final orderData = {
           'userId': user.uid,
@@ -1437,7 +1442,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  Future<bool> _processWalletPayment(double amount) async {
+  Future<bool> _processWalletPayment(double amount, String orderId) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return false;
 
@@ -1454,8 +1459,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         'last_transaction': FieldValue.serverTimestamp(),
       });
 
-      final orderRef = FirebaseFirestore.instance.collection('orders').doc();
-
       final transactionRef =
           FirebaseFirestore.instance.collection('wallet_transactions').doc();
       batch.set(transactionRef, {
@@ -1466,9 +1469,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
         'cashback': cashback,
         'method': 'wallet_payment',
         'status': 'completed',
-        'reference': 'Order #${orderRef.id.substring(0, 8)}',
-        'order_id': orderRef.id,
-        'description': 'Payment for Order #${orderRef.id.substring(0, 8)}',
+        'reference': 'Order #' + orderId,
+        'order_id': orderId,
+        'description': 'Payment for Order #' + orderId,
       });
 
       await batch.commit();
