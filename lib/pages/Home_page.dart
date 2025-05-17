@@ -479,26 +479,28 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         return;
       }
 
+      final batch = FirebaseFirestore.instance.batch();
       final cartRef = FirebaseFirestore.instance
-          .collection('cart')
+          .collection('users')
           .doc(user.uid)
-          .collection('userCart')
-          .doc(product['id']);
+          .collection('cart');
 
-      final docSnapshot = await cartRef.get();
+      final docSnapshot = await cartRef.doc(product['id']).get();
 
       if (docSnapshot.exists) {
         final currentQuantity = docSnapshot.data()?['quantity'] ?? 1;
         final newQuantity = (currentQuantity + 1).clamp(1, 10);
-        await cartRef.update({'quantity': newQuantity});
+        batch.update(cartRef.doc(product['id']), {'quantity': newQuantity});
       } else {
-        await cartRef.set({
+        batch.set(cartRef.doc(product['id']), {
           'name': product['name'],
           'price': product['price'],
           'imagePath': product['image'],
           'quantity': 1,
         });
       }
+
+      await batch.commit();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1125,6 +1127,33 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : null;
 
+    // Special mod için renkler
+    final selectedBgColor = themeNotifier.isSpecialModeActive
+        ? (isDark ? specialColor : specialColor?.withOpacity(0.1))
+        : (isDark
+            ? (themeNotifier.isBlackMode
+                ? Theme.of(context).colorScheme.secondary
+                : Colors.red.shade900)
+            : Colors.red.shade50);
+
+    final unselectedBgColor = isDark ? Colors.grey.shade800 : Colors.grey.shade200;
+
+    final borderColor = themeNotifier.isSpecialModeActive
+        ? specialColor
+        : (isDark
+            ? (themeNotifier.isBlackMode
+                ? Theme.of(context).colorScheme.secondary
+                : Colors.red.shade700)
+            : Colors.red.shade400);
+
+    final shadowColor = themeNotifier.isSpecialModeActive
+        ? (specialColor ?? Colors.red).withOpacity(isDark ? 0.5 : 0.3)
+        : (isDark
+            ? (themeNotifier.isBlackMode
+                ? Theme.of(context).colorScheme.secondary.withOpacity(0.5)
+                : Colors.red.shade900.withOpacity(0.5))
+            : Colors.red.shade300.withOpacity(0.5));
+
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -1134,40 +1163,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             height: 70,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isDark
-                  ? (isSelected
-                      ? (themeNotifier.isSpecialModeActive
-                          ? specialColor
-                          : (themeNotifier.isBlackMode
-                              ? Theme.of(context).colorScheme.secondary
-                              : Colors.red.shade900))
-                      : Colors.grey.shade800)
-                  : (isSelected ? Colors.red.shade50 : Colors.grey.shade200),
+              color: isSelected ? selectedBgColor : unselectedBgColor,
               border: isSelected
                   ? Border.all(
-                      color: isDark
-                          ? (themeNotifier.isSpecialModeActive
-                              ? specialColor ?? Colors.red
-                              : (themeNotifier.isBlackMode
-                                  ? Theme.of(context).colorScheme.secondary
-                                  : Colors.red.shade700))
-                          : Colors.red.shade400,
+                      color: borderColor ?? Colors.red,
                       width: 2,
                     )
                   : null,
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                        color: isDark
-                            ? (themeNotifier.isSpecialModeActive
-                                ? (specialColor ?? Colors.red).withOpacity(0.5)
-                                : (themeNotifier.isBlackMode
-                                    ? Theme.of(context)
-                                        .colorScheme
-                                        .secondary
-                                        .withOpacity(0.5)
-                                    : Colors.red.shade900.withOpacity(0.5)))
-                            : Colors.red.shade300.withOpacity(0.5),
+                        color: shadowColor,
                         blurRadius: 8,
                         spreadRadius: 1,
                       ),
@@ -1202,21 +1208,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ),
           ),
           SizedBox(height: 8),
-          Text(
-            _getLocalizedCategoryName(label, context),
-            style: TextStyle(
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isDark
-                  ? (isSelected
-                      ? (themeNotifier.isSpecialModeActive
-                          ? specialColor
-                          : (themeNotifier.isBlackMode
-                              ? Theme.of(context).colorScheme.secondary
-                              : Colors.red.shade400))
-                      : Colors.white70)
-                  : (isSelected ? Colors.red : Colors.black),
+                      Text(
+              _getLocalizedCategoryName(label, context),
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected
+                    ? (themeNotifier.isSpecialModeActive
+                        ? specialColor
+                        : (isDark
+                            ? (themeNotifier.isBlackMode
+                                ? Theme.of(context).colorScheme.secondary
+                                : Colors.red.shade400)
+                            : Colors.red))
+                    : (isDark ? Colors.white70 : Colors.black),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -1781,7 +1787,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
 }
 
 class CartManager extends ChangeNotifier {
+  static final CartManager _instance = CartManager._internal();
+  factory CartManager() => _instance;
+  CartManager._internal();
+
   List<CartItem> _items = [];
+  StreamSubscription<QuerySnapshot>? _cartSubscription;
 
   List<CartItem> get items => _items;
   int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
@@ -1820,30 +1831,39 @@ class CartManager extends ChangeNotifier {
 
   Future<void> loadCart() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('cart')
-          .doc(user.uid)
-          .collection('userCart')
-          .get();
-
-      _items = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return CartItem(
-          id: doc.id,
-          name: data['name'] ?? 'Unknown Product',
-          price: double.tryParse(data['price']?.toString() ?? '0') ?? 0.0,
-          imagePath: data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-          quantity: data['quantity'] ?? 1,
-        );
-      }).toList();
-
+    if (user == null) {
+      _items = [];
       notifyListeners();
-    } catch (e) {
-      print('Error loading cart: $e');
+      return;
     }
+
+    await _cartSubscription?.cancel();
+
+    _cartSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('cart')
+        .snapshots()
+        .listen(
+          (snapshot) {
+            _items = snapshot.docs.map((doc) {
+              final data = doc.data();
+              return CartItem(
+                id: doc.id,
+                name: data['name'] ?? 'Unknown Product',
+                price: double.tryParse(data['price']?.toString() ?? '0') ?? 0.0,
+                imagePath: data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
+                quantity: data['quantity'] ?? 1,
+              );
+            }).toList();
+            notifyListeners();
+          },
+          onError: (error) {
+            print('Error loading cart: $error');
+            _items = [];
+            notifyListeners();
+          },
+        );
   }
 
   Future<void> saveCart() async {
@@ -1853,9 +1873,9 @@ class CartManager extends ChangeNotifier {
     try {
       final batch = FirebaseFirestore.instance.batch();
       final cartRef = FirebaseFirestore.instance
-          .collection('cart')
+          .collection('users')
           .doc(user.uid)
-          .collection('userCart');
+          .collection('cart');
 
       final existingItems = await cartRef.get();
       for (var doc in existingItems.docs) {
@@ -1876,6 +1896,12 @@ class CartManager extends ChangeNotifier {
     } catch (e) {
       print('Error saving cart: $e');
     }
+  }
+
+  @override
+  void dispose() {
+    _cartSubscription?.cancel();
+    super.dispose();
   }
 }
 

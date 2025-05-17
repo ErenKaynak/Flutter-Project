@@ -192,9 +192,9 @@ class _FavoritesPageState extends State<FavoritesPage>
       }
 
       final cartRef = FirebaseFirestore.instance
-          .collection('cart')
+          .collection('users')
           .doc(user.uid)
-          .collection('userCart')
+          .collection('cart')
           .doc(product['id']);
 
       final docSnapshot = await cartRef.get();

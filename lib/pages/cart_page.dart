@@ -33,7 +33,7 @@ class CartItem {
       id: doc.id,
       name: data['name'] ?? 'Unknown Product',
       price: data['price']?.toString() ?? '0',
-      image: data['imageUrl'] ?? '',
+      image: data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
       quantity: data['quantity'] ?? 1,
     );
   }
@@ -43,7 +43,7 @@ class CartItem {
       'id': id,
       'name': name,
       'price': price,
-      'imageUrl': image,
+      'imagePath': image,
       'quantity': quantity,
     };
   }
@@ -98,13 +98,24 @@ class CartManager {
         .snapshots()
         .listen(
           (snapshot) {
-            _cartItems =
-                snapshot.docs
-                    .map((doc) => CartItem.fromFirestore(doc))
-                    .toList();
+            _cartItems = snapshot.docs.map((doc) {
+              final item = CartItem.fromFirestore(doc);
+              // Miktarı 1-10 arasında sınırla
+              if (item.quantity > 10) {
+                // Firestore'u da güncelle
+                doc.reference.update({'quantity': 10});
+                item.quantity = 10;
+              } else if (item.quantity < 1) {
+                // Firestore'u da güncelle
+                doc.reference.update({'quantity': 1});
+                item.quantity = 1;
+              }
+              return item;
+            }).toList();
             _notifyListeners();
           },
           onError: (error) {
+            print('Error loading cart: $error');
             _cartItems = [];
             _notifyListeners();
           },
@@ -125,10 +136,25 @@ class CartManager {
       final doc = await docRef.get();
       if (doc.exists) {
         final currentQuantity = doc.data()?['quantity'] ?? 1;
-        final newQuantity = (currentQuantity + change).clamp(1, 10);
+        // Yeni miktar hesaplanırken mevcut miktara change eklenir
+        int newQuantity = currentQuantity + change;
+        
+        // Miktarı 1-10 arasında sınırla
+        newQuantity = newQuantity.clamp(1, 10);
+        
+        // Firestore'u güncelle
         await docRef.update({'quantity': newQuantity});
+        
+        // Yerel listeyi güncelle
+        final index = _cartItems.indexWhere((item) => item.id == id);
+        if (index != -1) {
+          _cartItems[index].quantity = newQuantity;
+          _notifyListeners();
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      print('Error updating quantity: $e');
+    }
   }
 
   Future<void> removeItem(String id) async {
