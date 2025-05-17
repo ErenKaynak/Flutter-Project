@@ -8,6 +8,29 @@
     "refunded",
     "processRefund",
     "refundProcessed",
-    "failedToProcessRefund"
+    "failedToProcessRefund",
+    "setupWalletPin",
+    "createWalletPin",
+    "walletPinDescription",
+    "enterPin",
+    "confirmPin",
+    "useBiometrics",
+    "biometricsDescription",
+    "setupPin",
+    "verify",
+    "invalidPin"
+  ],
+
+  "tr": [
+    "setupWalletPin",
+    "createWalletPin",
+    "walletPinDescription",
+    "enterPin",
+    "confirmPin",
+    "useBiometrics",
+    "biometricsDescription",
+    "setupPin",
+    "verify",
+    "invalidPin"
   ]
 }

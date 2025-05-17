@@ -4,7 +4,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:engineering_project/assets/components/wallet_auth_service.dart';
+import 'package:engineering_project/pages/wallet_pin_setup.dart';
 import 'theme_notifier.dart';
+import 'package:flutter/foundation.dart';
+import 'package:engineering_project/pages/pin_entry_screen.dart';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({Key? key}) : super(key: key);
@@ -17,13 +21,66 @@ class _WalletPageState extends State<WalletPage> {
   double _balance = 0.0;
   final _amountController = TextEditingController();
   bool _isLoading = true;
+  bool _isAuthenticated = false;
   List<Map<String, dynamic>> _transactions = [];
+  final _walletAuthService = WalletAuthService();
+  final _pinController = TextEditingController();
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _fetchWalletBalance();
-    _fetchTransactions();
+    _checkAuthentication();
+  }
+
+  Future<void> _checkAuthentication() async {
+    final isPinSet = await _walletAuthService.isPinSet();
+    if (!isPinSet) {
+      // Show PIN setup screen
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const WalletPinSetup()),
+      );
+      if (result == true) {
+        setState(() {
+          _isAuthenticated = true;
+        });
+        _loadWalletData();
+      } else {
+        Navigator.pop(context); // Go back if PIN setup was cancelled
+      }
+    } else {
+      // Use PinEntryScreen for PIN verification
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PinEntryScreen(
+            pinLength: 4,
+            title: 'Enter PIN',
+            subtitle: 'Unlock your wallet',
+            showBiometrics: true,
+            confirmMode: false,
+            onPinEntered: (pin) async {
+              final isValid = await _walletAuthService.verifyPin(pin);
+              return isValid;
+            },
+          ),
+        ),
+      );
+      if (result == true) {
+        setState(() {
+          _isAuthenticated = true;
+        });
+        _loadWalletData();
+      } else {
+        Navigator.pop(context); // Go back if PIN entry was cancelled
+      }
+    }
+  }
+
+  Future<void> _loadWalletData() async {
+    await _fetchWalletBalance();
+    await _fetchTransactions();
   }
 
   Future<void> _fetchTransactions() async {
@@ -179,25 +236,61 @@ class _WalletPageState extends State<WalletPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isAuthenticated) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final l10n = AppLocalizations.of(context)!;
+    final specialColor = themeNotifier.isSpecialModeActive
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : null;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.myWallet), elevation: 0),
-      body:
-          _isLoading
-              ? Center(
+      appBar: AppBar(
+        title: Text(l10n.myWallet),
+        elevation: 0,
+        backgroundColor: isDark ? Colors.black : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(15)),
+        ),
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isDark
+                ? [
+                    themeNotifier.isSpecialModeActive
+                        ? (specialColor?.shade900 ?? Colors.red.shade900)
+                        : Colors.red.shade900,
+                    Colors.grey.shade900,
+                  ]
+                : [
+                    themeNotifier.isSpecialModeActive
+                        ? (specialColor?.shade50 ?? Colors.red.shade50)
+                        : Colors.red.shade50,
+                    Colors.white,
+                  ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: _isLoading
+            ? Center(
                 child: CircularProgressIndicator(
-                  color:
-                      themeNotifier.isSpecialModeActive
-                          ? themeNotifier.getThemeColor(
-                            themeNotifier.specialTheme,
-                          )
-                          : Colors.red,
+                  color: themeNotifier.isSpecialModeActive
+                      ? specialColor
+                      : (themeNotifier.isBlackMode
+                          ? Theme.of(context).colorScheme.secondary
+                          : Colors.red),
                 ),
               )
-              : RefreshIndicator(
+            : RefreshIndicator(
                 onRefresh: () async {
                   await _fetchWalletBalance();
                   await _fetchTransactions();
@@ -213,53 +306,32 @@ class _WalletPageState extends State<WalletPage> {
                           width: double.infinity,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors:
-                                  isDark
-                                      ? [
-                                        themeNotifier.isSpecialModeActive
-                                            ? themeNotifier
-                                                .getThemeColor(
-                                                  themeNotifier.specialTheme,
-                                                )
-                                                .shade900
-                                            : Colors.red.shade900,
-                                        Colors.grey.shade900,
-                                      ]
-                                      : [
-                                        themeNotifier.isSpecialModeActive
-                                            ? themeNotifier
-                                                .getThemeColor(
-                                                  themeNotifier.specialTheme,
-                                                )
-                                                .shade500
-                                            : Colors.red.shade500,
-                                        themeNotifier.isSpecialModeActive
-                                            ? themeNotifier
-                                                .getThemeColor(
-                                                  themeNotifier.specialTheme,
-                                                )
-                                                .shade100
-                                            : Colors.red.shade100,
-                                      ],
+                              colors: isDark
+                                  ? [
+                                      themeNotifier.isSpecialModeActive
+                                          ? (specialColor?.shade900 ?? Colors.red.shade900)
+                                          : Colors.red.shade900,
+                                      Colors.grey.shade900,
+                                    ]
+                                  : [
+                                      themeNotifier.isSpecialModeActive
+                                          ? (specialColor?.shade500 ?? Colors.red.shade500)
+                                          : Colors.red.shade500,
+                                      themeNotifier.isSpecialModeActive
+                                          ? (specialColor?.shade100 ?? Colors.red.shade100)
+                                          : Colors.red.shade100,
+                                    ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color:
-                                    isDark
-                                        ? Colors.black26
-                                        : (themeNotifier.isSpecialModeActive
-                                            ? themeNotifier
-                                                .getThemeColor(
-                                                  themeNotifier.specialTheme,
-                                                )
-                                                .shade200
-                                                .withOpacity(0.5)
-                                            : Colors.red.shade200.withOpacity(
-                                              0.5,
-                                            )),
+                                color: isDark
+                                    ? Colors.black26
+                                    : (themeNotifier.isSpecialModeActive
+                                        ? (specialColor?.shade200.withOpacity(0.5) ?? Colors.red.shade200.withOpacity(0.5))
+                                        : Colors.red.shade200.withOpacity(0.5)),
                                 blurRadius: 10,
                                 offset: const Offset(0, 5),
                               ),
@@ -272,8 +344,7 @@ class _WalletPageState extends State<WalletPage> {
                               Text(
                                 l10n.currentBalance,
                                 style: TextStyle(
-                                  color:
-                                      isDark ? Colors.grey[400] : Colors.white,
+                                  color: isDark ? Colors.grey[400] : Colors.white,
                                   fontSize: 16,
                                 ),
                               ),
@@ -290,10 +361,7 @@ class _WalletPageState extends State<WalletPage> {
                               Text(
                                 l10n.cashbackInfo,
                                 style: TextStyle(
-                                  color:
-                                      isDark
-                                          ? Colors.grey[400]
-                                          : Colors.white70,
+                                  color: isDark ? Colors.grey[400] : Colors.white70,
                                   fontSize: 14,
                                 ),
                               ),
@@ -301,21 +369,17 @@ class _WalletPageState extends State<WalletPage> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        const SizedBox(height: 16),
                         SizedBox(
                           width: double.infinity,
                           height: 50,
                           child: ElevatedButton(
                             onPressed: _showAddMoneyDialog,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  themeNotifier.isSpecialModeActive
-                                      ? themeNotifier
-                                          .getThemeColor(
-                                            themeNotifier.specialTheme,
-                                          )
-                                          .shade400
-                                      : Colors.red.shade400,
+                              backgroundColor: themeNotifier.isSpecialModeActive
+                                  ? specialColor
+                                  : (themeNotifier.isBlackMode
+                                      ? Theme.of(context).colorScheme.secondary
+                                      : Colors.red.shade400),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -334,35 +398,40 @@ class _WalletPageState extends State<WalletPage> {
                         const SizedBox(height: 24),
                         Container(
                           width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey.shade800 : Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isDark ? Colors.black26 : Colors.black12,
+                                blurRadius: 10,
+                                offset: Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          padding: EdgeInsets.all(20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      l10n.transactionHistory,
-                                      style:
-                                          Theme.of(
-                                            context,
-                                          ).textTheme.titleLarge,
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    l10n.transactionHistory,
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
                                     ),
-                                    Text(
-                                      l10n.transactionsCount(
-                                        _transactions.length,
-                                      ),
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 14,
-                                      ),
+                                  ),
+                                  Text(
+                                    l10n.transactionsCount(_transactions.length),
+                                    style: TextStyle(
+                                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                      fontSize: 14,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 16),
                               if (_transactions.isEmpty) ...[
@@ -372,19 +441,13 @@ class _WalletPageState extends State<WalletPage> {
                                       Container(
                                         padding: EdgeInsets.all(20),
                                         decoration: BoxDecoration(
-                                          color:
-                                              isDark
-                                                  ? Colors.grey.shade800
-                                                  : Colors.grey.shade100,
+                                          color: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(
                                           Icons.receipt_long,
                                           size: 48,
-                                          color:
-                                              isDark
-                                                  ? Colors.grey[400]
-                                                  : Colors.grey[500],
+                                          color: isDark ? Colors.grey[400] : Colors.grey[500],
                                         ),
                                       ),
                                       const SizedBox(height: 16),
@@ -393,20 +456,14 @@ class _WalletPageState extends State<WalletPage> {
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
-                                          color:
-                                              isDark
-                                                  ? Colors.grey[400]
-                                                  : Colors.grey[700],
+                                          color: isDark ? Colors.grey[400] : Colors.grey[700],
                                         ),
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
                                         l10n.transactionsWillAppear,
                                         style: TextStyle(
-                                          color:
-                                              isDark
-                                                  ? Colors.grey[500]
-                                                  : Colors.grey[600],
+                                          color: isDark ? Colors.grey[500] : Colors.grey[600],
                                         ),
                                       ),
                                     ],
@@ -430,21 +487,17 @@ class _WalletPageState extends State<WalletPage> {
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
+                                      color: isDark ? Colors.grey.shade700 : Colors.white,
                                       child: InkWell(
                                         onTap: () {
                                           showModalBottomSheet(
                                             context: context,
                                             shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.vertical(
-                                                    top: Radius.circular(20),
-                                                  ),
+                                              borderRadius: BorderRadius.vertical(
+                                                top: Radius.circular(20),
+                                              ),
                                             ),
-                                            builder:
-                                                (context) =>
-                                                    _buildTransactionDetails(
-                                                      transaction,
-                                                    ),
+                                            builder: (context) => _buildTransactionDetails(transaction),
                                           );
                                         },
                                         borderRadius: BorderRadius.circular(12),
@@ -462,7 +515,7 @@ class _WalletPageState extends State<WalletPage> {
                                                           : isCashbackReversal
                                                               ? Colors.orange.withOpacity(0.1)
                                                               : (themeNotifier.isSpecialModeActive
-                                                                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme).withOpacity(0.1)
+                                                                  ? specialColor?.withOpacity(0.1) ?? Colors.red.withOpacity(0.1)
                                                                   : Colors.red.withOpacity(0.1)),
                                                   shape: BoxShape.circle,
                                                 ),
@@ -481,15 +534,14 @@ class _WalletPageState extends State<WalletPage> {
                                                           : isCashbackReversal
                                                               ? Colors.orange
                                                               : (themeNotifier.isSpecialModeActive
-                                                                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                                                  ? specialColor
                                                                   : Colors.red),
                                                 ),
                                               ),
                                               SizedBox(width: 16),
                                               Expanded(
                                                 child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
                                                       isDeposit
@@ -502,45 +554,22 @@ class _WalletPageState extends State<WalletPage> {
                                                       style: TextStyle(
                                                         fontWeight: FontWeight.bold,
                                                         fontSize: 16,
-                                                        color: isRefund
-                                                            ? Colors.blue
-                                                            : isCashbackReversal
-                                                                ? Colors.orange
-                                                                : null,
+                                                        color: isDark ? Colors.white : Colors.black87,
                                                       ),
                                                     ),
                                                     SizedBox(height: 4),
                                                     Text(
-                                                      _formatDate(
-                                                        transaction['timestamp'],
-                                                      ),
+                                                      _formatDate(transaction['timestamp']),
                                                       style: TextStyle(
-                                                        color: Colors.grey[600],
+                                                        color: isDark ? Colors.grey[400] : Colors.grey[600],
                                                         fontSize: 13,
                                                       ),
                                                     ),
-                                                    if (isRefund && transaction['reference'] != null)
-                                                      Text(
-                                                        transaction['reference'],
-                                                        style: TextStyle(
-                                                          color: Colors.blue,
-                                                          fontSize: 12,
-                                                        ),
-                                                      ),
-                                                    if (!isRefund && transaction['reference'] != null)
-                                                      Text(
-                                                        transaction['reference'],
-                                                        style: TextStyle(
-                                                          color: Colors.grey[600],
-                                                          fontSize: 12,
-                                                        ),
-                                                      ),
                                                   ],
                                                 ),
                                               ),
                                               Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.end,
+                                                crossAxisAlignment: CrossAxisAlignment.end,
                                                 children: [
                                                   Text(
                                                     isDeposit
@@ -558,22 +587,19 @@ class _WalletPageState extends State<WalletPage> {
                                                               : isCashbackReversal
                                                                   ? Colors.orange
                                                                   : (themeNotifier.isSpecialModeActive
-                                                                      ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                                                      ? specialColor
                                                                       : Colors.red),
                                                       fontWeight: FontWeight.bold,
                                                       fontSize: 16,
                                                     ),
                                                   ),
-                                                  if (transaction['cashback'] !=
-                                                          null &&
-                                                      transaction['cashback'] > 0)
+                                                  if (transaction['cashback'] != null && transaction['cashback'] > 0)
                                                     Text(
                                                       '+₺${transaction['cashback'].toStringAsFixed(2)} cashback',
                                                       style: TextStyle(
                                                         color: Colors.green,
                                                         fontSize: 12,
-                                                        fontWeight:
-                                                            FontWeight.w500,
+                                                        fontWeight: FontWeight.w500,
                                                       ),
                                                     ),
                                                 ],
@@ -592,6 +618,7 @@ class _WalletPageState extends State<WalletPage> {
                       ],
                     ),
                   ),
+                ),
                 ),
               ),
     );

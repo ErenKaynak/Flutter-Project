@@ -697,5 +697,15 @@
                 "type": "String"
             }
         }
-    }
+    },
+    "setupWalletPin": "Setup Wallet PIN",
+    "createWalletPin": "Create Wallet PIN",
+    "walletPinDescription": "Create a 6-digit PIN to secure your wallet",
+    "enterPin": "Enter PIN",
+    "confirmPin": "Confirm PIN",
+    "useBiometrics": "Use Biometrics",
+    "biometricsDescription": "Use fingerprint or face recognition to access your wallet",
+    "setupPin": "Setup PIN",
+    "verify": "Verify",
+    "invalidPin": "Invalid PIN"
 }
