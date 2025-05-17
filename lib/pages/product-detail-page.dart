@@ -28,6 +28,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   bool isFavorite = false;
   bool isCheckingFavorite = true;
   bool isOutOfStock = false;
+  int selectedImageIndex = 0;
 
   double? averageRating;
   int totalRatings = 0;
@@ -272,7 +273,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         'addedAt': FieldValue.serverTimestamp(),
         'name': productData?.name,
         'price': productData?.price,
-        'imageUrl': productData?.imageUrl,
+        'imagePath': productData?.imageUrl,
         'category': productData?.category,
       }, SetOptions(merge: true));
 
@@ -471,7 +472,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     child: Hero(
                       tag: 'product-${widget.productId}',
                       child: Image.network(
-                        images[0],
+                        images[selectedImageIndex],
                         fit: BoxFit.contain,
                         errorBuilder:
                             (_, __, ___) => Icon(
@@ -526,15 +527,21 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     itemCount: images.length,
                     itemBuilder: (context, index) {
                       return GestureDetector(
-                        onTap: () => setState(() => selectedQuantity = index + 1),
+                        onTap: () {
+                          setState(() {
+                            selectedImageIndex = index;
+                          });
+                        },
                         child: Container(
                           margin: EdgeInsets.symmetric(horizontal: 6),
                           width: 70,
                           decoration: BoxDecoration(
                             border: Border.all(
                               color:
-                                  selectedQuantity == index + 1
-                                      ? Theme.of(context).primaryColor
+                                  index == selectedImageIndex
+                                      ? (themeNotifier.isSpecialModeActive
+                                          ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                          : Theme.of(context).primaryColor)
                                       : isDark
                                       ? Colors.grey.shade700
                                       : Colors.grey.shade300,
@@ -543,12 +550,12 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                             borderRadius: BorderRadius.circular(8),
                             color: Theme.of(context).cardColor,
                             boxShadow:
-                                selectedQuantity == index + 1 && !isDark
+                                index == selectedImageIndex && !isDark
                                     ? [
                                       BoxShadow(
-                                        color: Theme.of(
-                                          context,
-                                        ).primaryColor.withOpacity(0.3),
+                                        color: (themeNotifier.isSpecialModeActive
+                                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                            : Theme.of(context).primaryColor).withOpacity(0.3),
                                         blurRadius: 4,
                                         spreadRadius: 1,
                                       ),
