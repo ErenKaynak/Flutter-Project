@@ -1260,4 +1260,34 @@ class AppLocalizationsTr extends AppLocalizations {
   String failedToProcessRefund(String error) {
     return 'İade işlenemedi: $error';
   }
+
+  @override
+  String get setupWalletPin => 'Setup Wallet PIN';
+
+  @override
+  String get createWalletPin => 'Create Wallet PIN';
+
+  @override
+  String get walletPinDescription => 'Create a 6-digit PIN to secure your wallet';
+
+  @override
+  String get enterPin => 'Enter PIN';
+
+  @override
+  String get confirmPin => 'Confirm PIN';
+
+  @override
+  String get useBiometrics => 'Use Biometrics';
+
+  @override
+  String get biometricsDescription => 'Use fingerprint or face recognition to access your wallet';
+
+  @override
+  String get setupPin => 'Setup PIN';
+
+  @override
+  String get verify => 'Verify';
+
+  @override
+  String get invalidPin => 'Invalid PIN';
 }

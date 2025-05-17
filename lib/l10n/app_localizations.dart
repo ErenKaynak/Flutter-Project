@@ -2454,6 +2454,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to process refund: {error}'**
   String failedToProcessRefund(String error);
+
+  /// No description provided for @setupWalletPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Setup Wallet PIN'**
+  String get setupWalletPin;
+
+  /// No description provided for @createWalletPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Wallet PIN'**
+  String get createWalletPin;
+
+  /// No description provided for @walletPinDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a 6-digit PIN to secure your wallet'**
+  String get walletPinDescription;
+
+  /// No description provided for @enterPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter PIN'**
+  String get enterPin;
+
+  /// No description provided for @confirmPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm PIN'**
+  String get confirmPin;
+
+  /// No description provided for @useBiometrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Biometrics'**
+  String get useBiometrics;
+
+  /// No description provided for @biometricsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use fingerprint or face recognition to access your wallet'**
+  String get biometricsDescription;
+
+  /// No description provided for @setupPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Setup PIN'**
+  String get setupPin;
+
+  /// No description provided for @verify.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify'**
+  String get verify;
+
+  /// No description provided for @invalidPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid PIN'**
+  String get invalidPin;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
