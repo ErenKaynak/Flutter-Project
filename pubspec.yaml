@@ -107,7 +107,7 @@ flutter:
     - lib/assets/Images/Mascot/
     - lib/assets/Images/app-icon-dark.png
     - lib/assets/Images/app-icon-light.png
-
+    - lib/assets/Images/icardi.png
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

@@ -840,7 +840,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final List<String> imageList = [
-      'lib/assets/Images/banner1.png',
+      'lib/assets/Images/icardi.png',
       'lib/assets/Images/banner2.png',
       'lib/assets/Images/banner3.png',
       'lib/assets/Images/banner4.png',
@@ -1136,7 +1136,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 : Colors.red.shade900)
             : Colors.red.shade50);
 
-    final unselectedBgColor = isDark ? Colors.grey.shade800 : Colors.grey.shade200;
+    final unselectedBgColor =
+        isDark ? Colors.grey.shade800 : Colors.grey.shade200;
 
     final borderColor = themeNotifier.isSpecialModeActive
         ? specialColor
@@ -1208,21 +1209,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ),
           ),
           SizedBox(height: 8),
-                      Text(
-              _getLocalizedCategoryName(label, context),
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected
-                    ? (themeNotifier.isSpecialModeActive
-                        ? specialColor
-                        : (isDark
-                            ? (themeNotifier.isBlackMode
-                                ? Theme.of(context).colorScheme.secondary
-                                : Colors.red.shade400)
-                            : Colors.red))
-                    : (isDark ? Colors.white70 : Colors.black),
-              ),
+          Text(
+            _getLocalizedCategoryName(label, context),
+            style: TextStyle(
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected
+                  ? (themeNotifier.isSpecialModeActive
+                      ? specialColor
+                      : (isDark
+                          ? (themeNotifier.isBlackMode
+                              ? Theme.of(context).colorScheme.secondary
+                              : Colors.red.shade400)
+                          : Colors.red))
+                  : (isDark ? Colors.white70 : Colors.black),
             ),
+          ),
         ],
       ),
     );
@@ -1845,25 +1846,25 @@ class CartManager extends ChangeNotifier {
         .collection('cart')
         .snapshots()
         .listen(
-          (snapshot) {
-            _items = snapshot.docs.map((doc) {
-              final data = doc.data();
-              return CartItem(
-                id: doc.id,
-                name: data['name'] ?? 'Unknown Product',
-                price: double.tryParse(data['price']?.toString() ?? '0') ?? 0.0,
-                imagePath: data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-                quantity: data['quantity'] ?? 1,
-              );
-            }).toList();
-            notifyListeners();
-          },
-          onError: (error) {
-            print('Error loading cart: $error');
-            _items = [];
-            notifyListeners();
-          },
-        );
+      (snapshot) {
+        _items = snapshot.docs.map((doc) {
+          final data = doc.data();
+          return CartItem(
+            id: doc.id,
+            name: data['name'] ?? 'Unknown Product',
+            price: double.tryParse(data['price']?.toString() ?? '0') ?? 0.0,
+            imagePath: data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
+            quantity: data['quantity'] ?? 1,
+          );
+        }).toList();
+        notifyListeners();
+      },
+      onError: (error) {
+        print('Error loading cart: $error');
+        _items = [];
+        notifyListeners();
+      },
+    );
   }
 
   Future<void> saveCart() async {
