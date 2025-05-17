@@ -1,28 +1,88 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Add this import
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AuthService {
   // Sign in with Google
   Future<UserCredential> signInWithGoogle() async {
-    // Begin interactive sign in process
-    final GoogleSignInAccount? gUser = await GoogleSignIn().signIn();
+    if (kIsWeb) {
+      // Create a new provider
+      GoogleAuthProvider googleProvider = GoogleAuthProvider();
+      
+      // Add scopes
+      googleProvider.addScope('https://www.googleapis.com/auth/userinfo.email');
+      googleProvider.addScope('https://www.googleapis.com/auth/userinfo.profile');
+      
+      // Once signed in, return the UserCredential
+      final userCredential = await FirebaseAuth.instance.signInWithPopup(googleProvider);
+      
+      // Create/update user document in Firestore
+      if (userCredential.user != null) {
+        await _createOrUpdateUserDocument(userCredential.user!);
+      }
+      
+      return userCredential;
+    } else {
+      // Begin interactive sign in process for mobile
+      final GoogleSignInAccount? gUser = await GoogleSignIn().signIn();
 
-    if (gUser == null) {
-      throw Exception("Google sign in was canceled");
+      if (gUser == null) {
+        throw Exception("Google sign in was canceled");
+      }
+
+      // Obtain auth details from request
+      final GoogleSignInAuthentication gAuth = await gUser.authentication;
+
+      // Create a new credential for user
+      final credential = GoogleAuthProvider.credential(
+        accessToken: gAuth.accessToken,
+        idToken: gAuth.idToken,
+      );
+
+      // Finally, sign in
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      
+      // Create/update user document in Firestore
+      if (userCredential.user != null) {
+        await _createOrUpdateUserDocument(userCredential.user!);
+      }
+      
+      return userCredential;
     }
+  }
 
-    // Obtain auth details from request
-    final GoogleSignInAuthentication gAuth = await gUser.authentication;
+  // Helper method to create or update user document
+  Future<void> _createOrUpdateUserDocument(User user) async {
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final docSnapshot = await userDoc.get();
 
-    // Create a new credential for user
-    final credential = GoogleAuthProvider.credential(
-      accessToken: gAuth.accessToken,
-      idToken: gAuth.idToken,
-    );
+    if (!docSnapshot.exists) {
+      // Create new user document
+      await userDoc.set({
+        'email': user.email,
+        'name': user.displayName?.split(' ').first ?? '',
+        'surname': user.displayName?.split(' ').last ?? '',
+        'profileImageUrl': user.photoURL ?? '',
+        'role': 'user',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-    // Finally, sign in
-    return await FirebaseAuth.instance.signInWithCredential(credential);
+      // Create wallet for new user
+      await FirebaseFirestore.instance.collection('wallets').doc(user.uid).set({
+        'balance': 0.0,
+        'created_at': FieldValue.serverTimestamp(),
+      });
+    } else {
+      // Update existing user document
+      await userDoc.update({
+        'email': user.email,
+        'name': user.displayName?.split(' ').first ?? '',
+        'surname': user.displayName?.split(' ').last ?? '',
+        'profileImageUrl': user.photoURL ?? '',
+        'lastLogin': FieldValue.serverTimestamp(),
+      });
+    }
   }
 
   // Sign out
