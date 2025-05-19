@@ -1290,4 +1290,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get invalidPin => 'Invalid PIN';
+
+  @override
+  String get orLogInWith => 'أو سجل الدخول بواسطة';
+
+  @override
+  String get passwordRequirements => 'متطلبات كلمة المرور:';
+
+  @override
+  String get atLeast8Characters => 'ثمانية أحرف على الأقل';
+
+  @override
+  String get maximum20Characters => '20 حرفًا كحد أقصى';
+
+  @override
+  String get oneUppercaseLetter => 'حرف كبير واحد';
+
+  @override
+  String get oneLowercaseLetter => 'حرف صغير واحد';
+
+  @override
+  String get oneSpecialCharacter => 'حرف خاص واحد';
 }

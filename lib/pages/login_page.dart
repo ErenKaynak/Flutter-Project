@@ -344,6 +344,41 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     }
   }
 
+  String getLogoAssetForTheme(ThemeNotifier themeNotifier, bool isDarkMode) {
+    if (themeNotifier.isSpecialModeActive) {
+      switch (themeNotifier.specialTheme) {
+        case SpecialTheme.blue:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-blue.png'
+              : 'lib/assets/Images/app-icon-light-blue.png';
+        case SpecialTheme.yellow:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-yellow.png'
+              : 'lib/assets/Images/app-icon-light-yellow.png';
+        case SpecialTheme.green:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-green.png'
+              : 'lib/assets/Images/app-icon-light-green.png';
+        case SpecialTheme.orange:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-orange.png'
+              : 'lib/assets/Images/app-icon-light-orange.png';
+        case SpecialTheme.purple:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-purple.png'
+              : 'lib/assets/Images/app-icon-light-purple.png';
+        default:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark.png'
+              : 'lib/assets/Images/app-icon-light.png';
+      }
+    } else {
+      return isDarkMode
+          ? 'lib/assets/Images/app-icon-dark.png'
+          : 'lib/assets/Images/app-icon-light.png';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -398,9 +433,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                     ),
                     child: ClipOval(
                       child: Image.asset(
-                        isDarkMode
-                            ? 'lib/assets/Images/app-icon-dark.png'
-                            : 'lib/assets/Images/app-icon-light.png',
+                        getLogoAssetForTheme(themeNotifier, isDarkMode),
                         width: 150,
                         height: 150,
                       ),

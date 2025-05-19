@@ -2514,6 +2514,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invalid PIN'**
   String get invalidPin;
+
+  /// No description provided for @orLogInWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Or Log in With'**
+  String get orLogInWith;
+
+  /// No description provided for @passwordRequirements.
+  ///
+  /// In en, this message translates to:
+  /// **'Password Requirements:'**
+  String get passwordRequirements;
+
+  /// No description provided for @atLeast8Characters.
+  ///
+  /// In en, this message translates to:
+  /// **'At least 8 characters'**
+  String get atLeast8Characters;
+
+  /// No description provided for @maximum20Characters.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum 20 characters'**
+  String get maximum20Characters;
+
+  /// No description provided for @oneUppercaseLetter.
+  ///
+  /// In en, this message translates to:
+  /// **'One uppercase letter'**
+  String get oneUppercaseLetter;
+
+  /// No description provided for @oneLowercaseLetter.
+  ///
+  /// In en, this message translates to:
+  /// **'One lowercase letter'**
+  String get oneLowercaseLetter;
+
+  /// No description provided for @oneSpecialCharacter.
+  ///
+  /// In en, this message translates to:
+  /// **'One special character'**
+  String get oneSpecialCharacter;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

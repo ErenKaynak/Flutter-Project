@@ -8,6 +8,7 @@ import 'package:engineering_project/pages/root_page.dart';
 import 'dart:math';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 
 class RegisterPage extends StatefulWidget {
   RegisterPage({super.key});
@@ -37,6 +38,41 @@ class _RegisterPageState extends State<RegisterPage> {
   bool hasSpecialChar = false;
   bool hasMinLength = false;
   bool hasMaxLength = true;
+
+  String getLogoAssetForTheme(ThemeNotifier themeNotifier, bool isDarkMode) {
+    if (themeNotifier.isSpecialModeActive) {
+      switch (themeNotifier.specialTheme) {
+        case SpecialTheme.blue:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-blue.png'
+              : 'lib/assets/Images/app-icon-light-blue.png';
+        case SpecialTheme.yellow:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-yellow.png'
+              : 'lib/assets/Images/app-icon-light-yellow.png';
+        case SpecialTheme.green:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-green.png'
+              : 'lib/assets/Images/app-icon-light-green.png';
+        case SpecialTheme.orange:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-orange.png'
+              : 'lib/assets/Images/app-icon-light-orange.png';
+        case SpecialTheme.purple:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-purple.png'
+              : 'lib/assets/Images/app-icon-light-purple.png';
+        default:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark.png'
+              : 'lib/assets/Images/app-icon-light.png';
+      }
+    } else {
+      return isDarkMode
+          ? 'lib/assets/Images/app-icon-dark.png'
+          : 'lib/assets/Images/app-icon-light.png';
+    }
+  }
 
   void signInWithGoogleAndNavigate() async {
     showDialog(
@@ -256,9 +292,13 @@ class _RegisterPageState extends State<RegisterPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    // Consistent background color logic
+    final backgroundColor = isDark ? const Color(0xFF121212) : Colors.grey[200];
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: backgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Form(
@@ -290,9 +330,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     child: ClipOval(
                       child: Image.asset(
-                        isDark
-                            ? 'lib/assets/Images/app-icon-dark.png'
-                            : 'lib/assets/Images/app-icon-light.png',
+                        getLogoAssetForTheme(themeNotifier, isDark),
                         width: 150,
                         height: 150,
                       ),
@@ -300,7 +338,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'Welcome Sign in Here...',
+                    l10n.welcome,
                     style: TextStyle(
                       color: colorScheme.onBackground,
                       fontSize: 16,
@@ -313,9 +351,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       Expanded(
                         child: _buildTextField(
                           controller: nameController,
-                          hintText: 'First Name',
+                          hintText: l10n.firstName,
                           icon: Icons.person,
-                          validatorMsg: 'Enter first name',
+                          validatorMsg: l10n.pleaseEnterFirstName,
                           colorScheme: colorScheme,
                           isDark: isDark,
                         ),
@@ -324,9 +362,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       Expanded(
                         child: _buildTextField(
                           controller: surnameController,
-                          hintText: 'Last Name',
+                          hintText: l10n.lastName,
                           icon: Icons.person,
-                          validatorMsg: 'Enter last name',
+                          validatorMsg: l10n.pleaseEnterLastName,
                           colorScheme: colorScheme,
                           isDark: isDark,
                         ),
@@ -336,29 +374,30 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(height: 10),
                   _buildTextField(
                     controller: emailController,
-                    hintText: 'Email',
+                    hintText: l10n.email,
                     icon: Icons.email,
-                    validatorMsg: 'Enter a email',
+                    validatorMsg: 'Please enter your email',
                     colorScheme: colorScheme,
                     isDark: isDark,
                   ),
                   const SizedBox(height: 10),
                   _buildPasswordField(
                     controller: passwordController,
-                    hintText: 'Password',
+                    hintText: l10n.password,
                     toggle: passToggle,
                     onToggle: () => setState(() => passToggle = !passToggle),
-                    validatorMsg: 'Enter a Password',
+                    validatorMsg: l10n.password,
                     colorScheme: colorScheme,
                     isDark: isDark,
+                    onChanged: (value) => _checkPasswordRequirements(value),
                   ),
                   const SizedBox(height: 10),
                   _buildPasswordField(
                     controller: confirmPasswordController,
-                    hintText: 'Confirm Password',
+                    hintText: l10n.confirmPassword,
                     toggle: passToggle,
                     onToggle: () => setState(() => passToggle = !passToggle),
-                    validatorMsg: 'Enter a password',
+                    validatorMsg: l10n.confirmPassword,
                     colorScheme: colorScheme,
                     isDark: isDark,
                     matchPassword: passwordController.text,
@@ -366,7 +405,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(height: 10),
                   _buildTextField(
                     controller: referralCodeController,
-                    hintText: 'Referral Code (Optional)',
+                    hintText: l10n.referralCode + ' (Optional)',
                     icon: Icons.card_giftcard,
                     validatorMsg: '',
                     colorScheme: colorScheme,
@@ -392,7 +431,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Password Requirements:',
+                          l10n.passwordRequirements,
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -401,23 +440,23 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 5),
                         _buildPasswordRequirement(
-                          'At least 8 characters',
-                          hasMinLength,
-                        ),
-                        _buildPasswordRequirement(
-                          'Maximum 20 characters',
+                          l10n.maximum20Characters,
                           hasMaxLength,
                         ),
                         _buildPasswordRequirement(
-                          'One uppercase letter',
+                          l10n.atLeast8Characters,
+                          hasMinLength,
+                        ),
+                        _buildPasswordRequirement(
+                          l10n.oneUppercaseLetter,
                           hasUpperCase,
                         ),
                         _buildPasswordRequirement(
-                          'One lowercase letter',
+                          l10n.oneLowercaseLetter,
                           hasLowerCase,
                         ),
                         _buildPasswordRequirement(
-                          'One special character',
+                          l10n.oneSpecialCharacter,
                           hasSpecialChar,
                         ),
                       ],
@@ -447,7 +486,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'You Have An Account?',
+                        l10n.alreadyHaveAccount,
                         style: TextStyle(color: colorScheme.onBackground),
                       ),
                       const SizedBox(width: 4),
@@ -461,7 +500,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           );
                         },
                         child: Text(
-                          'Login!',
+                          l10n.login + '!',
                           style: TextStyle(
                             color:
                                 themeNotifier.isSpecialModeActive
@@ -498,9 +537,11 @@ class _RegisterPageState extends State<RegisterPage> {
                           color: colorScheme.onSurface.withOpacity(0.3),
                         ),
                       ),
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.symmetric(horizontal: 8),
-                        child: Text('Or Log in With'),
+                        child: Text(
+                          l10n.orLogInWith ?? 'Or Log in With',
+                        ),
                       ),
                       Expanded(
                         child: Divider(
@@ -593,15 +634,12 @@ class _RegisterPageState extends State<RegisterPage> {
     required ColorScheme colorScheme,
     required bool isDark,
     String? matchPassword,
+    ValueChanged<String>? onChanged,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: toggle,
-      onChanged: (value) {
-        if (hintText == 'Password') {
-          _checkPasswordRequirements(value);
-        }
-      },
+      onChanged: onChanged,
       decoration: InputDecoration(
         fillColor: isDark ? Colors.grey[800] : Colors.grey[300],
         filled: true,

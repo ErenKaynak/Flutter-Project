@@ -592,5 +592,12 @@
                 "type": "String"
             }
         }
-    }
+    },
+    "orLogInWith": "Veya ile giriş yap",
+    "passwordRequirements": "Şifre Gereksinimleri:",
+    "atLeast8Characters": "En az 8 karakter",
+    "maximum20Characters": "En fazla 20 karakter",
+    "oneUppercaseLetter": "Bir büyük harf",
+    "oneLowercaseLetter": "Bir küçük harf",
+    "oneSpecialCharacter": "Bir özel karakter"
 } 

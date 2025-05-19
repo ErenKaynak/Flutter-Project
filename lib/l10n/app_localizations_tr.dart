@@ -1290,4 +1290,25 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get invalidPin => 'Invalid PIN';
+
+  @override
+  String get orLogInWith => 'Veya ile giriş yap';
+
+  @override
+  String get passwordRequirements => 'Şifre Gereksinimleri:';
+
+  @override
+  String get atLeast8Characters => 'En az 8 karakter';
+
+  @override
+  String get maximum20Characters => 'En fazla 20 karakter';
+
+  @override
+  String get oneUppercaseLetter => 'Bir büyük harf';
+
+  @override
+  String get oneLowercaseLetter => 'Bir küçük harf';
+
+  @override
+  String get oneSpecialCharacter => 'Bir özel karakter';
 }

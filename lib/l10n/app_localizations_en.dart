@@ -1290,4 +1290,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get invalidPin => 'Invalid PIN';
+
+  @override
+  String get orLogInWith => 'Or Log in With';
+
+  @override
+  String get passwordRequirements => 'Password Requirements:';
+
+  @override
+  String get atLeast8Characters => 'At least 8 characters';
+
+  @override
+  String get maximum20Characters => 'Maximum 20 characters';
+
+  @override
+  String get oneUppercaseLetter => 'One uppercase letter';
+
+  @override
+  String get oneLowercaseLetter => 'One lowercase letter';
+
+  @override
+  String get oneSpecialCharacter => 'One special character';
 }

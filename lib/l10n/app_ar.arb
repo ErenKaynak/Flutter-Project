@@ -551,5 +551,12 @@
     "markAsInProgress": "تحديد كقيد المعالجة",
     "markAsResolved": "تحديد كتم الحل",
     "dismiss": "رفض",
-    "noBugReports": "لا توجد تقارير أخطاء"
+    "noBugReports": "لا توجد تقارير أخطاء",
+    "orLogInWith": "أو سجل الدخول بواسطة",
+    "passwordRequirements": "متطلبات كلمة المرور:",
+    "atLeast8Characters": "ثمانية أحرف على الأقل",
+    "maximum20Characters": "20 حرفًا كحد أقصى",
+    "oneUppercaseLetter": "حرف كبير واحد",
+    "oneLowercaseLetter": "حرف صغير واحد",
+    "oneSpecialCharacter": "حرف خاص واحد"
 } 
