@@ -1286,9 +1286,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       sliver: SliverGrid(
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 15,
-          childAspectRatio: 0.55,
+          crossAxisSpacing: 5,
+          mainAxisSpacing: 10,
+          childAspectRatio: 0.5,
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
           final product = filteredProducts[index];
@@ -1498,84 +1498,80 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       SizedBox(
                         width: double.infinity,
                         height: 40,
-                        child: AnimatedBuilder(
-                          animation: Listenable.merge([
-                            _colorAnimationControllers[product['id']]!,
-                            _tickAnimationControllers[product['id']]!,
-                          ]),
-                          builder: (context, child) {
-                            return ElevatedButton(
-                              onPressed: isOutOfStock ||
-                                      _isAddingToCartMap[product['id']] == true
-                                  ? null
-                                  : () => _addToCart(product),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    _colorAnimations[product['id']]?.value ??
-                                        (themeNotifier.isSpecialModeActive
-                                            ? specialColor
-                                            : (themeNotifier.isBlackMode
-                                                ? Theme.of(context)
-                                                    .colorScheme
-                                                    .secondary
-                                                : Colors.red)),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                elevation: 2,
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Opacity(
-                                    opacity: 1.0 -
-                                        (_colorAnimationControllers[
-                                                    product['id']]
-                                                ?.value ??
-                                            0.0),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        if (!isOutOfStock)
-                                          Icon(Icons.shopping_cart,
-                                              size: 16, color: Colors.white),
-                                        if (!isOutOfStock) SizedBox(width: 8),
-                                        Text(
-                                          isOutOfStock
-                                              ? AppLocalizations.of(context)!
-                                                  .outOfStock
-                                              : AppLocalizations.of(context)!
-                                                  .addToCart,
-                                          style: TextStyle(
-                                            fontSize: isOutOfStock ? 12 : 14,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.visible,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(horizontal: 4),
+                            backgroundColor:
+                                _colorAnimations[product['id']]?.value ??
+                                    (themeNotifier.isSpecialModeActive
+                                        ? specialColor
+                                        : (themeNotifier.isBlackMode
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .secondary
+                                            : Colors.red)),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 2,
+                          ),
+                          onPressed: isOutOfStock ||
+                                  _isAddingToCartMap[product['id']] == true
+                              ? null
+                              : () => _addToCart(product),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Opacity(
+                                opacity: 1.0 -
+                                    (_colorAnimationControllers[
+                                                product['id']]
+                                            ?.value ??
+                                        0.0),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                    children: [
+                                      if (!isOutOfStock)
+                                        Icon(Icons.shopping_cart,
+                                            size: 16, color: Colors.white),
+                                      if (!isOutOfStock) SizedBox(width: 8),
+                                      Text(
+                                        isOutOfStock
+                                            ? AppLocalizations.of(context)!
+                                                .outOfStock
+                                            : AppLocalizations.of(context)!
+                                                .addToCart,
+                                        style: TextStyle(
+                                          fontSize: isOutOfStock ? 12 : 14,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                  if ((_colorAnimationControllers[product['id']]
-                                              ?.value ??
-                                          0.0) >
-                                      0)
-                                    Transform.scale(
-                                      scale: _tickAnimations[product['id']]
-                                              ?.value ??
-                                          0.0,
-                                      child: Icon(
-                                        Icons.check,
-                                        color: Colors.white,
-                                        size: 24,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                    ),
-                                ],
+                                    ],
+                                  ),
+                                ),
                               ),
-                            );
-                          },
+                              if ((_colorAnimationControllers[product['id']]
+                                          ?.value ??
+                                      0.0) >
+                                  0)
+                                Transform.scale(
+                                  scale: _tickAnimations[product['id']]
+                                          ?.value ??
+                                      0.0,
+                                  child: Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ],

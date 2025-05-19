@@ -10,6 +10,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:engineering_project/assets/components/wallet_auth_service.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class LoginPage extends StatefulWidget {
   LoginPage({super.key});
@@ -18,7 +21,7 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -26,12 +29,110 @@ class _LoginPageState extends State<LoginPage> {
   bool _mounted = true;
   String? emailError;
   String? passwordError;
+  bool isPasswordlessEnabled = false;
+  bool isLoadingSettings = true;
+  bool showPasswordField = false;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_animationController);
+  }
+
+  Future<void> _checkPasswordlessSetting() async {
+    final email = emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() {
+        isLoadingSettings = false;
+        isPasswordlessEnabled = false;
+      });
+      return;
+    }
+
+    setState(() {
+      isLoadingSettings = true;
+    });
+
+    try {
+      final userQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .get();
+
+      if (userQuery.docs.isNotEmpty) {
+        final userDoc = userQuery.docs.first;
+        if (mounted) {
+          setState(() {
+            isPasswordlessEnabled = userDoc.data()['passwordless_enabled'] ?? false;
+            isLoadingSettings = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            isPasswordlessEnabled = false;
+            isLoadingSettings = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error checking passwordless setting: $e');
+      if (mounted) {
+        setState(() {
+          isPasswordlessEnabled = false;
+          isLoadingSettings = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleSignIn() async {
+    final email = emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() {
+        emailError = "Please enter your email.";
+      });
+      return;
+    }
+
+    await _checkPasswordlessSetting();
+
+    if (!isPasswordlessEnabled) {
+      setState(() {
+        showPasswordField = true;
+      });
+      _animationController.forward();
+      return;
+    }
+
+    // Check biometrics availability
+    final walletAuthService = WalletAuthService();
+    final canBiometric = await walletAuthService.isBiometricsAvailable();
+    
+    if (!canBiometric) {
+      setState(() {
+        showPasswordField = true;
+      });
+      _animationController.forward();
+      return;
+    }
+
+    // If we get here, we can proceed with passwordless sign in
+    _passwordlessSignIn();
+  }
 
   @override
   void dispose() {
     _mounted = false;
     emailController.dispose();
     passwordController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -185,6 +286,64 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  void _passwordlessSignIn() async {
+    final email = emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() { emailError = 'Please enter your email.'; });
+      return;
+    }
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      // 1. Check biometrics
+      final walletAuthService = WalletAuthService();
+      final canBiometric = await walletAuthService.isBiometricsAvailable();
+      if (!canBiometric) {
+        Navigator.pop(context);
+        setState(() { emailError = 'Biometrics not available on this device.'; });
+        return;
+      }
+      final authenticated = await walletAuthService.authenticateWithBiometrics();
+      if (!authenticated) {
+        Navigator.pop(context);
+        setState(() { emailError = 'Biometric authentication failed.'; });
+        return;
+      }
+
+      // 2. Request custom token from backend
+      final response = await http.post(
+        Uri.parse('https://passwordlessbackend-production.up.railway.app/createCustomToken'), // <-- change to your backend URL
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+      if (response.statusCode != 200) {
+        Navigator.pop(context);
+        setState(() { emailError = 'Failed to get custom token: ${response.body}'; });
+        return;
+      }
+      final token = jsonDecode(response.body)['token'];
+
+      // 3. Sign in with custom token
+      await FirebaseAuth.instance.signOut();
+      await FirebaseAuth.instance.signInWithCustomToken(token);
+
+      if (context.mounted) Navigator.pop(context);
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const RootScreen()),
+          (Route<dynamic> route) => false,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) Navigator.pop(context);
+      setState(() { emailError = 'Passwordless sign in failed. Please try again.'; });
+      print('Passwordless sign in error: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -260,6 +419,11 @@ class _LoginPageState extends State<LoginPage> {
                   TextFormField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
+                    onChanged: (value) {
+                      if (value.isNotEmpty) {
+                        _checkPasswordlessSetting();
+                      }
+                    },
                     style: TextStyle(
                       color: isDarkMode ? Colors.white : Colors.black87,
                     ),
@@ -294,51 +458,56 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: passwordController,
-                    obscureText: passToggle,
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.white : Colors.black87,
-                    ),
-                    decoration: InputDecoration(
-                      fillColor: inputFillColor,
-                      filled: true,
-                      hintText: l10n.password,
-                      hintStyle: TextStyle(
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                      ),
-                      prefixIcon: Icon(
-                        Icons.lock,
-                        color: isDarkMode ? Colors.grey[400] : null,
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          passToggle ? Icons.visibility : Icons.visibility_off,
-                          color: isDarkMode ? Colors.grey[400] : null,
-                        ),
-                        onPressed:
-                            () => setState(() => passToggle = !passToggle),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: iconColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: iconColor, width: 2),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color:
-                              isDarkMode
-                                  ? Colors.grey[700]!
-                                  : Colors.grey[300]!,
-                        ),
-                      ),
-                    ),
+                  AnimatedBuilder(
+                    animation: _fadeAnimation,
+                    builder: (context, child) {
+                      return FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: showPasswordField
+                            ? TextFormField(
+                                controller: passwordController,
+                                obscureText: passToggle,
+                                style: TextStyle(
+                                  color: isDarkMode ? Colors.white : Colors.black87,
+                                ),
+                                decoration: InputDecoration(
+                                  fillColor: inputFillColor,
+                                  filled: true,
+                                  hintText: l10n.password,
+                                  hintStyle: TextStyle(
+                                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.lock,
+                                    color: isDarkMode ? Colors.grey[400] : null,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      passToggle ? Icons.visibility : Icons.visibility_off,
+                                      color: isDarkMode ? Colors.grey[400] : null,
+                                    ),
+                                    onPressed: () => setState(() => passToggle = !passToggle),
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: iconColor),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: iconColor, width: 2),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      );
+                    },
                   ),
-                  const SizedBox(height: 5),
                   const SizedBox(height: 5),
                   if (emailError != null || passwordError != null)
                     Align(
@@ -411,8 +580,11 @@ class _LoginPageState extends State<LoginPage> {
                   FloatingActionButton(
                     backgroundColor: iconColor,
                     foregroundColor: Colors.white,
-                    onPressed: signUserIn,
-                    child: const Icon(Icons.arrow_forward, size: 25),
+                    onPressed: showPasswordField ? signUserIn : _handleSignIn,
+                    child: Icon(
+                      showPasswordField ? Icons.arrow_forward : Icons.arrow_forward,
+                      size: 25
+                    ),
                   ),
                   const SizedBox(height: 25),
                   Padding(

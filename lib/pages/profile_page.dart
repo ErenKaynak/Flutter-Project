@@ -15,6 +15,8 @@ import 'package:engineering_project/providers/language_provider.dart';
 import 'package:confetti/confetti.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
+import 'dart:io' show Platform;
+import 'package:flutter/cupertino.dart';
 
 import 'theme_notifier.dart';
 import 'address_screen.dart';
@@ -92,6 +94,8 @@ class _ProfilePageState extends State<ProfilePage> {
   bool isUploading = false;
   String? referralCode;
   bool _showFloatingButton = true;
+  bool passwordlessEnabled = false;
+  bool isPasswordlessLoading = false;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -109,6 +113,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _checkAISettings();
     fetchProfileData();
     _loadSpecialModePreferences();
+    _loadPasswordlessSetting();
   }
 
   @override
@@ -897,6 +902,33 @@ class _ProfilePageState extends State<ProfilePage> {
                                 () => _showBugReportDialog(),
                                 themeNotifier,
                               ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(Icons.fingerprint, color: themeNotifier.isSpecialModeActive ? themeNotifier.getThemeColor(themeNotifier.specialTheme) : Colors.red.shade700),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'Passwordless Sign In',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: isDark ? Colors.white : Colors.black87,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  isPasswordlessLoading
+                                    ? SizedBox(width: 32, height: 32, child: CircularProgressIndicator(strokeWidth: 2))
+                                    : _adaptiveSwitch(
+                                        value: passwordlessEnabled,
+                                        onChanged: _togglePasswordless,
+                                        activeColor: themeNotifier.isSpecialModeActive
+                                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
+                                            : Colors.red.shade700,
+                                      ),
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -1410,9 +1442,49 @@ class _ProfilePageState extends State<ProfilePage> {
     await prefs.setString(_kSpecialThemeKey, theme.toString());
   }
 
+  Future<void> _loadPasswordlessSetting() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    if (doc.exists && doc.data()!.containsKey('passwordless_enabled')) {
+      setState(() {
+        passwordlessEnabled = doc['passwordless_enabled'] == true;
+      });
+    }
+  }
+
+  Future<void> _togglePasswordless(bool value) async {
+    setState(() { isPasswordlessLoading = true; });
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    await FirebaseFirestore.instance.collection('users').doc(uid).set({
+      'passwordless_enabled': value,
+    }, SetOptions(merge: true));
+    setState(() {
+      passwordlessEnabled = value;
+      isPasswordlessLoading = false;
+    });
+  }
+
   @override
   void dispose() {
     _confettiController.dispose();
     super.dispose();
+  }
+
+  Widget _adaptiveSwitch({required bool value, required ValueChanged<bool> onChanged, Color? activeColor}) {
+    if (Theme.of(context).platform == TargetPlatform.iOS || Platform.isIOS) {
+      return CupertinoSwitch(
+        value: value,
+        onChanged: onChanged,
+        activeColor: activeColor,
+      );
+    } else {
+      return Switch(
+        value: value,
+        onChanged: onChanged,
+        activeColor: activeColor,
+      );
+    }
   }
 }
