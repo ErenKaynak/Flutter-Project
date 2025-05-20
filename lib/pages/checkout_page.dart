@@ -922,7 +922,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '₺${item.price} × ${item.quantity}',
+                        formatPrice(item.price),
                         style: TextStyle(
                           color: Theme.of(context).hintColor,
                           fontSize: 13,
@@ -932,7 +932,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   ),
                 ),
                 Text(
-                  '₺${(double.parse(item.price) * item.quantity).toStringAsFixed(2)}',
+                  formatDoublePrice(double.parse(item.price) * item.quantity),
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
@@ -1425,7 +1425,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 ),
               const SizedBox(width: 8),
               Text(
-                isFreeShipping ? l10n.free : '₺${amount.toStringAsFixed(2)}',
+                isFreeShipping ? l10n.free : formatDoublePrice(amount),
                 style: TextStyle(
                   fontSize: isTotal ? 18 : 16,
                   fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
@@ -1490,5 +1490,24 @@ class _CheckoutPageState extends State<CheckoutPage> {
       }
       return false;
     }
+  }
+
+  String formatPrice(String price) {
+    try {
+      final double numericPrice = double.parse(price);
+      return '₺${numericPrice.toStringAsFixed(2).replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]},',
+      )}';
+    } catch (e) {
+      return '₺0.00';
+    }
+  }
+
+  String formatDoublePrice(double price) {
+    return '₺${price.toStringAsFixed(2).replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    )}';
   }
 }

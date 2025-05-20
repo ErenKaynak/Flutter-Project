@@ -9,6 +9,7 @@ import 'package:engineering_project/pages/wallet_pin_setup.dart';
 import 'theme_notifier.dart';
 import 'package:flutter/foundation.dart';
 import 'package:engineering_project/pages/pin_entry_screen.dart';
+import 'package:intl/intl.dart';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({Key? key}) : super(key: key);
@@ -309,6 +310,20 @@ class _WalletPageState extends State<WalletPage> {
     );
   }
 
+  String _formatPrice(double amount) {
+    final formatter = NumberFormat.currency(
+      locale: 'tr_TR',
+      symbol: '₺',
+      decimalDigits: 2,
+    );
+    return formatter.format(amount);
+  }
+
+  String _formatPriceWithSign(double amount, bool isPositive) {
+    final formatted = _formatPrice(amount.abs());
+    return isPositive ? '+$formatted' : '-$formatted';
+  }
+
   @override
   Widget build(BuildContext context) {
     print('[WalletPage] build: _isAuthenticated=$_isAuthenticated, _authFailed=$_authFailed, _isLoading=$_isLoading');
@@ -448,7 +463,7 @@ class _WalletPageState extends State<WalletPage> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                '₺${_balance.toStringAsFixed(2)}',
+                                _formatPrice(_balance),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 32,
@@ -671,12 +686,12 @@ class _WalletPageState extends State<WalletPage> {
                                                 children: [
                                                   Text(
                                                     isDeposit
-                                                        ? '+₺${transaction['amount'].abs().toStringAsFixed(2)}'
+                                                        ? _formatPriceWithSign(transaction['amount'], true)
                                                         : isRefund
-                                                            ? '+₺${transaction['amount'].abs().toStringAsFixed(2)}'
+                                                            ? _formatPriceWithSign(transaction['amount'], true)
                                                             : isCashbackReversal
-                                                                ? '-₺${transaction['amount'].abs().toStringAsFixed(2)}'
-                                                                : '-₺${transaction['amount'].abs().toStringAsFixed(2)}',
+                                                                ? _formatPriceWithSign(transaction['amount'], false)
+                                                                : _formatPriceWithSign(transaction['amount'], false),
                                                     style: TextStyle(
                                                       color: isDeposit
                                                           ? Colors.green
@@ -693,7 +708,7 @@ class _WalletPageState extends State<WalletPage> {
                                                   ),
                                                   if (transaction['cashback'] != null && transaction['cashback'] > 0)
                                                     Text(
-                                                      '+₺${transaction['cashback'].toStringAsFixed(2)} cashback',
+                                                      _formatPriceWithSign(transaction['cashback'], true) + ' cashback',
                                                       style: TextStyle(
                                                         color: Colors.green,
                                                         fontSize: 12,
@@ -749,17 +764,17 @@ class _WalletPageState extends State<WalletPage> {
           _detailRow(
             l10n.amount,
             isDeposit
-                ? '+₺${transaction['amount'].abs().toStringAsFixed(2)}'
+                ? _formatPriceWithSign(transaction['amount'], true)
                 : isRefund
-                    ? '+₺${transaction['amount'].abs().toStringAsFixed(2)}'
+                    ? _formatPriceWithSign(transaction['amount'], true)
                     : isCashbackReversal
-                        ? '-₺${transaction['amount'].abs().toStringAsFixed(2)}'
-                        : '-₺${transaction['amount'].abs().toStringAsFixed(2)}',
+                        ? _formatPriceWithSign(transaction['amount'], false)
+                        : _formatPriceWithSign(transaction['amount'], false),
           ),
           if (transaction['cashback'] != null && transaction['cashback'] > 0)
             _detailRow(
               'Cashback',
-              '₺${transaction['cashback'].toStringAsFixed(2)}',
+              _formatPrice(transaction['cashback']),
             ),
           _detailRow(l10n.date, _formatDate(transaction['timestamp'])),
           _detailRow(

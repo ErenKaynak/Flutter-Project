@@ -588,6 +588,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
+  // Add helper function for price formatting
+  String formatPrice(String price) {
+    try {
+      final double numericPrice = double.parse(price);
+      return '₺${numericPrice.toStringAsFixed(2).replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]},',
+      )}';
+    } catch (e) {
+      return '₺0.00';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -1484,7 +1497,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             ),
                             SizedBox(height: 2),
                             Text(
-                              "₺${product["price"]}",
+                              formatPrice(product["price"]),
                               style: TextStyle(
                                 color: Colors.green.shade700,
                                 fontWeight: FontWeight.bold,

@@ -7,6 +7,7 @@ import 'package:engineering_project/pages/cart_page.dart';
 import 'package:engineering_project/pages/theme_notifier.dart';
 import 'package:provider/provider.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
 
 class FavoritesPage extends StatefulWidget {
   final Function? onFavoritesChanged;
@@ -27,6 +28,7 @@ class _FavoritesPageState extends State<FavoritesPage>
   final Map<String, AnimationController> _tickAnimationControllers = {};
   final Map<String, Animation<double>> _tickAnimations = {};
   final Map<String, bool> _isAddingToCartMap = {};
+  final NumberFormat _priceFormat = NumberFormat.currency(locale: 'tr_TR', symbol: '₺');
 
   @override
   void initState() {
@@ -519,17 +521,19 @@ class _FavoritesPageState extends State<FavoritesPage>
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: 2),
                     Text(
-                      "₺${product["price"]}",
+                      _priceFormat.format(double.tryParse(product["price"]) ?? 0),
                       style: TextStyle(
                         color: Colors.green.shade700,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Spacer(flex: 1),
                     SizedBox(

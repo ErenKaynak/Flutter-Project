@@ -357,6 +357,27 @@ class _CartPageState extends State<CartPage> {
   bool _isApplyingDiscount = false;
   String? _discountError;
 
+  // Add helper function for price formatting
+  String formatPrice(String price) {
+    try {
+      final double numericPrice = double.parse(price);
+      return '₺${numericPrice.toStringAsFixed(2).replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]},',
+      )}';
+    } catch (e) {
+      return '₺0.00';
+    }
+  }
+
+  // Add helper function for formatting double prices
+  String formatDoublePrice(double price) {
+    return '₺${price.toStringAsFixed(2).replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    )}';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -839,7 +860,7 @@ class _CartPageState extends State<CartPage> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        '₺${item.price}',
+                                        formatPrice(item.price),
                                         style: theme.textTheme.bodyLarge
                                             ?.copyWith(
                                               color:
@@ -1072,7 +1093,7 @@ class _CartPageState extends State<CartPage> {
                               style: TextStyle(fontSize: 14),
                             ),
                             Text(
-                              '₺${_cartManager.totalPrice.toStringAsFixed(2)}',
+                              formatDoublePrice(_cartManager.totalPrice),
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Theme.of(context).hintColor,
@@ -1092,7 +1113,7 @@ class _CartPageState extends State<CartPage> {
                               ),
                             ),
                             Text(
-                              '-₺${_appliedDiscount!.calculateDiscount(_cartManager.totalPrice).toStringAsFixed(2)}',
+                              '-${formatDoublePrice(_appliedDiscount!.calculateDiscount(_cartManager.totalPrice))}',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.green.shade700,
@@ -1113,7 +1134,7 @@ class _CartPageState extends State<CartPage> {
                             ),
                           ),
                           Text(
-                            '₺${_discountedTotal.toStringAsFixed(2)}',
+                            formatDoublePrice(_discountedTotal),
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,

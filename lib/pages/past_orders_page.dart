@@ -445,6 +445,26 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     }
   }
 
+  String formatPrice(String price) {
+    try {
+      final double numericPrice = double.parse(price);
+      return '₺${numericPrice.toStringAsFixed(2).replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]},',
+      )}';
+    } catch (e) {
+      return '₺0.00';
+    }
+  }
+
+  String formatDoublePrice(dynamic price) {
+    final double numericPrice = price is int ? price.toDouble() : (price is double ? price : 0.0);
+    return '₺${numericPrice.toStringAsFixed(2).replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    )}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -800,43 +820,69 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           initiallyExpanded: false,
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           childrenPadding: EdgeInsets.zero,
-          title: Text(
-            '${l10n.orderPrefix}${order['orderNumber']}',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).textTheme.titleMedium?.color,
-            ),
-          ),
-          subtitle: Column(
+          title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 4),
-              Text(
-                DateFormat(
-                  l10n.dateFormat,
-                  Localizations.localeOf(context).languageCode,
-                ).format((order['timestamp'] as Timestamp).toDate()),
-                style: const TextStyle(fontSize: 12),
-              ),
-              const SizedBox(height: 8),
               Row(
                 children: [
-                  _buildStatusBadge(order['status']),
-                  const Spacer(),
-                  Text.rich(
-                    TextSpan(
+                  Expanded(
+                    child: Text(
+                      '${l10n.orderPrefix}${order['orderNumber']}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: Theme.of(context).textTheme.titleMedium?.color,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Transform.scale(
+                    scale: 0.85,
+                    child: _buildStatusBadge(order['status']),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      DateFormat(
+                        l10n.dateFormat,
+                        Localizations.localeOf(context).languageCode,
+                      ).format((order['timestamp'] as Timestamp).toDate()),
+                      style: const TextStyle(fontSize: 11.5),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        TextSpan(text: '${l10n.total}: '),
-                        TextSpan(
-                          text: '₺${order['total'].toString()}',
+                        Icon(Icons.attach_money, color: Colors.green, size: 14),
+                        const SizedBox(width: 1),
+                        Text(
+                          '${l10n.total}: ',
                           style: const TextStyle(
-                            color: Colors.green,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
                           ),
                         ),
+                        Text(
+                          formatDoublePrice(order['total']),
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
                       ],
-                    ),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
@@ -872,6 +918,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                     Text(
                       order['trackingNumber'],
                       style: const TextStyle(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
                   ],
@@ -883,6 +930,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                   Text(
                     order['shippingAddress'] ?? l10n.defaultShippingAddress,
                     style: const TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -895,10 +943,12 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                       order['paymentMethod'] ?? l10n.cardPayment,
                     ),
                     style: const TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       OutlinedButton.icon(
                         onPressed: () {
@@ -954,6 +1004,104 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildOrderItem(Map<String, dynamic> item, {required String status}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              item['imagePath'] ?? 'lib/assets/Images/placeholder.png',
+              width: 60,
+              height: 60,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 60,
+                  height: 60,
+                  color: Colors.grey.shade200,
+                  child: Icon(Icons.image_not_supported, color: Colors.grey),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item['name'] ?? l10n.productNotFound,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 4),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: '${l10n.quantityPrefix} '),
+                      TextSpan(text: '${item['quantity']} × ${formatPrice(item['price'].toString())}'),
+                    ],
+                  ),
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                    fontSize: 14,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: '${l10n.itemTotalPrefix} '),
+                      TextSpan(
+                        text: formatDoublePrice(double.parse(item['price'].toString()) * (item['quantity'] as int)),
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  style: const TextStyle(fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          if (status == STATUS_DELIVERED)
+            FutureBuilder<bool>(
+              future: _hasUserReviewedProduct(item['id']),
+              builder: (context, snapshot) {
+                final bool hasReviewed = snapshot.data ?? false;
+                return TextButton(
+                  onPressed: hasReviewed ? null : () => _showRatingDialog(item['id'], item['name']),
+                  child: Text(
+                    hasReviewed ? l10n.alreadyReviewed : l10n.rateProduct,
+                    style: TextStyle(
+                      color: hasReviewed
+                          ? Colors.grey
+                          : (themeNotifier.isSpecialModeActive
+                              ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                              : Theme.of(context).primaryColor),
+                      fontSize: 12,
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
       ),
     );
   }
@@ -1037,100 +1185,6 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOrderItem(Map<String, dynamic> item, {required String status}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final l10n = AppLocalizations.of(context)!;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              item['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-              width: 60,
-              height: 60,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: 60,
-                  height: 60,
-                  color: Colors.grey.shade200,
-                  child: Icon(Icons.image_not_supported, color: Colors.grey),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item['name'] ?? l10n.productNotFound,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(text: '${l10n.quantityPrefix} '),
-                      TextSpan(text: '${item['quantity']} × ₺${item['price']}'),
-                    ],
-                  ),
-                  style: TextStyle(
-                    color: Theme.of(context).textTheme.bodyMedium?.color,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(text: '${l10n.itemTotalPrefix} '),
-                      TextSpan(
-                        text: '₺${(double.parse(item['price'].toString()) * (item['quantity'] as int)).toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-          if (status == STATUS_DELIVERED)
-            FutureBuilder<bool>(
-              future: _hasUserReviewedProduct(item['id']),
-              builder: (context, snapshot) {
-                final bool hasReviewed = snapshot.data ?? false;
-                return TextButton(
-                  onPressed: hasReviewed ? null : () => _showRatingDialog(item['id'], item['name']),
-                  child: Text(
-                    hasReviewed ? l10n.alreadyReviewed : l10n.rateProduct,
-                    style: TextStyle(
-                      color: hasReviewed
-                          ? Colors.grey
-                          : (themeNotifier.isSpecialModeActive
-                              ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-                              : Theme.of(context).primaryColor),
-                      fontSize: 12,
-                    ),
-                  ),
-                );
-              },
-            ),
         ],
       ),
     );
@@ -1316,7 +1370,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 Text(l10n.confirmRefundRequest),
                 const SizedBox(height: 16),
                 Text(
-                  '${l10n.orderTotal}: ₺${order['total'].toString()}',
+                  '${l10n.orderTotal}: ${formatDoublePrice(order['total'])}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),

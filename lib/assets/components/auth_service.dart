@@ -19,6 +19,7 @@ class AuthService {
       
       // Create/update user document in Firestore
       if (userCredential.user != null) {
+        print('Google Sign-In successful - User: ${userCredential.user?.email}');
         await _createOrUpdateUserDocument(userCredential.user!);
       }
       
@@ -30,6 +31,8 @@ class AuthService {
       if (gUser == null) {
         throw Exception("Google sign in was canceled");
       }
+
+      print('Google Sign-In Account: ${gUser.email}');
 
       // Obtain auth details from request
       final GoogleSignInAuthentication gAuth = await gUser.authentication;
@@ -45,6 +48,7 @@ class AuthService {
       
       // Create/update user document in Firestore
       if (userCredential.user != null) {
+        print('Firebase Auth successful - User: ${userCredential.user?.email}');
         await _createOrUpdateUserDocument(userCredential.user!);
       }
       
@@ -60,7 +64,8 @@ class AuthService {
     if (!docSnapshot.exists) {
       // Create new user document
       await userDoc.set({
-        'email': user.email,
+        'uid': user.uid,
+        'email': user.email ?? '',
         'name': user.displayName?.split(' ').first ?? '',
         'surname': user.displayName?.split(' ').last ?? '',
         'profileImageUrl': user.photoURL ?? '',
@@ -76,7 +81,8 @@ class AuthService {
     } else {
       // Update existing user document
       await userDoc.update({
-        'email': user.email,
+        'uid': user.uid,
+        'email': user.email ?? '',
         'name': user.displayName?.split(' ').first ?? '',
         'surname': user.displayName?.split(' ').last ?? '',
         'profileImageUrl': user.photoURL ?? '',
@@ -137,5 +143,118 @@ class AuthService {
           'isAdmin': isAdmin,
           'createdAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true)); // Merge in case the document already exists
+  }
+
+  // Migration function to update existing user documents
+  Future<void> migrateExistingUsers() async {
+    try {
+      print('Starting user migration...');
+      
+      // Get all users from Firestore
+      final usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
+      
+      for (var doc in usersSnapshot.docs) {
+        final userData = doc.data();
+        final userId = doc.id;
+        
+        print('Migrating user: $userId');
+        
+        // Get the user from Firebase Auth
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          print('No authenticated user found. Please sign in first.');
+          return;
+        }
+        
+        // Update the user document with the new structure
+        await FirebaseFirestore.instance.collection('users').doc(userId).update({
+          'uid': userId,
+          'email': userData['email'] ?? user.email ?? '',
+          'name': userData['name'] ?? user.displayName?.split(' ').first ?? '',
+          'surname': userData['surname'] ?? user.displayName?.split(' ').last ?? '',
+          'profileImageUrl': userData['profileImageUrl'] ?? user.photoURL ?? '',
+          'role': userData['role'] ?? 'user',
+          'lastLogin': FieldValue.serverTimestamp(),
+        });
+        
+        // Check if wallet exists, if not create it
+        final walletDoc = await FirebaseFirestore.instance.collection('wallets').doc(userId).get();
+        if (!walletDoc.exists) {
+          await FirebaseFirestore.instance.collection('wallets').doc(userId).set({
+            'balance': 0.0,
+            'created_at': FieldValue.serverTimestamp(),
+          });
+        }
+        
+        print('Successfully migrated user: $userId');
+      }
+      
+      print('User migration completed successfully!');
+    } catch (e) {
+      print('Error during user migration: $e');
+      rethrow;
+    }
+  }
+
+  // Helper function to check if a user needs migration
+  Future<bool> needsMigration(String userId) async {
+    try {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (!userDoc.exists) return true;
+      
+      final userData = userDoc.data()!;
+      return !userData.containsKey('uid') || 
+             !userData.containsKey('name') || 
+             !userData.containsKey('surname');
+    } catch (e) {
+      print('Error checking migration status: $e');
+      return true;
+    }
+  }
+
+  // Function to migrate a single user
+  Future<void> migrateSingleUser(String userId) async {
+    try {
+      print('Starting migration for user: $userId');
+      
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (!userDoc.exists) {
+        print('User document not found: $userId');
+        return;
+      }
+      
+      final userData = userDoc.data()!;
+      final user = FirebaseAuth.instance.currentUser;
+      
+      if (user == null) {
+        print('No authenticated user found. Please sign in first.');
+        return;
+      }
+      
+      // Update the user document
+      await FirebaseFirestore.instance.collection('users').doc(userId).update({
+        'uid': userId,
+        'email': userData['email'] ?? user.email ?? '',
+        'name': userData['name'] ?? user.displayName?.split(' ').first ?? '',
+        'surname': userData['surname'] ?? user.displayName?.split(' ').last ?? '',
+        'profileImageUrl': userData['profileImageUrl'] ?? user.photoURL ?? '',
+        'role': userData['role'] ?? 'user',
+        'lastLogin': FieldValue.serverTimestamp(),
+      });
+      
+      // Check and create wallet if needed
+      final walletDoc = await FirebaseFirestore.instance.collection('wallets').doc(userId).get();
+      if (!walletDoc.exists) {
+        await FirebaseFirestore.instance.collection('wallets').doc(userId).set({
+          'balance': 0.0,
+          'created_at': FieldValue.serverTimestamp(),
+        });
+      }
+      
+      print('Successfully migrated user: $userId');
+    } catch (e) {
+      print('Error migrating user $userId: $e');
+      rethrow;
+    }
   }
 }

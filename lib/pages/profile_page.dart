@@ -27,6 +27,17 @@ import '../admin-panel/admin_main.dart';
 const String _kSpecialModeActiveKey = 'special_mode_active';
 const String _kSpecialThemeKey = 'special_theme';
 
+Color getToggleBorderColor(BuildContext context, ThemeNotifier themeNotifier) {
+  final isDark = Theme.of(context).brightness == Brightness.dark || themeNotifier.isBlackMode;
+  if (isDark) {
+    return Colors.white.withOpacity(0.2);
+  } else if (themeNotifier.isSpecialModeActive) {
+    return themeNotifier.getThemeColor(themeNotifier.specialTheme).withOpacity(0.3);
+  } else {
+    return Colors.red.withOpacity(0.3);
+  }
+}
+
 class LanguageSelector extends StatelessWidget {
   const LanguageSelector({Key? key}) : super(key: key);
 
@@ -902,33 +913,19 @@ class _ProfilePageState extends State<ProfilePage> {
                                 () => _showBugReportDialog(),
                                 themeNotifier,
                               ),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(Icons.fingerprint, color: themeNotifier.isSpecialModeActive ? themeNotifier.getThemeColor(themeNotifier.specialTheme) : Colors.red.shade700),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        'Passwordless Sign In',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: isDark ? Colors.white : Colors.black87,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  isPasswordlessLoading
-                                    ? SizedBox(width: 32, height: 32, child: CircularProgressIndicator(strokeWidth: 2))
-                                    : _adaptiveSwitch(
-                                        value: passwordlessEnabled,
-                                        onChanged: _togglePasswordless,
-                                        activeColor: themeNotifier.isSpecialModeActive
-                                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
-                                            : Colors.red.shade700,
-                                      ),
-                                ],
+                              buildButton(
+                                'Passwordless Sign In',
+                                passwordlessEnabled ? Icons.fingerprint : Icons.lock_outline,
+                                () {
+                                  if (!isPasswordlessLoading) _togglePasswordless(!passwordlessEnabled);
+                                },
+                                themeNotifier,
                               ),
+                              if (isPasswordlessLoading)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: SizedBox(width: 32, height: 32, child: CircularProgressIndicator(strokeWidth: 2)),
+                                ),
                             ],
                           ),
                         ),
@@ -985,6 +982,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 (_) => themeNotifier.toggleTheme(),
                                 isDark,
                               ),
+                              const SizedBox(height: 16),
                               if (_showSpecialModeToggle)
                                 _buildThemeToggle(
                                   l10n.specialMode,
@@ -1011,6 +1009,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   },
                                   isDark,
                                 ),
+                              if (_showSpecialModeToggle) const SizedBox(height: 16),
                               if (isColorPickerVisible)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 16.0),
@@ -1052,6 +1051,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                             .toList(),
                                   ),
                                 ),
+                              if (isColorPickerVisible) const SizedBox(height: 16),
                             ],
                           ),
                         ),
@@ -1209,15 +1209,8 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color:
-              isDark
-                  ? Colors.white.withOpacity(0.1)
-                  : (themeNotifier.isSpecialModeActive
-                      ? themeNotifier
-                          .getThemeColor(themeNotifier.specialTheme)
-                          .withOpacity(0.1)
-                      : Colors.red.withOpacity(0.1)),
-          width: 1,
+          color: getToggleBorderColor(context, themeNotifier),
+          width: 1.5,
         ),
       ),
       margin: const EdgeInsets.only(bottom: 8),
