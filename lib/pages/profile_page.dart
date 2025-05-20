@@ -1205,7 +1205,7 @@ class _ProfilePageState extends State<ProfilePage> {
   ) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
@@ -1219,7 +1219,6 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           Row(
             children: [
-              const SizedBox(width: 12),
               Icon(
                 icon,
                 color:
@@ -1239,15 +1238,12 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ],
           ),
-          Switch(
+          _adaptiveSwitch(
             value: value,
             onChanged: onChanged,
-            activeColor:
-                themeNotifier.isSpecialModeActive
-                    ? themeNotifier
-                        .getThemeColor(themeNotifier.specialTheme)
-                        .shade700
-                    : Colors.red.shade700,
+            activeColor: themeNotifier.isSpecialModeActive
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
+                : Colors.red.shade700,
           ),
         ],
       ),
