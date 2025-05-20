@@ -2,24 +2,36 @@ import 'package:engineering_project/assets/AI/ngrok_config.dart';
 
 class LocalAIConfig {
   // Default local URL (fallback)
-  static const String defaultBaseUrl = 'http://localhost:1234/v1';
-  static const String BaseUrl = 'https://paradisepc.loca.lt';
+  static const String defaultBaseUrl = 'http://127.0.0.1:1234';
+  static const String BaseUrl = 'https://paradisenc.loca.lt';
   
   // Get the current base URL (ngrok or local)
   static Future<String> getBaseUrl() async {
-    final ngrokUrl = await NgrokConfig.getNgrokUrl();
-    return ngrokUrl != null ? '$ngrokUrl/v1' : defaultBaseUrl;
+    try {
+      final ngrokUrl = await NgrokConfig.getNgrokUrl();
+      if (ngrokUrl != null) {
+        print('Using ngrok URL: $ngrokUrl');
+        return ngrokUrl;
+      }
+      print('Using default URL: $defaultBaseUrl');
+      return defaultBaseUrl;
+    } catch (e) {
+      print('Error getting base URL: $e');
+      return defaultBaseUrl;
+    }
   }
 
   static const String modelName = 'mistral'; // Your local model name
 
   // Endpoints
-  static const String chatCompletionEndpoint = '/chat/completions';
+  static const String chatCompletionEndpoint = '/v1/chat/completions';
+  static const String modelsEndpoint = '/v1/models';
 
   // Headers
   static Map<String, String> getHeaders() {
     return {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
   }
 
