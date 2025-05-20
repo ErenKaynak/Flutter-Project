@@ -15,7 +15,7 @@ import 'package:engineering_project/providers/language_provider.dart';
 import 'package:confetti/confetti.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
-import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/cupertino.dart';
 
 import 'theme_notifier.dart';
@@ -999,9 +999,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                         _saveSpecialTheme(SpecialTheme.none);
                                         _saveSpecialModeActiveState(false);
                                         print("Special Mode Toggled OFF. Saved state: active=false, theme=none.");
+                                        _showSpecialModeToggle = false;
+                                        isColorPickerVisible = false;
                                       } else {
                                         _saveSpecialModeActiveState(true);
                                         print("Special Mode Toggled ON. Saved state: active=true. Waiting for theme selection.");
+                                        _showSpecialModeToggle = true;
+                                        isColorPickerVisible = true;
                                       }
                                     });
                                   },
@@ -1029,10 +1033,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                                   _saveSpecialModeActiveState(true);
                                                   print("Color selected: $theme. Saved state: active=true, theme=$theme.");
 
-                                                  setState(() {
-                                                    _showSpecialModeToggle = false;
-                                                    isColorPickerVisible = false;
-                                                  });
+                                                  setState(() {});
                                                 },
                                                 child: CircleAvatar(
                                                   backgroundColor: color,
@@ -1473,7 +1474,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _adaptiveSwitch({required bool value, required ValueChanged<bool> onChanged, Color? activeColor}) {
-    if (Theme.of(context).platform == TargetPlatform.iOS || Platform.isIOS) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
       return CupertinoSwitch(
         value: value,
         onChanged: onChanged,

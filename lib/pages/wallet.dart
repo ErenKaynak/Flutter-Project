@@ -26,6 +26,8 @@ class _WalletPageState extends State<WalletPage> {
   final _walletAuthService = WalletAuthService();
   final _pinController = TextEditingController();
   String? _error;
+  bool _authChecked = false;
+  bool _authFailed = false;
 
   @override
   void initState() {
@@ -34,47 +36,120 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   Future<void> _checkAuthentication() async {
-    final isPinSet = await _walletAuthService.isPinSet();
-    if (!isPinSet) {
-      // Show PIN setup screen
-      final result = await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const WalletPinSetup()),
-      );
-      if (result == true) {
-        setState(() {
-          _isAuthenticated = true;
-        });
-        _loadWalletData();
+    if (_authChecked) return;
+    _authChecked = true;
+    print('[WalletPage] Starting authentication check...');
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final isPinSet = await _walletAuthService.isPinSet();
+      print('[WalletPage] isPinSet: $isPinSet');
+      
+      if (!isPinSet) {
+        print('[WalletPage] Navigating to WalletPinSetup...');
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const WalletPinSetup()),
+        );
+        print('[WalletPage] WalletPinSetup result: $result');
+        if (result == true) {
+          setState(() {
+            _isAuthenticated = true;
+            _authFailed = false;
+          });
+          _loadWalletData();
+        } else {
+          print('[WalletPage] PIN setup cancelled. Showing fallback UI.');
+          if (mounted) setState(() { _authFailed = true; });
+        }
       } else {
-        Navigator.pop(context); // Go back if PIN setup was cancelled
+        if (kIsWeb) {
+          print('[WalletPage] Running on web, showing web PIN dialog...');
+          await _showWebPinDialog();
+        } else {
+          print('[WalletPage] Running on mobile, showing PinEntryScreen...');
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PinEntryScreen(
+                pinLength: 4,
+                title: 'Enter PIN',
+                subtitle: 'Unlock your wallet',
+                showBiometrics: true,
+                confirmMode: false,
+                onPinEntered: (pin) async {
+                  final isValid = await _walletAuthService.verifyPin(pin);
+                  print('[WalletPage] PinEntryScreen onPinEntered: $isValid');
+                  return isValid;
+                },
+              ),
+            ),
+          );
+          print('[WalletPage] PinEntryScreen result: $result');
+          if (result == true) {
+            setState(() {
+              _isAuthenticated = true;
+              _authFailed = false;
+            });
+            _loadWalletData();
+          } else {
+            print('[WalletPage] PIN entry cancelled. Showing fallback UI.');
+            if (mounted) setState(() { _authFailed = true; });
+          }
+        }
       }
-    } else {
-      // Use PinEntryScreen for PIN verification
-      final result = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PinEntryScreen(
-            pinLength: 4,
-            title: 'Enter PIN',
-            subtitle: 'Unlock your wallet',
-            showBiometrics: true,
-            confirmMode: false,
-            onPinEntered: (pin) async {
-              final isValid = await _walletAuthService.verifyPin(pin);
-              return isValid;
-            },
+    });
+  }
+
+  Future<void> _showWebPinDialog() async {
+    final TextEditingController pinController = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Enter PIN'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: pinController,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  hintText: 'Enter your 4-digit PIN',
+                  counterText: '',
+                ),
+              ),
+            ],
           ),
-        ),
-      );
-      if (result == true) {
-        setState(() {
-          _isAuthenticated = true;
-        });
-        _loadWalletData();
-      } else {
-        Navigator.pop(context); // Go back if PIN entry was cancelled
-      }
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final isValid = await _walletAuthService.verifyPin(pinController.text);
+                Navigator.of(context).pop(isValid);
+              },
+              child: const Text('Verify'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      setState(() {
+        _isAuthenticated = true;
+        _authFailed = false;
+      });
+      _loadWalletData();
+    } else {
+      setState(() {
+        _authFailed = true;
+      });
     }
   }
 
@@ -236,6 +311,29 @@ class _WalletPageState extends State<WalletPage> {
 
   @override
   Widget build(BuildContext context) {
+    print('[WalletPage] build: _isAuthenticated=$_isAuthenticated, _authFailed=$_authFailed, _isLoading=$_isLoading');
+    if (_authFailed) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Wallet')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lock_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text('Authentication cancelled or failed.'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Back'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     if (!_isAuthenticated) {
       return const Scaffold(
         body: Center(
