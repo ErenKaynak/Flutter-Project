@@ -93,6 +93,7 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
 
   Future<void> _checkLocalAIAvailability() async {
     final isAvailable = await LocalAIService.isAvailable();
+    if (!mounted) return;
     setState(() {
       _isLocalAIAvailable = isAvailable;
     });
@@ -103,23 +104,23 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
   }
 
   void _showLocalAIError() {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Local AI is not available. Please make sure LM Studio is running.'),
-          duration: Duration(seconds: 5),
-          action: SnackBarAction(
-            label: 'Retry',
-            onPressed: _checkLocalAIAvailability,
-          ),
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Local AI is not available. Please make sure LM Studio is running.'),
+        duration: Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'Retry',
+          onPressed: _checkLocalAIAvailability,
         ),
-      );
-    }
+      ),
+    );
   }
 
   Future<void> _handleSubmitted(String text, {File? image}) async {
     if (text.trim().isEmpty && image == null) return;
 
+    if (!mounted) return;
     setState(() {
       if (text.isNotEmpty) {
         _messages.add(ChatMessage(text: text, isUser: true));
@@ -144,103 +145,41 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
         // Get product recommendations
         final recommendations = await _getProductRecommendations(text, preferences);
         
-        if (recommendations.isNotEmpty) {
-          // Create a message with the recommendations
-          String recommendationText = 'Recommended components:\n\n';
-          for (var product in recommendations) {
-            recommendationText += '• ${product.name}\n';
+        if (!mounted) return;
+        setState(() {
+          _isTyping = false;
+          if (recommendations.isNotEmpty) {
+            // Get AI explanations for each product
+            _getProductExplanations(recommendations, text).then((explanations) {
+              if (!mounted) return;
+              setState(() {
+                String recommendationText = 'Recommended components:\n\n';
+                for (var i = 0; i < recommendations.length; i++) {
+                  final product = recommendations[i];
+                  final explanation = explanations[i];
+                  recommendationText += '• ${product.name}\n';
+                  recommendationText += '  ${explanation}\n\n';
+                }
+
+                _messages.add(ChatMessage(
+                  text: recommendationText,
+                  isUser: false,
+                  recommendedProducts: recommendations,
+                ));
+              });
+            });
+          } else {
+            _messages.add(ChatMessage(
+              text: 'No suitable components found. Please provide more specific requirements.',
+              isUser: false,
+            ));
           }
-          recommendationText += '\nClick "Add All to Cart" to add these components, or ask about specific parts for more details.';
-
-          // Get AI-generated description for each product
-          String productDescriptions = '';
-          for (var product in recommendations) {
-            final productInfo = await LocalAIService.getChatCompletion(
-              'Describe ${product.name} in one sentence. Focus on key features and value.',
-              'You are a PC hardware expert. Provide a single, concise sentence about this component.'
-            );
-            productDescriptions += '\n${product.name}: $productInfo';
-          }
-
-          // Add the message with recommendations and AI-generated descriptions
-          _addMessage(ChatMessage(
-            text: recommendationText + productDescriptions,
-            isUser: false,
-            recommendedProducts: recommendations,
-          ));
-        } else {
-          _addMessage(ChatMessage(
-            text: 'I couldn\'t find suitable components for your build. Could you please provide more details about your requirements?',
-            isUser: false,
-          ));
-        }
-      } else if (_messages.isNotEmpty && 
-                 _messages.last.recommendedProducts != null &&
-                 _messages.last.recommendedProducts!.isNotEmpty) {
-        // Check if user is asking about a recommended product
-        final lastRecommendations = _messages.last.recommendedProducts!;
-        LocalizedProduct? askedProduct;
-        
-        for (var product in lastRecommendations) {
-          if (text.toLowerCase().contains(product.name.toLowerCase())) {
-            askedProduct = product;
-            break;
-          }
-        }
-
-        if (askedProduct != null) {
-          // Get detailed information about the product from AI
-          final response = await LocalAIService.getChatCompletion(
-            'Provide detailed information about this PC component: ${askedProduct.name}. Include:\n' +
-            '1. Technical Specifications:\n' +
-            '   - Detailed hardware specifications\n' +
-            '   - Performance metrics\n' +
-            '   - Power requirements\n' +
-            '2. Performance Analysis:\n' +
-            '   - Gaming performance\n' +
-            '   - Productivity performance\n' +
-            '   - Benchmark comparisons\n' +
-            '3. Compatibility:\n' +
-            '   - System requirements\n' +
-            '   - Compatible components\n' +
-            '   - Potential bottlenecks\n' +
-            '4. Use Cases:\n' +
-            '   - Ideal scenarios\n' +
-            '   - Target users\n' +
-            '   - Value proposition\n' +
-            '5. Price Analysis:\n' +
-            '   - Price-to-performance ratio\n' +
-            '   - Market positioning\n' +
-            '   - Value for money\n' +
-            '6. User Experience:\n' +
-            '   - Common user feedback\n' +
-            '   - Pros and cons\n' +
-            '   - Reliability and durability',
-            'You are a PC hardware expert with deep knowledge of computer components. Provide detailed, accurate, and comprehensive information about PC hardware. Focus on technical accuracy, practical implications, and real-world performance. Use a professional but accessible tone. Include specific numbers and metrics when available.'
-          );
-
-          _addMessage(ChatMessage(
-            text: response,
-            isUser: false,
-            recommendedProducts: [askedProduct],
-          ));
-        } else {
-          // Regular chat response
-          final response = await LocalAIService.getChatCompletion(
-            text,
-            'You are a knowledgeable PC hardware assistant. Provide detailed, accurate information about computer components and PC building. Include specific technical details, performance metrics, and practical advice. Use a professional but accessible tone.'
-          );
-
-          _addMessage(ChatMessage(
-            text: response,
-            isUser: false,
-          ));
-        }
+        });
       } else {
         // Regular chat response
         final response = await LocalAIService.getChatCompletion(
           text,
-          'You are a knowledgeable PC hardware assistant. Provide detailed, accurate information about computer components and PC building. Include specific technical details, performance metrics, and practical advice. Use a professional but accessible tone.'
+          'You are a PC expert. Give short, clear answers. Use simple language. Keep responses under 100 words.'
         );
 
         _addMessage(ChatMessage(
@@ -251,10 +190,29 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     } catch (e) {
       print('Error in chat response: $e');
       _addMessage(ChatMessage(
-        text: 'Sorry, I encountered an error. Please try again.',
+        text: 'Error occurred. Please try again.',
         isUser: false,
       ));
     }
+  }
+
+  Future<List<String>> _getProductExplanations(List<LocalizedProduct> products, String originalRequest) async {
+    List<String> explanations = [];
+    
+    for (var product in products) {
+      try {
+        final explanation = await LocalAIService.getChatCompletion(
+          'Briefly explain ${product.name} in 2 short sentences. First: key features. Second: why it fits "$originalRequest".',
+          'You are a PC expert. Give very short, clear explanations. Use simple language. Keep it under 100 characters total.'
+        );
+        explanations.add(explanation.trim());
+      } catch (e) {
+        print('Error getting explanation for ${product.name}: $e');
+        explanations.add('A reliable component that meets your requirements.');
+      }
+    }
+    
+    return explanations;
   }
 
   @override
@@ -464,7 +422,7 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                   return SizedBox(
                     width: 300,
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         if (starter == 'addNewProduct') {
                           _showAddProductDialog();
                         } else if (starter == 'iNeedAssistance') {
@@ -472,8 +430,61 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                         } else if (starter == 'updateProduct') {
                           _showProductSearchDialog();
                         } else {
-                          _messageController.text = localizedText;
-                          _handleSubmitted(localizedText);
+                          // Handle recommendation starters
+                          setState(() {
+                            _isTyping = true;
+                          });
+
+                          try {
+                            // Get recommendations based on the starter
+                            Map<String, String> preferences = {
+                              'use_case': starter == 'lookingForGamingPC' ? 'gaming' : 'general',
+                              'cpu_brand': '',
+                            };
+
+                            final recommendations = await _getProductRecommendations(localizedText, preferences);
+                            
+                            if (!mounted) return;
+                            setState(() {
+                              _isTyping = false;
+                              if (recommendations.isNotEmpty) {
+                                // Get AI explanations for each product
+                                _getProductExplanations(recommendations, localizedText).then((explanations) {
+                                  if (!mounted) return;
+                                  setState(() {
+                                    String recommendationText = 'Recommended components:\n\n';
+                                    for (var i = 0; i < recommendations.length; i++) {
+                                      final product = recommendations[i];
+                                      final explanation = explanations[i];
+                                      recommendationText += '• ${product.name}\n';
+                                      recommendationText += '  ${explanation}\n\n';
+                                    }
+
+                                    _messages.add(ChatMessage(
+                                      text: recommendationText,
+                                      isUser: false,
+                                      recommendedProducts: recommendations,
+                                    ));
+                                  });
+                                });
+                              } else {
+                                _messages.add(ChatMessage(
+                                  text: 'No suitable components found. Please try a different request.',
+                                  isUser: false,
+                                ));
+                              }
+                            });
+                          } catch (e) {
+                            print('Error getting recommendations: $e');
+                            if (!mounted) return;
+                            setState(() {
+                              _isTyping = false;
+                              _messages.add(ChatMessage(
+                                text: 'Error occurred. Please try again.',
+                                isUser: false,
+                              ));
+                            });
+                          }
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -574,11 +585,6 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : Colors.red;
 
-    // Clean up any code formatting from the response
-    String cleanText = message.text.replaceAll(RegExp(r'```[\w]*\n|```'), '')
-                                  .replaceAll(RegExp(r'\*[\w]*\n'), '')
-                                  .trim();
-  
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
@@ -613,35 +619,13 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                       bottomRight: Radius.circular(20),
                     ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        cleanText,
-                        style: TextStyle(
-                          color: message.isUser 
-                            ? Colors.white 
-                            : (isDark ? Colors.white70 : Colors.black87),
-                        ),
-                      ),
-                      if (message.recommendedProducts != null && message.recommendedProducts!.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12.0),
-                          child: ElevatedButton.icon(
-                            onPressed: () => _showAddToCartDialog(message.recommendedProducts!),
-                            icon: Icon(Icons.shopping_cart, color: Colors.white),
-                            label: Text('Add All to Cart'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: themeColor,
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
+                  child: Text(
+                    message.text,
+                    style: TextStyle(
+                      color: message.isUser 
+                        ? Colors.white 
+                        : (isDark ? Colors.white70 : Colors.black87),
+                    ),
                   ),
                 ),
               ),
@@ -657,14 +641,30 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
               ],
             ],
           ),
-          // Add recommendation cards if available
           if (message.recommendedProducts != null && message.recommendedProducts!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: Column(
-                children: message.recommendedProducts!.map((product) => 
-                  _buildRecommendationCard(product)
-                ).toList(),
+                children: [
+                  // Add "Add All to Cart" button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: ElevatedButton.icon(
+                      onPressed: () => _addAllToCart(message.recommendedProducts!),
+                      icon: Icon(Icons.shopping_cart),
+                      label: Text('Add All to Cart'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: themeColor,
+                        foregroundColor: Colors.white,
+                        minimumSize: Size(double.infinity, 45),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  ...message.recommendedProducts!.map((product) => 
+                    _buildRecommendationCard(product)
+                  ).toList(),
+                ],
               ),
             ),
         ],
@@ -679,6 +679,17 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : Colors.red;
 
+    void navigateToProductDetail() {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProductDetailPage(
+            productId: product.id,
+          ),
+        ),
+      );
+    }
+
     return Card(
       margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       color: isDark ? Colors.grey.shade800 : Colors.white,
@@ -690,18 +701,22 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    product.imageUrl,
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
+                // Make the image clickable
+                GestureDetector(
+                  onTap: navigateToProductDetail,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      product.imageUrl,
                       width: 80,
                       height: 80,
-                      color: Colors.grey.shade300,
-                      child: Icon(Icons.image_not_supported),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        width: 80,
+                        height: 80,
+                        color: Colors.grey.shade300,
+                        child: Icon(Icons.image_not_supported),
+                      ),
                     ),
                   ),
                 ),
@@ -710,12 +725,16 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        product.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: isDark ? Colors.white : Colors.black87,
+                      // Make the product name clickable
+                      GestureDetector(
+                        onTap: navigateToProductDetail,
+                        child: Text(
+                          product.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
                         ),
                       ),
                       SizedBox(height: 4),
@@ -1178,6 +1197,15 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
 
       print('Starting product recommendations search with preferences: $preferences');
 
+      // Extract CPU brand preference from message if not already set
+      if (preferences['cpu_brand'] == null || preferences['cpu_brand']!.isEmpty) {
+        if (message.toLowerCase().contains('amd')) {
+          preferences['cpu_brand'] = 'amd';
+        } else if (message.toLowerCase().contains('intel')) {
+          preferences['cpu_brand'] = 'intel';
+        }
+      }
+
       // Get all products and filter by availability
       final QuerySnapshot allProducts = await firestore
           .collection('products')
@@ -1191,100 +1219,161 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
       for (var doc in allProducts.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final category = data['category'] as String? ?? 'Unknown';
-        productsByCategory.putIfAbsent(category, () => []).add(doc);
+        // Normalize category names
+        final normalizedCategory = category.replaceAll('\'', '');
+        productsByCategory.putIfAbsent(normalizedCategory, () => []).add(doc);
       }
 
-      // CPU Selection Logic
-      if (productsByCategory.containsKey('CPU\'s')) {
-        var cpus = productsByCategory['CPU\'s']!;
-
-        // Filter by brand if specified
-        if (preferences['cpu_brand'] != null) {
-          cpus = cpus.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final name = (data['name'] as String).toLowerCase();
-            return name.contains(preferences['cpu_brand']!.toLowerCase());
-          }).toList();
-        }
-
-        // Sort by price if it's a budget build
-        if (message.toLowerCase().contains('budget') ||
-            message.toLowerCase().contains('cheap')) {
-          cpus.sort((a, b) {
-            final priceA = (a.data() as Map<String, dynamic>)['price'] as num;
-            final priceB = (b.data() as Map<String, dynamic>)['price'] as num;
-            return priceA.compareTo(priceB);
-          });
-        }
-
-        if (cpus.isNotEmpty) {
-          recommendations.add(LocalizedProduct.fromFirestore(cpus.first));
-        }
-      }
-
-      // Only proceed with other components if we found a CPU
-      if (recommendations.isEmpty) {
-        print('No CPU found, returning empty recommendations');
-        return [];
-      }
-
-      // Get CPU brand for compatibility
-      final cpuBrand = recommendations.first.name.toLowerCase().contains('intel')
-          ? 'intel'
-          : 'amd';
-
-      // Compatible Motherboard Selection
-      if (productsByCategory.containsKey('Motherboards')) {
-        var motherboards = productsByCategory['Motherboards']!.where((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          final name = (data['name'] as String).toLowerCase();
-          return name.contains(cpuBrand);
-        }).toList();
-
-        if (motherboards.isNotEmpty) {
-          recommendations.add(LocalizedProduct.fromFirestore(motherboards[0]));
-        }
-      }
-
-      // Add other components based on use case
+      // Define required categories in order of priority
+      final requiredCategories = ['CPUs', 'Motherboards', 'GPUs', 'RAMs'];
       final isGaming = preferences['use_case'] == 'gaming';
       final isBudget = message.toLowerCase().contains('budget') ||
           message.toLowerCase().contains('cheap');
 
-      // Define required categories
-      final requiredCategories = ['RAM\'s', 'Storage', 'PSU', 'Case'];
-      if (isGaming) requiredCategories.insert(1, 'GPU\'s');
+      // First, select CPU
+      if (productsByCategory.containsKey('CPUs')) {
+        var cpus = productsByCategory['CPUs']!;
+        
+        // Filter by brand if specified
+        if (preferences['cpu_brand'] != null && preferences['cpu_brand']!.isNotEmpty) {
+          print('Filtering CPUs by brand: ${preferences['cpu_brand']}');
+          cpus = cpus.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final name = (data['name'] as String).toLowerCase();
+            final brand = preferences['cpu_brand']!.toLowerCase();
+            return name.contains(brand);
+          }).toList();
+          print('Found ${cpus.length} CPUs for brand ${preferences['cpu_brand']}');
+        }
 
-      for (final category in requiredCategories) {
+        // Sort CPUs based on requirements
+        cpus.sort((a, b) {
+          final priceA = (a.data() as Map<String, dynamic>)['price'] as num;
+          final priceB = (b.data() as Map<String, dynamic>)['price'] as num;
+          
+          if (isBudget) {
+            return priceA.compareTo(priceB);
+          } else if (isGaming) {
+            return priceB.compareTo(priceA);
+          } else {
+            return priceA.compareTo(priceB);
+          }
+        });
+
+        if (cpus.isNotEmpty) {
+          recommendations.add(LocalizedProduct.fromFirestore(cpus.first));
+          final cpuData = cpus.first.data() as Map<String, dynamic>;
+          print('Selected CPU: ${cpuData['name']}');
+        } else {
+          print('No CPUs found matching criteria');
+          return [];
+        }
+      }
+
+      // Process remaining categories
+      for (final category in requiredCategories.skip(1)) { // Skip CPU as it's already processed
         if (!productsByCategory.containsKey(category)) {
           print('Category not found: $category');
           continue;
         }
 
         var products = productsByCategory[category]!;
+        print('Processing category: $category with ${products.length} products');
 
-        // Sort by price for budget builds
-        if (isBudget) {
-          products.sort((a, b) {
-            final priceA = (a.data() as Map<String, dynamic>)['price'] as num;
-            final priceB = (b.data() as Map<String, dynamic>)['price'] as num;
+        // Sort products based on requirements
+        products.sort((a, b) {
+          final priceA = (a.data() as Map<String, dynamic>)['price'] as num;
+          final priceB = (b.data() as Map<String, dynamic>)['price'] as num;
+          
+          if (isBudget) {
             return priceA.compareTo(priceB);
-          });
+          } else if (isGaming) {
+            return priceB.compareTo(priceA);
+          } else {
+            return priceA.compareTo(priceB);
+          }
+        });
+
+        // Special handling for specific categories
+        if (category == 'Motherboards') {
+          // For gaming builds, prioritize higher-end motherboards
+          if (isGaming) {
+            products = products.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final name = (data['name'] as String).toLowerCase();
+              return name.contains('z') || name.contains('x') || name.contains('b');
+            }).toList();
+          }
         }
 
-        // Special handling for gaming GPUs
-        if (category == 'GPU\'s' && isGaming && !isBudget) {
-          products = products.where((doc) {
+        if (category == 'GPUs') {
+          // Always include a GPU, with gaming-specific filtering
+          if (isGaming) {
+            products = products.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final name = (data['name'] as String).toLowerCase();
+              return name.contains('rtx') || name.contains('rx') || name.contains('gtx');
+            }).toList();
+          }
+        }
+
+        if (category == 'RAMs') {
+          // Always include RAM, with gaming-specific filtering
+          if (isGaming) {
+            products = products.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final name = (data['name'] as String).toLowerCase();
+              return name.contains('16gb') || name.contains('32gb');
+            }).toList();
+          }
+        }
+
+        // Add the best matching product from this category
+        if (products.isNotEmpty) {
+          recommendations.add(LocalizedProduct.fromFirestore(products.first));
+          final productData = products.first.data() as Map<String, dynamic>;
+          print('Added ${productData['name']} from category $category');
+        } else {
+          print('No products found for category $category');
+          return [];
+        }
+      }
+
+      // Verify we have all required components
+      if (recommendations.length < requiredCategories.length) {
+        print('Warning: Could not find products for all required categories');
+        return [];
+      }
+
+      // Add PSU if available (optional component)
+      if (productsByCategory.containsKey('PSU')) {
+        var psus = productsByCategory['PSU']!;
+        
+        // Sort PSUs based on requirements
+        psus.sort((a, b) {
+          final priceA = (a.data() as Map<String, dynamic>)['price'] as num;
+          final priceB = (b.data() as Map<String, dynamic>)['price'] as num;
+          
+          if (isBudget) {
+            return priceA.compareTo(priceB);
+          } else if (isGaming) {
+            return priceB.compareTo(priceA);
+          } else {
+            return priceA.compareTo(priceB);
+          }
+        });
+
+        // For gaming builds, ensure we get a higher wattage PSU
+        if (isGaming) {
+          psus = psus.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
-            final price = (data['price'] as num).toDouble();
             final name = (data['name'] as String).toLowerCase();
-            // Check for gaming GPUs (RTX series or high-end AMD)
-            return price >= 300 && (name.contains('rtx') || name.contains('rx'));
+            return name.contains('750w') || name.contains('850w') || name.contains('1000w');
           }).toList();
         }
 
-        if (products.isNotEmpty) {
-          recommendations.add(LocalizedProduct.fromFirestore(products.first));
+        if (psus.isNotEmpty) {
+          recommendations.add(LocalizedProduct.fromFirestore(psus.first));
         }
       }
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:engineering_project/assets/AI/ngrok_config.dart';
+import 'package:engineering_project/assets/AI/local_ai_config.dart';
 
 class AISettingsPage extends StatefulWidget {
   const AISettingsPage({super.key});
@@ -21,10 +21,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   Future<void> _loadNgrokUrl() async {
     try {
-      final url = await NgrokConfig.getNgrokUrl();
+      final url = await LocalAIConfig.getBaseUrl();
       if (mounted) {
         setState(() {
-          _ngrokController.text = url ?? '';
+          _ngrokController.text = url;
           _isLoading = false;
         });
       }
@@ -42,16 +42,16 @@ class _AISettingsPageState extends State<AISettingsPage> {
     final url = _ngrokController.text.trim();
     
     if (url.isEmpty) {
-      await NgrokConfig.clearNgrokUrl();
+      await LocalAIConfig.clearNgrokUrl();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Using local AI server')),
+          const SnackBar(content: Text('Using remote AI server')),
         );
       }
       return;
     }
 
-    if (!NgrokConfig.isValidNgrokUrl(url)) {
+    if (!LocalAIConfig.isValidNgrokUrl(url)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -64,7 +64,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
     }
 
     try {
-      await NgrokConfig.setNgrokUrl(url);
+      await LocalAIConfig.setNgrokUrl(url);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Settings saved successfully')),
@@ -105,19 +105,27 @@ class _AISettingsPageState extends State<AISettingsPage> {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('How to Use ngrok'),
+                  title: const Text('How to Set Up Remote AI Access'),
                   content: const SingleChildScrollView(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text('Option 1: Using ngrok (Recommended)'),
                         Text('1. Install ngrok on your computer'),
                         Text('2. Start your local AI server (LM Studio)'),
                         Text('3. Run: ngrok http 1234'),
                         Text('4. Copy the https URL from ngrok'),
                         Text('5. Paste it here and save'),
                         SizedBox(height: 16),
-                        Text('Note: The ngrok URL changes each time you restart ngrok. You\'ll need to update it here when that happens.'),
+                        Text('Option 2: Using loca.lt'),
+                        Text('1. Install loca.lt on your computer'),
+                        Text('2. Start your local AI server (LM Studio)'),
+                        Text('3. Run: loca.lt 1234'),
+                        Text('4. Copy the https URL from loca.lt'),
+                        Text('5. Paste it here and save'),
+                        SizedBox(height: 16),
+                        Text('Note: The URL changes each time you restart the tunnel. You\'ll need to update it here when that happens.'),
                       ],
                     ),
                   ),
@@ -156,7 +164,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Leave empty to use local server (localhost:1234)',
+              'Leave empty to use remote server',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey,
@@ -170,11 +178,11 @@ class _AISettingsPageState extends State<AISettingsPage> {
             const SizedBox(height: 16),
             OutlinedButton(
               onPressed: () async {
-                await NgrokConfig.clearNgrokUrl();
+                await LocalAIConfig.clearNgrokUrl();
                 if (mounted) {
                   _ngrokController.clear();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Using local AI server')),
+                    const SnackBar(content: Text('Using remote AI server')),
                   );
                 }
               },

@@ -62,5 +62,11 @@
 	</array>
 	<key>NSFaceIDUsageDescription</key>
 	<string>We need to use Face ID to secure your wallet</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>This app needs access to local network to connect to the AI service</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_dartobservatory._tcp</string>
+	</array>
 </dict>
 </plist>

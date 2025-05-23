@@ -17,6 +17,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:engineering_project/providers/cart_provider.dart';
 import 'package:engineering_project/providers/language_provider.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:engineering_project/assets/AI/ai_settings_page.dart';
 
 const String _kSpecialModeActiveKey = 'special_mode_active';
 const String _kSpecialThemeKey = 'special_theme';

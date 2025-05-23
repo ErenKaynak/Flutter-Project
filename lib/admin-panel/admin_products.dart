@@ -86,22 +86,14 @@ class _AdminProductsState extends State<AdminProducts> {
   Future<String> _generateDescription(String productName, String category, String language) async {
     try {
       // Simplified prompt structure for English
-      String basePrompt = '''Generate a concise technical description for this computer component:
-Product: $productName
-Category: $category
-${_getBasicSpecs(productName, category)}
-
-Requirements:
-- Keep it under 300 characters
-- Focus on key technical specifications
-- Use professional terminology
-- Include compatibility information
-- 
-- Mention key features''';
+      String basePrompt = '''Briefly explain ${productName} in 2 short sentences. First: key features. Second: why it fits "$category".''';
 
       // Add timeout handling
       final response = await Future.any([
-        LocalAIService.getChatCompletion(basePrompt, 'You are a technical writer.'),
+        LocalAIService.getChatCompletion(
+          basePrompt,
+          'You are a PC expert. Give very short, clear explanations. Use simple language. Keep it under 100 characters total.'
+        ),
         Future.delayed(const Duration(seconds: 15)).then((_) => throw TimeoutException('Description generation timed out')),
       ]);
 
@@ -116,17 +108,20 @@ Requirements:
       String translationPrompt = '';
       switch (language) {
         case 'tr':
-          translationPrompt = 'Translate this technical description to Turkish (Türkçe). Maintain technical accuracy and proper Turkish grammar:\n\n$englishDescription';
+          translationPrompt = 'Translate this product description to Turkish: "$englishDescription". Only provide the Turkish translation, no explanations.';
           break;
         case 'ar':
-          translationPrompt = 'Translate this technical description to Arabic (العربية). Maintain technical accuracy and proper Arabic grammar:\n\n$englishDescription';
+          translationPrompt = 'Translate this product description to Arabic: "$englishDescription". Only provide the Arabic translation, no explanations.';
           break;
         default:
           return englishDescription;
       }
 
       final translatedResponse = await Future.any([
-        LocalAIService.getChatCompletion(translationPrompt, 'You are a professional translator specializing in technical content.'),
+        LocalAIService.getChatCompletion(
+          translationPrompt,
+          'You are a professional translator. Translate the given product description. Keep the same tone and style. Keep it under 100 characters. Only provide the translation, no additional text.'
+        ),
         Future.delayed(const Duration(seconds: 15)).then((_) => throw TimeoutException('Translation timed out')),
       ]);
 
