@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Add this import
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:engineering_project/assets/components/email_service.dart';
 
 class AuthService {
   // Sign in with Google
@@ -142,6 +143,18 @@ class AuthService {
         'balance': 0.0,
         'created_at': FieldValue.serverTimestamp(),
       });
+
+      // Send welcome email
+      try {
+        await EmailService.sendWelcomeEmail(
+          userEmail: email,
+          userName: userData['name']?.toString() ?? 'User',
+          userId: user.uid,
+        );
+      } catch (e) {
+        print('Error sending welcome email: $e');
+        // Don't throw the error as the account was already created successfully
+      }
     } else {
       // Update existing user document
       await userDoc.update(userData);

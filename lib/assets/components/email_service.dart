@@ -1,0 +1,594 @@
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class EmailService {
+  // Railway backend URL
+  static const String _baseUrl = 'https://email-backend-production-8783.up.railway.app';
+
+  // Generate HTML receipt template
+  static String _generateReceiptTemplate({
+    required String customerName,
+    required String orderNumber,
+    required List<Map<String, dynamic>> items,
+    required double totalAmount,
+    required DateTime orderDate,
+    required String shippingAddress,
+  }) {
+    final currencyFormat = NumberFormat.currency(symbol: '₺');
+    final dateFormat = DateFormat('MMMM dd, yyyy');
+    
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          margin: 0;
+          padding: 0;
+        }
+        .container {
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 20px;
+        }
+        .header {
+          background: linear-gradient(135deg, #ff4b4b 0%, #ff7676 100%);
+          color: white;
+          padding: 30px;
+          text-align: center;
+          border-radius: 10px 10px 0 0;
+        }
+        .content {
+          background: #ffffff;
+          padding: 30px;
+          border: 1px solid #e0e0e0;
+          border-radius: 0 0 10px 10px;
+        }
+        .order-info {
+          margin-bottom: 30px;
+        }
+        .items-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 20px 0;
+        }
+        .items-table th, .items-table td {
+          padding: 12px;
+          text-align: left;
+          border-bottom: 1px solid #e0e0e0;
+        }
+        .items-table th {
+          background-color: #f8f9fa;
+          font-weight: 600;
+        }
+        .total {
+          text-align: right;
+          font-size: 1.2em;
+          font-weight: bold;
+          margin-top: 20px;
+        }
+        .footer {
+          text-align: center;
+          margin-top: 30px;
+          color: #666;
+          font-size: 0.9em;
+        }
+        .button {
+          display: inline-block;
+          padding: 12px 24px;
+          background: linear-gradient(135deg, #ff4b4b 0%, #ff7676 100%);
+          color: white;
+          text-decoration: none;
+          border-radius: 5px;
+          margin-top: 20px;
+        }
+        .logo-circle {
+          background: #fff;
+          border-radius: 50%;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+          width: 80px;
+          height: 80px;
+          background-image: url('https://i.imgur.com/Chg9qcf.png');
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin: 0 auto 12px auto;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div style="text-align:center; margin-bottom: 20px;">
+          <img src="https://i.imgur.com/Chg9qcf.png" alt="Logo" style="height: 60px;">
+        </div>
+        <div class="header">
+          <div class="logo-circle"></div>
+          <h1>Siparişiniz İçin Teşekkürler!</h1>
+          <p>Sipariş Onayı</p>
+        </div>
+        <div class="content">
+          <div class="order-info">
+            <h2>Sipariş Detayları</h2>
+            <p><strong>Sipariş Numarası:</strong> $orderNumber</p>
+            <p><strong>Tarih:</strong> ${dateFormat.format(orderDate)}</p>
+            <p><strong>Müşteri:</strong> $customerName</p>
+            <p><strong>Teslimat Adresi:</strong> $shippingAddress</p>
+          </div>
+          
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Ürün</th>
+                <th>Adet</th>
+                <th>Fiyat</th>
+                <th>Toplam</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map((item) => '''
+                <tr>
+                  <td>${item['name']}</td>
+                  <td>${item['quantity']}</td>
+                  <td>${currencyFormat.format(item['price'])}</td>
+                  <td>${currencyFormat.format(item['price'] * item['quantity'])}</td>
+                </tr>
+              ''').join('')}
+            </tbody>
+          </table>
+          
+          <div class="total">
+            <p>Toplam Tutar: ${currencyFormat.format(totalAmount)}</p>
+          </div>
+          
+          <div style="text-align: center;">
+            <a href="#" class="button">Sipariş Durumunu Görüntüle</a>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p>Sorularınız için destek ekibimizle iletişime geçebilirsiniz.</p>
+          <p>© 2024 Paradise PC Components. Tüm hakları saklıdır.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    ''';
+  }
+
+  // Send receipt email
+  static Future<void> sendReceipt({
+    required String customerEmail,
+    required String customerName,
+    required String orderNumber,
+    required List<Map<String, dynamic>> items,
+    required double totalAmount,
+    required DateTime orderDate,
+    required String shippingAddress,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/send-email'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'customerEmail': customerEmail,
+          'customerName': customerName,
+          'orderNumber': orderNumber,
+          'items': items,
+          'totalAmount': totalAmount,
+          'orderDate': orderDate.toIso8601String(),
+          'shippingAddress': shippingAddress,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to send email: ${response.body}');
+      }
+
+      print('Email sent successfully: ${response.body}');
+    } catch (e) {
+      print('Error sending email: $e');
+      // Don't throw the error as the order was already placed successfully
+    }
+  }
+
+  // Generate welcome email template
+  static String _generateWelcomeTemplate({
+    required String userName,
+    required String verificationToken,
+  }) {
+    final verificationUrl = '$_baseUrl/api/verify-email?token=$verificationToken';
+    
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          margin: 0;
+          padding: 0;
+        }
+        .container {
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 20px;
+        }
+        .header {
+          background: linear-gradient(135deg, #ff4b4b 0%, #ff7676 100%);
+          color: white;
+          padding: 30px;
+          text-align: center;
+          border-radius: 10px 10px 0 0;
+        }
+        .content {
+          background: #ffffff;
+          padding: 30px;
+          border: 1px solid #e0e0e0;
+          border-radius: 0 0 10px 10px;
+        }
+        .welcome-message {
+          margin-bottom: 30px;
+        }
+        .features {
+          margin: 30px 0;
+        }
+        .feature-item {
+          margin: 15px 0;
+          padding-left: 25px;
+          position: relative;
+        }
+        .feature-item:before {
+          content: "✓";
+          color: #ff4b4b;
+          position: absolute;
+          left: 0;
+          font-weight: bold;
+        }
+        .button {
+          display: inline-block;
+          padding: 12px 24px;
+          background: linear-gradient(135deg, #ff4b4b 0%, #ff7676 100%);
+          color: white;
+          text-decoration: none;
+          border-radius: 5px;
+          margin-top: 20px;
+        }
+        .verify-button {
+          display: inline-block;
+          padding: 12px 24px;
+          background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+          color: white;
+          text-decoration: none;
+          border-radius: 5px;
+          margin: 20px 0;
+        }
+        .footer {
+          text-align: center;
+          margin-top: 30px;
+          color: #666;
+          font-size: 0.9em;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div style="text-align:center; margin-bottom: 20px;">
+          <img src="https://i.imgur.com/Chg9qcf.png" alt="Logo" style="height: 60px;">
+        </div>
+        <div class="header">
+          <div class="logo-circle"></div>
+          <h1>Welcome to Paradise PC Components!</h1>
+          <p>Your Account Has Been Created Successfully</p>
+        </div>
+        <div class="content">
+          <div class="welcome-message">
+            <h2>Hello $userName,</h2>
+            <p>Thank you for joining Paradise PC Components! We're excited to have you on board.</p>
+            <p>Your account has been successfully created and you can now access all our features.</p>
+          </div>
+          
+          <div style="text-align: center;">
+            <a href="$verificationUrl" class="verify-button">Verify Your Email</a>
+          </div>
+          
+          <div class="features">
+            <h3>What you can do now:</h3>
+            <div class="feature-item">Browse our extensive product catalog</div>
+            <div class="feature-item">Place orders with secure payment options</div>
+            <div class="feature-item">Track your orders in real-time</div>
+            <div class="feature-item">Manage your profile and preferences</div>
+          </div>
+          
+          <div style="text-align: center;">
+            <a href="#" class="button">Start Shopping Now</a>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p>If you have any questions, our support team is here to help.</p>
+          <p>© 2024 Paradise PC Components. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    ''';
+  }
+
+  // Send welcome email
+  static Future<void> sendWelcomeEmail({
+    required String userEmail,
+    required String userName,
+    required String userId,
+  }) async {
+    try {
+      // Generate a verification token
+      final verificationToken = DateTime.now().millisecondsSinceEpoch.toString() + userId;
+      
+      // Store the verification token in Firestore
+      await FirebaseFirestore.instance
+          .collection('emailVerifications')
+          .doc(userId)
+          .set({
+            'token': verificationToken,
+            'email': userEmail,
+            'createdAt': FieldValue.serverTimestamp(),
+            'verified': false,
+          });
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/send-email'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'customerEmail': userEmail,
+          'customerName': userName,
+          'subject': 'Welcome to Paradise PC Components!',
+          'htmlContent': _generateWelcomeTemplate(
+            userName: userName,
+            verificationToken: verificationToken,
+          ),
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to send welcome email: ${response.body}');
+      }
+
+      print('Welcome email sent successfully: ${response.body}');
+    } catch (e) {
+      print('Error sending welcome email: $e');
+      // Don't throw the error as the account was already created successfully
+    }
+  }
+
+  // Verify email
+  static Future<bool> verifyEmail(String token) async {
+    try {
+      // Find the verification document
+      final verificationQuery = await FirebaseFirestore.instance
+          .collection('emailVerifications')
+          .where('token', isEqualTo: token)
+          .get();
+
+      if (verificationQuery.docs.isEmpty) {
+        return false;
+      }
+
+      final verificationDoc = verificationQuery.docs.first;
+      final userId = verificationDoc.id;
+      final verificationData = verificationDoc.data();
+
+      // Check if already verified
+      if (verificationData['verified'] == true) {
+        return true;
+      }
+
+      // Update user document
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .update({
+            'emailVerified': true,
+            'verifiedAt': FieldValue.serverTimestamp(),
+          });
+
+      // Update verification document
+      await verificationDoc.reference.update({
+        'verified': true,
+        'verifiedAt': FieldValue.serverTimestamp(),
+      });
+
+      return true;
+    } catch (e) {
+      print('Error verifying email: $e');
+      return false;
+    }
+  }
+
+  // Generate verification email template
+  static String _generateVerificationTemplate({
+    required String userName,
+    required String verificationLink,
+  }) {
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          margin: 0;
+          padding: 0;
+        }
+        .container {
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 20px;
+        }
+        .header {
+          background: linear-gradient(135deg, #ff4b4b 0%, #ff7676 100%);
+          color: white;
+          padding: 30px;
+          text-align: center;
+          border-radius: 10px 10px 0 0;
+        }
+        .content {
+          background: #ffffff;
+          padding: 30px;
+          border: 1px solid #e0e0e0;
+          border-radius: 0 0 10px 10px;
+        }
+        .verification-message {
+          margin-bottom: 30px;
+          text-align: center;
+        }
+        .verify-button {
+          display: inline-block;
+          padding: 12px 24px;
+          background: linear-gradient(135deg, #ff4b4b 0%, #ff7676 100%);
+          color: white;
+          text-decoration: none;
+          border-radius: 5px;
+          margin: 20px 0;
+          font-weight: bold;
+        }
+        .steps {
+          margin: 30px 0;
+          padding: 0;
+          list-style: none;
+        }
+        .step {
+          margin: 15px 0;
+          padding-left: 25px;
+          position: relative;
+        }
+        .step:before {
+          content: "✓";
+          color: #ff4b4b;
+          position: absolute;
+          left: 0;
+          font-weight: bold;
+        }
+        .footer {
+          text-align: center;
+          margin-top: 30px;
+          color: #666;
+          font-size: 0.9em;
+        }
+        .expiry-notice {
+          background: #fff3cd;
+          color: #856404;
+          padding: 15px;
+          border-radius: 5px;
+          margin: 20px 0;
+          text-align: center;
+        }
+        .manual-link {
+          word-break: break-all;
+          color: #666;
+          font-size: 0.9em;
+          margin-top: 20px;
+          text-align: center;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div style="text-align:center; margin-bottom: 20px;">
+          <img src="https://i.imgur.com/Chg9qcf.png" alt="Logo" style="height: 60px;">
+        </div>
+        <div class="header">
+          <div class="logo-circle"></div>
+          <h1>Verify Your Email</h1>
+          <p>Paradise PC Components</p>
+        </div>
+        <div class="content">
+          <div class="verification-message">
+            <h2>Hello $userName,</h2>
+            <p>Thank you for registering with Paradise PC Components! To complete your registration and access all features, please verify your email address.</p>
+          </div>
+          
+          <div style="text-align: center;">
+            <a href="$verificationLink" class="verify-button">Verify Email Address</a>
+          </div>
+          
+          <div class="expiry-notice">
+            This verification link will expire in 24 hours.
+          </div>
+          
+          <div class="manual-link">
+            If the button above doesn't work, copy and paste this link into your browser:<br>
+            <a href="$verificationLink">$verificationLink</a>
+          </div>
+          
+          <div class="steps">
+            <h3>After verification, you can:</h3>
+            <div class="step">Access your personalized dashboard</div>
+            <div class="step">Browse our product catalog</div>
+            <div class="step">Make secure purchases</div>
+            <div class="step">Track your orders</div>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p>If you didn't create an account, you can safely ignore this email.</p>
+          <p>© 2024 Paradise PC Components. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    ''';
+  }
+
+  // Send verification email
+  static Future<void> sendVerificationEmail({
+    required String userEmail,
+    required String userName,
+    required String verificationLink,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/send-email'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'customerEmail': userEmail,
+          'customerName': userName,
+          'subject': 'Verify Your Email - Paradise PC Components',
+          'htmlContent': _generateVerificationTemplate(
+            userName: userName,
+            verificationLink: verificationLink,
+          ),
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to send verification email: ${response.body}');
+      }
+
+      print('Verification email sent successfully: ${response.body}');
+    } catch (e) {
+      print('Error sending verification email: $e');
+      throw Exception('Failed to send verification email: $e');
+    }
+  }
+} 

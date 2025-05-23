@@ -15,7 +15,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class LoginPage extends StatefulWidget {
-  LoginPage({super.key});
+  final String? preFilledEmail;
+  
+  LoginPage({super.key, this.preFilledEmail});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -43,6 +45,12 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       duration: const Duration(milliseconds: 300),
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_animationController);
+    
+    // Set pre-filled email if provided
+    if (widget.preFilledEmail != null) {
+      emailController.text = widget.preFilledEmail!;
+      _checkPasswordlessSetting();
+    }
   }
 
   Future<void> _checkPasswordlessSetting() async {
@@ -196,6 +204,17 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
       final user = credential.user;
       if (user != null) {
+        // Check if email is verified
+        if (!user.emailVerified) {
+          if (context.mounted) {
+            Navigator.of(context).pop(); // Pop loading dialog
+            setState(() {
+              emailError = "Please verify your email before logging in. Check your inbox for the verification link.";
+            });
+            return;
+          }
+        }
+
         // Save user data
         await _saveUserToFirestore(user);
 

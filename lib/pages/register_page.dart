@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:engineering_project/assets/components/email_service.dart';
 
 class RegisterPage extends StatefulWidget {
   RegisterPage({super.key});
@@ -155,6 +156,25 @@ class _RegisterPageState extends State<RegisterPage> {
 
       final uid = userCredential.user?.uid;
       if (uid != null) {
+        // Generate a verification token
+        final verificationToken = DateTime.now().millisecondsSinceEpoch.toString() + uid;
+        await FirebaseFirestore.instance
+            .collection('emailVerifications')
+            .doc(uid)
+            .set({
+              'token': verificationToken,
+              'email': emailController.text.trim(),
+              'createdAt': FieldValue.serverTimestamp(),
+              'verified': false,
+            });
+
+        // Send custom verification email using EmailService
+        await EmailService.sendVerificationEmail(
+          userEmail: emailController.text.trim(),
+          userName: nameController.text.trim(),
+          verificationLink: 'https://email-backend-production-8783.up.railway.app/api/verify-email?token=$verificationToken',
+        );
+
         // Generate unique referral code for new user
         String referralCode = _generateReferralCode();
 
@@ -228,7 +248,9 @@ class _RegisterPageState extends State<RegisterPage> {
       if (context.mounted) Navigator.pop(context);
       if (context.mounted) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const RootScreen()),
+          MaterialPageRoute(
+            builder: (context) => LoginPage(preFilledEmail: emailController.text.trim()),
+          ),
           (Route<dynamic> route) => false,
         );
       }

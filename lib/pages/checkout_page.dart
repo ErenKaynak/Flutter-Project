@@ -9,6 +9,7 @@ import 'package:engineering_project/pages/cart_page.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:engineering_project/assets/components/email_service.dart';
 
 class CheckoutPage extends StatefulWidget {
   final double subtotal;
@@ -530,6 +531,26 @@ class _CheckoutPageState extends State<CheckoutPage> {
         }
 
         await batch.commit();
+
+        // Send email receipt
+        try {
+          await EmailService.sendReceipt(
+            customerEmail: user.email ?? '',
+            customerName: '${_selectedAddress!['firstName']} ${_selectedAddress!['lastName']}',
+            orderNumber: orderRef.id.substring(0, 8),
+            items: widget.items.map((item) => {
+              'name': item.name,
+              'quantity': item.quantity,
+              'price': double.parse(item.price),
+            }).toList(),
+            totalAmount: total,
+            orderDate: DateTime.now(),
+            shippingAddress: _selectedAddress!['fullAddress'],
+          );
+        } catch (e) {
+          print('Error sending email receipt: $e');
+          // Don't throw the error as the order was already placed successfully
+        }
 
         final cartManager = CartManager();
         await cartManager.clearCart();
