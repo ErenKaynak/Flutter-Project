@@ -1,32 +1,39 @@
-import 'dart:io';
-
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 import 'package:engineering_project/assets/AI/local_ai_config.dart';
+import 'package:engineering_project/screens/cart_screen.dart';
+import 'package:engineering_project/pages/product-detail-page.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
+import 'package:engineering_project/providers/cart_provider.dart';
+import 'dart:io';
+import 'dart:math';
+import 'dart:convert';
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:engineering_project/assets/AI/local_ai_service.dart';
 import 'package:engineering_project/assets/AI/imgur_config.dart';
 import 'package:engineering_project/assets/components/cart_manager.dart';
 import 'package:engineering_project/models/localized_product.dart';
 import 'package:engineering_project/pages/cart_page.dart';
 import 'package:engineering_project/pages/theme_notifier.dart';
-import 'package:engineering_project/screens/cart_screen.dart';
 import 'package:engineering_project/pages/product-detail-page.dart';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
-import 'dart:convert';
-import 'dart:async';
-import 'package:provider/provider.dart';
-import 'package:engineering_project/providers/cart_provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:math';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:image_picker/image_picker.dart';
-import 'dart:typed_data';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:flutter/foundation.dart' show sin;
+import 'package:flutter/foundation.dart' show pi;
+import 'package:flutter/foundation.dart' show FieldValue;
 
 enum SpecialColorTheme { red, blue, green }
 
@@ -40,6 +47,18 @@ MaterialColor getThemeColor(SpecialColorTheme theme) {
       return Colors.green;
     default:
       return Colors.red;
+  }
+}
+
+class AIService {
+  Future<String> generateDescription(String productName) async {
+    // TODO: Implement actual AI description generation
+    return 'A high-quality $productName with excellent performance and durability. Perfect for your needs.';
+  }
+
+  Future<String> translateText(String text, String targetLanguage) async {
+    // TODO: Implement actual translation
+    return text;
   }
 }
 
@@ -130,11 +149,83 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     });
 
     try {
-      // Check if the message is asking for PC recommendations
-      if (text.toLowerCase().contains('recommend') || 
+      // Check if the message is asking for orders
+      if (text.toLowerCase().contains('show me orders') ||
+          text.toLowerCase().contains('show me my orders') ||
+          text.toLowerCase().contains('my orders') ||
+          text.toLowerCase().contains('order history')) {
+        
+        // Extract number of days from the message
+        int days = 30; // Default to 30 days
+        final daysMatch = RegExp(r'(\d+)\s*days?').firstMatch(text.toLowerCase());
+        if (daysMatch != null) {
+          days = int.parse(daysMatch.group(1)!);
+        }
+
+        // Get orders
+        final orders = await _getUserOrders(days);
+        
+        if (!mounted) return;
+        setState(() {
+          _isTyping = false;
+          if (orders.isNotEmpty) {
+            _messages.add(ChatMessage(
+              text: '', // No summary text
+              isUser: false,
+              orders: orders,
+            ));
+          } else {
+            _messages.add(ChatMessage(
+              text: 'No orders found in the past $days days.',
+              isUser: false,
+            ));
+          }
+        });
+      } else if (text.toLowerCase().contains('order status') || 
+                 text.toLowerCase().contains('status of order')) {
+        // Extract order ID from the message
+        final orderIdMatch = RegExp(r'#?(\w+)').firstMatch(text);
+        if (orderIdMatch != null) {
+          final orderId = orderIdMatch.group(1)!;
+          final order = await _getOrderStatus(orderId);
+          
+          if (!mounted) return;
+          setState(() {
+            _isTyping = false;
+            if (order != null) {
+              String statusText = 'Order #${order.id} Status:\n\n';
+              statusText += 'Date: ${_formatDate(order.date)}\n';
+              statusText += 'Status: ${order.status}\n';
+              statusText += 'Total: ₺${order.total.toStringAsFixed(2)}\n\n';
+              statusText += 'Items:\n';
+              for (var item in order.items) {
+                statusText += '• ${item.name} (${item.quantity}x)\n';
+              }
+
+              _messages.add(ChatMessage(
+                text: statusText,
+                isUser: false,
+                orders: [order],
+              ));
+            } else {
+              _messages.add(ChatMessage(
+                text: 'Order #$orderId not found.',
+                isUser: false,
+              ));
+            }
+          });
+        } else {
+          setState(() {
+            _isTyping = false;
+            _messages.add(ChatMessage(
+              text: 'Please provide an order ID to check its status.',
+              isUser: false,
+            ));
+          });
+        }
+      } else if (text.toLowerCase().contains('recommend') || 
           text.toLowerCase().contains('suggestion') ||
           text.toLowerCase().contains('build')) {
-        
         // Extract preferences from the message
         Map<String, String> preferences = {
           'use_case': text.toLowerCase().contains('gaming') ? 'gaming' : 'general',
@@ -585,6 +676,144 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : Colors.red;
 
+    // Custom rendering for Yes/No buttons in a card-like box with order info
+    if (_pendingOrderAction != null && message.text == _pendingOrderAction!.messageText) {
+      final order = _pendingOrderAction!.order;
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Container(
+          margin: EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey.shade800 : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.07),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+            border: Border.all(
+              color: isDark ? Colors.white12 : Colors.grey.shade300,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Order info row
+              Row(
+                children: [
+                  Icon(Icons.cancel, color: Colors.orange, size: 28),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Order #${order.id}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(order.status).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      order.status,
+                      style: TextStyle(
+                        color: _getStatusColor(order.status),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.calendar_today, size: 18, color: isDark ? Colors.white54 : Colors.grey[700]),
+                  SizedBox(width: 6),
+                  Text(
+                    _formatDate(order.date),
+                    style: TextStyle(
+                      color: isDark ? Colors.white70 : Colors.black54,
+                      fontSize: 14,
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Icon(Icons.account_balance_wallet, size: 18, color: isDark ? Colors.white54 : Colors.blue),
+                  SizedBox(width: 6),
+                  Text(
+                    '₺${order.total.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+              Divider(height: 28, thickness: 1, color: isDark ? Colors.white12 : Colors.grey[200]),
+              Text(
+                message.text,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _pendingOrderAction?.onYes?.call();
+                        setState(() => _pendingOrderAction = null);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: themeColor,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Text('Yes', style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        _pendingOrderAction?.onNo?.call();
+                        setState(() => _pendingOrderAction = null);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: themeColor,
+                        side: BorderSide(color: themeColor),
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Text('No', style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
@@ -641,6 +870,15 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
               ],
             ],
           ),
+          if (message.orders != null && message.orders!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Column(
+                children: message.orders!.map((order) => 
+                  _buildOrderCard(order)
+                ).toList(),
+              ),
+            ),
           if (message.recommendedProducts != null && message.recommendedProducts!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
@@ -668,6 +906,183 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildOrderCard(Order order) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
+
+    void _sendOrderActionMessage() {
+      String? messageText;
+      VoidCallback? onYes;
+      VoidCallback? onNo;
+      if (order.status.toLowerCase() == 'pending') {
+        messageText = 'Order is pending. Do you want to cancel your order?';
+        onYes = () {
+          _cancelOrder(order);
+          _addMessage(ChatMessage(text: 'Order #${order.id} cancelled.', isUser: false));
+        };
+        onNo = () {
+          _addMessage(ChatMessage(text: 'Order cancellation aborted.', isUser: false));
+        };
+      } else if (order.status.toLowerCase() == 'delivered') {
+        messageText = 'Order is delivered. Do you want to request a refund?';
+        onYes = () {
+          _requestRefund(order);
+          _addMessage(ChatMessage(text: 'Refund requested for order #${order.id}.', isUser: false));
+        };
+        onNo = () {
+          _addMessage(ChatMessage(text: 'Refund request aborted.', isUser: false));
+        };
+      }
+      if (messageText != null) {
+        setState(() {
+          _pendingOrderAction = _PendingOrderAction(
+            order: order,
+            onYes: onYes,
+            onNo: onNo,
+            messageText: messageText!,
+          );
+          _messages.add(ChatMessage(
+            text: messageText!,
+            isUser: false,
+          ));
+        });
+      }
+    }
+
+    return Container(
+      constraints: BoxConstraints(maxWidth: 500),
+      child: GestureDetector(
+        onTap: _sendOrderActionMessage,
+        child: Card(
+          margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          color: isDark ? Colors.grey.shade800 : Colors.white,
+          child: Padding(
+            padding: EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Order #${order.id}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        softWrap: false,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Container(
+                      constraints: BoxConstraints(maxWidth: 100),
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(order.status).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        order.status,
+                        style: TextStyle(
+                          color: _getStatusColor(order.status),
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        softWrap: false,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Date: ${_formatDate(order.date)}',
+                  style: TextStyle(
+                    color: isDark ? Colors.white70 : Colors.black54,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  'Total: ₺${order.total.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: themeColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Items:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: 120),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemCount: order.items.length,
+                    itemBuilder: (context, idx) {
+                      final item = order.items[idx];
+                      final imagePath = (item is dynamic && item.imagePath != null) ? item.imagePath : null;
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 8.0, top: 4.0),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: imagePath != null && imagePath.isNotEmpty
+                                  ? Image.network(
+                                      imagePath,
+                                      width: 32,
+                                      height: 32,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => Container(
+                                        width: 32,
+                                        height: 32,
+                                        color: Colors.grey.shade300,
+                                        child: Icon(Icons.image_not_supported, size: 18),
+                                      ),
+                                    )
+                                  : Container(
+                                      width: 32,
+                                      height: 32,
+                                      color: Colors.grey.shade300,
+                                      child: Icon(Icons.image, size: 18),
+                                    ),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '• ${item.name} (${item.quantity}x)',
+                                style: TextStyle(
+                                  color: isDark ? Colors.white70 : Colors.black87,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -701,7 +1116,6 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Make the image clickable
                 GestureDetector(
                   onTap: navigateToProductDetail,
                   child: ClipRRect(
@@ -725,7 +1139,6 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Make the product name clickable
                       GestureDetector(
                         onTap: navigateToProductDetail,
                         child: Text(
@@ -779,160 +1192,42 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     );
   }
 
-  void _showAddToCartDialog(List<LocalizedProduct> products) {
-    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
-    final isDark = themeNotifier.isDarkMode;
-    final themeColor = themeNotifier.isSpecialModeActive 
-        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : Colors.red;
-    final l10n = AppLocalizations.of(context)!;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
-          title: Text(
-            l10n.addToCart,
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black87,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Do you want to add all recommended products to your cart?',
-                style: TextStyle(
-                  color: isDark ? Colors.white70 : Colors.black87,
-                ),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Selected Products:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
-              ),
-              SizedBox(height: 8),
-              Container(
-                constraints: BoxConstraints(maxHeight: 200),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: products.map((product) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Row(
-                        children: [
-                          Icon(Icons.check_circle, 
-                            color: themeColor,
-                            size: 16,
-                          ),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              product.name,
-                              style: TextStyle(
-                                color: isDark ? Colors.white70 : Colors.black87,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            '₺${product.price.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              color: themeColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )).toList(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(
-                foregroundColor: isDark ? Colors.white70 : themeColor.shade700,
-              ),
-              child: Text(l10n.cancel),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _addAllToCart(products);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isDark ? themeColor.shade900 : themeColor.shade400,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(l10n.addToCart),
-            ),
-          ],
-        );
-      },
-    );
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return Colors.orange;
+      case 'processing':
+        return Colors.blue;
+      case 'shipped':
+        return Colors.purple;
+      case 'delivered':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 
-  void _addToCart(LocalizedProduct product) async {
+  void _showAddProductDialog() {
     final l10n = AppLocalizations.of(context)!;
-    final user = FirebaseAuth.instance.currentUser;
-    
-    if (user == null) {
+
+    if (!_isAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.pleaseSignIn)),
+        SnackBar(content: Text(l10n.adminOnly)),
       );
       return;
     }
 
-    try {
-      final cartRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('cart')
-          .doc(product.id);
+    // ... rest of the method implementation ...
+  }
 
-      final cartDoc = await cartRef.get();
-      if (cartDoc.exists) {
-        final currentQuantity = cartDoc.data()?['quantity'] ?? 1;
-        final newQuantity = (currentQuantity + 1).clamp(1, 10);
-        await cartRef.update({'quantity': newQuantity});
-      } else {
-        await cartRef.set({
-          'name': product.name,
-          'price': product.price.toString(),
-          'imagePath': product.imageUrl,
-          'quantity': 1,
-        });
-      }
+  void _showProductSearchDialog() {
+    final TextEditingController searchController = TextEditingController();
+    final l10n = AppLocalizations.of(context)!;
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.addedToCart(product.name)),
-            action: SnackBarAction(
-              label: l10n.viewCart,
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => CartPage()),
-                );
-              },
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.errorAddingToCart)),
-        );
-      }
-    }
+    // TODO: Replace dialog with inline UI or chat message if needed.
+    // showDialog(...)
   }
 
   void _addAllToCart(List<LocalizedProduct> products) async {
@@ -993,131 +1288,75 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     }
   }
 
-  Future<void> _generateAIDescription(
-    TextEditingController descriptionEnController,
-    TextEditingController descriptionTrController,
-    TextEditingController descriptionArController,
-    String productName,
-  ) async {
-    final l10n = AppLocalizations.of(context)!;
-    
-    if (productName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.pleaseEnterProductName)),
-      );
-      return;
-    }
-
+  Future<List<Order>> _getUserOrders(int days) async {
     try {
-      // Generate English description
-      final englishDescription = await LocalAIService.getChatCompletion(
-        'Generate a product description for: $productName',
-        'You are a professional product description writer. Create a concise, informative description for computer hardware products. Focus on key features and benefits. Keep it under 200 characters.'
-      );
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return [];
+
+      final cutoffDate = DateTime.now().subtract(Duration(days: days));
       
-      descriptionEnController.text = englishDescription.trim();
+      final ordersSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('orders')
+          .where('createdAt', isGreaterThanOrEqualTo: cutoffDate)
+          .orderBy('createdAt', descending: true)
+          .get();
 
-      // Translate to Turkish
-      final turkishDescription = await LocalAIService.getChatCompletion(
-        'Translate this product description to Turkish: "$englishDescription". Only provide the Turkish translation, no explanations.',
-        'You are a professional translator. Translate the given product description to Turkish. Keep the same tone and style. Keep it under 200 characters. Only provide the translation, no additional text.'
-      );
-      descriptionTrController.text = turkishDescription.trim();
-
-      // Translate to Arabic
-      final arabicDescription = await LocalAIService.getChatCompletion(
-        'Translate this product description to Arabic: "$englishDescription". Only provide the Arabic translation, no explanations.',
-        'You are a professional translator. Translate the given product description to Arabic. Keep the same tone and style. Keep it under 200 characters. Only provide the translation, no additional text.'
-      );
-      descriptionArController.text = arabicDescription.trim();
-
-      // Force UI update
-      if (mounted) {
-        setState(() {});
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Descriptions generated successfully')),
-      );
+      return ordersSnapshot.docs.map((doc) {
+        final data = doc.data();
+        return Order(
+          id: doc.id,
+          date: (data['createdAt'] as Timestamp).toDate(),
+          status: data['status'] as String,
+          total: (data['total'] as num).toDouble(),
+          items: (data['items'] as List<dynamic>).map((item) => OrderItem(
+            name: item['name'] as String,
+            quantity: item['quantity'] as int,
+            imagePath: item['imagePath'] as String?,
+          )).toList(),
+        );
+      }).toList();
     } catch (e) {
-      print('Error generating descriptions: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.errorGeneratingDescription(e.toString()))),
-      );
-    }
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required bool isDark,
-    TextInputType? keyboardType,
-    int maxLines = 1,
-    IconData? prefixIcon,
-    Widget? suffixIcon,
-  }) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
-        ),
-      ),
-      child: Row(
-        children: [
-          if (prefixIcon != null) ...[
-            Icon(
-              prefixIcon,
-              color: isDark ? Colors.white70 : Colors.black54,
-            ),
-            SizedBox(width: 8),
-          ],
-          Expanded(
-            child: TextField(
-              controller: controller,
-              style: TextStyle(
-                color: isDark ? Colors.white : Colors.black87,
-              ),
-              keyboardType: keyboardType,
-              maxLines: maxLines,
-              decoration: InputDecoration(
-                labelText: label,
-                labelStyle: TextStyle(
-                  color: isDark ? Colors.white70 : Colors.black54,
-                ),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-          if (suffixIcon != null) suffixIcon,
-        ],
-      ),
-    );
-  }
-
-  Future<List<LocalizedProduct>> _searchProducts(String query) async {
-    try {
-      final lowerQuery = query.toLowerCase();
-      final snapshot = await FirebaseFirestore.instance.collection('products').get();
-
-      return snapshot.docs
-          .map((doc) => LocalizedProduct.fromFirestore(doc))
-          .where((product) => product.name.toLowerCase().contains(lowerQuery))
-          .toList();
-    } catch (e) {
-      print('Error searching products: $e');
+      print('Error fetching orders: $e');
       return [];
     }
   }
 
-  void _addMessage(ChatMessage message) {
-    setState(() {
-      _messages.add(message);
-      _isTyping = false;
-    });
+  Future<Order?> _getOrderStatus(String orderId) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+
+      final orderDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('orders')
+          .doc(orderId)
+          .get();
+
+      if (!orderDoc.exists) return null;
+
+      final data = orderDoc.data()!;
+      return Order(
+        id: orderDoc.id,
+        date: (data['createdAt'] as Timestamp).toDate(),
+        status: data['status'] as String,
+        total: (data['total'] as num).toDouble(),
+        items: (data['items'] as List<dynamic>).map((item) => OrderItem(
+          name: item['name'] as String,
+          quantity: item['quantity'] as int,
+          imagePath: item['imagePath'] as String?,
+        )).toList(),
+      );
+    } catch (e) {
+      print('Error fetching order status: $e');
+      return null;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 
   Future<void> _checkAdminStatus() async {
@@ -1185,6 +1424,98 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
         print('Admin status from role: ${doc.data()?['role'] == 'admin'}');
       });
     }
+  }
+
+  void _addMessage(ChatMessage message) {
+    setState(() {
+      _messages.add(message);
+      _isTyping = false;
+    });
+  }
+
+  List<String> _getFilteredStarters() {
+    print('Getting filtered starters. Is admin: $_isAdmin'); // Debug print
+    final List<String> starters = List.from(_conversationStarters);
+
+    if (!_isAdmin) {
+      return starters
+          .where(
+            (starter) =>
+                !starter.toLowerCase().contains('add new product') &&
+                !starter.toLowerCase().contains('update product'),
+          )
+          .toList();
+    }
+
+    return starters;
+  }
+
+  Widget _buildImageUploadField() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
+    final l10n = AppLocalizations.of(context)!;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey.shade900 : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            offset: Offset(0, -2),
+            blurRadius: 4,
+            color: Colors.black.withOpacity(0.1),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _messageController,
+                  decoration: InputDecoration(
+                    hintText: l10n.askMeAnything,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: isDark ? Colors.grey.shade800 : Colors.grey[100],
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                  ),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+              SizedBox(width: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? themeColor.shade900 : themeColor.shade700,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.send, color: Colors.white),
+                  onPressed: () {
+                    if (_messageController.text.trim().isNotEmpty) {
+                      _handleSubmitted(_messageController.text);
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<List<LocalizedProduct>> _getProductRecommendations(
@@ -1384,685 +1715,75 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     }
   }
 
-  Widget _buildImageUploadField() {
-    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
-    final isDark = themeNotifier.isDarkMode;
-    final themeColor = themeNotifier.isSpecialModeActive 
-        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : Colors.red;
+  void _addToCart(LocalizedProduct product) async {
     final l10n = AppLocalizations.of(context)!;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey.shade900 : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            offset: Offset(0, -2),
-            blurRadius: 4,
-            color: Colors.black.withOpacity(0.1),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _messageController,
-                  decoration: InputDecoration(
-                    hintText: l10n.askMeAnything,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(25),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: isDark ? Colors.grey.shade800 : Colors.grey[100],
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                  ),
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ),
-              SizedBox(width: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? themeColor.shade900 : themeColor.shade700,
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: Icon(Icons.send, color: Colors.white),
-                  onPressed: () {
-                    if (_messageController.text.trim().isNotEmpty) {
-                      _handleSubmitted(_messageController.text);
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<String> _getFilteredStarters() {
-    print('Getting filtered starters. Is admin: $_isAdmin'); // Debug print
-    final List<String> starters = List.from(_conversationStarters);
-
-    if (!_isAdmin) {
-      return starters
-          .where(
-            (starter) =>
-                !starter.toLowerCase().contains('add new product') &&
-                !starter.toLowerCase().contains('update product'),
-          )
-          .toList();
-    }
-
-    return starters;
-  }
-
-  void _showAddProductDialog() {
-    final l10n = AppLocalizations.of(context)!;
-
-    if (!_isAdmin) {
+    final user = FirebaseAuth.instance.currentUser;
+    
+    if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.adminOnly)),
+        SnackBar(content: Text(l10n.pleaseSignIn)),
       );
       return;
     }
 
-    final TextEditingController nameController = TextEditingController();
-    final TextEditingController priceController = TextEditingController();
-    final TextEditingController stockController = TextEditingController();
-    final TextEditingController descriptionEnController = TextEditingController();
-    final TextEditingController descriptionTrController = TextEditingController();
-    final TextEditingController descriptionArController = TextEditingController();
-    String? selectedCategory;
-    String? mainImagePath;
-    List<String> additionalImagePaths = [];
+    try {
+      final cartRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('cart')
+          .doc(product.id);
 
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
-            final isDark = themeNotifier.isDarkMode;
-            final themeColor = themeNotifier.isSpecialModeActive 
-                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-                : Colors.red;
-            final l10n = AppLocalizations.of(context)!;
+      final cartDoc = await cartRef.get();
+      if (cartDoc.exists) {
+        final currentQuantity = cartDoc.data()?['quantity'] ?? 1;
+        final newQuantity = (currentQuantity + 1).clamp(1, 10);
+        await cartRef.update({'quantity': newQuantity});
+      } else {
+        await cartRef.set({
+          'name': product.name,
+          'price': product.price.toString(),
+          'imagePath': product.imageUrl,
+          'quantity': 1,
+        });
+      }
 
-            return Dialog(
-              backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Container(
-                width: MediaQuery.of(context).size.width * 0.8,
-                padding: EdgeInsets.all(20),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        l10n.addNewProduct,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                      SizedBox(height: 20),
-                      _buildTextField(
-                        controller: nameController,
-                        label: l10n.productName,
-                        isDark: isDark,
-                        prefixIcon: Icons.inventory_2,
-                      ),
-                      SizedBox(height: 12),
-                      _buildTextField(
-                        controller: priceController,
-                        label: l10n.price,
-                        isDark: isDark,
-                        keyboardType: TextInputType.number,
-                        prefixIcon: Icons.attach_money,
-                      ),
-                      SizedBox(height: 12),
-                      _buildTextField(
-                        controller: stockController,
-                        label: l10n.stock,
-                        isDark: isDark,
-                        keyboardType: TextInputType.number,
-                        prefixIcon: Icons.warehouse,
-                      ),
-                      SizedBox(height: 12),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.category,
-                              color: isDark ? themeColor.shade200 : themeColor,
-                            ),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: FutureBuilder<List<String>>(
-                                future: _fetchCategories(),
-                                builder: (context, snapshot) {
-                                  if (!snapshot.hasData) {
-                                    return CircularProgressIndicator();
-                                  }
-                                  return DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: selectedCategory,
-                                      hint: Text(
-                                        l10n.selectCategory,
-                                        style: TextStyle(
-                                          color: isDark ? Colors.white70 : Colors.black87,
-                                        ),
-                                      ),
-                                      isExpanded: true,
-                                      dropdownColor: isDark ? Colors.grey.shade800 : Colors.white,
-                                      items: snapshot.data!.map((String category) {
-                                        return DropdownMenuItem<String>(
-                                          value: category,
-                                          child: Text(
-                                            category,
-                                            style: TextStyle(
-                                              color: isDark ? Colors.white : Colors.black87,
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                      onChanged: (String? newValue) {
-                                        setState(() {
-                                          selectedCategory = newValue;
-                                        });
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
-                          ),
-                        ),
-                        child: ExpansionTile(
-                          title: Text(
-                            'Product Descriptions',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                          iconColor: themeColor,
-                          collapsedIconColor: themeColor,
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Description (English)',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? Colors.white : Colors.black87,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  _buildTextField(
-                                    controller: descriptionEnController,
-                                    label: 'English Description',
-                                    isDark: isDark,
-                                    maxLines: 3,
-                                    prefixIcon: Icons.description,
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        Icons.auto_fix_high,
-                                        color: isDark ? themeColor.shade200 : themeColor,
-                                      ),
-                                      onPressed: () async {
-                                        if (nameController.text.isEmpty) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Please enter a product name first')),
-                                          );
-                                          return;
-                                        }
-
-                                        await _generateAIDescription(descriptionEnController, descriptionTrController, descriptionArController, nameController.text);
-                                      },
-                                      tooltip: l10n.generateAIDescription,
-                                    ),
-                                  ),
-                                  SizedBox(height: 12),
-                                  Text(
-                                    'Description (Turkish)',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? Colors.white : Colors.black87,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  _buildTextField(
-                                    controller: descriptionTrController,
-                                    label: 'Turkish Description',
-                                    isDark: isDark,
-                                    maxLines: 3,
-                                    prefixIcon: Icons.description,
-                                  ),
-                                  SizedBox(height: 12),
-                                  Text(
-                                    'Description (Arabic)',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? Colors.white : Colors.black87,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  _buildTextField(
-                                    controller: descriptionArController,
-                                    label: 'Arabic Description',
-                                    isDark: isDark,
-                                    maxLines: 3,
-                                    prefixIcon: Icons.description,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            l10n.mainImage,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 8),
-                      Center(
-                        child: Stack(
-                          children: [
-                            Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: themeColor.withOpacity(0.5),
-                                ),
-                              ),
-                              child: mainImagePath != null
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(9),
-                                      child: Image.network(
-                                        mainImagePath!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => Center(
-                                          child: Icon(
-                                            Icons.error,
-                                            color: Colors.red,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                  : IconButton(
-                                      icon: Icon(
-                                        Icons.add_photo_alternate,
-                                        color: themeColor,
-                                        size: 32,
-                                      ),
-                                      onPressed: () async {
-                                        final imageUrl = await _pickAndUploadImage();
-                                        if (imageUrl != null) {
-                                          setState(() {
-                                            mainImagePath = imageUrl;
-                                          });
-                                        }
-                                      },
-                                    ),
-                            ),
-                            if (mainImagePath != null)
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: IconButton(
-                                  icon: Icon(
-                                    Icons.close,
-                                    color: Colors.red,
-                                    size: 20,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      mainImagePath = null;
-                                    });
-                                  },
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            l10n.additionalImages,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 8),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Row(
-                            children: List.generate(3, (index) {
-                              final hasImage = index < additionalImagePaths.length;
-                              return Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 4),
-                                child: Stack(
-                                  children: [
-                                    Container(
-                                      width: 100,
-                                      height: 100,
-                                      decoration: BoxDecoration(
-                                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: themeColor.withOpacity(0.5),
-                                        ),
-                                      ),
-                                      child: hasImage
-                                          ? ClipRRect(
-                                              borderRadius: BorderRadius.circular(9),
-                                              child: Image.network(
-                                                additionalImagePaths[index],
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (context, error, stackTrace) => Center(
-                                                  child: Icon(
-                                                    Icons.error,
-                                                    color: Colors.red,
-                                                  ),
-                                                ),
-                                              ),
-                                            )
-                                          : IconButton(
-                                              icon: Icon(
-                                                Icons.add_photo_alternate,
-                                                color: themeColor,
-                                                size: 32,
-                                              ),
-                                              onPressed: () async {
-                                                final imageUrl = await _pickAndUploadImage();
-                                                if (imageUrl != null) {
-                                                  setState(() {
-                                                    if (index >= additionalImagePaths.length) {
-                                                      additionalImagePaths.add(imageUrl);
-                                                    } else {
-                                                      additionalImagePaths[index] = imageUrl;
-                                                    }
-                                                  });
-                                                }
-                                              },
-                                            ),
-                                    ),
-                                    if (hasImage)
-                                      Positioned(
-                                        right: 0,
-                                        top: 0,
-                                        child: IconButton(
-                                          icon: Icon(
-                                            Icons.close,
-                                            color: Colors.red,
-                                            size: 20,
-                                          ),
-                                          onPressed: () {
-                                            setState(() {
-                                              additionalImagePaths.removeAt(index);
-                                            });
-                                          },
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text(
-                              l10n.cancel,
-                              style: TextStyle(
-                                color: isDark ? Colors.white70 : Colors.black87,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: themeColor,
-                              foregroundColor: Colors.white,
-                            ),
-                            onPressed: () async {
-                              if (_validateProductInput(
-                                nameController.text,
-                                priceController.text,
-                                stockController.text,
-                                selectedCategory,
-                                mainImagePath,
-                              )) {
-                                try {
-                                  if (mainImagePath?.isEmpty ?? true) {
-                                    throw Exception('Please upload a main image');
-                                  }
-
-                                  final newProduct = {
-                                    'name': nameController.text,
-                                    'price': double.parse(priceController.text),
-                                    'stock': int.parse(stockController.text),
-                                    'category': selectedCategory,
-                                    'descriptions': {
-                                      'en': descriptionEnController.text,
-                                      'tr': descriptionTrController.text,
-                                      'ar': descriptionArController.text,
-                                    },
-                                    'imagePath': mainImagePath!,
-                                    'images': [mainImagePath, ...additionalImagePaths],
-                                    'createdAt': FieldValue.serverTimestamp(),
-                                    'updatedAt': FieldValue.serverTimestamp(),
-                                  };
-
-                                  await FirebaseFirestore.instance
-                                      .collection('products')
-                                      .add(newProduct);
-
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Product added successfully')),
-                                  );
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error adding product: $e')),
-                                  );
-                                }
-                              }
-                            },
-                            child: Text(l10n.add),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showProductSearchDialog() {
-    final TextEditingController searchController = TextEditingController();
-    final l10n = AppLocalizations.of(context)!;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(l10n.searchProduct),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: searchController,
-                decoration: InputDecoration(
-                  labelText: l10n.productName,
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.search),
-                ),
-              ),
-              SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () async {
-                  final products = await _searchProducts(searchController.text);
-                  Navigator.pop(context);
-                  if (products.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.noProductsFound)),
-                    );
-                  } else {
-                    _showProductSelectionDialog(products);
-                  }
-                },
-                child: Text(l10n.searchProducts),
-              ),
-            ],
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.addedToCart(product.name)),
+            action: SnackBarAction(
+              label: l10n.viewCart,
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => CartPage()),
+                );
+              },
+            ),
           ),
         );
-      },
-    );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.errorAddingToCart)),
+        );
+      }
+    }
   }
 
-  Future<List<String>> _fetchCategories() async {
+  Future<List<LocalizedProduct>> _searchProducts(String query) async {
     try {
-      final snapshot = await FirebaseFirestore.instance.collection('categories').get();
-      return snapshot.docs.map((doc) => doc['name'] as String).toList();
+      final lowerQuery = query.toLowerCase();
+      final snapshot = await FirebaseFirestore.instance.collection('products').get();
+
+      return snapshot.docs
+          .map((doc) => LocalizedProduct.fromFirestore(doc))
+          .where((product) => product.name.toLowerCase().contains(lowerQuery))
+          .toList();
     } catch (e) {
-      print('Error fetching categories: $e');
+      print('Error searching products: $e');
       return [];
     }
-  }
-
-  Future<String?> _pickAndUploadImage() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-      
-      if (image == null) return null;
-
-      final String fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
-      final Reference storageRef = FirebaseStorage.instance.ref().child('product_images/$fileName');
-      
-      final UploadTask uploadTask = storageRef.putFile(File(image.path));
-      final TaskSnapshot taskSnapshot = await uploadTask;
-      
-      return await taskSnapshot.ref.getDownloadURL();
-    } catch (e) {
-      print('Error picking/uploading image: $e');
-      return null;
-    }
-  }
-
-  bool _validateProductInput(
-    String name,
-    String price,
-    String stock,
-    String? category,
-    String? mainImagePath,
-  ) {
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Product name is required')),
-      );
-      return false;
-    }
-
-    if (price.isEmpty || double.tryParse(price) == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter a valid price')),
-      );
-      return false;
-    }
-
-    if (stock.isEmpty || int.tryParse(stock) == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter a valid stock quantity')),
-      );
-      return false;
-    }
-
-    if (category == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please select a category')),
-      );
-      return false;
-    }
-
-    if (mainImagePath == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please upload a main image')),
-      );
-      return false;
-    }
-
-    return true;
   }
 
   void _showProductSelectionDialog(List<LocalizedProduct> products) {
@@ -2074,173 +1795,8 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     final l10n = AppLocalizations.of(context)!;
     final currentLocale = Localizations.localeOf(context).languageCode;
 
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Container(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.selectProductToUpdate,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-              ),
-              SizedBox(height: 20),
-              Container(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.6,
-                ),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    final product = products[index];
-                    return ListTile(
-                      title: Text(
-                        product.name,
-                        style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black,
-                        ),
-                      ),
-                      subtitle: Text(
-                        product.getDescription(currentLocale),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: isDark ? Colors.white70 : Colors.black87,
-                        ),
-                      ),
-                      trailing: Text(
-                        '₺${product.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          color: themeColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showEditProductDialog(product);
-                      },
-                    );
-                  },
-                ),
-              ),
-              SizedBox(height: 20),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(l10n.cancel),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showProductDetails(LocalizedProduct product) async {
-    // Wait for admin status to be confirmed
-    await _checkAdminStatus();
-
-    if (!mounted) return;
-
-    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
-    final isDark = themeNotifier.isDarkMode;
-    final themeColor = themeNotifier.isSpecialModeActive 
-        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : Colors.red;
-    final l10n = AppLocalizations.of(context)!;
-    final currentLocale = Localizations.localeOf(context).languageCode;
-
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Container(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                product.name,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-              ),
-              SizedBox(height: 10),
-              Text(
-                '${l10n.productCategory}: ${product.category}',
-                style: TextStyle(
-                  color: isDark ? Colors.white70 : Colors.black87,
-                ),
-              ),
-              Text(
-                '${l10n.productPrice}: ₺${product.price.toStringAsFixed(2)}',
-                style: TextStyle(
-                  color: isDark ? Colors.white70 : Colors.black87,
-                ),
-              ),
-              Text(
-                '${l10n.productStock}: ${product.stock}',
-                style: TextStyle(
-                  color: isDark ? Colors.white70 : Colors.black87,
-                ),
-              ),
-              SizedBox(height: 10),
-              Text(
-                l10n.productDescription,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-              ),
-              Text(
-                product.getDescription(currentLocale),
-                style: TextStyle(
-                  color: isDark ? Colors.white70 : Colors.black87,
-                ),
-              ),
-              SizedBox(height: 20),
-              if (_isAdmin)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(l10n.cancel),
-                    ),
-                    SizedBox(width: 10),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _showEditProductDialog(product);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: themeColor,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: Text(l10n.update),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
+    // TODO: Replace dialog with inline UI or chat message if needed.
+    // showDialog(...)
   }
 
   void _showEditProductDialog(LocalizedProduct product) {
@@ -2718,18 +2274,241 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
       },
     );
   }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required bool isDark,
+    TextInputType? keyboardType,
+    IconData? prefixIcon,
+    Widget? suffixIcon,
+    int maxLines = 1,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      style: TextStyle(
+        color: isDark ? Colors.white : Colors.black87,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(
+          color: isDark ? Colors.white70 : Colors.black54,
+        ),
+        prefixIcon: prefixIcon != null
+            ? Icon(
+                prefixIcon,
+                color: isDark ? Colors.white70 : Colors.black54,
+              )
+            : null,
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(
+            color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(
+            color: isDark ? Colors.white70 : Colors.black54,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<List<String>> _fetchCategories() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('categories').get();
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      print('Error fetching categories: $e');
+      return [];
+    }
+  }
+
+  Future<void> _generateAIDescription(
+    TextEditingController enController,
+    TextEditingController trController,
+    TextEditingController arController,
+    String productName,
+  ) async {
+    try {
+      final aiService = AIService();
+      final enDescription = await aiService.generateDescription(productName);
+      enController.text = enDescription;
+
+      final trDescription = await aiService.translateText(enDescription, 'tr');
+      trController.text = trDescription;
+
+      final arDescription = await aiService.translateText(enDescription, 'ar');
+      arController.text = arDescription;
+    } catch (e) {
+      print('Error generating AI description: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error generating description: $e')),
+      );
+    }
+  }
+
+  Future<String?> _pickAndUploadImage() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      
+      if (image == null) return null;
+
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('product_images')
+          .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+      final uploadTask = await storageRef.putFile(File(image.path));
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+
+      return downloadUrl;
+    } catch (e) {
+      print('Error picking/uploading image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error uploading image: $e')),
+      );
+      return null;
+    }
+  }
+
+  bool _validateProductInput(
+    String name,
+    String price,
+    String stock,
+    String? category,
+    String? mainImage,
+  ) {
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a product name')),
+      );
+      return false;
+    }
+
+    if (price.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a price')),
+      );
+      return false;
+    }
+
+    if (double.tryParse(price) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid price')),
+      );
+      return false;
+    }
+
+    if (stock.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter stock quantity')),
+      );
+      return false;
+    }
+
+    if (int.tryParse(stock) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid stock quantity')),
+      );
+      return false;
+    }
+
+    if (category == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a category')),
+      );
+      return false;
+    }
+
+    if (mainImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please upload a main image')),
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  void _cancelOrder(Order order) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Order #${order.id} cancelled (placeholder).')),
+    );
+    // TODO: Implement actual cancel logic
+  }
+
+  void _requestRefund(Order order) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Refund requested for order #${order.id} (placeholder).')),
+    );
+    // TODO: Implement actual refund logic
+  }
+
+  _PendingOrderAction? _pendingOrderAction;
+}
+
+class Order {
+  final String id;
+  final DateTime date;
+  final String status;
+  final double total;
+  final List<OrderItem> items;
+
+  Order({
+    required this.id,
+    required this.date,
+    required this.status,
+    required this.total,
+    required this.items,
+  });
+}
+
+class OrderItem {
+  final String name;
+  final int quantity;
+  final String? imagePath;
+
+  OrderItem({
+    required this.name,
+    required this.quantity,
+    this.imagePath,
+  });
 }
 
 class ChatMessage {
   final String text;
   final bool isUser;
   final List<LocalizedProduct>? recommendedProducts;
+  final List<Order>? orders;
   final String? imageUrl;
 
   ChatMessage({
     required this.text,
     required this.isUser,
     this.recommendedProducts,
+    this.orders,
     this.imageUrl,
   });
+}
+
+// Add this at the very top of the file, before any other class or import (if not already present):
+class _PendingOrderAction {
+  final Order order;
+  final VoidCallback? onYes;
+  final VoidCallback? onNo;
+  final String messageText;
+  _PendingOrderAction({required this.order, this.onYes, this.onNo, required this.messageText});
 }
