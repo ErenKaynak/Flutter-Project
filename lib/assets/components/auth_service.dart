@@ -19,8 +19,28 @@ class AuthService {
       
       // Create/update user document in Firestore
       if (userCredential.user != null) {
-        print('Google Sign-In successful - User: ${userCredential.user?.email}');
-        await _createOrUpdateUserDocument(userCredential.user!);
+        print('Web Google Sign-In successful - User: ${userCredential.user?.email}');
+        print('Web User Display Name: ${userCredential.user?.displayName}');
+        print('Web User Provider Data: ${userCredential.user?.providerData}');
+        
+        // Get email from provider data if user.email is null
+        String? email = userCredential.user?.email;
+        if (email == null || email.isEmpty) {
+          for (var info in userCredential.user!.providerData) {
+            if (info.email != null && info.email!.isNotEmpty) {
+              email = info.email;
+              break;
+            }
+          }
+        }
+        
+        if (email == null || email.isEmpty) {
+          throw Exception("Failed to get user email from Google Sign-In");
+        }
+        
+        // Create a temporary user with the correct email
+        final tempUser = userCredential.user!;
+        await _createOrUpdateUserDocument(tempUser);
       }
       
       return userCredential;
@@ -32,7 +52,8 @@ class AuthService {
         throw Exception("Google sign in was canceled");
       }
 
-      print('Google Sign-In Account: ${gUser.email}');
+      print('Mobile Google Sign-In Account: ${gUser.email}');
+      print('Mobile User Display Name: ${gUser.displayName}');
 
       // Obtain auth details from request
       final GoogleSignInAuthentication gAuth = await gUser.authentication;
@@ -48,8 +69,28 @@ class AuthService {
       
       // Create/update user document in Firestore
       if (userCredential.user != null) {
-        print('Firebase Auth successful - User: ${userCredential.user?.email}');
-        await _createOrUpdateUserDocument(userCredential.user!);
+        print('Mobile Firebase Auth successful - User: ${userCredential.user?.email}');
+        print('Mobile User Display Name: ${userCredential.user?.displayName}');
+        print('Mobile User Provider Data: ${userCredential.user?.providerData}');
+        
+        // Get email from provider data if user.email is null
+        String? email = userCredential.user?.email;
+        if (email == null || email.isEmpty) {
+          for (var info in userCredential.user!.providerData) {
+            if (info.email != null && info.email!.isNotEmpty) {
+              email = info.email;
+              break;
+            }
+          }
+        }
+        
+        if (email == null || email.isEmpty) {
+          throw Exception("Failed to get user email from Google Sign-In");
+        }
+        
+        // Create a temporary user with the correct email
+        final tempUser = userCredential.user!;
+        await _createOrUpdateUserDocument(tempUser);
       }
       
       return userCredential;
@@ -58,18 +99,41 @@ class AuthService {
 
   // Helper method to create or update user document
   Future<void> _createOrUpdateUserDocument(User user) async {
+    // Get email from provider data if user.email is null
+    String? email = user.email;
+    if (email == null || email.isEmpty) {
+      for (var info in user.providerData) {
+        if (info.email != null && info.email!.isNotEmpty) {
+          email = info.email;
+          break;
+        }
+      }
+    }
+
+    if (email == null || email.isEmpty) {
+      print('Warning: Attempting to create/update user document with empty email');
+      return;
+    }
+
     final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
     final docSnapshot = await userDoc.get();
+
+    final userData = {
+      'uid': user.uid,
+      'email': email.toLowerCase().trim(),
+      'name': user.displayName?.split(' ').first ?? '',
+      'surname': user.displayName?.split(' ').last ?? '',
+      'profileImageUrl': user.photoURL ?? '',
+      'role': 'user',
+      'lastLogin': FieldValue.serverTimestamp(),
+    };
+
+    print('Creating/Updating user document with data: $userData');
 
     if (!docSnapshot.exists) {
       // Create new user document
       await userDoc.set({
-        'uid': user.uid,
-        'email': user.email ?? '',
-        'name': user.displayName?.split(' ').first ?? '',
-        'surname': user.displayName?.split(' ').last ?? '',
-        'profileImageUrl': user.photoURL ?? '',
-        'role': 'user',
+        ...userData,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -80,14 +144,7 @@ class AuthService {
       });
     } else {
       // Update existing user document
-      await userDoc.update({
-        'uid': user.uid,
-        'email': user.email ?? '',
-        'name': user.displayName?.split(' ').first ?? '',
-        'surname': user.displayName?.split(' ').last ?? '',
-        'profileImageUrl': user.photoURL ?? '',
-        'lastLogin': FieldValue.serverTimestamp(),
-      });
+      await userDoc.update(userData);
     }
   }
 
