@@ -2,12 +2,20 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/language_provider.dart';
 
 class EmailService {
   // Railway backend URL
   static const String _baseUrl = 'https://email-backend-production-8783.up.railway.app';
 
-  // Generate HTML receipt template
+  // Get current locale from context
+  static String _getCurrentLocale(BuildContext context) {
+    return Provider.of<LanguageProvider>(context, listen: false).currentLocale.languageCode;
+  }
+
+  // Generate HTML receipt template based on language
   static String _generateReceiptTemplate({
     required String customerName,
     required String orderNumber,
@@ -15,9 +23,67 @@ class EmailService {
     required double totalAmount,
     required DateTime orderDate,
     required String shippingAddress,
+    required String languageCode,
   }) {
     final currencyFormat = NumberFormat.currency(symbol: '₺');
     final dateFormat = DateFormat('MMMM dd, yyyy');
+    
+    // Language-specific text
+    final Map<String, Map<String, String>> translations = {
+      'en': {
+        'title': 'Thank You for Your Order!',
+        'orderConfirmation': 'Order Confirmation',
+        'orderDetails': 'Order Details',
+        'orderNumber': 'Order Number',
+        'date': 'Date',
+        'customer': 'Customer',
+        'deliveryAddress': 'Delivery Address',
+        'product': 'Product',
+        'quantity': 'Quantity',
+        'price': 'Price',
+        'total': 'Toplam',
+        'totalAmount': 'Toplam Tutar',
+        'viewOrderStatus': 'View Order Status',
+        'support': 'If you have any questions, please contact our support team.',
+        'copyright': '© 2024 Paradise PC Components. All rights reserved.',
+      },
+      'tr': {
+        'title': 'Siparişiniz İçin Teşekkürler!',
+        'orderConfirmation': 'Sipariş Onayı',
+        'orderDetails': 'Sipariş Detayları',
+        'orderNumber': 'Sipariş Numarası',
+        'date': 'Tarih',
+        'customer': 'Müşteri',
+        'deliveryAddress': 'Teslimat Adresi',
+        'product': 'Ürün',
+        'quantity': 'Adet',
+        'price': 'Fiyat',
+        'total': 'Toplam',
+        'totalAmount': 'Toplam Tutar',
+        'viewOrderStatus': 'Sipariş Durumunu Görüntüle',
+        'support': 'Sorularınız için destek ekibimizle iletişime geçebilirsiniz.',
+        'copyright': '© 2024 Paradise PC Components. Tüm hakları saklıdır.',
+      },
+      'ar': {
+        'title': 'شكراً لطلبك!',
+        'orderConfirmation': 'تأكيد الطلب',
+        'orderDetails': 'تفاصيل الطلب',
+        'orderNumber': 'رقم الطلب',
+        'date': 'التاريخ',
+        'customer': 'العميل',
+        'deliveryAddress': 'عنوان التوصيل',
+        'product': 'المنتج',
+        'quantity': 'الكمية',
+        'price': 'السعر',
+        'total': 'المجموع',
+        'totalAmount': 'المبلغ الإجمالي',
+        'viewOrderStatus': 'عرض حالة الطلب',
+        'support': 'إذا كان لديك أي أسئلة، يرجى الاتصال بفريق الدعم.',
+        'copyright': '© 2024 Paradise PC Components. جميع الحقوق محفوظة.',
+      },
+    };
+
+    final text = translations[languageCode] ?? translations['en']!;
     
     return '''
     <!DOCTYPE html>
@@ -112,25 +178,25 @@ class EmailService {
         </div>
         <div class="header">
           <div class="logo-circle"></div>
-          <h1>Siparişiniz İçin Teşekkürler!</h1>
-          <p>Sipariş Onayı</p>
+          <h1>${text['title']}</h1>
+          <p>${text['orderConfirmation']}</p>
         </div>
         <div class="content">
           <div class="order-info">
-            <h2>Sipariş Detayları</h2>
-            <p><strong>Sipariş Numarası:</strong> $orderNumber</p>
-            <p><strong>Tarih:</strong> ${dateFormat.format(orderDate)}</p>
-            <p><strong>Müşteri:</strong> $customerName</p>
-            <p><strong>Teslimat Adresi:</strong> $shippingAddress</p>
+            <h2>${text['orderDetails']}</h2>
+            <p><strong>${text['orderNumber']}:</strong> $orderNumber</p>
+            <p><strong>${text['date']}:</strong> ${dateFormat.format(orderDate)}</p>
+            <p><strong>${text['customer']}:</strong> $customerName</p>
+            <p><strong>${text['deliveryAddress']}:</strong> $shippingAddress</p>
           </div>
           
           <table class="items-table">
             <thead>
               <tr>
-                <th>Ürün</th>
-                <th>Adet</th>
-                <th>Fiyat</th>
-                <th>Toplam</th>
+                <th>${text['product']}</th>
+                <th>${text['quantity']}</th>
+                <th>${text['price']}</th>
+                <th>${text['total']}</th>
               </tr>
             </thead>
             <tbody>
@@ -146,17 +212,17 @@ class EmailService {
           </table>
           
           <div class="total">
-            <p>Toplam Tutar: ${currencyFormat.format(totalAmount)}</p>
+            <p>${text['totalAmount']}: ${currencyFormat.format(totalAmount)}</p>
           </div>
           
           <div style="text-align: center;">
-            <a href="#" class="button">Sipariş Durumunu Görüntüle</a>
+            <a href="#" class="button">${text['viewOrderStatus']}</a>
           </div>
         </div>
         
         <div class="footer">
-          <p>Sorularınız için destek ekibimizle iletişime geçebilirsiniz.</p>
-          <p>© 2024 Paradise PC Components. Tüm hakları saklıdır.</p>
+          <p>${text['support']}</p>
+          <p>${text['copyright']}</p>
         </div>
       </div>
     </body>
@@ -166,6 +232,7 @@ class EmailService {
 
   // Send receipt email
   static Future<void> sendReceipt({
+    required BuildContext context,
     required String customerEmail,
     required String customerName,
     required String orderNumber,
@@ -175,6 +242,8 @@ class EmailService {
     required String shippingAddress,
   }) async {
     try {
+      final languageCode = _getCurrentLocale(context);
+      
       final response = await http.post(
         Uri.parse('$_baseUrl/api/send-email'),
         headers: {
@@ -188,6 +257,15 @@ class EmailService {
           'totalAmount': totalAmount,
           'orderDate': orderDate.toIso8601String(),
           'shippingAddress': shippingAddress,
+          'htmlContent': _generateReceiptTemplate(
+            customerName: customerName,
+            orderNumber: orderNumber,
+            items: items,
+            totalAmount: totalAmount,
+            orderDate: orderDate,
+            shippingAddress: shippingAddress,
+            languageCode: languageCode,
+          ),
         }),
       );
 
@@ -206,8 +284,63 @@ class EmailService {
   static String _generateWelcomeTemplate({
     required String userName,
     required String verificationToken,
+    required String languageCode,
   }) {
     final verificationUrl = '$_baseUrl/api/verify-email?token=$verificationToken';
+    
+    // Language-specific text
+    final Map<String, Map<String, String>> translations = {
+      'en': {
+        'title': 'Welcome to Paradise PC Components!',
+        'subtitle': 'Your Account Has Been Created Successfully',
+        'hello': 'Hello',
+        'welcomeMessage': 'Thank you for joining Paradise PC Components! We\'re excited to have you on board.',
+        'accountCreated': 'Your account has been successfully created and you can now access all our features.',
+        'verifyEmail': 'Verify Your Email',
+        'features': 'What you can do now:',
+        'feature1': 'Browse our extensive product catalog',
+        'feature2': 'Place orders with secure payment options',
+        'feature3': 'Track your orders in real-time',
+        'feature4': 'Manage your profile and preferences',
+        'startShopping': 'Start Shopping Now',
+        'support': 'If you have any questions, our support team is here to help.',
+        'copyright': '© 2024 Paradise PC Components. All rights reserved.',
+      },
+      'tr': {
+        'title': 'Paradise PC Components\'a Hoş Geldiniz!',
+        'subtitle': 'Hesabınız Başarıyla Oluşturuldu',
+        'hello': 'Merhaba',
+        'welcomeMessage': 'Paradise PC Components\'a katıldığınız için teşekkür ederiz! Sizi aramızda görmekten mutluluk duyuyoruz.',
+        'accountCreated': 'Hesabınız başarıyla oluşturuldu ve artık tüm özelliklere erişebilirsiniz.',
+        'verifyEmail': 'E-posta Adresinizi Doğrulayın',
+        'features': 'Şunları yapabilirsiniz:',
+        'feature1': 'Geniş ürün kataloğumuzu inceleyin',
+        'feature2': 'Güvenli ödeme seçenekleriyle sipariş verin',
+        'feature3': 'Siparişlerinizi gerçek zamanlı takip edin',
+        'feature4': 'Profilinizi ve tercihlerinizi yönetin',
+        'startShopping': 'Hemen Alışverişe Başlayın',
+        'support': 'Sorularınız için destek ekibimiz size yardımcı olmaktan mutluluk duyar.',
+        'copyright': '© 2024 Paradise PC Components. Tüm hakları saklıdır.',
+      },
+      'ar': {
+        'title': 'مرحباً بك في Paradise PC Components!',
+        'subtitle': 'تم إنشاء حسابك بنجاح',
+        'hello': 'مرحباً',
+        'welcomeMessage': 'شكراً لانضمامك إلى Paradise PC Components! يسعدنا وجودك معنا.',
+        'accountCreated': 'تم إنشاء حسابك بنجاح ويمكنك الآن الوصول إلى جميع الميزات.',
+        'verifyEmail': 'تحقق من بريدك الإلكتروني',
+        'features': 'ما يمكنك فعله الآن:',
+        'feature1': 'تصفح كتالوج منتجاتنا الواسع',
+        'feature2': 'تقديم الطلبات مع خيارات دفع آمنة',
+        'feature3': 'تتبع طلباتك في الوقت الفعلي',
+        'feature4': 'إدارة ملفك الشخصي وتفضيلاتك',
+        'startShopping': 'ابدأ التسوق الآن',
+        'support': 'إذا كان لديك أي أسئلة، فريق الدعم لدينا هنا للمساعدة.',
+        'copyright': '© 2024 Paradise PC Components. جميع الحقوق محفوظة.',
+      },
+    };
+
+    final text = translations[languageCode] ?? translations['en']!;
     
     return '''
     <!DOCTYPE html>
@@ -291,36 +424,36 @@ class EmailService {
         </div>
         <div class="header">
           <div class="logo-circle"></div>
-          <h1>Welcome to Paradise PC Components!</h1>
-          <p>Your Account Has Been Created Successfully</p>
+          <h1>${text['title']}</h1>
+          <p>${text['subtitle']}</p>
         </div>
         <div class="content">
           <div class="welcome-message">
-            <h2>Hello $userName,</h2>
-            <p>Thank you for joining Paradise PC Components! We're excited to have you on board.</p>
-            <p>Your account has been successfully created and you can now access all our features.</p>
+            <h2>${text['hello']} $userName,</h2>
+            <p>${text['welcomeMessage']}</p>
+            <p>${text['accountCreated']}</p>
           </div>
           
           <div style="text-align: center;">
-            <a href="$verificationUrl" class="verify-button">Verify Your Email</a>
+            <a href="$verificationUrl" class="verify-button">${text['verifyEmail']}</a>
           </div>
           
           <div class="features">
-            <h3>What you can do now:</h3>
-            <div class="feature-item">Browse our extensive product catalog</div>
-            <div class="feature-item">Place orders with secure payment options</div>
-            <div class="feature-item">Track your orders in real-time</div>
-            <div class="feature-item">Manage your profile and preferences</div>
+            <h3>${text['features']}</h3>
+            <div class="feature-item">${text['feature1']}</div>
+            <div class="feature-item">${text['feature2']}</div>
+            <div class="feature-item">${text['feature3']}</div>
+            <div class="feature-item">${text['feature4']}</div>
           </div>
           
           <div style="text-align: center;">
-            <a href="#" class="button">Start Shopping Now</a>
+            <a href="#" class="button">${text['startShopping']}</a>
           </div>
         </div>
         
         <div class="footer">
-          <p>If you have any questions, our support team is here to help.</p>
-          <p>© 2024 Paradise PC Components. All rights reserved.</p>
+          <p>${text['support']}</p>
+          <p>${text['copyright']}</p>
         </div>
       </div>
     </body>
@@ -330,11 +463,14 @@ class EmailService {
 
   // Send welcome email
   static Future<void> sendWelcomeEmail({
+    required BuildContext context,
     required String userEmail,
     required String userName,
     required String userId,
   }) async {
     try {
+      final languageCode = _getCurrentLocale(context);
+      
       // Generate a verification token
       final verificationToken = DateTime.now().millisecondsSinceEpoch.toString() + userId;
       
@@ -361,6 +497,7 @@ class EmailService {
           'htmlContent': _generateWelcomeTemplate(
             userName: userName,
             verificationToken: verificationToken,
+            languageCode: languageCode,
           ),
         }),
       );
@@ -424,7 +561,62 @@ class EmailService {
   static String _generateVerificationTemplate({
     required String userName,
     required String verificationLink,
+    required String languageCode,
   }) {
+    // Language-specific text
+    final Map<String, Map<String, String>> translations = {
+      'en': {
+        'title': 'Verify Your Email',
+        'subtitle': 'Paradise PC Components',
+        'hello': 'Hello',
+        'message': 'Thank you for registering with Paradise PC Components! To complete your registration and access all features, please verify your email address.',
+        'verifyButton': 'Verify Email Address',
+        'expiryNotice': 'This verification link will expire in 24 hours.',
+        'manualLink': 'If the button above doesn\'t work, copy and paste this link into your browser:',
+        'features': 'After verification, you can:',
+        'feature1': 'Access your personalized dashboard',
+        'feature2': 'Browse our product catalog',
+        'feature3': 'Make secure purchases',
+        'feature4': 'Track your orders',
+        'ignore': 'If you didn\'t create an account, you can safely ignore this email.',
+        'copyright': '© 2024 Paradise PC Components. All rights reserved.',
+      },
+      'tr': {
+        'title': 'E-posta Adresinizi Doğrulayın',
+        'subtitle': 'Paradise PC Components',
+        'hello': 'Merhaba',
+        'message': 'Paradise PC Components\'a kayıt olduğunuz için teşekkür ederiz! Kaydınızı tamamlamak ve tüm özelliklere erişmek için lütfen e-posta adresinizi doğrulayın.',
+        'verifyButton': 'E-posta Adresini Doğrula',
+        'expiryNotice': 'Bu doğrulama bağlantısı 24 saat içinde sona erecektir.',
+        'manualLink': 'Yukarıdaki düğme çalışmazsa, bu bağlantıyı tarayıcınıza kopyalayıp yapıştırın:',
+        'features': 'Doğrulamadan sonra şunları yapabilirsiniz:',
+        'feature1': 'Kişiselleştirilmiş panelinize erişin',
+        'feature2': 'Ürün kataloğumuzu inceleyin',
+        'feature3': 'Güvenli alışveriş yapın',
+        'feature4': 'Siparişlerinizi takip edin',
+        'ignore': 'Bir hesap oluşturmadıysanız, bu e-postayı güvenle görmezden gelebilirsiniz.',
+        'copyright': '© 2024 Paradise PC Components. Tüm hakları saklıdır.',
+      },
+      'ar': {
+        'title': 'تحقق من بريدك الإلكتروني',
+        'subtitle': 'Paradise PC Components',
+        'hello': 'مرحباً',
+        'message': 'شكراً لتسجيلك في Paradise PC Components! لإكمال تسجيلك والوصول إلى جميع الميزات، يرجى التحقق من عنوان بريدك الإلكتروني.',
+        'verifyButton': 'تحقق من البريد الإلكتروني',
+        'expiryNotice': 'ستنتهي صلاحية رابط التحقق هذا خلال 24 ساعة.',
+        'manualLink': 'إذا لم يعمل الزر أعلاه، انسخ هذا الرابط والصقه في متصفحك:',
+        'features': 'بعد التحقق، يمكنك:',
+        'feature1': 'الوصول إلى لوحة التحكم الشخصية',
+        'feature2': 'تصفح كتالوج المنتجات',
+        'feature3': 'إجراء عمليات شراء آمنة',
+        'feature4': 'تتبع طلباتك',
+        'ignore': 'إذا لم تقم بإنشاء حساب، يمكنك تجاهل هذا البريد الإلكتروني بأمان.',
+        'copyright': '© 2024 Paradise PC Components. جميع الحقوق محفوظة.',
+      },
+    };
+
+    final text = translations[languageCode] ?? translations['en']!;
+    
     return '''
     <!DOCTYPE html>
     <html>
@@ -517,40 +709,40 @@ class EmailService {
         </div>
         <div class="header">
           <div class="logo-circle"></div>
-          <h1>Verify Your Email</h1>
-          <p>Paradise PC Components</p>
+          <h1>${text['title']}</h1>
+          <p>${text['subtitle']}</p>
         </div>
         <div class="content">
           <div class="verification-message">
-            <h2>Hello $userName,</h2>
-            <p>Thank you for registering with Paradise PC Components! To complete your registration and access all features, please verify your email address.</p>
+            <h2>${text['hello']} $userName,</h2>
+            <p>${text['message']}</p>
           </div>
           
           <div style="text-align: center;">
-            <a href="$verificationLink" class="verify-button">Verify Email Address</a>
+            <a href="$verificationLink" class="verify-button">${text['verifyButton']}</a>
           </div>
           
           <div class="expiry-notice">
-            This verification link will expire in 24 hours.
+            ${text['expiryNotice']}
           </div>
           
           <div class="manual-link">
-            If the button above doesn't work, copy and paste this link into your browser:<br>
+            ${text['manualLink']}<br>
             <a href="$verificationLink">$verificationLink</a>
           </div>
           
           <div class="steps">
-            <h3>After verification, you can:</h3>
-            <div class="step">Access your personalized dashboard</div>
-            <div class="step">Browse our product catalog</div>
-            <div class="step">Make secure purchases</div>
-            <div class="step">Track your orders</div>
+            <h3>${text['features']}</h3>
+            <div class="step">${text['feature1']}</div>
+            <div class="step">${text['feature2']}</div>
+            <div class="step">${text['feature3']}</div>
+            <div class="step">${text['feature4']}</div>
           </div>
         </div>
         
         <div class="footer">
-          <p>If you didn't create an account, you can safely ignore this email.</p>
-          <p>© 2024 Paradise PC Components. All rights reserved.</p>
+          <p>${text['ignore']}</p>
+          <p>${text['copyright']}</p>
         </div>
       </div>
     </body>
@@ -560,11 +752,14 @@ class EmailService {
 
   // Send verification email
   static Future<void> sendVerificationEmail({
+    required BuildContext context,
     required String userEmail,
     required String userName,
     required String verificationLink,
   }) async {
     try {
+      final languageCode = _getCurrentLocale(context);
+      
       final response = await http.post(
         Uri.parse('$_baseUrl/api/send-email'),
         headers: {
@@ -577,6 +772,7 @@ class EmailService {
           'htmlContent': _generateVerificationTemplate(
             userName: userName,
             verificationLink: verificationLink,
+            languageCode: languageCode,
           ),
         }),
       );

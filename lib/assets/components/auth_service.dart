@@ -3,10 +3,11 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Add this import
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:engineering_project/assets/components/email_service.dart';
+import 'package:flutter/material.dart';
 
 class AuthService {
   // Sign in with Google
-  Future<UserCredential> signInWithGoogle() async {
+  Future<UserCredential> signInWithGoogle(BuildContext context) async {
     if (kIsWeb) {
       // Create a new provider
       GoogleAuthProvider googleProvider = GoogleAuthProvider();
@@ -41,7 +42,7 @@ class AuthService {
         
         // Create a temporary user with the correct email
         final tempUser = userCredential.user!;
-        await _createOrUpdateUserDocument(tempUser);
+        await _createOrUpdateUserDocument(tempUser, context);
       }
       
       return userCredential;
@@ -91,7 +92,7 @@ class AuthService {
         
         // Create a temporary user with the correct email
         final tempUser = userCredential.user!;
-        await _createOrUpdateUserDocument(tempUser);
+        await _createOrUpdateUserDocument(tempUser, context);
       }
       
       return userCredential;
@@ -99,7 +100,7 @@ class AuthService {
   }
 
   // Helper method to create or update user document
-  Future<void> _createOrUpdateUserDocument(User user) async {
+  Future<void> _createOrUpdateUserDocument(User user, BuildContext context) async {
     // Get email from provider data if user.email is null
     String? email = user.email;
     if (email == null || email.isEmpty) {
@@ -147,6 +148,7 @@ class AuthService {
       // Send welcome email
       try {
         await EmailService.sendWelcomeEmail(
+          context: context,
           userEmail: email,
           userName: userData['name']?.toString() ?? 'User',
           userId: user.uid,

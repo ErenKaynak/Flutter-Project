@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:engineering_project/assets/components/email_service.dart';
+import 'package:flutter/material.dart';
 
 class OrderService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -9,6 +10,7 @@ class OrderService {
     required List<Map<String, dynamic>> items,
     required double totalAmount,
     required String shippingAddress,
+    required BuildContext context,
   }) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -36,6 +38,7 @@ class OrderService {
 
       // Send receipt email
       await EmailService.sendReceipt(
+        context: context,
         customerEmail: user.email ?? '',
         customerName: '${userData['name']} ${userData['surname']}',
         orderNumber: orderNumber,

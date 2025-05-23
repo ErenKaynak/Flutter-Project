@@ -535,6 +535,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         // Send email receipt
         try {
           await EmailService.sendReceipt(
+            context: context,
             customerEmail: user.email ?? '',
             customerName: '${_selectedAddress!['firstName']} ${_selectedAddress!['lastName']}',
             orderNumber: orderRef.id.substring(0, 8),

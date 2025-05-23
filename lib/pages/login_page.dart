@@ -152,7 +152,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
     try {
-      await AuthService().signInWithGoogle();
+      await AuthService().signInWithGoogle(context);
       if (!_mounted) return;
       if (context.mounted) Navigator.pop(context);
       if (!_mounted) return;

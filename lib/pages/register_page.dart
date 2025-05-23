@@ -83,7 +83,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     try {
-      await AuthService().signInWithGoogle();
+      await AuthService().signInWithGoogle(context);
 
       if (context.mounted) Navigator.pop(context);
       if (context.mounted) {
@@ -170,6 +170,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
         // Send custom verification email using EmailService
         await EmailService.sendVerificationEmail(
+          context: context,
           userEmail: emailController.text.trim(),
           userName: nameController.text.trim(),
           verificationLink: 'https://email-backend-production-8783.up.railway.app/api/verify-email?token=$verificationToken',
