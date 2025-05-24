@@ -593,9 +593,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     try {
       final double numericPrice = double.parse(price);
       return '₺${numericPrice.toStringAsFixed(2).replaceAllMapped(
-        RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-        (Match m) => '${m[1]},',
-      )}';
+            RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+            (Match m) => '${m[1]},',
+          )}';
     } catch (e) {
       return '₺0.00';
     }
@@ -853,12 +853,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final List<String> imageList = [
-      'lib/assets/Images/icardi.png',
+      'lib/assets/Images/motherboard.png',
       'lib/assets/Images/graphiccards.png',
       'lib/assets/Images/rams.png',
       'lib/assets/Images/case.png',
       'lib/assets/Images/cpu.png',
-      'lib/assets/Images/banner6.png',
+      'lib/assets/Images/powersupply.png',
     ];
 
     return Container(
@@ -1538,15 +1538,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             children: [
                               Opacity(
                                 opacity: 1.0 -
-                                    (_colorAnimationControllers[
-                                                product['id']]
+                                    (_colorAnimationControllers[product['id']]
                                             ?.value ??
                                         0.0),
                                 child: FittedBox(
                                   fit: BoxFit.scaleDown,
                                   child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.center,
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       if (!isOutOfStock)
                                         Icon(Icons.shopping_cart,
@@ -1574,9 +1572,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                       0.0) >
                                   0)
                                 Transform.scale(
-                                  scale: _tickAnimations[product['id']]
-                                          ?.value ??
-                                      0.0,
+                                  scale:
+                                      _tickAnimations[product['id']]?.value ??
+                                          0.0,
                                   child: Icon(
                                     Icons.check,
                                     color: Colors.white,
