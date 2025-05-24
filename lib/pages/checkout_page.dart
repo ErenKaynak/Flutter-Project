@@ -550,7 +550,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
           );
         } catch (e) {
           print('Error sending email receipt: $e');
-          // Don't throw the error as the order was already placed successfully
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Sipariş başarıyla oluşturuldu fakat onay maili gönderilemedi. Lütfen müşteri hizmetleriyle iletişime geçin.'),
+                duration: Duration(seconds: 5),
+                action: SnackBarAction(
+                  label: 'TAMAM',
+                  onPressed: () {},
+                ),
+              ),
+            );
+          }
         }
 
         final cartManager = CartManager();

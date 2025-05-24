@@ -244,12 +244,24 @@ class EmailService {
     try {
       final languageCode = _getCurrentLocale(context);
       
+      final htmlContent = _generateReceiptTemplate(
+        customerName: customerName,
+        orderNumber: orderNumber,
+        items: items,
+        totalAmount: totalAmount,
+        orderDate: orderDate,
+        shippingAddress: shippingAddress,
+        languageCode: languageCode,
+      );
+
       final response = await http.post(
         Uri.parse('$_baseUrl/api/send-email'),
         headers: {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
+          'to': customerEmail,
+          'subject': 'Sipariş Onayı - #$orderNumber',
           'customerEmail': customerEmail,
           'customerName': customerName,
           'orderNumber': orderNumber,
@@ -257,26 +269,20 @@ class EmailService {
           'totalAmount': totalAmount,
           'orderDate': orderDate.toIso8601String(),
           'shippingAddress': shippingAddress,
-          'htmlContent': _generateReceiptTemplate(
-            customerName: customerName,
-            orderNumber: orderNumber,
-            items: items,
-            totalAmount: totalAmount,
-            orderDate: orderDate,
-            shippingAddress: shippingAddress,
-            languageCode: languageCode,
-          ),
+          'htmlContent': htmlContent,
         }),
       );
 
       if (response.statusCode != 200) {
+        print('Email sending failed with status code: ${response.statusCode}');
+        print('Response body: ${response.body}');
         throw Exception('Failed to send email: ${response.body}');
       }
 
       print('Email sent successfully: ${response.body}');
     } catch (e) {
       print('Error sending email: $e');
-      // Don't throw the error as the order was already placed successfully
+      throw Exception('Failed to send email: $e');
     }
   }
 
