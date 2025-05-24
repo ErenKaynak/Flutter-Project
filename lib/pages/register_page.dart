@@ -154,106 +154,72 @@ class _RegisterPageState extends State<RegisterPage> {
             password: passwordController.text.trim(),
           );
 
-      final uid = userCredential.user?.uid;
-      if (uid != null) {
-        // Generate a verification token
-        final verificationToken = DateTime.now().millisecondsSinceEpoch.toString() + uid;
-        await FirebaseFirestore.instance
-            .collection('emailVerifications')
-            .doc(uid)
-            .set({
-              'token': verificationToken,
-              'email': emailController.text.trim(),
-              'createdAt': FieldValue.serverTimestamp(),
-              'verified': false,
-            });
-
-        // Send custom verification email using EmailService
-        await EmailService.sendVerificationEmail(
-          context: context,
-          userEmail: emailController.text.trim(),
-          userName: nameController.text.trim(),
-          verificationLink: 'https://email-backend-production-8783.up.railway.app/api/verify-email?token=$verificationToken',
-        );
+      final user = userCredential.user;
+      if (user != null) {
+        // Send email verification
+        await user.sendEmailVerification();
 
         // Generate unique referral code for new user
         String referralCode = _generateReferralCode();
 
         // Create user document
-        await FirebaseFirestore.instance.collection('users').doc(uid).set({
-          'email': emailController.text.trim(),
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'email': emailController.text.trim().toLowerCase(),
           'name': nameController.text.trim(),
           'surname': surnameController.text.trim(),
-          'profileImage': profileImageController.text.trim(),
+          'profileImageUrl': profileImageController.text.trim(),
           'role': 'user',
-          'referralCode': referralCode,
-          'created_at': FieldValue.serverTimestamp(),
+          'referral_code': referralCode,
+          'createdAt': FieldValue.serverTimestamp(),
+          'emailVerified': false,
         });
 
-        // Create referral code document
+        // Create wallet for new user
         await FirebaseFirestore.instance
-            .collection('referral_codes')
-            .doc(referralCode)
-            .set({'userId': uid, 'createdAt': FieldValue.serverTimestamp()});
-
-        // Create wallet for new user with initial balance of 0
-        await FirebaseFirestore.instance.collection('wallets').doc(uid).set({
+            .collection('wallets')
+            .doc(user.uid)
+            .set({
           'balance': 0.0,
           'created_at': FieldValue.serverTimestamp(),
         });
 
-        // If valid referral code was used, reward both users
+        // If referral code was used, update referrer's document
         if (referrerUid != null) {
-          // Add balance to referrer
           await FirebaseFirestore.instance
-              .collection('wallets')
+              .collection('users')
               .doc(referrerUid)
-              .update({'balance': FieldValue.increment(100)});
-
-          // Add balance to new user
-          await FirebaseFirestore.instance
-              .collection('wallets')
-              .doc(uid)
-              .update({'balance': FieldValue.increment(100)});
-
-          // Record referral transaction for referrer
-          await FirebaseFirestore.instance
-              .collection('wallet_transactions')
-              .add({
-                'user_id': referrerUid,
-                'amount': 100,
-                'type': 'referral_reward',
-                'description': 'Referral Reward',
-                'referred_user': uid,
-                'timestamp': FieldValue.serverTimestamp(),
-                'status': 'completed',
-                'method': 'referral',
-              });
-
-          // Record referral transaction for new user
-          await FirebaseFirestore.instance
-              .collection('wallet_transactions')
-              .add({
-                'user_id': uid,
-                'amount': 100,
-                'type': 'referral_reward',
-                'description': 'Referral Reward',
-                'referrer': referrerUid,
-                'timestamp': FieldValue.serverTimestamp(),
-                'status': 'completed',
-                'method': 'referral',
-              });
+              .update({
+            'referrals': FieldValue.arrayUnion([user.uid])
+          });
         }
-      }
 
-      if (context.mounted) Navigator.pop(context);
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => LoginPage(preFilledEmail: emailController.text.trim()),
-          ),
-          (Route<dynamic> route) => false,
-        );
+        if (context.mounted) {
+          Navigator.pop(context);
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text("Email Verification"),
+              content: Text("A verification email has been sent to your email address. Please verify your email before logging in."),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LoginPage(
+                          preFilledEmail: emailController.text.trim(),
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text("OK"),
+                ),
+              ],
+            ),
+          );
+        }
       }
     } on FirebaseAuthException catch (e) {
       if (context.mounted) Navigator.pop(context);

@@ -208,9 +208,42 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         if (!user.emailVerified) {
           if (context.mounted) {
             Navigator.of(context).pop(); // Pop loading dialog
-            setState(() {
-              emailError = "Please verify your email before logging in. Check your inbox for the verification link.";
-            });
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text("Email Not Verified"),
+                content: Text("Please verify your email before logging in. Check your inbox for the verification link."),
+                actions: [
+                  TextButton(
+                    onPressed: () async {
+                      try {
+                        await user.sendEmailVerification();
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Verification email sent again. Please check your inbox."),
+                            duration: Duration(seconds: 3),
+                          ),
+                        );
+                      } catch (e) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Error sending verification email. Please try again later."),
+                            duration: Duration(seconds: 3),
+                          ),
+                        );
+                      }
+                    },
+                    child: Text("Resend Verification Email"),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text("OK"),
+                  ),
+                ],
+              ),
+            );
             return;
           }
         }
