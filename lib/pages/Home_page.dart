@@ -854,10 +854,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     final List<String> imageList = [
       'lib/assets/Images/icardi.png',
-      'lib/assets/Images/banner2.png',
-      'lib/assets/Images/banner3.png',
-      'lib/assets/Images/banner4.png',
-      'lib/assets/Images/banner5.png',
+      'lib/assets/Images/graphiccards.png',
+      'lib/assets/Images/rams.png',
+      'lib/assets/Images/case.png',
+      'lib/assets/Images/cpu.png',
       'lib/assets/Images/banner6.png',
     ];
 
