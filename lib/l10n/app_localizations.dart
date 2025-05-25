@@ -2556,6 +2556,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'One special character'**
   String get oneSpecialCharacter;
+
+  /// No description provided for @notifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
+
+  /// No description provided for @noNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications yet'**
+  String get noNotifications;
+
+  /// No description provided for @noNotificationsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'New notifications will appear here'**
+  String get noNotificationsDesc;
+
+  /// No description provided for @clearAllNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all notifications'**
+  String get clearAllNotifications;
+
+  /// No description provided for @allNotificationsCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'All notifications cleared'**
+  String get allNotificationsCleared;
+
+  /// No description provided for @notificationDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification deleted'**
+  String get notificationDeleted;
+
+  /// No description provided for @welcomeNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome!'**
+  String get welcomeNotification;
+
+  /// No description provided for @welcomeNotificationDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to our store. We have great offers for you.'**
+  String get welcomeNotificationDesc;
+
+  /// No description provided for @newProductNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'New Product'**
+  String get newProductNotification;
+
+  /// No description provided for @newProductNotificationDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'RTX 4090 is in stock! Check it out now.'**
+  String get newProductNotificationDesc;
+
+  /// No description provided for @discountNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Special Discount'**
+  String get discountNotification;
+
+  /// No description provided for @discountNotificationDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'20% off on all RAM products!'**
+  String get discountNotificationDesc;
+
+  /// No description provided for @daysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days ago'**
+  String daysAgo(int count);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

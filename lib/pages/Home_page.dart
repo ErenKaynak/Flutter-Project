@@ -4,6 +4,7 @@ import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:engineering_project/pages/search_page.dart';
 import 'package:engineering_project/pages/theme_notifier.dart';
+import 'package:engineering_project/pages/notifications_page.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -674,7 +675,50 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               alignment: Alignment.center,
               children: [
                 IconButton(
-                  icon: Icon(Icons.shopping_cart),
+                  icon: const Icon(Icons.notifications),
+                  color: isDark ? Colors.white : Colors.black,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const NotificationsPage()),
+                    );
+                  },
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: themeNotifier.isSpecialModeActive
+                          ? specialColor
+                          : (themeNotifier.isBlackMode
+                              ? Theme.of(context).colorScheme.secondary
+                              : Colors.red),
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: BoxConstraints(minWidth: 16, minHeight: 16),
+                    child: Text(
+                      '3', // Fixed to 3 for now (will be dynamic later)
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    Icons.shopping_cart,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
                   onPressed: () {
                     if (mounted) {
                       Navigator.push(

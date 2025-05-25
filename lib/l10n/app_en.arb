@@ -714,5 +714,25 @@
     "maximum20Characters": "Maximum 20 characters",
     "oneUppercaseLetter": "One uppercase letter",
     "oneLowercaseLetter": "One lowercase letter",
-    "oneSpecialCharacter": "One special character"
+    "oneSpecialCharacter": "One special character",
+    "notifications": "Notifications",
+    "noNotifications": "No notifications yet",
+    "noNotificationsDesc": "New notifications will appear here",
+    "clearAllNotifications": "Clear all notifications",
+    "allNotificationsCleared": "All notifications cleared",
+    "notificationDeleted": "Notification deleted",
+    "welcomeNotification": "Welcome!",
+    "welcomeNotificationDesc": "Welcome to our store. We have great offers for you.",
+    "newProductNotification": "New Product",
+    "newProductNotificationDesc": "RTX 4090 is in stock! Check it out now.",
+    "discountNotification": "Special Discount",
+    "discountNotificationDesc": "20% off on all RAM products!",
+    "daysAgo": "{count} days ago",
+    "@daysAgo": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    }
 }

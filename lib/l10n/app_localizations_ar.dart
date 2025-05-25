@@ -1311,4 +1311,45 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get oneSpecialCharacter => 'حرف خاص واحد';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get noNotifications => 'No notifications yet';
+
+  @override
+  String get noNotificationsDesc => 'New notifications will appear here';
+
+  @override
+  String get clearAllNotifications => 'Clear all notifications';
+
+  @override
+  String get allNotificationsCleared => 'All notifications cleared';
+
+  @override
+  String get notificationDeleted => 'Notification deleted';
+
+  @override
+  String get welcomeNotification => 'Welcome!';
+
+  @override
+  String get welcomeNotificationDesc => 'Welcome to our store. We have great offers for you.';
+
+  @override
+  String get newProductNotification => 'New Product';
+
+  @override
+  String get newProductNotificationDesc => 'RTX 4090 is in stock! Check it out now.';
+
+  @override
+  String get discountNotification => 'Special Discount';
+
+  @override
+  String get discountNotificationDesc => '20% off on all RAM products!';
+
+  @override
+  String daysAgo(int count) {
+    return '$count days ago';
+  }
 }

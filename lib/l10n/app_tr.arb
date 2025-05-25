@@ -599,5 +599,25 @@
     "maximum20Characters": "En fazla 20 karakter",
     "oneUppercaseLetter": "Bir büyük harf",
     "oneLowercaseLetter": "Bir küçük harf",
-    "oneSpecialCharacter": "Bir özel karakter"
+    "oneSpecialCharacter": "Bir özel karakter",
+    "notifications": "Bildirimler",
+    "noNotifications": "Henüz bildirim yok",
+    "noNotificationsDesc": "Yeni bildirimler burada görünecek",
+    "clearAllNotifications": "Tüm bildirimleri temizle",
+    "allNotificationsCleared": "Tüm bildirimler temizlendi",
+    "notificationDeleted": "Bildirim silindi",
+    "welcomeNotification": "Hoş Geldiniz!",
+    "welcomeNotificationDesc": "Mağazamıza hoş geldiniz. Sizin için harika tekliflerimiz var.",
+    "newProductNotification": "Yeni Ürün",
+    "newProductNotificationDesc": "RTX 4090 stokta! Hemen inceleyin.",
+    "discountNotification": "İndirim Fırsatı",
+    "discountNotificationDesc": "Tüm RAM'lerde %20 indirim başladı!",
+    "daysAgo": "{count} gün önce",
+    "@daysAgo": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    }
 } 

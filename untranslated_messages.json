@@ -18,7 +18,20 @@
     "biometricsDescription",
     "setupPin",
     "verify",
-    "invalidPin"
+    "invalidPin",
+    "notifications",
+    "noNotifications",
+    "noNotificationsDesc",
+    "clearAllNotifications",
+    "allNotificationsCleared",
+    "notificationDeleted",
+    "welcomeNotification",
+    "welcomeNotificationDesc",
+    "newProductNotification",
+    "newProductNotificationDesc",
+    "discountNotification",
+    "discountNotificationDesc",
+    "daysAgo"
   ],
 
   "tr": [

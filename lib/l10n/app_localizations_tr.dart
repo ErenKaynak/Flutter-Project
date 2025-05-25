@@ -1311,4 +1311,45 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get oneSpecialCharacter => 'Bir özel karakter';
+
+  @override
+  String get notifications => 'Bildirimler';
+
+  @override
+  String get noNotifications => 'Henüz bildirim yok';
+
+  @override
+  String get noNotificationsDesc => 'Yeni bildirimler burada görünecek';
+
+  @override
+  String get clearAllNotifications => 'Tüm bildirimleri temizle';
+
+  @override
+  String get allNotificationsCleared => 'Tüm bildirimler temizlendi';
+
+  @override
+  String get notificationDeleted => 'Bildirim silindi';
+
+  @override
+  String get welcomeNotification => 'Hoş Geldiniz!';
+
+  @override
+  String get welcomeNotificationDesc => 'Mağazamıza hoş geldiniz. Sizin için harika tekliflerimiz var.';
+
+  @override
+  String get newProductNotification => 'Yeni Ürün';
+
+  @override
+  String get newProductNotificationDesc => 'RTX 4090 stokta! Hemen inceleyin.';
+
+  @override
+  String get discountNotification => 'İndirim Fırsatı';
+
+  @override
+  String get discountNotificationDesc => 'Tüm RAM\'lerde %20 indirim başladı!';
+
+  @override
+  String daysAgo(int count) {
+    return '$count gün önce';
+  }
 }
