@@ -49,9 +49,9 @@ dependencies:
   provider: ^6.1.2
   cloud_firestore: ^5.6.5
   get: ^4.7.2
-  firebase_storage: ^12.4.4
+  firebase_storage: ^11.6.0
   lottie: ^3.3.1
-  image_picker: ^1.1.2
+  image_picker: ^1.0.7
   flutter_launcher_icons: ^0.14.3
   fl_chart: ^1.0.0
   csv: ^6.0.0

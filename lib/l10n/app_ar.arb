@@ -558,5 +558,21 @@
     "maximum20Characters": "20 حرفًا كحد أقصى",
     "oneUppercaseLetter": "حرف كبير واحد",
     "oneLowercaseLetter": "حرف صغير واحد",
-    "oneSpecialCharacter": "حرف خاص واحد"
+    "oneSpecialCharacter": "حرف خاص واحد",
+    "notificationManagement": "إدارة الإشعارات",
+    "newNotification": "إنشاء إشعار جديد",
+    "notificationTitle": "عنوان الإشعار",
+    "notificationMessage": "رسالة الإشعار",
+    "sendToAllUsers": "إرسال إلى جميع المستخدمين",
+    "sendNotification": "إرسال الإشعار",
+    "notificationSent": "تم إرسال الإشعار بنجاح",
+    "notificationError": "حدث خطأ: {error}",
+    "@notificationError": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "pleaseEnterTitleAndMessage": "الرجاء إدخال العنوان والرسالة"
 } 

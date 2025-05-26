@@ -6,6 +6,7 @@ import 'package:engineering_project/admin-panel/admin_products.dart';
 import 'package:engineering_project/admin-panel/admin_user.dart';
 import 'package:engineering_project/admin-panel/admin_statistics.dart';
 import 'package:engineering_project/admin-panel/admin_bug_reports.dart';
+import 'package:engineering_project/admin-panel/admin_notification_management.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -397,20 +398,6 @@ class _AdminPageState extends State<AdminPage> {
             const SizedBox(height: 10),
 
             _buildAdminCard(
-              icon: Image.asset(
-                'lib/assets/Images/Mascot/mascot-head.png',
-                width: 24,
-                height: 24,
-                fit: BoxFit.contain,
-              ),
-              title: l10n.assistantTommySettings,
-              subtitle: l10n.configureTommyAvailability,
-              onTap: () => _showAISettingsDialog(context),
-            ),
-
-            const SizedBox(height: 10),
-
-            _buildAdminCard(
               icon: Icons.settings,
               title: l10n.settings,
               subtitle: l10n.configureAppSettings,
@@ -448,11 +435,38 @@ class _AdminPageState extends State<AdminPage> {
                             );
                           },
                         ),
+                        ListTile(
+                          leading: const Icon(Icons.notifications),
+                          title: Text(l10n.notificationManagement),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AdminNotificationManagement(),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
                 );
               },
+            ),
+
+            const SizedBox(height: 10),
+
+            _buildAdminCard(
+              icon: Image.asset(
+                'lib/assets/Images/Mascot/mascot-head.png',
+                width: 24,
+                height: 24,
+                fit: BoxFit.contain,
+              ),
+              title: l10n.assistantTommySettings,
+              subtitle: l10n.configureTommyAvailability,
+              onTap: () => _showAISettingsDialog(context),
             ),
           ],
         ),

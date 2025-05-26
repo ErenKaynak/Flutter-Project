@@ -2634,6 +2634,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} days ago'**
   String daysAgo(int count);
+
+  /// No description provided for @notificationManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Management'**
+  String get notificationManagement;
+
+  /// No description provided for @newNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Create New Notification'**
+  String get newNotification;
+
+  /// No description provided for @notificationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Title'**
+  String get notificationTitle;
+
+  /// No description provided for @notificationMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Message'**
+  String get notificationMessage;
+
+  /// No description provided for @sendToAllUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to All Users'**
+  String get sendToAllUsers;
+
+  /// No description provided for @sendNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Notification'**
+  String get sendNotification;
+
+  /// No description provided for @notificationSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification sent successfully'**
+  String get notificationSent;
+
+  /// No description provided for @notificationError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error occurred: {error}'**
+  String notificationError(String error);
+
+  /// No description provided for @pleaseEnterTitleAndMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter title and message'**
+  String get pleaseEnterTitleAndMessage;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

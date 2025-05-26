@@ -1352,4 +1352,33 @@ class AppLocalizationsAr extends AppLocalizations {
   String daysAgo(int count) {
     return '$count days ago';
   }
+
+  @override
+  String get notificationManagement => 'إدارة الإشعارات';
+
+  @override
+  String get newNotification => 'إنشاء إشعار جديد';
+
+  @override
+  String get notificationTitle => 'عنوان الإشعار';
+
+  @override
+  String get notificationMessage => 'رسالة الإشعار';
+
+  @override
+  String get sendToAllUsers => 'إرسال إلى جميع المستخدمين';
+
+  @override
+  String get sendNotification => 'إرسال الإشعار';
+
+  @override
+  String get notificationSent => 'تم إرسال الإشعار بنجاح';
+
+  @override
+  String notificationError(String error) {
+    return 'حدث خطأ: $error';
+  }
+
+  @override
+  String get pleaseEnterTitleAndMessage => 'الرجاء إدخال العنوان والرسالة';
 }

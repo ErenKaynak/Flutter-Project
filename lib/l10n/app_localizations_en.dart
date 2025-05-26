@@ -1352,4 +1352,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String daysAgo(int count) {
     return '$count days ago';
   }
+
+  @override
+  String get notificationManagement => 'Notification Management';
+
+  @override
+  String get newNotification => 'Create New Notification';
+
+  @override
+  String get notificationTitle => 'Notification Title';
+
+  @override
+  String get notificationMessage => 'Notification Message';
+
+  @override
+  String get sendToAllUsers => 'Send to All Users';
+
+  @override
+  String get sendNotification => 'Send Notification';
+
+  @override
+  String get notificationSent => 'Notification sent successfully';
+
+  @override
+  String notificationError(String error) {
+    return 'Error occurred: $error';
+  }
+
+  @override
+  String get pleaseEnterTitleAndMessage => 'Please enter title and message';
 }

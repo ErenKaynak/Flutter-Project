@@ -734,5 +734,21 @@
                 "type": "int"
             }
         }
-    }
+    },
+    "notificationManagement": "Notification Management",
+    "newNotification": "Create New Notification",
+    "notificationTitle": "Notification Title",
+    "notificationMessage": "Notification Message",
+    "sendToAllUsers": "Send to All Users",
+    "sendNotification": "Send Notification",
+    "notificationSent": "Notification sent successfully",
+    "notificationError": "Error occurred: {error}",
+    "@notificationError": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "pleaseEnterTitleAndMessage": "Please enter title and message"
 }

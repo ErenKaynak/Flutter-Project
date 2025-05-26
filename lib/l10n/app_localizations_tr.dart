@@ -1352,4 +1352,33 @@ class AppLocalizationsTr extends AppLocalizations {
   String daysAgo(int count) {
     return '$count gün önce';
   }
+
+  @override
+  String get notificationManagement => 'Bildirim Yönetimi';
+
+  @override
+  String get newNotification => 'Yeni Bildirim Oluştur';
+
+  @override
+  String get notificationTitle => 'Bildirim Başlığı';
+
+  @override
+  String get notificationMessage => 'Bildirim Mesajı';
+
+  @override
+  String get sendToAllUsers => 'Tüm Kullanıcılara Gönder';
+
+  @override
+  String get sendNotification => 'Bildirimi Gönder';
+
+  @override
+  String get notificationSent => 'Bildirim başarıyla gönderildi';
+
+  @override
+  String notificationError(String error) {
+    return 'Hata oluştu: $error';
+  }
+
+  @override
+  String get pleaseEnterTitleAndMessage => 'Lütfen başlık ve mesaj alanlarını doldurun';
 }

@@ -619,5 +619,21 @@
                 "type": "int"
             }
         }
-    }
+    },
+    "notificationManagement": "Bildirim Yönetimi",
+    "newNotification": "Yeni Bildirim Oluştur",
+    "notificationTitle": "Bildirim Başlığı",
+    "notificationMessage": "Bildirim Mesajı",
+    "sendToAllUsers": "Tüm Kullanıcılara Gönder",
+    "sendNotification": "Bildirimi Gönder",
+    "notificationSent": "Bildirim başarıyla gönderildi",
+    "notificationError": "Hata oluştu: {error}",
+    "@notificationError": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "pleaseEnterTitleAndMessage": "Lütfen başlık ve mesaj alanlarını doldurun"
 } 
