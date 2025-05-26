@@ -1013,95 +1013,119 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final l10n = AppLocalizations.of(context)!;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              item['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-              width: 60,
-              height: 60,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: 60,
-                  height: 60,
-                  color: Colors.grey.shade200,
-                  child: Icon(Icons.image_not_supported, color: Colors.grey),
-                );
-              },
+    return GestureDetector(
+      onTap: () {
+        // Navigate to product detail page when clicked
+        if (item['id'] != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProductDetailPage(productId: item['id']),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item['name'] ?? l10n.productNotFound,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 4),
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(text: '${l10n.quantityPrefix} '),
-                      TextSpan(text: '${item['quantity']} × ${formatPrice(item['price'].toString())}'),
-                    ],
-                  ),
-                  style: TextStyle(
-                    color: Theme.of(context).textTheme.bodyMedium?.color,
-                    fontSize: 14,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(text: '${l10n.itemTotalPrefix} '),
-                      TextSpan(
-                        text: formatDoublePrice(double.parse(item['price'].toString()) * (item['quantity'] as int)),
-                        style: const TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  style: const TextStyle(fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          if (status == STATUS_DELIVERED)
-            FutureBuilder<bool>(
-              future: _hasUserReviewedProduct(item['id']),
-              builder: (context, snapshot) {
-                final bool hasReviewed = snapshot.data ?? false;
-                return TextButton(
-                  onPressed: hasReviewed ? null : () => _showRatingDialog(item['id'], item['name']),
-                  child: Text(
-                    hasReviewed ? l10n.alreadyReviewed : l10n.rateProduct,
-                    style: TextStyle(
-                      color: hasReviewed
-                          ? Colors.grey
-                          : (themeNotifier.isSpecialModeActive
-                              ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-                              : Theme.of(context).primaryColor),
-                      fontSize: 12,
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.productNotFound)),
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: item['imagePath'] != null && item['imagePath'].toString().startsWith('http')
+                  ? Image.network(
+                      item['imagePath'],
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 60,
+                          height: 60,
+                          color: Colors.grey.shade200,
+                          child: Icon(Icons.image_not_supported, color: Colors.grey),
+                        );
+                      },
+                    )
+                  : Container(
+                      width: 60,
+                      height: 60,
+                      color: Colors.grey.shade200,
+                      child: Icon(Icons.image_not_supported, color: Colors.grey),
                     ),
-                  ),
-                );
-              },
             ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item['name'] ?? l10n.productNotFound,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 4),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: '${l10n.quantityPrefix} '),
+                        TextSpan(text: '${item['quantity']} × ${formatPrice(item['price'].toString())}'),
+                      ],
+                    ),
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: '${l10n.itemTotalPrefix} '),
+                        TextSpan(
+                          text: formatDoublePrice(double.parse(item['price'].toString()) * (item['quantity'] as int)),
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    style: const TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            if (status == STATUS_DELIVERED)
+              FutureBuilder<bool>(
+                future: _hasUserReviewedProduct(item['id']),
+                builder: (context, snapshot) {
+                  final bool hasReviewed = snapshot.data ?? false;
+                  return TextButton(
+                    onPressed: hasReviewed ? null : () => _showRatingDialog(item['id'], item['name']),
+                    child: Text(
+                      hasReviewed ? l10n.alreadyReviewed : l10n.rateProduct,
+                      style: TextStyle(
+                        color: hasReviewed
+                            ? Colors.grey
+                            : (themeNotifier.isSpecialModeActive
+                                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                : Theme.of(context).primaryColor),
+                        fontSize: 12,
+                      ),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
       ),
     );
   }

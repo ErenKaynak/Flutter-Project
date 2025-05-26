@@ -154,6 +154,27 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     try {
       await AuthService().signInWithGoogle(context);
       if (!_mounted) return;
+      
+      // Check if user account is disabled
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+            
+        if (userDoc.exists && userDoc.data()?['disabled'] == true) {
+          // Sign out the user immediately
+          await FirebaseAuth.instance.signOut();
+          
+          if (context.mounted) {
+            Navigator.pop(context);
+            setState(() { emailError = 'This account has been disabled by an administrator.'; });
+          }
+          return;
+        }
+      }
+      
       if (context.mounted) Navigator.pop(context);
       if (!_mounted) return;
       if (context.mounted) {
@@ -204,6 +225,27 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
       final user = credential.user;
       if (user != null) {
+        // Check if user account is disabled
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+            
+        if (userDoc.exists && userDoc.data()?['disabled'] == true) {
+          // Sign out the user immediately
+          await FirebaseAuth.instance.signOut();
+          
+          if (context.mounted) {
+            // Pop the loading dialog
+            Navigator.of(context).pop();
+            
+            setState(() {
+              emailError = "This account has been disabled by an administrator.";
+            });
+          }
+          return;
+        }
+        
         // Check if email is verified
         if (!user.emailVerified) {
           if (context.mounted) {
@@ -254,12 +296,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         if (!mounted) return;
 
         // Get user role
-        final userDoc =
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .get();
-
         final String role = userDoc['role'] ?? 'user';
 
         if (!mounted) return;
@@ -367,7 +403,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
       // 2. Request custom token from backend
       final response = await http.post(
-        Uri.parse('https://passwordlessbackend-production.up.railway.app/createCustomToken'), // <-- change to your backend URL
+        Uri.parse('https://passwordlessbackend-production.up.railway.app/createCustomToken'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}),
       );
@@ -381,6 +417,26 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       // 3. Sign in with custom token
       await FirebaseAuth.instance.signOut();
       await FirebaseAuth.instance.signInWithCustomToken(token);
+      
+      // 4. Check if user account is disabled
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+            
+        if (userDoc.exists && userDoc.data()?['disabled'] == true) {
+          // Sign out the user immediately
+          await FirebaseAuth.instance.signOut();
+          
+          if (context.mounted) {
+            Navigator.pop(context);
+            setState(() { emailError = 'This account has been disabled by an administrator.'; });
+          }
+          return;
+        }
+      }
 
       if (context.mounted) Navigator.pop(context);
       if (context.mounted) {

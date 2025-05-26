@@ -127,6 +127,30 @@ class CartManager {
     if (user == null) return;
 
     try {
+      // Only perform stock check if we're increasing quantity
+      if (change > 0) {
+        // Get the current product stock from Firestore
+        final productDoc = await _firestore.collection('products').doc(id).get();
+        final currentStock = productDoc.data()?['stock'] ?? 0;
+        
+        // Get current cart quantity
+        final cartDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('cart')
+            .doc(id)
+            .get();
+        
+        if (cartDoc.exists) {
+          final currentQuantity = cartDoc.data()?['quantity'] ?? 1;
+          
+          // If trying to add more than available stock, don't proceed
+          if (currentQuantity >= currentStock) {
+            return; // Silently return without increasing quantity
+          }
+        }
+      }
+
       final docRef = _firestore
           .collection('users')
           .doc(user.uid)

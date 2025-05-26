@@ -22,6 +22,8 @@ class _FavoritesPageState extends State<FavoritesPage>
     with TickerProviderStateMixin {
   bool _isLoading = true;
   List<Map<String, dynamic>> favoriteProducts = [];
+  // Add this new Map to track unfavorited products
+  final Map<String, bool> _unfavoritedProducts = {};
   final Map<String, AnimationController> _animationControllers = {};
   final Map<String, AnimationController> _colorAnimationControllers = {};
   final Map<String, Animation<Color?>> _colorAnimations = {};
@@ -106,18 +108,51 @@ class _FavoritesPageState extends State<FavoritesPage>
               .get();
 
       final List<Map<String, dynamic>> loadedFavorites = [];
-      favoritesSnapshot.docs.forEach((doc) {
+      final List<Future<void>> stockFutures = [];
+      
+      // First, load basic product info from favorites
+      for (var doc in favoritesSnapshot.docs) {
         final data = doc.data();
-        loadedFavorites.add({
-          'id': doc.id,
+        final productId = doc.id;
+        
+        final productMap = {
+          'id': productId,
           'name': data['name'] ?? 'Unknown Product',
           'price': data['price']?.toString() ?? '0',
           'image': data['image'] ?? 'lib/assets/Images/placeholder.png',
           'category': data['category'] ?? 'Uncategorized',
           'description': data['description'] ?? 'No description available',
-          'stock': data['stock'] ?? 0,
-        });
-      });
+          'stock': data['stock'] ?? 0, // Default stock value
+        };
+        
+        loadedFavorites.add(productMap);
+        
+        // Create a future to fetch the latest stock for this product
+        final stockFuture = FirebaseFirestore.instance
+            .collection('products')
+            .doc(productId)
+            .get()
+            .then((productDoc) {
+              if (productDoc.exists) {
+                final productData = productDoc.data();
+                if (productData != null && productData.containsKey('stock')) {
+                  // Update the stock value with the latest from products collection
+                  final index = loadedFavorites.indexWhere((p) => p['id'] == productId);
+                  if (index >= 0) {
+                    loadedFavorites[index]['stock'] = productData['stock'] ?? 0;
+                  }
+                }
+              }
+            })
+            .catchError((error) {
+              print('Error fetching product stock: $error');
+            });
+            
+        stockFutures.add(stockFuture);
+      }
+      
+      // Wait for all stock fetch operations to complete
+      await Future.wait(stockFutures);
 
       setState(() {
         favoriteProducts = loadedFavorites;
@@ -140,21 +175,24 @@ class _FavoritesPageState extends State<FavoritesPage>
         return;
       }
 
+      // Mark the product as unfavorited in the UI
+      setState(() {
+        _unfavoritedProducts[productId] = true;
+      });
+
+      // Still remove from Firestore
       await FirebaseFirestore.instance
           .collection('favorites')
           .doc(user.uid)
           .collection('userFavorites')
           .doc(productId)
           .delete();
-
-      setState(() {
-        favoriteProducts.removeWhere((product) => product['id'] == productId);
-      });
-
+  
+      // Notify parent if needed
       if (widget.onFavoritesChanged != null) {
         widget.onFavoritesChanged!();
       }
-
+  
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.removedFromFavorites),
@@ -163,6 +201,10 @@ class _FavoritesPageState extends State<FavoritesPage>
       );
     } catch (e) {
       print('Error removing from favorites: $e');
+      // Reset unfavorited status if there's an error
+      setState(() {
+        _unfavoritedProducts.remove(productId);
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.failedToRemove),
@@ -174,13 +216,7 @@ class _FavoritesPageState extends State<FavoritesPage>
 
   Future<void> addToCart(Map<String, dynamic> product) async {
     final l10n = AppLocalizations.of(context)!;
-    final controller = _animationControllers[product['id']];
-    if (controller != null && mounted) {
-      controller.reset();
-      await controller.forward();
-      controller.reset();
-    }
-
+    
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -191,6 +227,43 @@ class _FavoritesPageState extends State<FavoritesPage>
           ),
         );
         return;
+      }
+      
+      // Fetch the latest product data to check current stock
+      final productDoc = await FirebaseFirestore.instance
+          .collection('products')
+          .doc(product['id'])
+          .get();
+      
+      if (!productDoc.exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.productNoLongerAvailable),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+      
+      final productData = productDoc.data()!;
+      final int currentStock = productData['stock'] is int ? productData['stock'] : 0;
+      
+      // Check if product is out of stock based on current data
+      if (currentStock <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.outOfStock),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+      
+      final controller = _animationControllers[product['id']];
+      if (controller != null && mounted) {
+        controller.reset();
+        await controller.forward();
+        controller.reset();
       }
 
       final cartRef = FirebaseFirestore.instance
@@ -491,7 +564,10 @@ class _FavoritesPageState extends State<FavoritesPage>
                         child: GestureDetector(
                           onTap: () => removeFromFavorites(product['id']),
                           child: Icon(
-                            Icons.favorite,
+                            // Show hollow heart if product is marked as unfavorited
+                            _unfavoritedProducts[product['id']] == true
+                                ? Icons.favorite_border
+                                : Icons.favorite,
                             color:
                                 themeNotifier.isSpecialModeActive
                                     ? themeNotifier.getThemeColor(
