@@ -223,23 +223,30 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
                                     ),
                                   ],
                                 )
-                              : Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add_photo_alternate,
-                                      size: 50,
-                                      color: themeColor.withOpacity(0.7),
+                              : Center(
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(vertical: 20),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.add_photo_alternate,
+                                          size: 56,
+                                          color: themeColor.withOpacity(0.7),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          l10n.addFromUrl,
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
+                                            color: isDark ? Colors.white70 : Colors.black54,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      l10n.addFromUrl,
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: isDark ? Colors.white70 : Colors.black54,
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                         ),
                       ),
