@@ -51,6 +51,10 @@ void main() async {
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  // Configure FCM
+  NotificationService.configure('a655dd169e223ed3b8639d09ce972bc37ffc4daf');
+  await NotificationService.init();
+
   // Configure error handling
   if (kDebugMode) {
     FlutterError.onError = (FlutterErrorDetails details) {
