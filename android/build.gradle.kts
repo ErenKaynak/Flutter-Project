@@ -2,6 +2,8 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // Add OneSignal repository
+        maven(url = "https://artifacts.onesignal.com/maven")
     }
 }
 

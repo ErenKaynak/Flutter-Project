@@ -228,7 +228,8 @@
     "@transactionsCount": {
         "placeholders": {
             "count": {
-                "type": "int"
+                "type": "int",
+                "description": "Number of transactions"
             }
         }
     },
@@ -340,7 +341,8 @@
     "@ordersCount": {
         "placeholders": {
             "count": {
-                "type": "int"
+                "type": "int",
+                "description": "Number of orders"
             }
         }
     },
@@ -615,8 +617,9 @@
     "daysAgo": "{count} gün önce",
     "@daysAgo": {
         "placeholders": {
-            "count": {
-                "type": "int"
+            "days": {
+                "type": "int",
+                "description": "Number of days ago"
             }
         }
     },
@@ -635,5 +638,15 @@
             }
         }
     },
-    "pleaseEnterTitleAndMessage": "Lütfen başlık ve mesaj alanlarını doldurun"
-} 
+    "pleaseEnterTitleAndMessage": "Lütfen başlık ve mesaj alanlarını doldurun",
+    "setupWalletPin": "Cüzdan PIN Kodu Oluştur",
+    "createWalletPin": "Yeni PIN Kodu Oluştur",
+    "walletPinDescription": "Lütfen cüzdanınız için 4 haneli bir PIN kodu oluşturun",
+    "enterPin": "PIN Kodunu Girin",
+    "confirmPin": "PIN Kodunu Onaylayın",
+    "useBiometrics": "Parmak İzi Kullan",
+    "biometricsDescription": "Cüzdana erişmek için parmak izi veya yüz tanıma kullanın",
+    "setupPin": "PIN Kodu Oluştur",
+    "verify": "Doğrula",
+    "invalidPin": "Geçersiz PIN Kodu"
+}

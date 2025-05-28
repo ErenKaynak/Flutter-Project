@@ -1262,34 +1262,34 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get setupWalletPin => 'Setup Wallet PIN';
+  String get setupWalletPin => 'Cüzdan PIN Kodu Oluştur';
 
   @override
-  String get createWalletPin => 'Create Wallet PIN';
+  String get createWalletPin => 'Yeni PIN Kodu Oluştur';
 
   @override
-  String get walletPinDescription => 'Create a 6-digit PIN to secure your wallet';
+  String get walletPinDescription => 'Lütfen cüzdanınız için 4 haneli bir PIN kodu oluşturun';
 
   @override
-  String get enterPin => 'Enter PIN';
+  String get enterPin => 'PIN Kodunu Girin';
 
   @override
-  String get confirmPin => 'Confirm PIN';
+  String get confirmPin => 'PIN Kodunu Onaylayın';
 
   @override
-  String get useBiometrics => 'Use Biometrics';
+  String get useBiometrics => 'Parmak İzi Kullan';
 
   @override
-  String get biometricsDescription => 'Use fingerprint or face recognition to access your wallet';
+  String get biometricsDescription => 'Cüzdana erişmek için parmak izi veya yüz tanıma kullanın';
 
   @override
-  String get setupPin => 'Setup PIN';
+  String get setupPin => 'PIN Kodu Oluştur';
 
   @override
-  String get verify => 'Verify';
+  String get verify => 'Doğrula';
 
   @override
-  String get invalidPin => 'Invalid PIN';
+  String get invalidPin => 'Geçersiz PIN Kodu';
 
   @override
   String get orLogInWith => 'Veya ile giriş yap';
@@ -1349,7 +1349,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get discountNotificationDesc => 'Tüm RAM\'lerde %20 indirim başladı!';
 
   @override
-  String daysAgo(int count) {
+  String daysAgo(int days, Object count) {
     return '$count gün önce';
   }
 
@@ -1381,4 +1381,28 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get pleaseEnterTitleAndMessage => 'Lütfen başlık ve mesaj alanlarını doldurun';
+
+  @override
+  String get bannerManagement => 'Banner Management';
+
+  @override
+  String get noBannersFound => 'No Banners Found';
+
+  @override
+  String get addFirstBanner => 'Add your first banner';
+
+  @override
+  String get bannerAddedSuccessfully => 'Banner added successfully';
+
+  @override
+  String get bannerUpdatedSuccessfully => 'Banner updated successfully';
+
+  @override
+  String get bannerDeletedSuccessfully => 'Banner deleted successfully';
+
+  @override
+  String get confirmDelete => 'Confirm Delete';
+
+  @override
+  String get deleteBannerConfirmation => 'Are you sure you want to delete this banner?';
 }

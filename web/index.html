@@ -10,38 +10,47 @@
 
     For more details:
     * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
   -->
   <base href="$FLUTTER_BASE_HREF">
-  <base href="/">
+  
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
-
-  <!-- Add these meta tags inside the head section -->
-  <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
-  <meta http-equiv="Access-Control-Allow-Origin" content="*">
-  <meta name="referrer" content="origin">
+  <meta name="description" content="Paradise PC Parts - Your one-stop shop for computer components">
 
   <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="engineering_project">
+  <meta name="apple-mobile-web-app-title" content="Paradise PC Parts">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
 
-  <title>engineering_project</title>
+  <title>Paradise PC Parts</title>
   <link rel="manifest" href="manifest.json">
+  
+  <script>
+    // The value below is injected by flutter build, do not touch.
+    var serviceWorkerVersion = "{{flutter_service_worker_version}}";
+  </script>
+  
+  <!-- This script adds the flutter initialization JS code -->
+  <script src="flutter.js" defer></script>
+  
   <meta name="google-signin-client_id" content="52042306180-he6nr5jffbu128eb25g3taioq08jckkq.apps.googleusercontent.com" />
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    window.addEventListener('load', function(ev) {
+      // Download main.dart.js
+      _flutter.loader.load({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        }
+      });
+    });
+  </script>
 </body>
 </html>

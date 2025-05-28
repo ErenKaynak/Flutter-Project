@@ -574,5 +574,44 @@
             }
         }
     },
-    "pleaseEnterTitleAndMessage": "الرجاء إدخال العنوان والرسالة"
-} 
+    "pleaseEnterTitleAndMessage": "الرجاء إدخال العنوان والرسالة",
+    "requestRefund": "طلب استرداد",
+    "confirmRefundRequest": "تأكيد طلب الاسترداد",
+    "refundRequestSubmitted": "تم تقديم طلب الاسترداد",
+    "failedToRequestRefund": "فشل في طلب الاسترداد",
+    "refundRequested": "تم طلب الاسترداد",
+    "refunded": "تم الاسترداد",
+    "processRefund": "معالجة الاسترداد",
+    "refundProcessed": "تمت معالجة الاسترداد",
+    "failedToProcessRefund": "فشل في معالجة الاسترداد",
+    "setupWalletPin": "إعداد رمز المحفظة",
+    "createWalletPin": "إنشاء رمز المحفظة",
+    "walletPinDescription": "الرجاء إنشاء رمز مكون من 4 أرقام لمحفظتك",
+    "enterPin": "أدخل الرمز",
+    "confirmPin": "تأكيد الرمز",
+    "useBiometrics": "استخدام البصمة",
+    "biometricsDescription": "استخدم بصمة الإصبع أو التعرف على الوجه للوصول إلى محفظتك",
+    "setupPin": "إعداد الرمز",
+    "verify": "تحقق",
+    "invalidPin": "رمز غير صحيح",
+    "notifications": "الإشعارات",
+    "noNotifications": "لا توجد إشعارات",
+    "noNotificationsDesc": "ستظهر الإشعارات هنا عندما تتلقاها",
+    "clearAllNotifications": "مسح كل الإشعارات",
+    "allNotificationsCleared": "تم مسح جميع الإشعارات",
+    "notificationDeleted": "تم حذف الإشعار",
+    "welcomeNotification": "مرحباً بك",
+    "welcomeNotificationDesc": "مرحباً بك في Paradise PC Parts",
+    "newProductNotification": "منتج جديد",
+    "newProductNotificationDesc": "تم إضافة منتجات جديدة إلى المتجر",
+    "discountNotification": "خصم جديد",
+    "discountNotificationDesc": "خصومات جديدة متوفرة الآن",
+    "daysAgo": "منذ {days} يوم",
+    "@daysAgo": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    }
+}

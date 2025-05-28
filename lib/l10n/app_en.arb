@@ -4,7 +4,7 @@
     "login": "Login",
     "signIn": "Sign In",
     "register": "Register",
-    "guest": "Continue as Guest", 
+    "guest": "Continue as Guest",
     "email": "Email",
     "password": "Password",
     "confirmPassword": "Confirm Password",
@@ -36,7 +36,8 @@
     "@products": {
         "placeholders": {
             "count": {
-                "type": "int"
+                "type": "int",
+                "description": "Number of products"
             }
         }
     },
@@ -48,7 +49,8 @@
     "@addedToCart": {
         "placeholders": {
             "productName": {
-                "type": "String"
+                "type": "String",
+                "description": "Name of the product added to cart"
             }
         }
     },
@@ -63,7 +65,6 @@
     "accountSettings": "Account Settings",
     "myAddresses": "My Addresses",
     "addNewAddress": "Add New Address",
-    "guest": "Guest",
     "hello": "Hello",
     "yourAddresses": "Your Addresses",
     "noAddressesFound": "No addresses found.",
@@ -90,7 +91,8 @@
     "@errorSavingAddress": {
         "placeholders": {
             "error": {
-                "type": "String"
+                "type": "String",
+                "description": "Error message"
             }
         }
     },
@@ -160,7 +162,8 @@
     "@discountApplied": {
         "placeholders": {
             "code": {
-                "type": "String"
+                "type": "String",
+                "description": "Discount code applied"
             }
         }
     },
@@ -179,7 +182,8 @@
     "@discount": {
         "placeholders": {
             "percent": {
-                "type": "int"
+                "type": "int",
+                "description": "Discount percentage"
             }
         }
     },
@@ -188,7 +192,8 @@
     "@totalAmount": {
         "placeholders": {
             "amount": {
-                "type": "String"
+                "type": "String",
+                "description": "Total amount to pay"
             }
         }
     },
@@ -198,7 +203,8 @@
     "@amountPaid": {
         "placeholders": {
             "amount": {
-                "type": "String"
+                "type": "String",
+                "description": "Amount paid"
             }
         }
     },
@@ -207,7 +213,8 @@
     "@orderId": {
         "placeholders": {
             "id": {
-                "type": "String"
+                "type": "String",
+                "description": "Order identification number"
             }
         }
     },
@@ -227,7 +234,8 @@
     "@availableBalance": {
         "placeholders": {
             "amount": {
-                "type": "String"
+                "type": "String",
+                "description": "Available wallet balance"
             }
         }
     },
@@ -236,7 +244,8 @@
     "@addMoreForFreeShipping": {
         "placeholders": {
             "amount": {
-                "type": "String"
+                "type": "String",
+                "description": "Amount needed for free shipping"
             }
         }
     },
@@ -267,7 +276,8 @@
     "@expires": {
         "placeholders": {
             "date": {
-                "type": "String"
+                "type": "String",
+                "description": "Expiration date"
             }
         }
     },
@@ -277,7 +287,8 @@
     "@outOfStockItems": {
         "placeholders": {
             "items": {
-                "type": "String"
+                "type": "String",
+                "description": "List of out of stock items"
             }
         }
     },
@@ -285,7 +296,8 @@
     "@insufficientStockItems": {
         "placeholders": {
             "items": {
-                "type": "String"
+                "type": "String",
+                "description": "List of items with insufficient stock"
             }
         }
     },
@@ -336,7 +348,8 @@
     "@transactionsCount": {
         "placeholders": {
             "count": {
-                "type": "int"
+                "type": "int",
+                "description": "Number of transactions"
             }
         }
     },
@@ -370,7 +383,8 @@
     "@errorSavingCard": {
         "placeholders": {
             "error": {
-                "type": "String"
+                "type": "String",
+                "description": "Error message when saving card"
             }
         }
     },
@@ -389,7 +403,8 @@
     "@ordersCount": {
         "placeholders": {
             "count": {
-                "type": "int"
+                "type": "int",
+                "description": "Number of orders"
             }
         }
     },
@@ -404,7 +419,8 @@
     "@noOrdersWithStatus": {
         "placeholders": {
             "status": {
-                "type": "String"
+                "type": "String",
+                "description": "Order status"
             }
         }
     },
@@ -450,7 +466,8 @@
     "@failedToCancelOrder": {
         "placeholders": {
             "error": {
-                "type": "String"
+                "type": "String",
+                "description": "Error message for order cancellation"
             }
         }
     },
@@ -730,8 +747,9 @@
     "daysAgo": "{count} days ago",
     "@daysAgo": {
         "placeholders": {
-            "count": {
-                "type": "int"
+            "days": {
+                "type": "int",
+                "description": "Number of days ago"
             }
         }
     },
@@ -750,5 +768,15 @@
             }
         }
     },
-    "pleaseEnterTitleAndMessage": "Please enter title and message"
+    "pleaseEnterTitleAndMessage": "Please enter title and message",
+    "bannerManagement": "Banner Management",
+    "noBannersFound": "No Banners Found",
+    "addFirstBanner": "Add your first banner",
+    "bannerAddedSuccessfully": "Banner added successfully",
+    "bannerUpdatedSuccessfully": "Banner updated successfully",
+    "bannerDeletedSuccessfully": "Banner deleted successfully",
+    "confirmDelete": "Confirm Delete",
+    "deleteBannerConfirmation": "Are you sure you want to delete this banner?",
+    "cancel": "Cancel",
+    "delete": "Delete"
 }

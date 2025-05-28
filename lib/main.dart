@@ -1,13 +1,16 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:engineering_project/assets/components/notification_service.dart';
 import 'package:engineering_project/assets/components/theme_data.dart';
+import 'package:engineering_project/assets/components/onesignal_navigation_observer.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:engineering_project/firebase_options.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
 import 'package:engineering_project/pages/root_page.dart';
 import 'package:engineering_project/pages/theme_notifier.dart';
 import 'package:engineering_project/pages/welcome_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -16,9 +19,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:engineering_project/providers/cart_provider.dart';
 import 'package:engineering_project/providers/language_provider.dart';
-import 'package:engineering_project/l10n/app_localizations.dart';
-import 'package:engineering_project/assets/AI/ai_settings_page.dart';
-
 const String _kSpecialModeActiveKey = 'special_mode_active';
 const String _kSpecialThemeKey = 'special_theme';
 
@@ -46,43 +46,31 @@ Future<void> loadSpecialModePreferences(ThemeNotifier themeNotifier) async {
 }
 
 void main() async {
+  // Set up error handling immediately
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    developer.log(details.toString(), name: 'Flutter Error');
+  };
+
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Initialize Firebase first
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-  // Configure FCM
-  NotificationService.configure('a655dd169e223ed3b8639d09ce972bc37ffc4daf');
-  await NotificationService.init();
-
-  // Configure error handling
-  if (kDebugMode) {
-    FlutterError.onError = (FlutterErrorDetails details) {
-      if (!details.toString().contains('OpenGL ES API') &&
-          !details.toString().contains('EGL_emulation')) {
-        FlutterError.presentError(details);
-      }
-    };
-  }
-
-  // Set preferred orientations
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-
-  // Create theme notifier instance
-  final themeNotifier = ThemeNotifier();
-  
-  // Load special mode preferences
-  await loadSpecialModePreferences(themeNotifier);
+  // Initialize OneSignal
+  await NotificationService.initialize(
+    appId: 'bb5b6419-07c9-4b72-9d85-e2c121f05591',
+    restApiKey: 'os_v2_app_xnnwigihzffxfhmf4lasd4cvsh5xegtwcgbuqwu6vvz3gqhd7zztqj65gwdfiy5gh2arh2z5jzkdlaqzat7kuxlvgdhzaos65roxnna', // Get this from OneSignal Dashboard -> Settings -> Keys & IDs
+  );
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: themeNotifier),
-        ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeNotifier()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: const MyApp(),
     ),
@@ -94,8 +82,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final languageProvider = Provider.of<LanguageProvider>(context);
+    final themeNotifier = context.watch<ThemeNotifier>();
+    final languageProvider = context.watch<LanguageProvider>();
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -126,12 +114,22 @@ class MyApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      // Enable navigator observers for OneSignal in-app routing
+      navigatorObservers: [
+        // Always add the observer - it will handle cases when OneSignal isn't configured
+        OneSignalNavigationObserver(),
+      ],
       supportedLocales: const [
         Locale('en'), // English
         Locale('tr'), // Turkish
         Locale('ar'), // Arabic
       ],
-      home: const AuthWrapper(),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const AuthWrapper(),
+        '/welcome': (context) => const WelcomeScreen(),
+        '/root': (context) => const RootPage(),
+      },
     );
   }
 }
@@ -144,6 +142,33 @@ class AuthWrapper extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
+        // Add additional error handling in the auth stream
+        if (snapshot.hasError) {
+          developer.log('Auth stream error: ${snapshot.error}', error: snapshot.error, stackTrace: snapshot.stackTrace);
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.orange),
+                  const SizedBox(height: 16),
+                  const Text('Authentication Error', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Text('${snapshot.error}', textAlign: TextAlign.center),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => FirebaseAuth.instance.signOut(),
+                    child: const Text('Sign Out'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -151,9 +176,32 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (snapshot.hasData && snapshot.data != null) {
+          // Update OneSignal with user info when authenticated
+          if (NotificationService.isConfigured) {
+            final user = snapshot.data!;
+            OneSignal.login(user.uid);
+            
+            // Set user tags for segmentation
+            if (user.displayName != null) {
+              NotificationService.addTag("username", user.displayName!);
+            }
+            if (user.email != null) {
+              NotificationService.addTag("email", user.email!);
+            }
+          }
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Navigator.pushReplacementNamed(context, '/root');
+          });
           return const RootPage();
         }
 
+        // Clear OneSignal external user ID when logged out
+        if (NotificationService.isConfigured) {
+          OneSignal.logout();
+        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.pushReplacementNamed(context, '/welcome');
+        });
         return const WelcomeScreen();
       },
     );

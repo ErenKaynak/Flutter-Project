@@ -1228,68 +1228,68 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noBugReports => 'لا توجد تقارير أخطاء';
 
   @override
-  String get requestRefund => 'Request Refund';
+  String get requestRefund => 'طلب استرداد';
 
   @override
-  String get confirmRefundRequest => 'Are you sure you want to request a refund for this order?';
+  String get confirmRefundRequest => 'تأكيد طلب الاسترداد';
 
   @override
   String get orderTotal => 'إجمالي الطلب';
 
   @override
-  String get refundRequestSubmitted => 'Refund request submitted successfully';
+  String get refundRequestSubmitted => 'تم تقديم طلب الاسترداد';
 
   @override
   String failedToRequestRefund(String error) {
-    return 'Failed to request refund: $error';
+    return 'فشل في طلب الاسترداد';
   }
 
   @override
-  String get refundRequested => 'Refund Requested';
+  String get refundRequested => 'تم طلب الاسترداد';
 
   @override
-  String get refunded => 'Refunded';
+  String get refunded => 'تم الاسترداد';
 
   @override
-  String get processRefund => 'Process Refund';
+  String get processRefund => 'معالجة الاسترداد';
 
   @override
-  String get refundProcessed => 'Refund processed successfully';
+  String get refundProcessed => 'تمت معالجة الاسترداد';
 
   @override
   String failedToProcessRefund(String error) {
-    return 'Failed to process refund: $error';
+    return 'فشل في معالجة الاسترداد';
   }
 
   @override
-  String get setupWalletPin => 'Setup Wallet PIN';
+  String get setupWalletPin => 'إعداد رمز المحفظة';
 
   @override
-  String get createWalletPin => 'Create Wallet PIN';
+  String get createWalletPin => 'إنشاء رمز المحفظة';
 
   @override
-  String get walletPinDescription => 'Create a 6-digit PIN to secure your wallet';
+  String get walletPinDescription => 'الرجاء إنشاء رمز مكون من 4 أرقام لمحفظتك';
 
   @override
-  String get enterPin => 'Enter PIN';
+  String get enterPin => 'أدخل الرمز';
 
   @override
-  String get confirmPin => 'Confirm PIN';
+  String get confirmPin => 'تأكيد الرمز';
 
   @override
-  String get useBiometrics => 'Use Biometrics';
+  String get useBiometrics => 'استخدام البصمة';
 
   @override
-  String get biometricsDescription => 'Use fingerprint or face recognition to access your wallet';
+  String get biometricsDescription => 'استخدم بصمة الإصبع أو التعرف على الوجه للوصول إلى محفظتك';
 
   @override
-  String get setupPin => 'Setup PIN';
+  String get setupPin => 'إعداد الرمز';
 
   @override
-  String get verify => 'Verify';
+  String get verify => 'تحقق';
 
   @override
-  String get invalidPin => 'Invalid PIN';
+  String get invalidPin => 'رمز غير صحيح';
 
   @override
   String get orLogInWith => 'أو سجل الدخول بواسطة';
@@ -1313,44 +1313,44 @@ class AppLocalizationsAr extends AppLocalizations {
   String get oneSpecialCharacter => 'حرف خاص واحد';
 
   @override
-  String get notifications => 'Notifications';
+  String get notifications => 'الإشعارات';
 
   @override
-  String get noNotifications => 'No notifications yet';
+  String get noNotifications => 'لا توجد إشعارات';
 
   @override
-  String get noNotificationsDesc => 'New notifications will appear here';
+  String get noNotificationsDesc => 'ستظهر الإشعارات هنا عندما تتلقاها';
 
   @override
-  String get clearAllNotifications => 'Clear all notifications';
+  String get clearAllNotifications => 'مسح كل الإشعارات';
 
   @override
-  String get allNotificationsCleared => 'All notifications cleared';
+  String get allNotificationsCleared => 'تم مسح جميع الإشعارات';
 
   @override
-  String get notificationDeleted => 'Notification deleted';
+  String get notificationDeleted => 'تم حذف الإشعار';
 
   @override
-  String get welcomeNotification => 'Welcome!';
+  String get welcomeNotification => 'مرحباً بك';
 
   @override
-  String get welcomeNotificationDesc => 'Welcome to our store. We have great offers for you.';
+  String get welcomeNotificationDesc => 'مرحباً بك في Paradise PC Parts';
 
   @override
-  String get newProductNotification => 'New Product';
+  String get newProductNotification => 'منتج جديد';
 
   @override
-  String get newProductNotificationDesc => 'RTX 4090 is in stock! Check it out now.';
+  String get newProductNotificationDesc => 'تم إضافة منتجات جديدة إلى المتجر';
 
   @override
-  String get discountNotification => 'Special Discount';
+  String get discountNotification => 'خصم جديد';
 
   @override
-  String get discountNotificationDesc => '20% off on all RAM products!';
+  String get discountNotificationDesc => 'خصومات جديدة متوفرة الآن';
 
   @override
-  String daysAgo(int count) {
-    return '$count days ago';
+  String daysAgo(int days, Object count) {
+    return 'منذ $days يوم';
   }
 
   @override
@@ -1381,4 +1381,28 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get pleaseEnterTitleAndMessage => 'الرجاء إدخال العنوان والرسالة';
+
+  @override
+  String get bannerManagement => 'Banner Management';
+
+  @override
+  String get noBannersFound => 'No Banners Found';
+
+  @override
+  String get addFirstBanner => 'Add your first banner';
+
+  @override
+  String get bannerAddedSuccessfully => 'Banner added successfully';
+
+  @override
+  String get bannerUpdatedSuccessfully => 'Banner updated successfully';
+
+  @override
+  String get bannerDeletedSuccessfully => 'Banner deleted successfully';
+
+  @override
+  String get confirmDelete => 'Confirm Delete';
+
+  @override
+  String get deleteBannerConfirmation => 'Are you sure you want to delete this banner?';
 }

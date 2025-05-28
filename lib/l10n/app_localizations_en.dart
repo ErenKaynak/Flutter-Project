@@ -24,7 +24,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get register => 'Register';
 
   @override
-  String get guest => 'Guest';
+  String get guest => 'Continue as Guest';
 
   @override
   String get email => 'Email';
@@ -270,7 +270,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get work => 'Work';
 
   @override
-  String get delete => 'DELETE';
+  String get delete => 'Delete';
 
   @override
   String get setAsDefault => 'Set as Default';
@@ -1349,7 +1349,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discountNotificationDesc => '20% off on all RAM products!';
 
   @override
-  String daysAgo(int count) {
+  String daysAgo(int days, Object count) {
     return '$count days ago';
   }
 
@@ -1381,4 +1381,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pleaseEnterTitleAndMessage => 'Please enter title and message';
+
+  @override
+  String get bannerManagement => 'Banner Management';
+
+  @override
+  String get noBannersFound => 'No Banners Found';
+
+  @override
+  String get addFirstBanner => 'Add your first banner';
+
+  @override
+  String get bannerAddedSuccessfully => 'Banner added successfully';
+
+  @override
+  String get bannerUpdatedSuccessfully => 'Banner updated successfully';
+
+  @override
+  String get bannerDeletedSuccessfully => 'Banner deleted successfully';
+
+  @override
+  String get confirmDelete => 'Confirm Delete';
+
+  @override
+  String get deleteBannerConfirmation => 'Are you sure you want to delete this banner?';
 }

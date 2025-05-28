@@ -67,8 +67,8 @@ abstract class AppLocalizations {
 
   final String localeName;
 
-  static AppLocalizations? of(BuildContext context) {
-    return Localizations.of<AppLocalizations>(context, AppLocalizations);
+  static AppLocalizations of(BuildContext context) {
+    return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
   static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
@@ -130,7 +130,7 @@ abstract class AppLocalizations {
   /// No description provided for @guest.
   ///
   /// In en, this message translates to:
-  /// **'Guest'**
+  /// **'Continue as Guest'**
   String get guest;
 
   /// No description provided for @email.
@@ -610,7 +610,7 @@ abstract class AppLocalizations {
   /// No description provided for @delete.
   ///
   /// In en, this message translates to:
-  /// **'DELETE'**
+  /// **'Delete'**
   String get delete;
 
   /// No description provided for @setAsDefault.
@@ -2633,7 +2633,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{count} days ago'**
-  String daysAgo(int count);
+  String daysAgo(int days, Object count);
 
   /// No description provided for @notificationManagement.
   ///
@@ -2688,6 +2688,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enter title and message'**
   String get pleaseEnterTitleAndMessage;
+
+  /// No description provided for @bannerManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Banner Management'**
+  String get bannerManagement;
+
+  /// No description provided for @noBannersFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No Banners Found'**
+  String get noBannersFound;
+
+  /// No description provided for @addFirstBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your first banner'**
+  String get addFirstBanner;
+
+  /// No description provided for @bannerAddedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Banner added successfully'**
+  String get bannerAddedSuccessfully;
+
+  /// No description provided for @bannerUpdatedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Banner updated successfully'**
+  String get bannerUpdatedSuccessfully;
+
+  /// No description provided for @bannerDeletedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Banner deleted successfully'**
+  String get bannerDeletedSuccessfully;
+
+  /// No description provided for @confirmDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Delete'**
+  String get confirmDelete;
+
+  /// No description provided for @deleteBannerConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this banner?'**
+  String get deleteBannerConfirmation;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
