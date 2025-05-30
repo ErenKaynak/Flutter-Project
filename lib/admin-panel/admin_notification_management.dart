@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../pages/theme_notifier.dart';
+import '../assets/components/notification_service.dart';
 
 class AdminNotificationManagement extends StatefulWidget {
   const AdminNotificationManagement({Key? key}) : super(key: key);
@@ -77,23 +78,65 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
         imageUrl = await _uploadImage();
       }
 
+      // Get all users if sending to all
       if (_sendToAllUsers) {
-        await FirebaseFirestore.instance.collection('notifications').add({
-          'title': _titleController.text,
-          'message': _messageController.text,
-          'timestamp': FieldValue.serverTimestamp(),
-          'sendToAll': true,
-          if (imageUrl != null) 'imageUrl': imageUrl,
-        });
+        // Get all users
+        final usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
+        
+        // Store notification for each user
+        for (var userDoc in usersSnapshot.docs) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userDoc.id)
+              .collection('notifications')
+              .add({
+            'title': _titleController.text,
+            'message': _messageController.text,
+            'timestamp': FieldValue.serverTimestamp(),
+            'sendToAll': true,
+            'read': false,
+            if (imageUrl != null) 'imageUrl': imageUrl,
+          });
+        }
+
+        // Send through OneSignal
+        await NotificationService.sendToAllUsers(
+          title: _titleController.text,
+          message: _messageController.text,
+          additionalData: {
+            'timestamp': DateTime.now().toIso8601String(),
+            if (imageUrl != null) 'imageUrl': imageUrl,
+          },
+        );
       } else {
-        await FirebaseFirestore.instance.collection('notifications').add({
-          'title': _titleController.text,
-          'message': _messageController.text,
-          'timestamp': FieldValue.serverTimestamp(),
-          'sendToAll': false,
-          'targetUsers': _selectedUsers,
-          if (imageUrl != null) 'imageUrl': imageUrl,
-        });
+        // Store notification for selected users
+        for (String userId in _selectedUsers) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .collection('notifications')
+              .add({
+            'title': _titleController.text,
+            'message': _messageController.text,
+            'timestamp': FieldValue.serverTimestamp(),
+            'sendToAll': false,
+            'read': false,
+            if (imageUrl != null) 'imageUrl': imageUrl,
+          });
+        }
+
+        // Send through OneSignal to specific users
+        if (_selectedUsers.isNotEmpty) {
+          await NotificationService.sendToUsers(
+            userIds: _selectedUsers,
+            title: _titleController.text,
+            message: _messageController.text,
+            additionalData: {
+              'timestamp': DateTime.now().toIso8601String(),
+              if (imageUrl != null) 'imageUrl': imageUrl,
+            },
+          );
+        }
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
