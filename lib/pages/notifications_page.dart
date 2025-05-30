@@ -269,7 +269,7 @@ class NotificationsPage extends StatelessWidget {
               final notification = snapshot.data!.docs[index];
               final data = notification.data() as Map<String, dynamic>;
               final timestamp = (data['timestamp'] as Timestamp).toDate();
-              final bool isRead = data['isRead'] ?? false;
+              final bool isRead = data['read'] ?? false;
 
               return Dismissible(
                 key: Key(notification.id),

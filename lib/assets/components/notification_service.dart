@@ -279,7 +279,7 @@ class NotificationService {
           .doc(user.uid)
           .collection('notifications')
           .doc(notificationId)
-          .update({'isRead': true});
+          .update({'read': true});
       
       print('OneSignal: Marked notification as read: $notificationId');
     } catch (e) {
@@ -302,11 +302,11 @@ class NotificationService {
       final batch = FirebaseFirestore.instance.batch();
       
       final notifications = await notificationsRef
-          .where('isRead', isEqualTo: false)
+          .where('read', isEqualTo: false)
           .get();
       
       for (var doc in notifications.docs) {
-        batch.update(doc.reference, {'isRead': true});
+        batch.update(doc.reference, {'read': true});
       }
       
       await batch.commit();
@@ -372,7 +372,7 @@ class NotificationService {
         .collection('users')
         .doc(user.uid)
         .collection('notifications')
-        .where('isRead', isEqualTo: false)
+        .where('read', isEqualTo: false)
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
   }

@@ -697,7 +697,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       child: Container(
                         padding: EdgeInsets.all(2),
                         decoration: BoxDecoration(
-                          color: Colors.red,
+                          color: themeNotifier.isSpecialModeActive
+                              ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                              : Colors.red,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         constraints: BoxConstraints(
