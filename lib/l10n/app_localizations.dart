@@ -2736,6 +2736,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Are you sure you want to delete this banner?'**
   String get deleteBannerConfirmation;
+
+  /// No description provided for @selectUsersFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select at least one user'**
+  String get selectUsersFirst;
+
+  /// No description provided for @uploadingImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading image...'**
+  String get uploadingImage;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

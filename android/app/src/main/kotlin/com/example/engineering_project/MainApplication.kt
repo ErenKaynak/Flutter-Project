@@ -1,0 +1,30 @@
+package com.example.engineering_project
+
+import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
+import io.flutter.app.FlutterApplication
+
+class MainApplication : FlutterApplication() {
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannel()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Default"
+            val descriptionText = "Default notification channel"
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel("default_notifications", name, importance).apply {
+                description = descriptionText
+                enableVibration(true)
+                setShowBadge(true)
+            }
+            val notificationManager: NotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+}

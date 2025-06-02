@@ -7,12 +7,15 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
     <uses-permission android:name="android.permission.INTERNET"/>
-    <!-- Add OneSignal permissions -->
+    <!-- Add OneSignal and FCM permissions -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
 
     <application
         android:label="engineering_project"
-        android:name="${applicationName}"
+        android:name=".MainApplication"
         android:icon="@mipmap/ic_launcher"
         android:hardwareAccelerated="true"
         android:requestLegacyExternalStorage="true"
@@ -51,7 +54,11 @@
         <!-- Add OneSignal App ID -->
         <meta-data
             android:name="onesignal_app_id"
-            android:value="YOUR-ONESIGNAL-APP-ID"/> <!-- Replace with your OneSignal App ID -->
+            android:value="bb5b6419-07c9-4b72-9d85-e2c121f05591"/>
+
+        <meta-data
+            android:name="onesignal_rest_api_key"
+            android:value="os_v2_app_xnnwigihzffxfhmf4lasd4cvsh5xegtwcgbuqwu6vvz3gqhd7zztqj65gwdfiy5gh2arh2z5jzkdlaqzat7kuxlvgdhzaos65roxnna"/>
 
         <!-- Add OneSignal notification service default icon and accent color -->
         <meta-data

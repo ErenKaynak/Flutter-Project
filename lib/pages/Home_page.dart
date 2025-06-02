@@ -1,6 +1,7 @@
 import 'package:engineering_project/assets/components/cart_manager.dart';
 import 'package:engineering_project/pages/cart_page.dart' as CartPage;
 import 'package:engineering_project/pages/login_page.dart';
+import 'package:engineering_project/pages/notifications_page_new.dart';
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:engineering_project/pages/search_page.dart';
 import 'package:engineering_project/pages/theme_notifier.dart';

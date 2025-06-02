@@ -47,7 +47,8 @@ flutter {
 }
 
 dependencies {
-    implementation(platform("com.google.firebase:firebase-bom:latest_version"))
+    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.firebase:firebase-functions")
     implementation("com.google.android.gms:play-services-basement:18.2.0")
     implementation("com.google.android.gms:play-services-safetynet:18.0.1")

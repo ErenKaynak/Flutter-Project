@@ -1405,4 +1405,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get deleteBannerConfirmation => 'Are you sure you want to delete this banner?';
+
+  @override
+  String get selectUsersFirst => 'Please select at least one user';
+
+  @override
+  String get uploadingImage => 'Uploading image...';
 }

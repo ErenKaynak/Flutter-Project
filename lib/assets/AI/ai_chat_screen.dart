@@ -31,9 +31,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/foundation.dart' show sin;
-import 'package:flutter/foundation.dart' show pi;
-import 'package:flutter/foundation.dart' show FieldValue;
+import 'dart:math' show sin, pi;
+import 'package:cloud_firestore/cloud_firestore.dart' show FieldValue;
 
 enum SpecialColorTheme { red, blue, green }
 
@@ -79,6 +78,7 @@ class _AIChatScreenState extends State<AIChatScreen>
   bool _isAdmin = false;
   String? _currentProductId;
   SpecialColorTheme? _selectedTheme;
+  _PendingOrderAction? _pendingOrderAction;
 
   AnimationController? _typingAnimation;
 
@@ -139,7 +139,6 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
   Future<void> _handleSubmitted(String text, {File? image}) async {
     if (text.trim().isEmpty && image == null) return;
 
-    if (!mounted) return;
     setState(() {
       if (text.isNotEmpty) {
         _messages.add(ChatMessage(text: text, isUser: true));
@@ -149,6 +148,39 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     });
 
     try {
+      // Check for order-related queries
+      final lowerText = text.toLowerCase();
+      if (lowerText.contains('order') || 
+          lowerText.contains('purchase') || 
+          lowerText.contains('bought')) {
+        
+        // Extract time period
+        final days = _extractDaysPeriod(text);
+        
+        // Get orders
+        final orders = await _getUserOrders(days);
+        
+        String response;
+        if (orders.isEmpty) {
+          response = days == 30 
+            ? "I couldn't find any orders in your history."
+            : "I couldn't find any orders in the past $days days.";
+        } else {
+          response = "Here ${orders.length == 1 ? 'is' : 'are'} your ${orders.length} " +
+                    "order${orders.length == 1 ? '' : 's'} from the past $days days:";
+        }
+
+        setState(() {
+          _isTyping = false;
+          _messages.add(ChatMessage(
+            text: response,
+            isUser: false,
+            orders: orders,
+          ));
+        });
+        return;
+      }
+
       // Check if the message is asking for orders
       if (text.toLowerCase().contains('show me orders') ||
           text.toLowerCase().contains('show me my orders') ||
@@ -224,8 +256,8 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
           });
         }
       } else if (text.toLowerCase().contains('recommend') || 
-          text.toLowerCase().contains('suggestion') ||
-          text.toLowerCase().contains('build')) {
+                 text.toLowerCase().contains('suggestion') ||
+                 text.toLowerCase().contains('build')) {
         // Extract preferences from the message
         Map<String, String> preferences = {
           'use_case': text.toLowerCase().contains('gaming') ? 'gaming' : 'general',
@@ -287,23 +319,24 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     }
   }
 
-  Future<List<String>> _getProductExplanations(List<LocalizedProduct> products, String originalRequest) async {
-    List<String> explanations = [];
-    
-    for (var product in products) {
-      try {
-        final explanation = await LocalAIService.getChatCompletion(
-          'Briefly explain ${product.name} in 2 short sentences. First: key features. Second: why it fits "$originalRequest".',
-          'You are a PC expert. Give very short, clear explanations. Use simple language. Keep it under 100 characters total.'
-        );
-        explanations.add(explanation.trim());
-      } catch (e) {
-        print('Error getting explanation for ${product.name}: $e');
-        explanations.add('A reliable component that meets your requirements.');
-      }
+  // Add this helper function to extract time period from message
+  int _extractDaysPeriod(String message) {
+    // Look for specific patterns like "2 days", "last 3 days", "past 5 days"
+    final daysPattern = RegExp(r'(\d+)(?:\s*(?:day|days))');
+    final match = daysPattern.firstMatch(message);
+    if (match != null) {
+      return int.parse(match.group(1)!);
     }
-    
-    return explanations;
+
+    // Look for just numbers
+    final numberPattern = RegExp(r'\b(\d+)\b');
+    final numberMatch = numberPattern.firstMatch(message);
+    if (numberMatch != null) {
+      return int.parse(numberMatch.group(1)!);
+    }
+
+    // Default to 30 days if no number specified
+    return 30;
   }
 
   @override
@@ -724,7 +757,7 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      order.status,
+                      order.status.displayName,
                       style: TextStyle(
                         color: _getStatusColor(order.status),
                         fontWeight: FontWeight.bold,
@@ -761,7 +794,8 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
               ),
               Divider(height: 28, thickness: 1, color: isDark ? Colors.white12 : Colors.grey[200]),
               Text(
-                message.text,
+                'Order details:\n' + order.items.map((item) => 
+                  '${item.quantity}x ${item.name}').join('\n'),
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w500,
@@ -917,49 +951,10 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : Colors.red;
 
-    void _sendOrderActionMessage() {
-      String? messageText;
-      VoidCallback? onYes;
-      VoidCallback? onNo;
-      if (order.status.toLowerCase() == 'pending') {
-        messageText = 'Order is pending. Do you want to cancel your order?';
-        onYes = () {
-          _cancelOrder(order);
-          _addMessage(ChatMessage(text: 'Order #${order.id} cancelled.', isUser: false));
-        };
-        onNo = () {
-          _addMessage(ChatMessage(text: 'Order cancellation aborted.', isUser: false));
-        };
-      } else if (order.status.toLowerCase() == 'delivered') {
-        messageText = 'Order is delivered. Do you want to request a refund?';
-        onYes = () {
-          _requestRefund(order);
-          _addMessage(ChatMessage(text: 'Refund requested for order #${order.id}.', isUser: false));
-        };
-        onNo = () {
-          _addMessage(ChatMessage(text: 'Refund request aborted.', isUser: false));
-        };
-      }
-      if (messageText != null) {
-        setState(() {
-          _pendingOrderAction = _PendingOrderAction(
-            order: order,
-            onYes: onYes,
-            onNo: onNo,
-            messageText: messageText!,
-          );
-          _messages.add(ChatMessage(
-            text: messageText!,
-            isUser: false,
-          ));
-        });
-      }
-    }
-
     return Container(
       constraints: BoxConstraints(maxWidth: 500),
       child: GestureDetector(
-        onTap: _sendOrderActionMessage,
+        onTap: () => _sendOrderActionMessage(order),
         child: Card(
           margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
           color: isDark ? Colors.grey.shade800 : Colors.white,
@@ -992,7 +987,7 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        order.status,
+                        order.status.displayName,
                         style: TextStyle(
                           color: _getStatusColor(order.status),
                           fontWeight: FontWeight.bold,
@@ -1005,78 +1000,38 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                   ],
                 ),
                 SizedBox(height: 8),
-                Text(
-                  'Date: ${_formatDate(order.date)}',
-                  style: TextStyle(
-                    color: isDark ? Colors.white70 : Colors.black54,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 18, color: isDark ? Colors.white54 : Colors.grey[700]),
+                    SizedBox(width: 6),
+                    Text(
+                      _formatDate(order.date),
+                      style: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.black54,
+                        fontSize: 14,
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Icon(Icons.account_balance_wallet, size: 18, color: isDark ? Colors.white54 : Colors.blue),
+                    SizedBox(width: 6),
+                    Text(
+                      '₺${order.total.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
                 ),
+                Divider(height: 28, thickness: 1, color: isDark ? Colors.white12 : Colors.grey[200]),
                 Text(
-                  'Total: ₺${order.total.toStringAsFixed(2)}',
+                  order.items.map((item) => 
+                    '${item.quantity}x ${item.name}').join('\n'),
                   style: TextStyle(
-                    color: themeColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Items:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w500,
                     color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: 120),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    itemCount: order.items.length,
-                    itemBuilder: (context, idx) {
-                      final item = order.items[idx];
-                      final imagePath = (item is dynamic && item.imagePath != null) ? item.imagePath : null;
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 8.0, top: 4.0),
-                        child: Row(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: imagePath != null && imagePath.isNotEmpty
-                                  ? Image.network(
-                                      imagePath,
-                                      width: 32,
-                                      height: 32,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => Container(
-                                        width: 32,
-                                        height: 32,
-                                        color: Colors.grey.shade300,
-                                        child: Icon(Icons.image_not_supported, size: 18),
-                                      ),
-                                    )
-                                  : Container(
-                                      width: 32,
-                                      height: 32,
-                                      color: Colors.grey.shade300,
-                                      child: Icon(Icons.image, size: 18),
-                                    ),
-                            ),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                '• ${item.name} (${item.quantity}x)',
-                                style: TextStyle(
-                                  color: isDark ? Colors.white70 : Colors.black87,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
                   ),
                 ),
               ],
@@ -1188,24 +1143,32 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
             ),
           ],
         ),
-      ),
+      )
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
+  Color _getStatusColor(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
         return Colors.orange;
-      case 'processing':
+      case OrderStatus.preparing:
         return Colors.blue;
-      case 'shipped':
+      case OrderStatus.onDelivery:
         return Colors.purple;
-      case 'delivered':
+      case OrderStatus.delivered:
         return Colors.green;
-      case 'cancelled':
+      case OrderStatus.refundRequested:
+        return Colors.orange;
+      case OrderStatus.refundInReview:
+        return Colors.blue;
+      case OrderStatus.refundApproved:
+        return Colors.green;
+      case OrderStatus.refundDeclined:
         return Colors.red;
-      default:
-        return Colors.grey;
+      case OrderStatus.refunded:
+        return Colors.green.shade700;
+      case OrderStatus.cancelled:
+        return Colors.red;
     }
   }
 
@@ -1291,7 +1254,13 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
   Future<List<Order>> _getUserOrders(int days) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return [];
+      if (user == null) {
+        _messages.add(ChatMessage(
+          text: 'Please sign in to view your orders.',
+          isUser: false,
+        ));
+        return [];
+      }
 
       final cutoffDate = DateTime.now().subtract(Duration(days: days));
       
@@ -1303,12 +1272,16 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
           .orderBy('createdAt', descending: true)
           .get();
 
+      if (ordersSnapshot.docs.isEmpty) {
+        return [];
+      }
+
       return ordersSnapshot.docs.map((doc) {
         final data = doc.data();
         return Order(
           id: doc.id,
           date: (data['createdAt'] as Timestamp).toDate(),
-          status: data['status'] as String,
+          status: Order._parseOrderStatus(data['status'] as String? ?? 'pending'),
           total: (data['total'] as num).toDouble(),
           items: (data['items'] as List<dynamic>).map((item) => OrderItem(
             name: item['name'] as String,
@@ -1319,6 +1292,10 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
       }).toList();
     } catch (e) {
       print('Error fetching orders: $e');
+      _messages.add(ChatMessage(
+        text: 'Sorry, I encountered an error while fetching your orders.',
+        isUser: false,
+      ));
       return [];
     }
   }
@@ -1341,7 +1318,7 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
       return Order(
         id: orderDoc.id,
         date: (data['createdAt'] as Timestamp).toDate(),
-        status: data['status'] as String,
+        status: Order._parseOrderStatus(data['status'] as String? ?? 'pending'),
         total: (data['total'] as num).toDouble(),
         items: (data['items'] as List<dynamic>).map((item) => OrderItem(
           name: item['name'] as String,
@@ -1769,6 +1746,37 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
         );
       }
     }
+  }
+
+  Future<List<String>> _getProductExplanations(
+    List<LocalizedProduct> products, 
+    String userQuery,
+  ) async {
+    final List<String> explanations = [];
+    
+    for (final product in products) {
+      try {
+        // Get AI explanation for each product based on user's query
+        final prompt = '''
+        Based on the user query "$userQuery", explain why this product is recommended:
+        Product: ${product.name}
+        Category: ${product.category}
+        Price: ₺${product.price}
+        ''';
+        
+        final explanation = await LocalAIService.getChatCompletion(
+          prompt,
+          'You are a PC expert. Explain product recommendations in 1-2 sentences. Focus on key benefits.',
+        );
+        
+        explanations.add(explanation);
+      } catch (e) {
+        print('Error getting explanation for ${product.name}: $e');
+        explanations.add('A recommended component for your build.');
+      }
+    }
+    
+    return explanations;
   }
 
   Future<List<LocalizedProduct>> _searchProducts(String query) async {
@@ -2283,7 +2291,7 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     IconData? prefixIcon,
     Widget? suffixIcon,
     int maxLines = 1,
-  }) {
+     }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
@@ -2450,65 +2458,215 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     // TODO: Implement actual cancel logic
   }
 
-  void _requestRefund(Order order) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Refund requested for order #${order.id} (placeholder).')),
-    );
-    // TODO: Implement actual refund logic
+  void _requestRefund(Order order) async {
+    try {
+      // Update order status in Firestore
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('orders')
+            .doc(order.id)
+            .update({
+          'status': 'refund_requested',
+          'refundRequestedAt': FieldValue.serverTimestamp(),
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Refund request submitted for order #${order.id}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error requesting refund: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error requesting refund: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
-  _PendingOrderAction? _pendingOrderAction;
+  void _sendOrderActionMessage(Order order) {
+    final message = ChatMessage(
+      text: "Would you like to perform any actions on Order #${order.id}?",
+      isUser: false,
+    );
+    setState(() {
+      _messages.add(message);
+    });
+  }
 }
 
-class Order {
-  final String id;
-  final DateTime date;
-  final String status;
-  final double total;
-  final List<OrderItem> items;
+/// Represents the possible states of an order
+enum OrderStatus {
+  pending,
+  preparing,
+  onDelivery,
+  delivered,
+  refundRequested,
+  refundInReview,
+  refundApproved,
+  refundDeclined,
+  refunded,
+  cancelled;
 
-  Order({
+  /// Gets the display name for the order status
+  String get displayName {
+    switch (this) {
+      case OrderStatus.pending:
+        return 'Pending';
+      case OrderStatus.preparing:
+        return 'Preparing';
+      case OrderStatus.onDelivery:
+        return 'On Delivery';
+      case OrderStatus.delivered:
+        return 'Delivered';
+      case OrderStatus.refundRequested:
+        return 'Refund Requested';
+      case OrderStatus.refundInReview:
+        return 'Refund In Review';
+      case OrderStatus.refundApproved:
+        return 'Refund Approved';
+      case OrderStatus.refundDeclined:
+        return 'Refund Declined';
+      case OrderStatus.refunded:
+        return 'Refunded';
+      case OrderStatus.cancelled:
+        return 'Cancelled';
+    }
+  }
+}
+
+/// Represents an order in the system
+class Order {
+  /// Unique identifier for the order
+  final String id;
+  
+  /// Date when the order was created
+  final DateTime date;
+  
+  /// Current status of the order
+  final OrderStatus status;
+  
+  /// Total amount of the order
+  final double total;
+  
+  /// Items included in the order
+  final List<OrderItem> items;
+  
+  /// Tracking number for delivery (optional)
+  final String? trackingNumber;
+
+  /// Creates a new Order instance
+  const Order({
     required this.id,
     required this.date,
     required this.status,
     required this.total,
     required this.items,
+    this.trackingNumber,
   });
+
+  /// Creates an Order instance from Firestore document
+  factory Order.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data() ?? {};
+    return Order(
+      id: doc.id,
+      date: (data['createdAt'] as Timestamp).toDate(),
+      status: _parseOrderStatus(data['status'] as String? ?? 'pending'),
+      total: (data['total'] as num).toDouble(),
+      trackingNumber: data['trackingNumber'] as String?,
+      items: (data['items'] as List<dynamic>)
+          .map((item) => OrderItem.fromMap(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  /// Parses a string into an OrderStatus enum
+  static OrderStatus _parseOrderStatus(String statusStr) {
+    final normalizedStatus = statusStr.toLowerCase().replaceAll(' ', '');
+    return OrderStatus.values.firstWhere(
+      (status) => status.toString().split('.').last.toLowerCase() == normalizedStatus,
+      orElse: () => OrderStatus.pending,
+    );
+  }
 }
 
+/// Represents an item within an order
 class OrderItem {
+  /// Name of the item
   final String name;
+  
+  /// Quantity ordered
   final int quantity;
+  
+  /// Path to the item's image (optional)
   final String? imagePath;
 
-  OrderItem({
+  /// Creates a new OrderItem instance
+  const OrderItem({
     required this.name,
     required this.quantity,
     this.imagePath,
   });
+
+  /// Creates an OrderItem from a map
+  factory OrderItem.fromMap(Map<String, dynamic> map) {
+    return OrderItem(
+      name: map['name'] as String,
+      quantity: map['quantity'] as int,
+      imagePath: map['imagePath'] as String?,
+    );
+  }
 }
 
-class ChatMessage {
-  final String text;
-  final bool isUser;
-  final List<LocalizedProduct>? recommendedProducts;
-  final List<Order>? orders;
-  final String? imageUrl;
+/// Represents a pending action on an order
+class _PendingOrderAction {
+  /// The order being acted upon
+  final Order order;
+  
+  /// Callback for confirming the action
+  final VoidCallback? onYes;
+  
+  /// Callback for canceling the action
+  final VoidCallback? onNo;
+  
+  /// Message to display to the user
+  final String messageText;
 
-  ChatMessage({
-    required this.text,
-    required this.isUser,
-    this.recommendedProducts,
-    this.orders,
-    this.imageUrl,
+  /// Creates a new _PendingOrderAction instance
+  const _PendingOrderAction({
+    required this.order,
+    this.onYes,
+    this.onNo,
+    required this.messageText,
   });
 }
 
-// Add this at the very top of the file, before any other class or import (if not already present):
-class _PendingOrderAction {
-  final Order order;
-  final VoidCallback? onYes;
-  final VoidCallback? onNo;
-  final String messageText;
-  _PendingOrderAction({required this.order, this.onYes, this.onNo, required this.messageText});
+/// Represents a chat message in the conversation
+class ChatMessage {
+  /// The text content of the message
+  final String text;
+  
+  /// Whether the message is from the user (true) or AI (false)
+  final bool isUser;
+  
+  /// Optional list of orders associated with this message
+  final List<Order>? orders;
+  
+  /// Optional list of recommended products
+  final List<LocalizedProduct>? recommendedProducts;
+
+  /// Creates a new ChatMessage instance
+  const ChatMessage({
+    required this.text,
+    required this.isUser,
+    this.orders,
+    this.recommendedProducts,
+  });
 }

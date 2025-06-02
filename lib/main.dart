@@ -54,16 +54,20 @@ void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase first
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    // Initialize Firebase first
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
 
-  // Initialize OneSignal
-  await NotificationService.initialize(
-    appId: 'bb5b6419-07c9-4b72-9d85-e2c121f05591',
-    restApiKey: 'os_v2_app_xnnwigihzffxfhmf4lasd4cvsh5xegtwcgbuqwu6vvz3gqhd7zztqj65gwdfiy5gh2arh2z5jzkdlaqzat7kuxlvgdhzaos65roxnna', // Get this from OneSignal Dashboard -> Settings -> Keys & IDs
-  );
+    // Initialize OneSignal for both web and mobile platforms
+    await NotificationService.initialize(
+      appId: 'bb5b6419-07c9-4b72-9d85-e2c121f05591',
+      restApiKey: 'os_v2_app_xnnwigihzffxfhmf4lasd4cvshp4lnkq7zsuoomolom6c6an5hh342rf54jd4eca3zykr2a6qbqo3cyls36fx27rzz3zh4rphqaaqty',
+    );
+  } catch (e) {
+    developer.log('Error during initialization: $e', name: 'Initialization');
+  }
 
   runApp(
     MultiProvider(

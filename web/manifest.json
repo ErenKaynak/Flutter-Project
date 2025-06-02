@@ -3,6 +3,7 @@
     "short_name": "Paradise",
     "start_url": ".",
     "display": "standalone",
+    "gcm_sender_id": "52042306180",
     "background_color": "#FFFFFF",
     "theme_color": "#FFFFFF",
     "description": "Your app description",

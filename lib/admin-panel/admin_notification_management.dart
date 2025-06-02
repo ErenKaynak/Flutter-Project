@@ -1,6 +1,8 @@
+// Add lint ignore for file-long lines
+// ignore_for_file: lines_longer_than_80_chars
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
@@ -22,9 +24,158 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
   bool _sendToAllUsers = true;
   List<String> _selectedUsers = [];
   bool _isLoading = false;
-  String? _imageUrl;
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
+
+  // Fix Text widget constructor linting issues
+  Text _buildTitle(String text, {bool isBold = false}) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+        fontSize: isBold ? 16 : 14,
+      ),
+    );
+  }
+
+  // Fix the user selection widget
+  Widget _buildUserSelection() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return _buildTitle('Error: ${snapshot.error}');
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Theme.of(context).brightness == Brightness.dark 
+                ? Colors.grey[850] 
+                : Colors.grey[100],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTitle('Select Users', isBold: true),
+              const SizedBox(height: 8),
+              ...snapshot.data!.docs.map((doc) {
+                final userData = doc.data() as Map<String, dynamic>;
+                final userId = doc.id;
+                final userName = userData['displayName'] as String? ?? 'User $userId';
+                
+                return CheckboxListTile(
+                  title: _buildTitle(userName),
+                  value: _selectedUsers.contains(userId),
+                  onChanged: (bool? value) {
+                    if (value != null) {
+                      setState(() {
+                        if (value) {
+                          _selectedUsers.add(userId);
+                        } else {
+                          _selectedUsers.remove(userId);
+                        }
+                      });
+                    }
+                  },
+                );
+              }).toList(),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Fix the image picker widget
+  Widget _buildImagePicker() {
+    return InkWell(
+      onTap: _pickImage,
+      child: Container(
+        height: 200,
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: Theme.of(context).primaryColor.withOpacity(0.5),
+          ),
+          borderRadius: BorderRadius.circular(12),
+          color: Theme.of(context).brightness == Brightness.dark 
+              ? Colors.grey[850] 
+              : Colors.grey[100],
+        ),
+        child: _imageFile != null
+            ? _buildSelectedImage()
+            : _buildImagePlaceholder(),
+      ),
+    );
+  }
+
+  Widget _buildSelectedImage() {
+    return Stack(
+      alignment: Alignment.topRight,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.file(
+            _imageFile!,
+            fit: BoxFit.cover,
+            width: double.infinity,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: _buildRemoveImageButton(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRemoveImageButton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.5),
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        icon: const Icon(Icons.close, color: Colors.white),
+        onPressed: () => setState(() => _imageFile = null),
+      ),
+    );
+  }
+
+  Widget _buildImagePlaceholder() {
+    return Center(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.add_photo_alternate,
+              size: 56,
+              color: Theme.of(context).primaryColor.withOpacity(0.7),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              AppLocalizations.of(context).addFromUrl,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.white70 
+                    : Colors.black54,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -59,11 +210,22 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
   }
 
   Future<void> _sendNotification() async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     
     if (_titleController.text.isEmpty || _messageController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.pleaseEnterTitleAndMessage)),
+      );
+      return;
+    }
+
+    // Add this check before sending notification
+    if (!_sendToAllUsers && _selectedUsers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.selectUsersFirst),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
@@ -75,100 +237,80 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
     try {
       String? imageUrl;
       if (_imageFile != null) {
+        // Show upload progress
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.uploadingImage)),
+        );
         imageUrl = await _uploadImage();
+        if (imageUrl == null) {
+          throw Exception('Failed to upload image');
+        }
       }
 
-      // Get all users if sending to all
-      if (_sendToAllUsers) {
-        // Get all users
-        final usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
-        
-        // Store notification for each user
-        for (var userDoc in usersSnapshot.docs) {
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userDoc.id)
-              .collection('notifications')
-              .add({
-            'title': _titleController.text,
-            'message': _messageController.text,
-            'timestamp': FieldValue.serverTimestamp(),
-            'sendToAll': true,
-            'read': false,
-            if (imageUrl != null) 'imageUrl': imageUrl,
-          });
-        }
+      // Create notification data
+      final notificationData = {
+        'title': _titleController.text,
+        'message': _messageController.text,
+        'timestamp': DateTime.now().toIso8601String(),
+        'sendToAll': _sendToAllUsers,
+        'read': false,
+        if (imageUrl != null) 'imageUrl': imageUrl,
+      };
 
-        // Send through OneSignal
+      if (_sendToAllUsers) {
         await NotificationService.sendToAllUsers(
           title: _titleController.text,
           message: _messageController.text,
-          additionalData: {
-            'timestamp': DateTime.now().toIso8601String(),
-            if (imageUrl != null) 'imageUrl': imageUrl,
-          },
+          additionalData: notificationData,
+        );
+      } else if (_selectedUsers.isNotEmpty) {
+        await NotificationService.sendToUsers(
+          userIds: _selectedUsers,
+          title: _titleController.text,
+          message: _messageController.text,
+          additionalData: notificationData,
         );
       } else {
-        // Store notification for selected users
-        for (String userId in _selectedUsers) {
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userId)
-              .collection('notifications')
-              .add({
-            'title': _titleController.text,
-            'message': _messageController.text,
-            'timestamp': FieldValue.serverTimestamp(),
-            'sendToAll': false,
-            'read': false,
-            if (imageUrl != null) 'imageUrl': imageUrl,
-          });
-        }
-
-        // Send through OneSignal to specific users
-        if (_selectedUsers.isNotEmpty) {
-          await NotificationService.sendToUsers(
-            userIds: _selectedUsers,
-            title: _titleController.text,
-            message: _messageController.text,
-            additionalData: {
-              'timestamp': DateTime.now().toIso8601String(),
-              if (imageUrl != null) 'imageUrl': imageUrl,
-            },
-          );
-        }
+        throw Exception('No users selected for targeted notification');
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.notificationSent),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.notificationSent),
+            backgroundColor: Colors.green,
+          ),
+        );
 
-      // Form'u temizle
-      _titleController.clear();
-      _messageController.clear();
-      setState(() {
-        _imageFile = null;
-      });
+        // Clear form
+        _titleController.clear();
+        _messageController.clear();
+        setState(() {
+          _imageFile = null;
+          _selectedUsers = [];
+        });
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.notificationError(e.toString())),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.notificationError(e.toString())),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final isDark = themeNotifier.isDarkMode;
     final themeColor = themeNotifier.isSpecialModeActive 
@@ -232,67 +374,7 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
                       ),
                       const SizedBox(height: 25),
                       // Görsel ekleme bölümü
-                      InkWell(
-                        onTap: _pickImage,
-                        child: Container(
-                          height: 200,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: themeColor.withOpacity(0.5)),
-                            borderRadius: BorderRadius.circular(12),
-                            color: isDark ? Colors.grey[850] : Colors.grey[100],
-                          ),
-                          child: _imageFile != null
-                              ? Stack(
-                                  alignment: Alignment.topRight,
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Image.file(
-                                        _imageFile!,
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                      ),
-                                    ),
-                                    Container(
-                                      margin: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.5),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: IconButton(
-                                        icon: const Icon(Icons.close, color: Colors.white),
-                                        onPressed: () => setState(() => _imageFile = null),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : Center(
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(vertical: 20),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.add_photo_alternate,
-                                          size: 56,
-                                          color: themeColor.withOpacity(0.7),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          l10n.addFromUrl,
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                            color: isDark ? Colors.white70 : Colors.black54,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                        ),
-                      ),
+                      _buildImagePicker(),
                       const SizedBox(height: 25),
                       TextField(
                         controller: _titleController,
@@ -348,14 +430,7 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
                       ),
                       if (!_sendToAllUsers) ...[
                         const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: isDark ? Colors.grey[850] : Colors.grey[100],
-                          ),
-                          child: const Text('Kullanıcı Seçimi buraya eklenecek'),
-                        ),
+                        _buildUserSelection(),
                       ],
                       const SizedBox(height: 30),
                       SizedBox(
@@ -399,4 +474,4 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
       ),
     );
   }
-} 
+}

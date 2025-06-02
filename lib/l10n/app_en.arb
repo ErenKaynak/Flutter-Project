@@ -778,5 +778,7 @@
     "confirmDelete": "Confirm Delete",
     "deleteBannerConfirmation": "Are you sure you want to delete this banner?",
     "cancel": "Cancel",
-    "delete": "Delete"
+    "delete": "Delete",
+    "selectUsersFirst": "Please select at least one user",
+    "uploadingImage": "Uploading image..."
 }

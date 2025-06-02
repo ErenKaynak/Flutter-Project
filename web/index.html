@@ -36,18 +36,71 @@
     var serviceWorkerVersion = "{{flutter_service_worker_version}}";
   </script>
   
+  <!-- OneSignal web SDK -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(function(OneSignal) {
+      OneSignal.init({
+        appId: "bb5b6419-07c9-4b72-9d85-e2c121f05591",
+        allowLocalhostAsSecureOrigin: true, // Remove this in production
+      });
+    });
+  </script>
+  
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
   
   <meta name="google-signin-client_id" content="52042306180-he6nr5jffbu128eb25g3taioq08jckkq.apps.googleusercontent.com" />
 </head>
 <body>
+  <div id="loading">
+    <style>
+      body {
+        inset: 0;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+        position: fixed;
+      }
+      #loading {
+        align-items: center;
+        display: flex;
+        height: 100%;
+        justify-content: center;
+        width: 100%;
+      }
+      #loading img {
+        animation: 1s ease-in-out 0s infinite alternate breathe;
+        opacity: .66;
+        transition: opacity .4s;
+      }
+      #loading.main_done img {
+        opacity: 1;
+      }
+      @keyframes breathe {
+        from {
+          transform: scale(1)
+        }
+        to {
+          transform: scale(0.95)
+        }
+      }
+    </style>
+    <img src="icons/Icon-192.png" alt="Loading indicator..." />
+  </div>
   <script>
-    window.addEventListener('load', function(ev) {
-      // Download main.dart.js
-      _flutter.loader.load({
+    window.addEventListener('load', function() {
+      var loading = document.querySelector('#loading');
+      _flutter.loader.loadEntrypoint({
         serviceWorker: {
           serviceWorkerVersion: serviceWorkerVersion,
+        },
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            loading.classList.add('main_done');
+            appRunner.runApp();
+          });
         }
       });
     });
