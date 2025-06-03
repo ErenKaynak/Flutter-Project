@@ -92,16 +92,15 @@
   <script>
     window.addEventListener('load', function() {
       var loading = document.querySelector('#loading');
-      _flutter.loader.loadEntrypoint({
+      _flutter.loader.load({
         serviceWorker: {
           serviceWorkerVersion: serviceWorkerVersion,
-        },
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            loading.classList.add('main_done');
-            appRunner.runApp();
-          });
         }
+      }).then(function(engineInitializer) {
+        return engineInitializer.initializeEngine();
+      }).then(function(appRunner) {
+        loading.classList.add('main_done');
+        return appRunner.runApp();
       });
     });
   </script>
