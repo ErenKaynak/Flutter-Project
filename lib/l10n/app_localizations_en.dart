@@ -125,6 +125,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get viewCart => 'VIEW CART';
 
   @override
+  String get off => 'off';
+
+  @override
   String addedToCart(String productName) {
     return '$productName added to cart';
   }
@@ -390,11 +393,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get enterCode => 'Enter code';
 
   @override
-  String get apply => 'APPLY';
-
-  @override
-  String discountApplied(String code) {
-    return 'Discount applied: $code';
+  String discountApplied(Object code) {
+    return 'Discount Applied: $code';
   }
 
   @override
@@ -403,7 +403,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get invalidDiscountCode => 'Invalid or expired discount code';
+  String get invalidDiscountCode => 'Invalid discount code';
 
   @override
   String get notApplicableDiscount => 'This code is not applicable to items in your cart';
@@ -1411,4 +1411,73 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get uploadingImage => 'Uploading image...';
+
+  @override
+  String get savedDiscounts => 'Saved Discounts';
+
+  @override
+  String get use => 'Use';
+
+  @override
+  String get noSavedDiscountCodes => 'No Saved Discount Codes';
+
+  @override
+  String get savedDiscountCodes => 'Saved Discount Codes';
+
+  @override
+  String get discountOffers => 'Available Discounts';
+
+  @override
+  String get discountAndPromotionCodes => 'Discounts & Promotions';
+
+  @override
+  String get enterDiscountCode => 'Enter discount code';
+
+  @override
+  String get enterValidDiscountCode => 'Please enter a valid discount code';
+
+  @override
+  String get apply => 'Apply';
+
+  @override
+  String minOrderAmount(String amount) {
+    return 'Minimum order amount: $amount';
+  }
+
+  @override
+  String currency(String amount) {
+    return '₺$amount';
+  }
+
+  @override
+  String get noDiscountsAvailable => 'No discounts available';
+
+  @override
+  String get newDiscount => 'New Discount!';
+
+  @override
+  String get discountCodeAvailable => 'A new discount code is available';
+
+  @override
+  String get discountSaved => 'Discount code saved successfully';
+
+  @override
+  String get saveDiscount => 'Save Discount';
+
+  @override
+  String get myDiscounts => 'My Discounts';
+
+  @override
+  String get noDiscounts => 'No discount codes available';
+
+  @override
+  String validUntil(String date) {
+    return 'Valid until $date';
+  }
+
+  @override
+  String get discountExpired => 'Expired';
+
+  @override
+  String get discountUsed => 'Used';
 }

@@ -1,3 +1,4 @@
+import 'package:engineering_project/admin-panel/admin_banner_management.dart';
 import 'package:engineering_project/admin-panel/admin_categories.dart';
 import 'package:engineering_project/admin-panel/admin_discount.dart';
 import 'package:engineering_project/admin-panel/admin_order_management.dart';
@@ -444,6 +445,19 @@ class _AdminPageState extends State<AdminPage> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const AdminNotificationManagement(),
+                              ),
+                            );
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.featured_play_list),
+                          title: Text(l10n.bannerManagement),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const BannerManagementPage(),
                               ),
                             );
                           },

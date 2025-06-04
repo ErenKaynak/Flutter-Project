@@ -257,14 +257,16 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
         if (imageUrl != null) 'imageUrl': imageUrl,
       };
 
+      bool success = false;
+      
       if (_sendToAllUsers) {
-        await NotificationService.sendToAllUsers(
+        success = await NotificationService.sendToAllUsers(
           title: _titleController.text,
           message: _messageController.text,
           additionalData: notificationData,
         );
       } else if (_selectedUsers.isNotEmpty) {
-        await NotificationService.sendToUsers(
+        success = await NotificationService.sendToUsers(
           userIds: _selectedUsers,
           title: _titleController.text,
           message: _messageController.text,
@@ -272,6 +274,10 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
         );
       } else {
         throw Exception('No users selected for targeted notification');
+      }
+
+      if (!success) {
+        throw Exception('Failed to send notification through backend');
       }
 
       if (mounted) {

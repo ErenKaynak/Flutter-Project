@@ -32,11 +32,19 @@
     "allCategories": "Tüm Kategoriler",
     "bestDeals": "En İyi Fırsatlar",
     "products": "{count} ürün",
-    "productQuantity": "Adet",
+    "@products": {
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "description": "Number of products"
+            }
+        }
+    },
     "noProductsFound": "Ürün bulunamadı",
     "tryDifferentSearch": "Farklı bir arama deneyin",
     "tryDifferentCategory": "Farklı bir kategori seçin",
     "viewCart": "Sepeti Görüntüle",
+    "off": "indirim",
     "addedToCart": "{productName} sepete eklendi",
     "@addedToCart": {
         "placeholders": {
@@ -181,10 +189,35 @@
     "discountCode": "İndirim Kodu",
     "enterCode": "Kodu girin",
     "apply": "UYGULA",
-    "discountApplied": "İndirim uygulandı: {code}",
+    "discountApplied": "İndirim Uygulandı: {code}",
     "percentOff": "%{percent} indirim",
+    "@percentOff": {
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
     "invalidDiscountCode": "Geçersiz veya süresi dolmuş indirim kodu",
-    "notApplicableDiscount": "Bu kod sepetinizdeki ürünler için geçerli değil",
+    "noSavedDiscountCodes": "Kayıtlı İndirim Kodu Bulunamadı",
+    "savedDiscountCodes": "Kayıtlı İndirim Kodları",
+    "enterDiscountCode": "İndirim kodunu girin",
+    "enterValidDiscountCode": "Lütfen geçerli bir indirim kodu girin",
+    "newDiscount": "Yeni İndirim!",
+    "discountCodeAvailable": "Yeni bir indirim kodu mevcut",
+    "discountSaved": "İndirim kodu başarıyla kaydedildi",
+    "saveDiscount": "İndirimi Kaydet",
+    "myDiscounts": "İndirimlerim",
+    "noDiscounts": "İndirim kodu bulunmuyor",
+    "validUntil": "{date} tarihine kadar geçerli",
+    "@validUntil": {
+        "placeholders": {
+            "date": {
+                "type": "String",
+                "example": "30 Haziran 2025"
+            }
+        }
+    },
     "subtotal": "Ara Toplam",
     "discount": "İndirim (%{percent})",
     "total": "Toplam",
@@ -648,5 +681,35 @@
     "biometricsDescription": "Cüzdana erişmek için parmak izi veya yüz tanıma kullanın",
     "setupPin": "PIN Kodu Oluştur",
     "verify": "Doğrula",
-    "invalidPin": "Geçersiz PIN Kodu"
+    "invalidPin": "Geçersiz PIN Kodu",
+    "savedDiscounts": "Kayıtlı İndirimler",
+    "use": "Kullan",
+    "noSavedDiscountCodes": "Kayıtlı İndirim Kodu Bulunamadı",
+    "savedDiscountCodes": "Kayıtlı İndirim Kodları",
+    "discountOffers": "Mevcut İndirimler",
+    "discountAndPromotionCodes": "İndirimler ve Promosyonlar",
+    "enterDiscountCode": "İndirim kodunu girin",
+    "enterValidDiscountCode": "Lütfen geçerli bir indirim kodu girin",
+    "apply": "Uygula",
+    "minOrderAmount": "Minimum sepet tutarı: {amount}",
+    "@minOrderAmount": {
+        "placeholders": {
+            "amount": {
+                "type": "String",
+                "example": "₺100"
+            }
+        }
+    },
+    "currency": "₺{amount}",
+    "@currency": {
+        "placeholders": {
+            "amount": {
+                "type": "String",
+                "example": "100.00"
+            }
+        }
+    },
+    "noDiscountsAvailable": "Mevcut indirim bulunmuyor",
+    "loading": "Yükleniyor...",
+    "invalidDiscountCode": "Geçersiz indirim kodu"
 }

@@ -125,6 +125,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get viewCart => 'عرض السلة';
 
   @override
+  String get off => 'خصم';
+
+  @override
   String addedToCart(String productName) {
     return 'تمت إضافة $productName إلى السلة';
   }
@@ -360,7 +363,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get yourReferralCode => 'رمز الإحالة الخاص بك';
 
   @override
-  String get loading => 'جاري التحميل...';
+  String get loading => 'جارٍ التحميل...';
 
   @override
   String get noFavoritesYet => 'لا توجد مفضلات حتى الآن';
@@ -387,395 +390,392 @@ class AppLocalizationsAr extends AppLocalizations {
   String get discountCode => 'رمز الخصم';
 
   @override
-  String get enterCode => 'أدخل الرمز';
+  String get enterCode => 'Enter code';
 
   @override
-  String get apply => 'تطبيق';
-
-  @override
-  String discountApplied(String code) {
-    return 'تم تطبيق الخصم: $code';
+  String discountApplied(Object code) {
+    return 'Discount Applied: $code';
   }
 
   @override
   String percentOff(int percent) {
-    return 'خصم $percent%';
+    return '$percent% off';
   }
 
   @override
-  String get invalidDiscountCode => 'رمز خصم غير صالح أو منتهي الصلاحية';
+  String get invalidDiscountCode => 'رمز الخصم غير صالح أو منتهي الصلاحية';
 
   @override
-  String get notApplicableDiscount => 'هذا الرمز غير قابل للتطبيق على العناصر في سلة التسوق';
+  String get notApplicableDiscount => 'This code is not applicable to items in your cart';
 
   @override
-  String get subtotal => 'المجموع الفرعي';
+  String get subtotal => 'Subtotal';
 
   @override
   String discount(int percent) {
-    return 'الخصم ($percent%)';
+    return 'Discount ($percent%)';
   }
 
   @override
-  String get total => 'المجموع';
+  String get total => 'Total';
 
   @override
   String totalAmount(String amount) {
-    return 'المجموع: $amount ريال';
+    return 'Total: ₺$amount';
   }
 
   @override
-  String get checkout => 'إتمام الشراء';
+  String get checkout => 'CHECKOUT';
 
   @override
-  String get paymentSuccessful => 'تم الدفع بنجاح!';
+  String get paymentSuccessful => 'Payment Successful!';
 
   @override
   String amountPaid(String amount) {
-    return 'المبلغ المدفوع: $amount ريال';
+    return 'Amount Paid: ₺$amount';
   }
 
   @override
-  String get orderPlaced => 'تم تقديم طلبك بنجاح';
+  String get orderPlaced => 'Your order has been placed successfully.';
 
   @override
   String orderId(String id) {
-    return 'رقم الطلب: $id';
+    return 'Order ID: $id';
   }
 
   @override
-  String get viewOrders => 'عرض الطلبات';
+  String get viewOrders => 'VIEW ORDERS';
 
   @override
-  String get continueShopping => 'مواصلة التسوق';
+  String get continueShopping => 'CONTINUE SHOPPING';
 
   @override
-  String get cardExpired => 'البطاقة منتهية الصلاحية';
+  String get cardExpired => 'Your card is expired, please try again';
 
   @override
-  String get pleaseSelectAddress => 'يرجى اختيار عنوان التوصيل';
+  String get pleaseSelectAddress => 'Please select an address';
 
   @override
-  String get pleaseSelectCard => 'يرجى اختيار بطاقة';
+  String get pleaseSelectCard => 'Please select a credit card';
 
   @override
-  String get deliveryAddress => 'عنوان التوصيل';
+  String get deliveryAddress => 'Delivery Address';
 
   @override
-  String get addNew => 'إضافة جديد';
+  String get addNew => 'Add New';
 
   @override
-  String get noSavedAddresses => 'لا توجد عناوين محفوظة';
+  String get noSavedAddresses => 'No saved addresses';
 
   @override
-  String get creditCards => 'بطاقات الائتمان';
+  String get creditCards => 'Credit Cards';
 
   @override
-  String get noSavedCards => 'لا توجد بطاقات محفوظة';
+  String get noSavedCards => 'No saved cards';
 
   @override
-  String get payWithCreditCard => 'الدفع ببطاقة الائتمان';
+  String get payWithCreditCard => 'Pay with credit card';
 
   @override
-  String get payWithWallet => 'الدفع بالمحفظة';
+  String get payWithWallet => 'Pay with Wallet';
 
   @override
   String availableBalance(String amount) {
-    return 'الرصيد المتاح: $amount ريال';
+    return 'Available Balance: ₺$amount';
   }
 
   @override
-  String get insufficientBalance => 'رصيد غير كافٍ';
+  String get insufficientBalance => 'Insufficient balance';
 
   @override
   String addMoreForFreeShipping(String amount) {
-    return 'أضف $amount ريال للحصول على شحن مجاني';
+    return 'Add ₺$amount more to get free shipping!';
   }
 
   @override
-  String get freeShippingOver => 'شحن مجاني للطلبات فوق 10,000 ريال';
+  String get freeShippingOver => 'Free over ₺10,000';
 
   @override
-  String get free => 'مجاناً';
+  String get free => 'FREE';
 
   @override
-  String get shipping => 'الشحن';
+  String get shipping => 'Shipping';
 
   @override
-  String get placeOrder => 'تأكيد الطلب';
+  String get placeOrder => 'PLACE ORDER';
 
   @override
-  String get address => 'العنوان';
+  String get address => 'Address';
 
   @override
-  String get payment => 'الدفع';
+  String get payment => 'Payment';
 
   @override
-  String get confirm => 'التأكيد';
+  String get confirm => 'Confirm';
 
   @override
-  String get paymentMethod => 'طريقة الدفع';
+  String get paymentMethod => 'Payment Method:';
 
   @override
-  String get addNewCard => 'إضافة بطاقة جديدة';
+  String get addNewCard => 'Add New Card';
 
   @override
-  String get orderSummary => 'ملخص الطلب';
+  String get orderSummary => 'Order Summary';
 
   @override
-  String get cardNumber => 'رقم البطاقة';
+  String get cardNumber => 'Card Number';
 
   @override
-  String get cardNumberHint => 'رقم البطاقة';
+  String get cardNumberHint => '1234 5678 9012 3456';
 
   @override
-  String get cardHolderName => 'اسم حامل البطاقة';
+  String get cardHolderName => 'Card Holder Name';
 
   @override
-  String get cardHolderHint => 'اسم حامل البطاقة';
+  String get cardHolderHint => 'JOHN DOE';
 
   @override
-  String get expiryDate => 'تاريخ الانتهاء';
+  String get expiryDate => 'Expiry Date';
 
   @override
-  String get expiryDateHint => 'شهر/سنة';
+  String get expiryDateHint => 'MM/YY';
 
   @override
-  String get cardIsExpired => 'البطاقة منتهية الصلاحية';
+  String get cardIsExpired => 'Card is expired';
 
   @override
-  String get cvv => 'رمز التحقق';
+  String get cvv => 'CVV';
 
   @override
-  String get cvvHint => '3 أرقام';
+  String get cvvHint => '123';
 
   @override
-  String get deleteCard => 'حذف البطاقة';
+  String get deleteCard => 'Delete Card';
 
   @override
-  String get deleteCardConfirmation => 'هل أنت متأكد من حذف هذه البطاقة؟';
+  String get deleteCardConfirmation => 'Are you sure you want to delete this card?';
 
   @override
-  String get defaultCard => 'البطاقة الافتراضية';
+  String get defaultCard => 'Default Card';
 
   @override
   String expires(String date) {
-    return 'تنتهي الصلاحية: $date';
+    return 'Expires: $date';
   }
 
   @override
-  String get ok => 'موافق';
+  String get ok => 'OK';
 
   @override
-  String get cannotReorder => 'لا يمكن إعادة الطلب';
+  String get cannotReorder => 'Cannot Reorder';
 
   @override
   String outOfStockItems(String items) {
-    return 'المنتجات التالية غير متوفرة في المخزون:\n\n• $items';
+    return 'The following items are out of stock:\n• $items';
   }
 
   @override
   String insufficientStockItems(String items) {
-    return 'الكمية المتوفرة غير كافية للمنتجات التالية:\n\n• $items';
+    return 'Insufficient stock for:\n• $items';
   }
 
   @override
-  String get myFavorites => 'المفضلة';
+  String get myFavorites => 'My Favorites';
 
   @override
-  String get refresh => 'تحديث';
+  String get refresh => 'Refresh';
 
   @override
-  String get exploreProducts => 'استكشف المنتجات';
+  String get exploreProducts => 'Explore Products';
 
   @override
-  String get failedToRemove => 'فشل في الإزالة';
+  String get failedToRemove => 'Failed to remove from favorites';
 
   @override
   String get pleaseLoginToAdd => 'يرجى تسجيل الدخول للإضافة إلى المفضلة';
 
   @override
-  String get failedToAddToCart => 'فشل في الإضافة إلى السلة';
+  String get failedToAddToCart => 'Failed to add item to cart';
 
   @override
-  String get adminDashboard => 'لوحة تحكم المسؤول';
+  String get adminDashboard => 'Admin Dashboard';
 
   @override
-  String get adminControls => 'أدوات المسؤول';
+  String get adminControls => 'Admin Controls';
 
   @override
-  String get userManagement => 'إدارة المستخدمين';
+  String get userManagement => 'User Management';
 
   @override
-  String get viewAndManageUsers => 'عرض وإدارة المستخدمين';
+  String get viewAndManageUsers => 'View and manage users';
 
   @override
-  String get productManagement => 'إدارة المنتجات';
+  String get productManagement => 'Product Management';
 
   @override
-  String get manageProducts => 'إدارة المنتجات';
+  String get manageProducts => 'Manage products';
 
   @override
-  String get orderManagement => 'إدارة الطلبات';
+  String get orderManagement => 'Order Management';
 
   @override
-  String get viewAndProcessOrders => 'عرض ومعالجة الطلبات';
+  String get viewAndProcessOrders => 'View and process orders';
 
   @override
-  String get currentBalance => 'الرصيد الحالي';
+  String get currentBalance => 'Current Balance';
 
   @override
-  String get cashbackInfo => 'احصل على استرداد نقدي يصل إلى 2% على كل عملية شراء';
+  String get cashbackInfo => '1% Cashback on all purchases';
 
   @override
-  String get addMoney => 'إضافة رصيد';
+  String get addMoney => 'Add Money';
 
   @override
-  String get transactionHistory => 'سجل المعاملات';
+  String get transactionHistory => 'Transaction History';
 
   @override
   String transactionsCount(int count) {
-    return '$count معاملة';
+    return '$count transactions';
   }
 
   @override
-  String get noTransactions => 'لا توجد معاملات حتى الآن';
+  String get noTransactions => 'No transactions yet';
 
   @override
-  String get transactionsWillAppear => 'ستظهر معاملاتك هنا';
+  String get transactionsWillAppear => 'Your transaction history will appear here';
 
   @override
-  String get moneyAdded => 'تمت إضافة المال';
+  String get moneyAdded => 'Money added successfully';
 
   @override
   String errorAddingBalance(String error) {
-    return 'خطأ في إضافة الرصيد';
+    return 'Error adding balance: $error';
   }
 
   @override
-  String get addMoneyToWallet => 'إضافة رصيد إلى المحفظة';
+  String get addMoneyToWallet => 'Add Money to Wallet';
 
   @override
-  String get amount => 'المبلغ';
+  String get amount => 'Amount';
 
   @override
-  String get selectCard => 'اختر البطاقة';
+  String get selectCard => 'Select Card';
 
   @override
-  String get useCard => 'استخدام البطاقة المحفوظة';
+  String get useCard => 'Use Saved Card';
 
   @override
-  String get enterValidAmount => 'يرجى إدخال مبلغ صحيح';
+  String get enterValidAmount => 'Please enter a valid amount';
 
   @override
-  String get fillCardDetails => 'يرجى ملء تفاصيل البطاقة';
+  String get fillCardDetails => 'Please fill all card details correctly';
 
   @override
-  String get cardNumberError => 'يجب أن يتكون رقم البطاقة من 16 رقماً';
+  String get cardNumberError => 'Card number must be 16 digits';
 
   @override
-  String get invalidCardNumber => 'رقم البطاقة غير صالح';
+  String get invalidCardNumber => 'Invalid card number';
 
   @override
-  String get onlyLettersAllowed => 'يُسمح بالحروف فقط';
+  String get onlyLettersAllowed => 'Only letters allowed';
 
   @override
-  String get useMMYYFormat => 'استخدم تنسيق شش/سس';
+  String get useMMYYFormat => 'Use MM/YY format';
 
   @override
-  String get invalidCVV => 'رمز CVV غير صالح';
+  String get invalidCVV => 'Invalid CVV';
 
   @override
-  String get amountMustBeGreater => 'يجب أن يكون المبلغ أكبر من 0';
+  String get amountMustBeGreater => 'Amount must be greater than 0';
 
   @override
-  String get maximumAmount => 'الحد الأقصى للمبلغ هو 10,000 ريال';
+  String get maximumAmount => 'Maximum amount is ₺10,000';
 
   @override
-  String get invalidAmount => 'مبلغ غير صالح';
+  String get invalidAmount => 'Invalid amount';
 
   @override
-  String get cardSaved => 'تم حفظ البطاقة بنجاح';
+  String get cardSaved => 'Card saved successfully';
 
   @override
   String errorSavingCard(String error) {
-    return 'خطأ في حفظ البطاقة: $error';
+    return 'Error saving card: $error';
   }
 
   @override
-  String get transactionDetails => 'تفاصيل المعاملة';
+  String get transactionDetails => 'Transaction Details';
 
   @override
-  String get type => 'النوع';
+  String get type => 'Type';
 
   @override
-  String get deposit => 'إيداع';
+  String get deposit => 'Deposit';
 
   @override
-  String get purchase => 'شراء';
+  String get purchase => 'Purchase';
 
   @override
-  String get date => 'التاريخ';
+  String get date => 'Date';
 
   @override
-  String get status => 'الحالة';
+  String get status => 'Status';
 
   @override
-  String get method => 'الطريقة';
+  String get method => 'Method';
 
   @override
-  String get reference => 'المرجع';
+  String get reference => 'Reference';
 
   @override
-  String get description => 'الوصف';
+  String get description => 'Description';
 
   @override
-  String get orderHistory => 'سجل الطلبات';
+  String get orderHistory => 'Order History';
 
   @override
-  String get yourOrders => 'طلباتك';
+  String get yourOrders => 'Your Orders';
 
   @override
   String ordersCount(int count) {
-    return '$count طلب';
+    return '$count orders';
   }
 
   @override
-  String get filterByStatus => 'تصفية حسب الحالة';
+  String get filterByStatus => 'Filter by Status';
 
   @override
-  String get allOrders => 'الكل';
+  String get allOrders => 'All';
 
   @override
-  String get pending => 'قيد الانتظار';
+  String get pending => 'Pending';
 
   @override
-  String get preparing => 'قيد التحضير';
+  String get preparing => 'Preparing';
 
   @override
-  String get onDelivery => 'قيد التوصيل';
+  String get onDelivery => 'On Delivery';
 
   @override
-  String get delivered => 'تم التوصيل';
+  String get delivered => 'Delivered';
 
   @override
-  String get cancelled => 'ملغي';
+  String get cancelled => 'Cancelled';
 
   @override
   String noOrdersWithStatus(String status) {
-    return 'لا توجد طلبات بحالة $status';
+    return 'No orders with \'$status\' status';
   }
 
   @override
-  String get tryDifferentFilter => 'جرب تصفية مختلفة';
+  String get tryDifferentFilter => 'Try selecting a different filter';
 
   @override
   String orderNumber(String number) {
-    return 'رقم الطلب';
+    return 'Order #$number';
   }
 
   @override
-  String get items => 'المنتجات';
+  String get items => 'Items:';
 
   @override
   String quantity(int count, String price) {
@@ -784,131 +784,131 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String itemTotal(String amount) {
-    return 'إجمالي العناصر';
+    return 'Item Total: ₺$amount';
   }
 
   @override
-  String get trackingNumber => 'رقم التتبع';
+  String get trackingNumber => 'Tracking Number:';
 
   @override
-  String get shippingAddress => 'عنوان الشحن';
+  String get shippingAddress => 'Shipping Address:';
 
   @override
-  String get noAddressProvided => 'لم يتم تقديم عنوان';
+  String get noAddressProvided => 'No address provided';
 
   @override
-  String get notSpecified => 'غير محدد';
+  String get notSpecified => 'Not specified';
 
   @override
-  String get reorder => 'إعادة الطلب';
+  String get reorder => 'Reorder';
 
   @override
-  String get cancelOrder => 'إلغاء الطلب';
+  String get cancelOrder => 'Cancel Order';
 
   @override
-  String get confirmCancelOrder => 'هل أنت متأكد من رغبتك في إلغاء هذا الطلب؟';
+  String get confirmCancelOrder => 'Are you sure you want to cancel this order?';
 
   @override
-  String get orderCancelled => 'تم إلغاء الطلب';
+  String get orderCancelled => 'Order cancelled successfully';
 
   @override
   String failedToCancelOrder(String error) {
-    return 'فشل إلغاء الطلب: $error';
+    return 'Failed to cancel order: $error';
   }
 
   @override
-  String get rateProduct => 'تقييم المنتج';
+  String get rateProduct => 'Rate this product';
 
   @override
-  String get alreadyReviewed => 'لقد قمت بتقييم هذا المنتج مسبقاً';
+  String get alreadyReviewed => 'Already reviewed';
 
   @override
-  String get canReviewAfterDelivery => 'يمكنك تقييم المنتج بعد استلامه';
+  String get canReviewAfterDelivery => 'Can review after delivery';
 
   @override
-  String get selectRating => 'اختر التقييم';
+  String get selectRating => 'Select Rating';
 
   @override
-  String get poor => 'سيء';
+  String get poor => 'Poor';
 
   @override
-  String get fair => 'مقبول';
+  String get fair => 'Fair';
 
   @override
-  String get good => 'جيد';
+  String get good => 'Good';
 
   @override
-  String get veryGood => 'جيد جداً';
+  String get veryGood => 'Very Good';
 
   @override
-  String get excellent => 'ممتاز';
+  String get excellent => 'Excellent';
 
   @override
-  String get writeReview => 'كتابة تقييم';
+  String get writeReview => 'Write your review (optional)';
 
   @override
-  String get submitReview => 'إرسال التقييم';
+  String get submitReview => 'Submit Review';
 
   @override
-  String get thankYouForReview => 'شكراً لتقييمك';
+  String get thankYouForReview => 'Thank you for your review!';
 
   @override
-  String get failedToSubmitReview => 'فشل إرسال التقييم';
+  String get failedToSubmitReview => 'Failed to submit review';
 
   @override
-  String get productNoLongerAvailable => 'هذا المنتج لم يعد متوفراً';
+  String get productNoLongerAvailable => 'Product is no longer available';
 
   @override
-  String get errorCheckingAvailability => 'حدث خطأ أثناء التحقق من المخزون';
+  String get errorCheckingAvailability => 'Error checking product availability. Please try again.';
 
   @override
-  String get tryAgain => 'حاول مرة أخرى';
+  String get tryAgain => 'TRY AGAIN';
 
   @override
-  String get noOrdersYet => 'لا توجد طلبات حتى الآن';
+  String get noOrdersYet => 'No orders yet';
 
   @override
-  String get yourOrderHistoryWillAppearHere => 'سيظهر سجل طلباتك هنا';
+  String get yourOrderHistoryWillAppearHere => 'Your order history will appear here';
 
   @override
-  String get startShopping => 'ابدأ التسوق';
+  String get startShopping => 'START SHOPPING';
 
   @override
-  String get somethingWentWrong => 'حدث خطأ ما';
+  String get somethingWentWrong => 'Something went wrong';
 
   @override
-  String get orderPrefix => 'طلب #';
+  String get orderPrefix => 'Order #';
 
   @override
-  String get itemsLabel => 'العناصر';
+  String get itemsLabel => 'Items:';
 
   @override
-  String get quantityPrefix => 'الكمية:';
+  String get quantityPrefix => 'Qty:';
 
   @override
-  String get itemTotalPrefix => 'المجموع:';
+  String get itemTotalPrefix => 'Item Total:';
 
   @override
-  String get shippingAddressLabel => 'عنوان التوصيل';
+  String get shippingAddressLabel => 'Shipping Address:';
 
   @override
-  String get defaultShippingAddress => 'عنوان التوصيل الافتراضي';
+  String get defaultShippingAddress => 'Default Shipping Address';
 
   @override
-  String get paymentMethodLabel => 'طريقة الدفع';
+  String get paymentMethodLabel => 'Payment Method:';
 
   @override
-  String get cardPayment => 'الدفع بالبطاقة';
+  String get cardPayment => 'Card';
 
   @override
-  String get reorderButton => 'إعادة الطلب';
+  String get reorderButton => 'Reorder';
 
   @override
-  String get dateFormat => 'dd/MM/yyyy HH:mm';
+  String get dateFormat => 'MMM dd, yyyy - HH:mm';
 
   @override
   String totalPrefix(String amount) {
-    return 'الإجمالي:';
+    return 'Total: ₺$amount';
   }
 
   @override
@@ -921,11 +921,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String addedToCartMessage(String name, int quantity) {
-    return 'تمت الإضافة إلى السلة';
+    return '$name x$quantity added to cart';
   }
 
   @override
-  String get mustBeLoggedIn => 'يجب تسجيل الدخول';
+  String get mustBeLoggedIn => 'You must be logged in to add to cart';
 
   @override
   String cannotAddMoreThanStock(int count) {
@@ -954,10 +954,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get failedToUpdateFavorites => 'فشل في تحديث المفضلة';
 
   @override
-  String get pleaseLoginToAddFavorites => 'الرجاء تسجيل الدخول لإضافة المفضلة';
+  String get pleaseLoginToAddFavorites => 'Please log in to add favorites';
 
   @override
-  String get justNow => 'الآن';
+  String get justNow => 'Just now';
 
   @override
   String minutesAgo(int count) {
@@ -970,417 +970,417 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get categoryAll => 'جميع الفئات';
+  String get categoryAll => 'All Categories';
 
   @override
-  String get categoryCPU => 'المعالجات';
+  String get categoryCPU => 'CPUs';
 
   @override
-  String get categoryGPU => 'بطاقات الرسومات';
+  String get categoryGPU => 'GPUs';
 
   @override
-  String get categoryRAM => 'الذاكرة';
+  String get categoryRAM => 'RAM';
 
   @override
-  String get categoryMotherboard => 'اللوحات الأم';
+  String get categoryMotherboard => 'Motherboards';
 
   @override
-  String get categoryStorage => 'التخزين';
+  String get categoryStorage => 'Storage';
 
   @override
-  String get categoryCase => 'الهياكل';
+  String get categoryCase => 'Cases';
 
   @override
-  String get categoryPSU => 'وحدات الطاقة';
+  String get categoryPSU => 'Power Supplies';
 
   @override
-  String get categoryPreBuilt => 'أجهزة جاهزة';
+  String get categoryPreBuilt => 'Pre-Built PCs';
 
   @override
-  String get aiChatTitle => 'المساعد الذكي';
+  String get aiChatTitle => 'Assistant Tommy';
 
   @override
-  String get askMeAnything => 'اسألني أي شيء';
+  String get askMeAnything => 'Ask Me Anything...';
 
   @override
-  String get howCanIHelp => 'كيف يمكنني المساعدة؟';
+  String get howCanIHelp => 'How can I help you today?';
 
   @override
-  String get iNeedAssistance => 'أحتاج إلى مساعدة';
+  String get iNeedAssistance => 'I need assistance';
 
   @override
-  String get recommendCheapestPC => 'أوصي بأرخص كمبيوتر';
+  String get recommendCheapestPC => 'Recommend me the cheapest PC build';
 
   @override
-  String get lookingForGamingPC => 'أبحث عن كمبيوتر للألعاب';
+  String get lookingForGamingPC => 'Looking for a gaming PC build';
 
   @override
-  String get addNewProduct => 'إضافة منتج جديد';
+  String get addNewProduct => 'Add New Product';
 
   @override
-  String get updateProduct => 'تحديث المنتج';
+  String get updateProduct => 'Update Product';
 
   @override
-  String get productDetails => 'تفاصيل المنتج';
+  String get productDetails => 'Product Details';
 
   @override
-  String get productName => 'اسم المنتج';
+  String get productName => 'Product Name';
 
   @override
-  String get productPrice => 'سعر المنتج';
+  String get productPrice => 'Price';
 
   @override
-  String get productStock => 'المخزون المتوفر';
+  String get productStock => 'Stock';
 
   @override
-  String get productCategory => 'فئة المنتج';
+  String get productCategory => 'Category';
 
   @override
-  String get mainImage => 'الصورة الرئيسية';
+  String get mainImage => 'Main Image';
 
   @override
-  String get additionalImages => 'صور إضافية';
+  String get additionalImages => 'Additional Images';
 
   @override
-  String get generateAIDescription => 'توليد وصف بالذكاء الاصطناعي';
+  String get generateAIDescription => 'Generate AI Description';
 
   @override
-  String get pleaseEnterProductName => 'الرجاء إدخال اسم المنتج أولاً';
+  String get pleaseEnterProductName => 'Please enter product name first';
 
   @override
   String errorGeneratingDescription(String error) {
-    return 'خطأ في إنشاء الوصف';
+    return 'Error generating description: $error';
   }
 
   @override
-  String get searchProduct => 'البحث عن منتج';
+  String get searchProduct => 'Search Product';
 
   @override
-  String get selectProductToUpdate => 'اختر منتجاً للتحديث';
+  String get selectProductToUpdate => 'Select Product to Update';
 
   @override
-  String get imageRequired => 'الصورة مطلوبة';
+  String get imageRequired => 'Main image is required';
 
   @override
-  String get productUpdated => 'تم تحديث المنتج';
+  String get productUpdated => 'Product updated successfully';
 
   @override
   String errorUpdatingProduct(String error) {
-    return 'خطأ في تحديث المنتج';
+    return 'Error updating product: $error';
   }
 
   @override
-  String get onVacation => 'أنا في إجازة حالياً!! حاول التحدث معي لاحقاً :P';
+  String get onVacation => 'I\'m currently on vacation!! Try to talk to me later :P';
 
   @override
-  String get adminOnly => 'يمكن للمسؤولين فقط إضافة المنتجات';
+  String get adminOnly => 'Only admin users can add products';
 
   @override
-  String get price => 'السعر';
+  String get price => 'Price';
 
   @override
-  String get stock => 'المخزون';
+  String get stock => 'Stock';
 
   @override
-  String get selectCategory => 'اختر الفئة';
+  String get selectCategory => 'Select Category';
 
   @override
-  String get update => 'تحديث';
+  String get update => 'Update';
 
   @override
   String stockRemaining(int stock) {
-    return 'باقي $stock قطعة';
+    return '$stock items remaining';
   }
 
   @override
   String updateStock(String productName) {
-    return 'تحديث المخزون لـ $productName';
+    return 'Update stock for $productName';
   }
 
   @override
-  String get newStockAmount => 'كمية المخزون الجديدة';
+  String get newStockAmount => 'New Stock Amount';
 
   @override
-  String get enterNewStockAmount => 'أدخل كمية المخزون الجديدة';
+  String get enterNewStockAmount => 'Enter new stock amount';
 
   @override
-  String get pleaseEnterValidNumber => 'الرجاء إدخال رقم صحيح';
+  String get pleaseEnterValidNumber => 'Please enter a valid number';
 
   @override
-  String get checkingStockLevels => 'جاري التحقق من مستويات المخزون...';
+  String get checkingStockLevels => 'Checking stock levels...';
 
   @override
-  String get lowStockAlerts => 'تنبيهات المخزون المنخفض';
+  String get lowStockAlerts => 'Low Stock Alerts';
 
   @override
-  String get noLowStockProducts => 'لا توجد منتجات بمخزون منخفض';
+  String get noLowStockProducts => 'No products with low stock';
 
   @override
   String lowStockProductsCount(int count) {
-    return '$count منتج بمخزون منخفض';
+    return '$count products with low stock';
   }
 
   @override
-  String get promoCodes => 'رموز الخصم';
+  String get promoCodes => 'Promo Codes';
 
   @override
-  String get createPromocodesAndDiscounts => 'إنشاء رموز وخصومات ترويجية';
+  String get createPromocodesAndDiscounts => 'Create Promocodes and Discounts';
 
   @override
-  String get salesStatistics => 'إحصائيات المبيعات';
+  String get salesStatistics => 'Sales Statistics';
 
   @override
-  String get viewSalesAnalytics => 'عرض تحليلات ورسوم بيانية للمبيعات';
+  String get viewSalesAnalytics => 'View sales analytics and charts';
 
   @override
-  String get assistantTommySettings => 'إعدادات المساعد تومي';
+  String get assistantTommySettings => 'Assistant Tommy\'s Settings';
 
   @override
-  String get configureTommyAvailability => 'تكوين توفر تومي';
+  String get configureTommyAvailability => 'Configure Tommy\'s availability';
 
   @override
-  String get enableAssistantTommy => 'تفعيل المساعد تومي';
+  String get enableAssistantTommy => 'Enable Assistant Tommy';
 
   @override
-  String get tommyAvailable => 'تومي متاح حالياً';
+  String get tommyAvailable => 'Tommy is currently available';
 
   @override
-  String get tommyDisabled => 'تومي معطل حالياً';
+  String get tommyDisabled => 'Tommy is currently disabled';
 
   @override
-  String get hideTommy => 'إخفاء تومي';
+  String get hideTommy => 'Hide Tommy';
 
   @override
-  String get allEyesOnTommy => 'كل العيون على تومي !';
+  String get allEyesOnTommy => 'All Eyes On Tommy !';
 
   @override
-  String get tommyHiding => 'تومي مختبئ في الخزانة !';
+  String get tommyHiding => 'Tommy is hiding in the closet !';
 
   @override
-  String get close => 'إغلاق';
+  String get close => 'Close';
 
   @override
-  String get photoUploader => 'رفع الصور';
+  String get photoUploader => 'Photo Uploader';
 
   @override
-  String get configureAppSettings => 'تكوين إعدادات التطبيق';
+  String get configureAppSettings => 'Configure app settings';
 
   @override
   String ratingCount(int count) {
-    return '$count تقييم';
+    return '$count ratings';
   }
 
   @override
-  String get reportBug => 'الإبلاغ عن خطأ';
+  String get reportBug => 'Report Bug';
 
   @override
-  String get bugReports => 'تقارير الأخطاء';
+  String get bugReports => 'Bug Reports';
 
   @override
-  String get viewAndManageBugReports => 'عرض وإدارة تقارير الأخطاء';
+  String get viewAndManageBugReports => 'View and manage bug reports';
 
   @override
-  String get bugTitle => 'عنوان الخطأ';
+  String get bugTitle => 'Bug Title';
 
   @override
-  String get enterBugTitle => 'أدخل عنواناً للخطأ';
+  String get enterBugTitle => 'Enter a title for the bug';
 
   @override
-  String get bugDescription => 'وصف الخطأ';
+  String get bugDescription => 'Bug Description';
 
   @override
-  String get describeBugInDetail => 'يرجى وصف الخطأ بالتفصيل';
+  String get describeBugInDetail => 'Please describe the bug in detail';
 
   @override
-  String get pleaseEnterBugDetails => 'يرجى إدخال العنوان والوصف';
+  String get pleaseEnterBugDetails => 'Please enter both title and description';
 
   @override
-  String get bugReportSubmitted => 'تم إرسال تقرير الخطأ بنجاح';
+  String get bugReportSubmitted => 'Bug report submitted successfully';
 
   @override
-  String get errorSubmittingBugReport => 'حدث خطأ أثناء إرسال التقرير';
+  String get errorSubmittingBugReport => 'Error submitting bug report';
 
   @override
-  String get reportedBy => 'تم الإبلاغ بواسطة';
+  String get reportedBy => 'Reported by';
 
   @override
-  String get reportedOn => 'تاريخ الإبلاغ';
+  String get reportedOn => 'Reported on';
 
   @override
-  String get inProgress => 'قيد المعالجة';
+  String get inProgress => 'In Progress';
 
   @override
-  String get resolved => 'تم الحل';
+  String get resolved => 'Resolved';
 
   @override
-  String get dismissed => 'تم الرفض';
+  String get dismissed => 'Dismissed';
 
   @override
-  String get markAsInProgress => 'تحديد كقيد المعالجة';
+  String get markAsInProgress => 'Mark as In Progress';
 
   @override
-  String get markAsResolved => 'تحديد كتم الحل';
+  String get markAsResolved => 'Mark as Resolved';
 
   @override
-  String get dismiss => 'رفض';
+  String get dismiss => 'Dismiss';
 
   @override
-  String get noBugReports => 'لا توجد تقارير أخطاء';
+  String get noBugReports => 'No bug reports found';
 
   @override
-  String get requestRefund => 'طلب استرداد';
+  String get requestRefund => 'Request Refund';
 
   @override
-  String get confirmRefundRequest => 'تأكيد طلب الاسترداد';
+  String get confirmRefundRequest => 'Are you sure you want to request a refund for this order?';
 
   @override
-  String get orderTotal => 'إجمالي الطلب';
+  String get orderTotal => 'Order Total';
 
   @override
-  String get refundRequestSubmitted => 'تم تقديم طلب الاسترداد';
+  String get refundRequestSubmitted => 'Refund request submitted successfully';
 
   @override
   String failedToRequestRefund(String error) {
-    return 'فشل في طلب الاسترداد';
+    return 'Failed to request refund: $error';
   }
 
   @override
-  String get refundRequested => 'تم طلب الاسترداد';
+  String get refundRequested => 'Refund Requested';
 
   @override
-  String get refunded => 'تم الاسترداد';
+  String get refunded => 'Refunded';
 
   @override
-  String get processRefund => 'معالجة الاسترداد';
+  String get processRefund => 'Process Refund';
 
   @override
-  String get refundProcessed => 'تمت معالجة الاسترداد';
+  String get refundProcessed => 'Refund processed successfully';
 
   @override
   String failedToProcessRefund(String error) {
-    return 'فشل في معالجة الاسترداد';
+    return 'Failed to process refund: $error';
   }
 
   @override
-  String get setupWalletPin => 'إعداد رمز المحفظة';
+  String get setupWalletPin => 'Setup Wallet PIN';
 
   @override
-  String get createWalletPin => 'إنشاء رمز المحفظة';
+  String get createWalletPin => 'Create Wallet PIN';
 
   @override
-  String get walletPinDescription => 'الرجاء إنشاء رمز مكون من 4 أرقام لمحفظتك';
+  String get walletPinDescription => 'Create a 6-digit PIN to secure your wallet';
 
   @override
-  String get enterPin => 'أدخل الرمز';
+  String get enterPin => 'Enter PIN';
 
   @override
-  String get confirmPin => 'تأكيد الرمز';
+  String get confirmPin => 'Confirm PIN';
 
   @override
-  String get useBiometrics => 'استخدام البصمة';
+  String get useBiometrics => 'Use Biometrics';
 
   @override
-  String get biometricsDescription => 'استخدم بصمة الإصبع أو التعرف على الوجه للوصول إلى محفظتك';
+  String get biometricsDescription => 'Use fingerprint or face recognition to access your wallet';
 
   @override
-  String get setupPin => 'إعداد الرمز';
+  String get setupPin => 'Setup PIN';
 
   @override
-  String get verify => 'تحقق';
+  String get verify => 'Verify';
 
   @override
-  String get invalidPin => 'رمز غير صحيح';
+  String get invalidPin => 'Invalid PIN';
 
   @override
-  String get orLogInWith => 'أو سجل الدخول بواسطة';
+  String get orLogInWith => 'Or Log in With';
 
   @override
-  String get passwordRequirements => 'متطلبات كلمة المرور:';
+  String get passwordRequirements => 'Password Requirements:';
 
   @override
-  String get atLeast8Characters => 'ثمانية أحرف على الأقل';
+  String get atLeast8Characters => 'At least 8 characters';
 
   @override
-  String get maximum20Characters => '20 حرفًا كحد أقصى';
+  String get maximum20Characters => 'Maximum 20 characters';
 
   @override
-  String get oneUppercaseLetter => 'حرف كبير واحد';
+  String get oneUppercaseLetter => 'One uppercase letter';
 
   @override
-  String get oneLowercaseLetter => 'حرف صغير واحد';
+  String get oneLowercaseLetter => 'One lowercase letter';
 
   @override
-  String get oneSpecialCharacter => 'حرف خاص واحد';
+  String get oneSpecialCharacter => 'One special character';
 
   @override
-  String get notifications => 'الإشعارات';
+  String get notifications => 'Notifications';
 
   @override
-  String get noNotifications => 'لا توجد إشعارات';
+  String get noNotifications => 'No notifications yet';
 
   @override
-  String get noNotificationsDesc => 'ستظهر الإشعارات هنا عندما تتلقاها';
+  String get noNotificationsDesc => 'New notifications will appear here';
 
   @override
-  String get clearAllNotifications => 'مسح كل الإشعارات';
+  String get clearAllNotifications => 'Clear all notifications';
 
   @override
-  String get allNotificationsCleared => 'تم مسح جميع الإشعارات';
+  String get allNotificationsCleared => 'All notifications cleared';
 
   @override
-  String get notificationDeleted => 'تم حذف الإشعار';
+  String get notificationDeleted => 'Notification deleted';
 
   @override
-  String get welcomeNotification => 'مرحباً بك';
+  String get welcomeNotification => 'Welcome!';
 
   @override
-  String get welcomeNotificationDesc => 'مرحباً بك في Paradise PC Parts';
+  String get welcomeNotificationDesc => 'Welcome to our store. We have great offers for you.';
 
   @override
-  String get newProductNotification => 'منتج جديد';
+  String get newProductNotification => 'New Product';
 
   @override
-  String get newProductNotificationDesc => 'تم إضافة منتجات جديدة إلى المتجر';
+  String get newProductNotificationDesc => 'RTX 4090 is in stock! Check it out now.';
 
   @override
-  String get discountNotification => 'خصم جديد';
+  String get discountNotification => 'Special Discount';
 
   @override
-  String get discountNotificationDesc => 'خصومات جديدة متوفرة الآن';
+  String get discountNotificationDesc => '20% off on all RAM products!';
 
   @override
   String daysAgo(int days, Object count) {
-    return 'منذ $days يوم';
+    return '$count days ago';
   }
 
   @override
-  String get notificationManagement => 'إدارة الإشعارات';
+  String get notificationManagement => 'Notification Management';
 
   @override
-  String get newNotification => 'إنشاء إشعار جديد';
+  String get newNotification => 'Create New Notification';
 
   @override
-  String get notificationTitle => 'عنوان الإشعار';
+  String get notificationTitle => 'Notification Title';
 
   @override
-  String get notificationMessage => 'رسالة الإشعار';
+  String get notificationMessage => 'Notification Message';
 
   @override
-  String get sendToAllUsers => 'إرسال إلى جميع المستخدمين';
+  String get sendToAllUsers => 'Send to All Users';
 
   @override
-  String get sendNotification => 'إرسال الإشعار';
+  String get sendNotification => 'Send Notification';
 
   @override
-  String get notificationSent => 'تم إرسال الإشعار بنجاح';
+  String get notificationSent => 'Notification sent successfully';
 
   @override
   String notificationError(String error) {
-    return 'حدث خطأ: $error';
+    return 'Error occurred: $error';
   }
 
   @override
-  String get pleaseEnterTitleAndMessage => 'الرجاء إدخال العنوان والرسالة';
+  String get pleaseEnterTitleAndMessage => 'Please enter title and message';
 
   @override
   String get bannerManagement => 'Banner Management';
@@ -1411,4 +1411,73 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get uploadingImage => 'Uploading image...';
+
+  @override
+  String get savedDiscounts => 'Saved Discounts';
+
+  @override
+  String get use => 'Use';
+
+  @override
+  String get noSavedDiscountCodes => 'لا توجد رموز خصم محفوظة';
+
+  @override
+  String get savedDiscountCodes => 'رموز الخصم المحفوظة';
+
+  @override
+  String get discountOffers => 'Available Discounts';
+
+  @override
+  String get discountAndPromotionCodes => 'Discounts & Promotions';
+
+  @override
+  String get enterDiscountCode => 'أدخل رمز الخصم';
+
+  @override
+  String get enterValidDiscountCode => 'الرجاء إدخال رمز خصم صالح';
+
+  @override
+  String get apply => 'Apply';
+
+  @override
+  String minOrderAmount(String amount) {
+    return 'Minimum order amount: $amount';
+  }
+
+  @override
+  String currency(String amount) {
+    return '$amount ₺';
+  }
+
+  @override
+  String get noDiscountsAvailable => 'لا توجد خصومات متاحة';
+
+  @override
+  String get newDiscount => 'خصم جديد!';
+
+  @override
+  String get discountCodeAvailable => 'يتوفر رمز خصم جديد';
+
+  @override
+  String get discountSaved => 'تم حفظ رمز الخصم بنجاح';
+
+  @override
+  String get saveDiscount => 'حفظ الخصم';
+
+  @override
+  String get myDiscounts => 'خصوماتي';
+
+  @override
+  String get noDiscounts => 'لا توجد رموز خصم متاحة';
+
+  @override
+  String validUntil(String date) {
+    return 'صالح حتى $date';
+  }
+
+  @override
+  String get discountExpired => 'Expired';
+
+  @override
+  String get discountUsed => 'Used';
 }

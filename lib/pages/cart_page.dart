@@ -1,6 +1,7 @@
 import 'package:engineering_project/assets/components/discount_code.dart';
 import 'package:engineering_project/assets/components/discount_service.dart';
 import 'package:engineering_project/pages/checkout_page.dart';
+import 'package:engineering_project/pages/discount_page.dart';
 import 'package:engineering_project/pages/home_page.dart';
 import 'package:engineering_project/pages/past_orders_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
@@ -358,6 +359,182 @@ class OrderSuccessPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class SavedDiscountCodesDialog extends StatelessWidget {
+  final Function(DiscountCode) onDiscountSelected;
+  final List<DiscountCode> savedDiscounts;
+
+  const SavedDiscountCodesDialog({
+    Key? key,
+    required this.onDiscountSelected,
+    required this.savedDiscounts,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l10n.savedDiscountCodes,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                IconButton(
+                  icon: Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const Divider(),
+            if (savedDiscounts.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: Text(l10n.noSavedDiscountCodes),
+                ),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                itemCount: savedDiscounts.length,
+                itemBuilder: (context, index) {
+                  final discount = savedDiscounts[index];
+                  return ListTile(
+                    leading: Icon(Icons.discount_outlined),
+                    title: Text(discount.code),
+                    subtitle: Text('${discount.discountPercentage}% ${l10n.off}'),
+                    trailing: TextButton(
+                      onPressed: () {
+                        onDiscountSelected(discount);
+                        Navigator.pop(context);
+                      },
+                      child: Text(l10n.use),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DiscountOffersDialog extends StatelessWidget {
+  final Function(DiscountCode) onDiscountSelected;
+  final List<DiscountCode> availableDiscounts;
+
+  const DiscountOffersDialog({
+    super.key,
+    required this.onDiscountSelected,
+    required this.availableDiscounts,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                Text(
+                  l10n.discountOffers,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ],
+            ),
+          ),
+          const Divider(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: l10n.enterDiscountCode,
+                suffixText: l10n.apply,
+                suffixStyle: const TextStyle(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              shrinkWrap: true,
+              physics: const ClampingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: availableDiscounts.length,
+              itemBuilder: (context, index) {
+                final discount = availableDiscounts[index];
+                return Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.star,
+                      color: Colors.amber,
+                    ),
+                    title: Text(discount.name),
+                    subtitle: Text(
+                      '${discount.description}\n${l10n.minOrderAmount}: ₺${discount.minOrderAmount}',
+                    ),
+                    trailing: TextButton(
+                      onPressed: () {
+                        onDiscountSelected(discount);
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        l10n.apply,
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    isThreeLine: true,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -980,118 +1157,49 @@ class _CartPageState extends State<CartPage> {
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_appliedDiscount == null) ...[
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _discountCodeController,
-                                decoration: InputDecoration(
-                                  labelText: l10n.discountCode,
-                                  hintText: l10n.enterCode,
-                                  errorText: _discountError,
-                                  filled: true,
-                                  fillColor:
-                                      Theme.of(
-                                        context,
-                                      ).inputDecorationTheme.fillColor,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
-                                      color: Theme.of(context).dividerColor,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    themeNotifier.isSpecialModeActive
-                                        ? themeNotifier.getThemeColor(
-                                          themeNotifier.specialTheme,
-                                        )
-                                        : Colors.red,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                  horizontal: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              onPressed:
-                                  _isApplyingDiscount
-                                      ? null
-                                      : _applyDiscountCode,
-                              child:
-                                  _isApplyingDiscount
-                                      ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                      : Text(l10n.apply),
-                            ),
-                          ],
-                        ),
-                      ] else ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.discount_outlined,
-                                color: Colors.green,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      l10n.discountApplied(_appliedDiscount!.code),
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green.shade800,
-                                      ),
-                                    ),
-                                    Text(
-                                      l10n.percentOff(_appliedDiscount!.discountPercentage.round()),
-                                      style: TextStyle(
-                                        color: Colors.green.shade800,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: _removeDiscount,
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Colors.grey,
-                                  size: 20,
-                                ),
-                              ),
-                            ],
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DiscountPage(
+                            onDiscountSelected: (discount) {
+                              setState(() {
+                                _appliedDiscount = discount;
+                              });
+                            },
+                            currentDiscount: _appliedDiscount,
+                            cartTotal: _cartManager.totalPrice,
                           ),
                         ),
-                      ],
-                    ],
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.star,
+                            color: Colors.amber,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _appliedDiscount != null
+                                  ? '${_appliedDiscount!.code} (${_appliedDiscount!.discountPercentage}% ${l10n.off})'
+                                  : l10n.discountAndPromotionCodes,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          Icon(Icons.arrow_forward_ios, size: 16),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
                 Container(

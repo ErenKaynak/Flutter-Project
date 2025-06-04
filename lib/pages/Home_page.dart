@@ -71,6 +71,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   StreamSubscription<QuerySnapshot>? _categoriesSubscription;
 
+  // Add these to the _HomePageState class
+  List<Map<String, dynamic>> _banners = [];
+  bool _isBannersLoading = true;
+  int _currentBannerIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +83,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _cartManager.addListener(_updateUI);
     _getUserProfile();
     _setupCategoriesListener();
+    
+    // Use Future.microtask to avoid calling setState during build
+    Future.microtask(() {
+      if (mounted) {
+        _fetchBanners();
+      }
+    });
+
     _searchController.addListener(() {
       if (mounted) {
         setState(() {
@@ -151,9 +164,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _searchController.dispose();
     _cartManager.removeListener(_updateUI);
     _categoriesSubscription?.cancel();
-
+    
+    // Clean up animation controllers
     _colorAnimationControllers.forEach((_, controller) => controller.dispose());
     _tickAnimationControllers.forEach((_, controller) => controller.dispose());
+    _animationControllers.forEach((_, controller) => controller.dispose());
 
     super.dispose();
   }
@@ -298,11 +313,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        if (mounted) {
-          setState(() {
-            favoriteProductIds = [];
-          });
-        }
+        setState(() {
+          favoriteProductIds = [];
+        });
         return;
       }
 
@@ -604,6 +617,57 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
+  // Add this function to fetch banners
+  Future<void> _fetchBanners() async {
+    if (!mounted) return;
+    
+    print('Starting to fetch banners...'); // Debug print
+    
+    try {
+      setState(() {
+        _isBannersLoading = true; // Set loading state at the start
+      });
+
+      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('banners')
+          .orderBy('order')
+          .get();
+
+      print('Fetched ${snapshot.docs.length} banners from Firestore'); // Debug print
+
+      if (!mounted) return;
+
+      final List<Map<String, dynamic>> loadedBanners = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        print('Banner data: ${data}'); // Debug print
+        return {
+          'id': doc.id,
+          'imageUrl': data['imageUrl'] ?? '',
+          'title': data['title'] ?? '',
+          'description': data['description'] ?? '',
+          'themeColor': data['themeColor'] ?? 'default',
+          'isActive': data['isActive'] ?? true,
+        };
+      }).toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        _banners = loadedBanners;
+        _isBannersLoading = false;
+      });
+      
+      print('Banners loaded successfully. Count: ${_banners.length}'); // Debug print
+    } catch (e) {
+      print('Error fetching banners: $e'); // Debug print
+      if (!mounted) return;
+      setState(() {
+        _banners = [];
+        _isBannersLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -789,6 +853,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
+                                
                                 Container(
                                   padding: EdgeInsets.all(16.0),
                                   margin: EdgeInsets.all(10.0),
@@ -888,10 +953,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                   ),
                                 ),
                                 _buildBannerSection(),
-                                SizedBox(height: 10),
                                 _buildCategoriesHeader(),
-                                _buildCategoriesRow(),
+                               _buildCategoriesRow(),
+                                SizedBox(height: 10),
                                 _buildProductsHeader(),
+                                
                               ],
                             ),
                           ),
@@ -904,126 +970,97 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildBannerSection() {
-    final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    print('Building banner section. Loading: $_isBannersLoading, Banners count: ${_banners.length}'); // Debug print
 
-    final List<String> imageList = [
-      'lib/assets/Images/motherboard.png',
-      'lib/assets/Images/graphiccards.png',
-      'lib/assets/Images/rams.png',
-      'lib/assets/Images/case.png',
-      'lib/assets/Images/cpu.png',
-      'lib/assets/Images/powersupply.png',
-    ];
+    if (_isBannersLoading) {
+      return Container(
+        margin: EdgeInsets.symmetric(horizontal: 10),
+        height: 180,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: Colors.grey[200],
+        ),
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_banners.isEmpty) {
+      return Container(
+        margin: EdgeInsets.symmetric(horizontal: 10),
+        height: 180,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: Colors.grey[200],
+        ),
+        child: Center(
+          child: Text('No banners available'),
+        ),
+      );
+    }
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 10),
       height: 180,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        color: isDark ? Colors.grey.shade800 : Colors.blue.shade100,
-        boxShadow: [
-          BoxShadow(
-            color: isDark ? Colors.black26 : Colors.black12,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Stack(
-          children: [
-            CarouselSlider(
-              options: CarouselOptions(
-                height: 180,
-                autoPlay: true,
-                autoPlayInterval: Duration(seconds: 3),
-                enlargeCenterPage: true,
-                viewportFraction: 1.0,
-              ),
-              items: imageList.map((imagePath) {
-                return Builder(
-                  builder: (BuildContext context) {
-                    return Container(
-                      width: MediaQuery.of(context).size.width,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: themeNotifier.isSpecialModeActive
-                              ? [
-                                  themeNotifier.getThemeColor(
-                                          themeNotifier.specialTheme) ??
-                                      Colors.red,
-                                  isDark
-                                      ? Colors.grey.shade900
-                                      : Colors.grey.shade100,
-                                ]
-                              : (themeNotifier.isBlackMode
-                                  ? [
-                                      Theme.of(context).colorScheme.secondary,
-                                      Colors.black54,
-                                    ]
-                                  : (isDark
-                                      ? [Colors.red.shade900, Colors.black54]
-                                      : [
-                                          Colors.red.shade500,
-                                          Colors.red.shade100
-                                        ])),
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: imagePath.startsWith('http')
-                          ? Image.network(
-                              imagePath,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Image.asset(
-                                  'lib/assets/Images/placeholder.png',
-                                  fit: BoxFit.cover,
-                                );
-                              },
-                            )
-                          : Image.asset(
-                              imagePath,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Image.asset(
-                                  'lib/assets/Images/placeholder.png',
-                                  fit: BoxFit.cover,
-                                );
-                              },
-                            ),
-                    );
-                  },
-                );
-              }).toList(),
-            ),
-            Positioned(
-              bottom: 10,
-              left: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: imageList.asMap().entries.map((entry) {
-                  return Container(
-                    width: 8.0,
-                    height: 8.0,
-                    margin: EdgeInsets.symmetric(horizontal: 4.0),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.8),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ],
+      child: CarouselSlider(
+        options: CarouselOptions(
+          height: 180,
+          autoPlay: true,
+          autoPlayInterval: Duration(seconds: 3),
+          enlargeCenterPage: true,
+          viewportFraction: 1.0,
+          onPageChanged: (index, reason) {
+            if (mounted) {
+              setState(() {
+                _currentBannerIndex = index;
+              });
+            }
+          },
         ),
+        items: _banners.map((banner) {
+          print('Building banner item: ${banner['imageUrl']}'); // Debug print
+          return Builder(
+            builder: (BuildContext context) {
+              return Container(
+                width: MediaQuery.of(context).size.width,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    banner['imageUrl'],
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      print('Error loading banner image: $error'); // Debug print
+                      return Container(
+                        color: Colors.grey[300],
+                        child: Icon(Icons.error),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          );
+        }).toList(),
       ),
     );
+  }
+
+  Color _getThemeColor(String colorName) {
+    switch (colorName) {
+      case 'red':
+        return Colors.red;
+      case 'purple':
+        return Colors.purple;
+      case 'blue':
+        return Colors.blue;
+      case 'green':
+        return Colors.green;
+      case 'pink':
+        return Colors.pink;
+      default:
+        return Colors.grey;
+    }
   }
 
   Widget _buildCategoriesHeader() {
@@ -1462,9 +1499,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                     );
                                   },
                                 ),
-                        ),
-                      ),
-                      Positioned(
+//TODO: FIX LINTER ISSUE HERE
+                    /*  Positioned(
                         top: 8,
                         right: 8,
                         child: Container(
@@ -1488,11 +1524,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ),*/
+                  ))],
                   ),
                 ),
-              ),
+          ),
               Flexible(
                 flex: 2,
                 child: Container(
@@ -1647,10 +1683,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ],
           ),
         ),
-      ),
-    );
+      ));
+    }
   }
-}
+
 
 class FavoritesPage extends StatefulWidget {
   final Function onFavoritesChanged;

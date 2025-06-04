@@ -80,6 +80,14 @@ class NotificationService {
         // Set handlers for notifications
         OneSignal.Notifications.addClickListener((event) {
           print('Notification clicked: ${event.notification.title}');
+          
+          // Handle discount code notifications
+          final additionalData = event.notification.additionalData;
+          if (additionalData != null && additionalData.containsKey('discountCode')) {
+            // Assume we have Provider.of<DiscountCodeProvider> available in the UI context
+            // The actual handling will be done in the UI when user interacts with notification
+            print('Discount code notification received: ${additionalData['discountCode']}');
+          }
         });
 
         OneSignal.Notifications.addForegroundWillDisplayListener((event) {
@@ -229,7 +237,7 @@ class NotificationService {
         print('Backend: Sent notification to all users successfully');
         return true;
       } else {
-        final errorMessage = responseData['data']?['errors']?.join(', ') ?? 'Unknown error';
+        final errorMessage = responseData['error'] ?? responseData['data']?['errors']?.join(', ') ?? 'Unknown error';
         print('Backend: Failed to send notification. Error: $errorMessage');
         throw Exception('Failed to send notification: $errorMessage');
       }
@@ -256,12 +264,16 @@ class NotificationService {
         'additionalData': additionalData,
       });
 
-      if (response.statusCode == 200) {
-        print('Backend: Sent notification to specific users. Response: ${response.body}');
+      // Parse response
+      final responseData = jsonDecode(response.body);
+      
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        print('Backend: Sent notification to specific users successfully');
         return true;
       } else {
-        print('Backend: Failed to send notification. Response: ${response.body}');
-        return false;
+        final errorMessage = responseData['error'] ?? 'Unknown error';
+        print('Backend: Failed to send notification. Error: $errorMessage');
+        throw Exception('Failed to send notification: $errorMessage');
       }
     } catch (e) {
       print('Error sending notification through backend: $e');

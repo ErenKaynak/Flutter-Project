@@ -1,5 +1,6 @@
 import 'package:engineering_project/assets/components/discount_code.dart';
 import 'package:engineering_project/assets/components/discount_service.dart';
+import 'package:engineering_project/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -22,6 +23,10 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
   final _codeController = TextEditingController();
   final _discountPercentageController = TextEditingController();
   final _usageLimitController = TextEditingController();
+  final _perUserLimitController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _minOrderController = TextEditingController();
   
   DateTime? _selectedExpiryDate;
   bool _hasExpiry = false;
@@ -97,7 +102,10 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
       final newCode = DiscountCode(
         id: '', // Will be assigned by Firestore
         code: _codeController.text.trim(),
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
         discountPercentage: double.parse(_discountPercentageController.text),
+        minOrderAmount: double.parse(_minOrderController.text),
         expiryDate: _hasExpiry ? _selectedExpiryDate : null,
         // If no categories are selected or "All" is selected, set to null for all products
         applicableCategories: _selectedCategories.isEmpty || _selectedCategories.contains("All") 
@@ -107,6 +115,9 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
             ? 0 
             : int.parse(_usageLimitController.text),
         usageCount: 0,
+        perUserLimit: _perUserLimitController.text.isEmpty 
+            ? 0 
+            : int.parse(_perUserLimitController.text),
       );
 
       final success = await _discountService.createDiscountCode(newCode);
@@ -123,6 +134,10 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
         _codeController.clear();
         _discountPercentageController.clear();
         _usageLimitController.clear();
+        _perUserLimitController.clear();
+        _nameController.clear();
+        _descriptionController.clear();
+        _minOrderController.clear();
         setState(() {
           _selectedExpiryDate = null;
           _hasExpiry = false;
@@ -217,6 +232,10 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
     _codeController.dispose();
     _discountPercentageController.dispose();
     _usageLimitController.dispose();
+    _perUserLimitController.dispose();
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _minOrderController.dispose();
     super.dispose();
   }
 
@@ -551,6 +570,30 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
               ),
               SizedBox(height: 16),
               TextFormField(
+                controller: _nameController,
+                decoration: inputDecoration.copyWith(
+                  labelText: 'Discount Name',
+                  hintText: 'Enter a name for the discount',
+                  prefixIcon: Icon(Icons.label, color: Colors.red.shade300),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a discount name';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: inputDecoration.copyWith(
+                  labelText: 'Description',
+                  hintText: 'Enter a description (optional)',
+                  prefixIcon: Icon(Icons.description, color: Colors.red.shade300),
+                ),
+              ),
+              SizedBox(height: 16),
+              TextFormField(
                 controller: _discountPercentageController,
                 decoration: inputDecoration.copyWith(
                   labelText: 'Discount Percentage',
@@ -576,11 +619,58 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
               ),
               SizedBox(height: 16),
               TextFormField(
+                controller: _minOrderController,
+                decoration: inputDecoration.copyWith(
+                  labelText: 'Minimum Order Amount',
+                  hintText: 'Enter minimum order amount',
+                  prefixIcon: Icon(Icons.monetization_on, color: Colors.red.shade300),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a minimum order amount';
+                  }
+                  try {
+                    final minOrder = double.parse(value);
+                    if (minOrder < 0) {
+                      return 'Enter a positive number';
+                    }
+                  } catch (e) {
+                    return 'Enter a valid number';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+              TextFormField(
                 controller: _usageLimitController,
                 decoration: inputDecoration.copyWith(
-                  labelText: 'Usage Limit (Optional)',
-                  hintText: 'Leave empty for unlimited use',
+                  labelText: 'Total Usage Limit (Optional)',
+                  hintText: 'Leave empty for unlimited total uses',
                   prefixIcon: Icon(Icons.repeat, color: Colors.red.shade300),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    try {
+                      final limit = int.parse(value);
+                      if (limit < 0) {
+                        return 'Enter a positive number';
+                      }
+                    } catch (e) {
+                      return 'Enter a valid number';
+                    }
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _perUserLimitController,
+                decoration: inputDecoration.copyWith(
+                  labelText: 'Per-User Limit (Optional)',
+                  hintText: 'Leave empty for unlimited uses per user',
+                  prefixIcon: Icon(Icons.person_outline, color: Colors.red.shade300),
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
@@ -774,116 +864,136 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                     ? BorderSide(color: Colors.grey.shade800)
                     : BorderSide.none,
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(4.0),
-                child: ExpansionTile(
-                  tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  childrenPadding: EdgeInsets.only(left: 16, right: 16, bottom: 16),
-                  leading: Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade100),
-                    ),
-                    child: Center(
-                      child: Text(
-                        "${code.discountPercentage.toStringAsFixed(0)}%",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red.shade700,
-                        ),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                childrenPadding: EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                leading: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade100),
+                  ),
+                  child: Center(
+                    child: Text(
+                      "${code.discountPercentage.toStringAsFixed(0)}%",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red.shade700,
                       ),
                     ),
                   ),
-                  title: Text(
-                    code.code,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: Theme.of(context).textTheme.titleLarge?.color,
-                    ),
-                  ),
-                  subtitle: Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: statusColor.withOpacity(0.3)),
-                        ),
-                        child: Text(
-                          statusText,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: statusColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Uses: ${(code.usageCount).toString()}/${code.usageLimit > 0 ? code.usageLimit.toString() : 'unlimited'}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).textTheme.bodyMedium?.color,
-                        ),
-                      ),
-                    ],
-                  ),
-                  trailing: IconButton(
-                    icon: Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: () => _showDeleteConfirmation(code),
-                  ),
+                ),
+                title: Row(
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Divider(),
-                        if (code.expiryDate != null)
-                          _buildInfoRow(
-                            'Expiry Date', 
-                            DateFormat('yyyy-MM-dd').format(code.expiryDate!),
-                            Icons.calendar_today,
-                          ),
-                        if (code.applicableCategories != null && code.applicableCategories!.isNotEmpty)
-                          _buildInfoRow(
-                            'Categories', 
-                            code.applicableCategories!.join(", "),
-                            Icons.category,
-                          ),
-                        _buildInfoRow(
-                          'Usage Count', 
-                          '${code.usageCount}${code.usageLimit > 0 ? ' of ${code.usageLimit}' : ''}',
-                          Icons.people,
+                    Text(
+                      code.code,
+                      style: TextStyle(
+                        color: Theme.of(context).textTheme.titleLarge?.color,
+                      ),
+                    ),
+                    Expanded(child: SizedBox()),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        statusText,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 12,
                         ),
-                        SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          
-                          children: [
-                            OutlinedButton.icon(
-                              icon: Icon(Icons.delete),
-                              label: Text('Delete'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.red,
-                                side: BorderSide(color: Colors.red),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              onPressed: () => _showDeleteConfirmation(code),
-                            ),
-                          ],
-                        ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 4),
+                    Text(
+                      'Total uses: ${(code.usageCount).toString()}/${code.usageLimit > 0 ? code.usageLimit.toString() : 'unlimited'}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                      ),
+                    ),
+                    Text(
+                      'Per user: ${code.perUserLimit > 0 ? code.perUserLimit.toString() : 'unlimited'} uses',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                      ),
+                    ),
+                  ],
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (statusText == 'Active')  // Only show for active discount codes
+                      IconButton(
+                        icon: Icon(Icons.send, color: Colors.green),
+                        tooltip: 'Send notification to users',
+                        onPressed: () => _showSendNotificationConfirmation(code),
+                      ),
+                    IconButton(
+                      icon: Icon(Icons.delete_outline, color: Colors.red),
+                      onPressed: () => _showDeleteConfirmation(code),
+                    ),
+                  ],
+                ),
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Divider(),
+                      if (code.expiryDate != null)
+                        _buildInfoRow(
+                          'Expiry Date', 
+                          DateFormat('yyyy-MM-dd').format(code.expiryDate!),
+                          Icons.calendar_today,
+                        ),
+                      if (code.applicableCategories != null && code.applicableCategories!.isNotEmpty)
+                        _buildInfoRow(
+                          'Categories', 
+                          code.applicableCategories!.join(", "),
+                          Icons.category,
+                        ),
+                      _buildInfoRow(
+                        'Total Usage', 
+                        '${code.usageCount}${code.usageLimit > 0 ? ' of ${code.usageLimit}' : ' (unlimited)'}',
+                        Icons.people,
+                      ),
+                      _buildInfoRow(
+                        'Per-User Limit', 
+                        code.perUserLimit > 0 ? '${code.perUserLimit} uses per user' : 'Unlimited uses per user',
+                        Icons.person_outline,
+                      ),
+                      SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton.icon(
+                            icon: Icon(Icons.delete),
+                            label: Text('Delete'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              side: BorderSide(color: Colors.red),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: () => _showDeleteConfirmation(code),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
               ),
             );
           },
@@ -1019,5 +1129,143 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
         );
       },
     );
+  }
+
+  Future<void> _showSendNotificationConfirmation(DiscountCode code) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).dialogBackgroundColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.notifications_active, color: Colors.green),
+              SizedBox(width: 8),
+              Text(
+                'Send Notification',
+                style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Send a notification about this discount code to all users:',
+                  style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                ),
+                SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Code: ${code.code}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      Text(
+                        'Discount: ${code.discountPercentage}%',
+                        style: TextStyle(
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                        ),
+                      ),
+                      if (code.expiryDate != null)
+                        Text(
+                          'Expires: ${DateFormat('MMM dd, yyyy').format(code.expiryDate!)}',
+                          style: TextStyle(
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text('Send Notification'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _sendDiscountNotification(code);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDiscountCodeTile(DiscountCode code) {
+    return ExpansionTile(
+      title: Text(code.name),
+      subtitle: Text(code.code),
+      trailing: code.isActive 
+        ? IconButton(
+            icon: const Icon(Icons.send),
+            tooltip: 'Send as notification',
+            onPressed: () => _sendDiscountNotification(code),
+          )
+        : null,
+      children: [
+        // ...existing code...
+      ],
+    );
+  }
+
+  Future<void> _sendDiscountNotification(DiscountCode code) async {
+    try {
+      final notificationService = NotificationService();
+      final success = await notificationService.sendDiscountNotification(
+        title: 'New Discount Available!',
+        message: 'Use code ${code.code} to get ${code.discountPercentage}% off',
+        discountCode: code.code,
+        discountPercentage: code.discountPercentage,
+        discountId: code.id,
+        expiryDate: code.expiryDate,
+      );
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Discount notification sent!')),
+        );
+      } else {
+        throw Exception('Failed to send notification');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sending notification: $e')),
+      );
+    }
   }
 }

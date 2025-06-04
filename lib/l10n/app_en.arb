@@ -44,7 +44,11 @@
     "noProductsFound": "No products found",
     "tryDifferentSearch": "Try a different search term",
     "tryDifferentCategory": "Try selecting a different category",
-    "viewCart": "VIEW CART",
+   "viewCart": "VIEW CART",
+    "off": "off",
+    "@off": {
+        "description": "Text used for discount percentage"
+    },
     "addedToCart": "{productName} added to cart",
     "@addedToCart": {
         "placeholders": {
@@ -157,16 +161,7 @@
     "clearCartConfirmation": "Are you sure you want to remove all items?",
     "discountCode": "Discount Code",
     "enterCode": "Enter code",
-    "apply": "APPLY",
-    "discountApplied": "Discount applied: {code}",
-    "@discountApplied": {
-        "placeholders": {
-            "code": {
-                "type": "String",
-                "description": "Discount code applied"
-            }
-        }
-    },
+    "discountApplied": "Discount Applied: {code}",
     "percentOff": "{percent}% off",
     "@percentOff": {
         "placeholders": {
@@ -780,5 +775,61 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "selectUsersFirst": "Please select at least one user",
-    "uploadingImage": "Uploading image..."
+    "uploadingImage": "Uploading image...",
+    "savedDiscounts": "Saved Discounts",
+    "use": "Use",
+    "noSavedDiscountCodes": "No Saved Discount Codes",
+    "savedDiscountCodes": "Saved Discount Codes",
+    "transactionsCount": "{count} transactions",
+    "@transactionsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "description": "Number of transactions"
+            }
+        }
+    },
+    "discountOffers": "Available Discounts",
+    "discountAndPromotionCodes": "Discounts & Promotions",
+    "enterDiscountCode": "Enter discount code",
+    "enterValidDiscountCode": "Please enter a valid discount code",
+    "apply": "Apply",
+    "minOrderAmount": "Minimum order amount: {amount}",
+    "@minOrderAmount": {
+        "placeholders": {
+            "amount": {
+                "type": "String",
+                "example": "₺100"
+            }
+        }
+    },
+    "currency": "₺{amount}",
+    "@currency": {
+        "placeholders": {
+            "amount": {
+                "type": "String",
+                "example": "100.00"
+            }
+        }
+    },
+    "noDiscountsAvailable": "No discounts available",
+    "loading": "Loading...",
+    "invalidDiscountCode": "Invalid discount code",
+    "newDiscount": "New Discount!",
+    "discountCodeAvailable": "A new discount code is available",
+    "discountSaved": "Discount code saved successfully",
+    "saveDiscount": "Save Discount",
+    "myDiscounts": "My Discounts",
+    "noDiscounts": "No discount codes available",
+    "validUntil": "Valid until {date}",
+    "@validUntil": {
+        "placeholders": {
+            "date": {
+                "type": "String",
+                "example": "June 30, 2025"
+            }
+        }
+    },
+    "discountExpired": "Expired",
+    "discountUsed": "Used"
 }

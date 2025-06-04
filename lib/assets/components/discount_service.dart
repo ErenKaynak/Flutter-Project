@@ -1,41 +1,65 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:engineering_project/assets/components/discount_code.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DiscountService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
+  Future<List<DiscountCode>> getAvailableDiscounts() async {
+    try {
+      final now = DateTime.now();
+      final QuerySnapshot querySnapshot = await _firestore
+          .collection('discountCodes')
+          .where('isActive', isEqualTo: true)
+          .where('expiryDate', isGreaterThan: now)
+          .orderBy('expiryDate', descending: false)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => DiscountCode.fromFirestore(doc))
+          .where((discount) => 
+              discount.isValid() && 
+              (discount.usageLimit == 0 || 
+               discount.usageCount < discount.usageLimit))
+          .toList();
+    } catch (e) {
+      print('Error getting available discounts: $e');
+      return [];
+    }
+  }
+
   Future<DiscountCode?> validateCode(String code) async {
     try {
       final querySnapshot = await _firestore
           .collection('discountCodes')
-          .where('code', isEqualTo: code)
+          .where('code', isEqualTo: code.trim())
+          .where('isActive', isEqualTo: true)
           .limit(1)
           .get();
-      
-      if (querySnapshot.docs.isEmpty) {
-        return null;
-      }
-      
+
+      if (querySnapshot.docs.isEmpty) return null;
+
       final discountCode = DiscountCode.fromFirestore(querySnapshot.docs.first);
-      
-      // Check if code is expired
-      if (discountCode.expiryDate != null && 
-          discountCode.expiryDate!.isBefore(DateTime.now())) {
-        // Deactivate the expired code
+      if (!discountCode.isValid()) {
         await deactivateExpiredCode(discountCode.id);
         return null;
       }
-      
-      // Check if usage limit is reached
-      if (discountCode.usageLimit > 0 && 
-          discountCode.usageCount >= discountCode.usageLimit) {
-        return null;
-      }
-      
+
       return discountCode;
     } catch (e) {
       print('Error validating discount code: $e');
       return null;
+    }
+  }
+
+  Future<void> deactivateExpiredCode(String codeId) async {
+    try {
+      await _firestore
+          .collection('discountCodes')
+          .doc(codeId)
+          .update({'isActive': false});
+    } catch (e) {
+      print('Error deactivating expired code: $e');
     }
   }
 
@@ -133,14 +157,23 @@ class DiscountService {
     }
   }
 
-  Future<void> deactivateExpiredCode(String codeId) async {
+  Future<List<DiscountCode>> getSavedDiscounts() async {
     try {
-      await _firestore
-          .collection('discountCodes')
-          .doc(codeId)
-          .update({'isActive': false});
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return [];
+
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('savedDiscounts')
+          .get();
+
+      return snapshot.docs
+          .map((doc) => DiscountCode.fromFirestore(doc))
+          .toList();
     } catch (e) {
-      print('Error deactivating expired code: $e');
+      print('Error getting saved discounts: $e');
+      return [];
     }
   }
 }

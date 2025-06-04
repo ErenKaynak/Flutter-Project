@@ -110,7 +110,7 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get productQuantity => 'Adet';
+  String get productQuantity => 'Quantity';
 
   @override
   String get noProductsFound => 'Ürün bulunamadı';
@@ -123,6 +123,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get viewCart => 'Sepeti Görüntüle';
+
+  @override
+  String get off => 'indirim';
 
   @override
   String addedToCart(String productName) {
@@ -390,11 +393,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get enterCode => 'Kodu girin';
 
   @override
-  String get apply => 'UYGULA';
-
-  @override
-  String discountApplied(String code) {
-    return 'İndirim uygulandı: $code';
+  String discountApplied(Object code) {
+    return 'İndirim Uygulandı: $code';
   }
 
   @override
@@ -403,10 +403,10 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get invalidDiscountCode => 'Geçersiz veya süresi dolmuş indirim kodu';
+  String get invalidDiscountCode => 'Geçersiz indirim kodu';
 
   @override
-  String get notApplicableDiscount => 'Bu kod sepetinizdeki ürünler için geçerli değil';
+  String get notApplicableDiscount => 'This code is not applicable to items in your cart';
 
   @override
   String get subtotal => 'Ara Toplam';
@@ -1411,4 +1411,73 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get uploadingImage => 'Uploading image...';
+
+  @override
+  String get savedDiscounts => 'Kayıtlı İndirimler';
+
+  @override
+  String get use => 'Kullan';
+
+  @override
+  String get noSavedDiscountCodes => 'Kayıtlı İndirim Kodu Bulunamadı';
+
+  @override
+  String get savedDiscountCodes => 'Kayıtlı İndirim Kodları';
+
+  @override
+  String get discountOffers => 'Mevcut İndirimler';
+
+  @override
+  String get discountAndPromotionCodes => 'İndirimler ve Promosyonlar';
+
+  @override
+  String get enterDiscountCode => 'İndirim kodunu girin';
+
+  @override
+  String get enterValidDiscountCode => 'Lütfen geçerli bir indirim kodu girin';
+
+  @override
+  String get apply => 'Uygula';
+
+  @override
+  String minOrderAmount(String amount) {
+    return 'Minimum sepet tutarı: $amount';
+  }
+
+  @override
+  String currency(String amount) {
+    return '₺$amount';
+  }
+
+  @override
+  String get noDiscountsAvailable => 'Mevcut indirim bulunmuyor';
+
+  @override
+  String get newDiscount => 'Yeni İndirim!';
+
+  @override
+  String get discountCodeAvailable => 'Yeni bir indirim kodu mevcut';
+
+  @override
+  String get discountSaved => 'İndirim kodu başarıyla kaydedildi';
+
+  @override
+  String get saveDiscount => 'İndirimi Kaydet';
+
+  @override
+  String get myDiscounts => 'İndirimlerim';
+
+  @override
+  String get noDiscounts => 'İndirim kodu bulunmuyor';
+
+  @override
+  String validUntil(String date) {
+    return '$date tarihine kadar geçerli';
+  }
+
+  @override
+  String get discountExpired => 'Expired';
+
+  @override
+  String get discountUsed => 'Used';
 }

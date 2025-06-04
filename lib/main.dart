@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:engineering_project/assets/components/notification_service.dart';
+import 'package:engineering_project/services/notification_init.dart';
 import 'package:engineering_project/assets/components/theme_data.dart';
 import 'package:engineering_project/assets/components/onesignal_navigation_observer.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
@@ -19,6 +20,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:engineering_project/providers/cart_provider.dart';
 import 'package:engineering_project/providers/language_provider.dart';
+import 'package:engineering_project/providers/discount_code_provider.dart';
 const String _kSpecialModeActiveKey = 'special_mode_active';
 const String _kSpecialThemeKey = 'special_theme';
 
@@ -54,20 +56,13 @@ void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    // Initialize Firebase first
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-
-    // Initialize OneSignal for both web and mobile platforms
-    await NotificationService.initialize(
-      appId: 'bb5b6419-07c9-4b72-9d85-e2c121f05591',
-      restApiKey: 'os_v2_app_xnnwigihzffxfhmf4lasd4cvshp4lnkq7zsuoomolom6c6an5hh342rf54jd4eca3zykr2a6qbqo3cyls36fx27rzz3zh4rphqaaqty',
-    );
-  } catch (e) {
-    developer.log('Error during initialization: $e', name: 'Initialization');
-  }
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  // Initialize notification system (OneSignal + handlers)
+  await NotificationInitializer.initialize();
 
   runApp(
     MultiProvider(
@@ -75,6 +70,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ThemeNotifier()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => DiscountCodeProvider()),
       ],
       child: const MyApp(),
     ),
@@ -181,17 +177,15 @@ class AuthWrapper extends StatelessWidget {
 
         if (snapshot.hasData && snapshot.data != null) {
           // Update OneSignal with user info when authenticated
-          if (NotificationService.isConfigured) {
-            final user = snapshot.data!;
-            OneSignal.login(user.uid);
-            
-            // Set user tags for segmentation
-            if (user.displayName != null) {
-              NotificationService.addTag("username", user.displayName!);
-            }
-            if (user.email != null) {
-              NotificationService.addTag("email", user.email!);
-            }
+          final user = snapshot.data!;
+          NotificationInitializer.updateUserId(user.uid);
+          
+          // Set user tags for segmentation
+          if (user.displayName != null) {
+            NotificationInitializer.addUserTag("username", user.displayName!);
+          }
+          if (user.email != null) {
+            NotificationInitializer.addUserTag("email", user.email!);
           }
           WidgetsBinding.instance.addPostFrameCallback((_) {
             Navigator.pushReplacementNamed(context, '/root');
@@ -200,9 +194,7 @@ class AuthWrapper extends StatelessWidget {
         }
 
         // Clear OneSignal external user ID when logged out
-        if (NotificationService.isConfigured) {
-          OneSignal.logout();
-        }
+        NotificationInitializer.updateUserId(null);
         WidgetsBinding.instance.addPostFrameCallback((_) {
           Navigator.pushReplacementNamed(context, '/welcome');
         });

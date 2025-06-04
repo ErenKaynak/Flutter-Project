@@ -5,6 +5,7 @@ import 'package:engineering_project/pages/theme_notifier.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:engineering_project/assets/components/notification_service.dart';
+import 'package:engineering_project/services/notification_init.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -22,20 +23,21 @@ class _NotificationsPageState extends State<NotificationsPage> {
   // Handle test notification
   Future<void> _handleTestNotification(BuildContext context) async {
     try {
-      // First validate configuration
-      final isValid = await NotificationService.validateConfiguration();
-      if (!isValid && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('OneSignal configuration is not valid'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+      // First check if notification system is initialized
+      if (!NotificationInitializer.isInitialized) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Notification system not initialized'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
         return;
       }
 
       // Send test notification
-      final success = await NotificationService.sendTestNotification();
+      final success = await NotificationInitializer.sendTestNotification();
       
       if (context.mounted) {
         if (success) {
@@ -175,7 +177,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   // Check subscription status
   Future<void> _checkSubscriptionStatus() async {
-    final subscribed = await NotificationService.isSubscribed();
+    final subscribed = await NotificationInitializer.isUserSubscribed();
     if (mounted) {
       setState(() {
         _isSubscribed = subscribed;
@@ -188,9 +190,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
     try {
       bool success;
       if (_isSubscribed) {
-        success = await NotificationService.unsubscribeUser();
+        success = await NotificationInitializer.unsubscribeUser();
       } else {
-        success = await NotificationService.subscribeUser();
+        success = await NotificationInitializer.subscribeUser();
       }
 
       if (success && mounted) {
