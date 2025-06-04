@@ -5,9 +5,12 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
-import io.flutter.app.FlutterApplication
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.plugin.common.PluginRegistry
+import io.flutter.plugins.GeneratedPluginRegistrant
 
-class MainApplication : FlutterApplication() {
+class MainApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
@@ -23,7 +26,7 @@ class MainApplication : FlutterApplication() {
                 enableVibration(true)
                 setShowBadge(true)
             }
-            val notificationManager: NotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
     }
