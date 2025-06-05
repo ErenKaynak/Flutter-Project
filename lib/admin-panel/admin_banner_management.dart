@@ -4,8 +4,10 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
+import 'dart:typed_data';
 import '../pages/theme_notifier.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class BannerManagementPage extends StatefulWidget {
   const BannerManagementPage({super.key});
@@ -19,6 +21,7 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
   bool _isUploading = false;
   List<Map<String, dynamic>> banners = [];
   bool _isLoading = true;
+  XFile? _webImageFile;
 
   // Available theme colors for banners
   final List<String> themeColors = ['default', 'red', 'purple', 'blue', 'green', 'pink'];
@@ -100,10 +103,17 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
 
     if (image == null) return;
 
-    _showBannerDialog(imageFile: File(image.path));
+    if (kIsWeb) {
+      setState(() {
+        _webImageFile = image;
+      });
+      _showBannerDialog(webImageFile: image);
+    } else {
+      _showBannerDialog(imageFile: File(image.path));
+    }
   }
 
-  void _showBannerDialog({File? imageFile, Map<String, dynamic>? banner}) {
+  void _showBannerDialog({File? imageFile, XFile? webImageFile, Map<String, dynamic>? banner}) {
     final TextEditingController titleController = TextEditingController(text: banner?['title'] ?? '');
     final TextEditingController descriptionController = TextEditingController(text: banner?['description'] ?? '');
     final TextEditingController orderController = TextEditingController(text: banner?['order']?.toString() ?? '0');
@@ -119,7 +129,7 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (imageFile != null)
+                if (imageFile != null || webImageFile != null)
                   Container(
                     height: 150,
                     width: double.infinity,
@@ -129,7 +139,20 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.file(imageFile, fit: BoxFit.cover),
+                      child: kIsWeb && webImageFile != null
+                          ? FutureBuilder<Uint8List>(
+                              future: webImageFile.readAsBytes(),
+                              builder: (context, snapshot) {
+                                if (snapshot.hasData) {
+                                  return Image.memory(
+                                    snapshot.data!,
+                                    fit: BoxFit.cover,
+                                  );
+                                }
+                                return Center(child: CircularProgressIndicator());
+                              },
+                            )
+                          : Image.file(imageFile!, fit: BoxFit.cover),
                     ),
                   )
                 else if (banner != null && banner['imageUrl'].isNotEmpty)
@@ -226,7 +249,7 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (banner == null && imageFile == null) {
+                if (banner == null && imageFile == null && webImageFile == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Please select an image')),
                   );
@@ -236,6 +259,7 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
                 Navigator.pop(context);
                 await _saveBanner(
                   imageFile: imageFile,
+                  webImageFile: webImageFile,
                   title: titleController.text,
                   description: descriptionController.text,
                   order: int.tryParse(orderController.text) ?? 0,
@@ -255,6 +279,7 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
 
   Future<void> _saveBanner({
     File? imageFile,
+    XFile? webImageFile,
     required String title,
     required String description,
     required int order,
@@ -271,14 +296,25 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
       String imageUrl = existingImageUrl ?? '';
 
       // Upload new image if provided
-      if (imageFile != null) {
+      if (imageFile != null || webImageFile != null) {
         final String fileName = 'banner_${DateTime.now().millisecondsSinceEpoch}.jpg';
         final Reference storageRef = FirebaseStorage.instance
             .ref()
             .child('banners')
             .child(fileName);
 
-        final UploadTask uploadTask = storageRef.putFile(imageFile);
+        UploadTask uploadTask;
+        if (kIsWeb && webImageFile != null) {
+          // Handle web platform
+          final bytes = await webImageFile.readAsBytes();
+          uploadTask = storageRef.putData(bytes);
+        } else if (imageFile != null) {
+          // Handle mobile platforms
+          uploadTask = storageRef.putFile(imageFile);
+        } else {
+          throw Exception('No image file provided');
+        }
+
         final TaskSnapshot snapshot = await uploadTask;
         imageUrl = await snapshot.ref.getDownloadURL();
       }
@@ -337,6 +373,7 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
     } finally {
       setState(() {
         _isUploading = false;
+        _webImageFile = null;
       });
     }
   }
