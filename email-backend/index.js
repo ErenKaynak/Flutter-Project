@@ -10,12 +10,12 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// OneSignal configuration
+// Environment variables for OneSignal configuration
 const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || 'bb5b6419-07c9-4b72-9d85-e2c121f05591';
-const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
+const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY || 'os_v2_app_xnnwigihzffxfhmf4lasd4cvshp4lnkq7zsuoomolom6c6an5hh342rf54jd4eca3zykr2a6qbqo3cyls36fx27rzz3zh4rphqaaqty';
 
-if (!ONESIGNAL_REST_API_KEY) {
-  console.error('ONESIGNAL_REST_API_KEY is required');
+if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
+  console.error('OneSignal configuration is missing. Please set ONESIGNAL_APP_ID and ONESIGNAL_REST_API_KEY environment variables.');
 }
 
 // Health check endpoint
@@ -27,12 +27,15 @@ app.get('/', (req, res) => {
   });
 });
 
-// Test endpoint
+// Test endpoint to check if server is running
 app.get('/test', (req, res) => {
-  res.json({ 
-    message: 'Test endpoint working',
-    oneSignalConfigured: !!ONESIGNAL_REST_API_KEY,
-    appId: ONESIGNAL_APP_ID
+  res.json({
+    status: 'ok',
+    message: 'Server is running',
+    oneSignalConfigured: {
+      appId: !!ONESIGNAL_APP_ID,
+      restApiKey: !!ONESIGNAL_REST_API_KEY
+    }
   });
 });
 
@@ -41,17 +44,27 @@ app.post('/send-notification', async (req, res) => {
   try {
     const { title, message, userIds, additionalData, imageUrl } = req.body;
 
+    console.log('Received notification request:', {
+      title,
+      message,
+      userIds,
+      hasAdditionalData: !!additionalData,
+      hasImageUrl: !!imageUrl
+    });
+
     if (!title || !message) {
+      console.error('Missing required fields');
       return res.status(400).json({
         success: false,
         error: 'Title and message are required'
       });
     }
 
-    if (!ONESIGNAL_REST_API_KEY) {
+    if (!ONESIGNAL_REST_API_KEY || !ONESIGNAL_APP_ID) {
+      console.error('OneSignal configuration missing');
       return res.status(500).json({
         success: false,
-        error: 'OneSignal REST API key not configured'
+        error: 'OneSignal configuration is missing'
       });
     }
 
@@ -75,7 +88,7 @@ app.post('/send-notification', async (req, res) => {
       notificationData.included_segments = ['All'];
     }
 
-    console.log('Sending notification:', JSON.stringify(notificationData, null, 2));
+    console.log('Sending notification to OneSignal:', JSON.stringify(notificationData, null, 2));
 
     const response = await axios.post(
       'https://onesignal.com/api/v1/notifications',
@@ -97,11 +110,16 @@ app.post('/send-notification', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error sending notification:', error.response?.data || error.message);
+    console.error('Error sending notification:', {
+      message: error.message,
+      response: error.response?.data,
+      stack: error.stack
+    });
+
     res.status(500).json({
       success: false,
-      error: error.response?.data || error.message,
-      details: error.response?.data?.errors || []
+      error: error.response?.data?.errors?.[0] || error.message,
+      details: error.response?.data || error.message
     });
   }
 });
@@ -109,23 +127,25 @@ app.post('/send-notification', async (req, res) => {
 // Send test notification
 app.post('/test-notification', async (req, res) => {
   try {
-    if (!ONESIGNAL_REST_API_KEY) {
+    console.log('Received test notification request');
+
+    if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
+      console.error('OneSignal configuration is missing');
       return res.status(500).json({
         success: false,
-        error: 'OneSignal REST API key not configured'
+        error: 'OneSignal configuration is missing'
       });
     }
 
     const notificationData = {
       app_id: ONESIGNAL_APP_ID,
-      headings: { en: 'Test Notification' },
-      contents: { en: 'This is a test notification from your backend!' },
       included_segments: ['All'],
-      data: {
-        type: 'test',
-        timestamp: new Date().toISOString()
-      }
+      contents: { en: 'This is a test notification' },
+      headings: { en: 'Test Notification' },
+      data: { type: 'test' }
     };
+
+    console.log('Sending test notification to OneSignal:', JSON.stringify(notificationData, null, 2));
 
     const response = await axios.post(
       'https://onesignal.com/api/v1/notifications',
@@ -138,17 +158,24 @@ app.post('/test-notification', async (req, res) => {
       }
     );
 
+    console.log('OneSignal test notification response:', response.data);
+
     res.json({
       success: true,
       data: response.data,
       message: 'Test notification sent successfully'
     });
-
   } catch (error) {
-    console.error('Error sending test notification:', error.response?.data || error.message);
+    console.error('Error sending test notification:', {
+      message: error.message,
+      response: error.response?.data,
+      stack: error.stack
+    });
+
     res.status(500).json({
       success: false,
-      error: error.response?.data || error.message
+      error: error.response?.data?.errors?.[0] || error.message,
+      details: error.response?.data || error.message
     });
   }
 });
