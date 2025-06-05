@@ -1035,12 +1035,211 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                     color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
+                if (order.status == OrderStatus.pending || order.status == OrderStatus.delivered) ...[
+                  SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (order.status == OrderStatus.pending)
+                        OutlinedButton.icon(
+                          onPressed: () => _showCancelOrderDialog(order),
+                          icon: Icon(Icons.cancel, color: Colors.red),
+                          label: Text('Cancel Order'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: BorderSide(color: Colors.red),
+                          ),
+                        ),
+                      if (order.status == OrderStatus.delivered)
+                        OutlinedButton.icon(
+                          onPressed: () => _showRefundRequestDialog(order),
+                          icon: Icon(Icons.money_off, color: Colors.orange),
+                          label: Text('Request Refund'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.orange,
+                            side: BorderSide(color: Colors.orange),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  void _showCancelOrderDialog(Order order) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Cancel Order'),
+        content: Text('Do you want to cancel this order?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('No'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _cancelOrder(order);
+            },
+            child: Text('Yes'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRefundRequestDialog(Order order) {
+    final reasonController = TextEditingController();
+    final List<XFile> selectedImages = [];
+    bool isUploading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Request Refund'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: reasonController,
+                  decoration: InputDecoration(
+                    labelText: 'Reason for refund',
+                    hintText: 'Please explain why you want a refund',
+                  ),
+                  maxLines: 3,
+                ),
+                SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final ImagePicker picker = ImagePicker();
+                    final images = await picker.pickMultiImage();
+                    if (images != null) {
+                      setState(() {
+                        selectedImages.addAll(images);
+                      });
+                    }
+                  },
+                  icon: Icon(Icons.add_photo_alternate),
+                  label: Text('Add Photos (Optional)'),
+                ),
+                if (selectedImages.isNotEmpty) ...[
+                  SizedBox(height: 8),
+                  Text('${selectedImages.length} images selected'),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isUploading ? null : () async {
+                if (reasonController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Please provide a reason for your refund request')),
+                  );
+                  return;
+                }
+
+                setState(() => isUploading = true);
+                
+                try {
+                  List<String> imageUrls = [];
+                  if (selectedImages.isNotEmpty) {
+                    for (var image in selectedImages) {
+                      final ref = FirebaseStorage.instance
+                          .ref()
+                          .child('refund_images')
+                          .child('${DateTime.now().millisecondsSinceEpoch}_${image.name}');
+                      
+                      final uploadTask = await ref.putFile(File(image.path));
+                      final imageUrl = await uploadTask.ref.getDownloadURL();
+                      imageUrls.add(imageUrl);
+                    }
+                  }
+
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user != null) {
+                    await FirebaseFirestore.instance
+                        .collection('orders')
+                        .doc(order.id)
+                        .update({
+                      'status': OrderStatus.refundRequested.displayName,
+                      'refundReason': reasonController.text.trim(),
+                      'refundImages': imageUrls,
+                      'refundRequestedAt': FieldValue.serverTimestamp(),
+                    });
+
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Refund request submitted successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  print('Error submitting refund request: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error submitting refund request: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                } finally {
+                  setState(() => isUploading = false);
+                }
+              },
+              child: Text('Submit Request'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _cancelOrder(Order order) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .doc(order.id)
+            .update({
+          'status': OrderStatus.cancelled.displayName,
+          'cancelledAt': FieldValue.serverTimestamp(),
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Order cancelled successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error cancelling order: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error cancelling order: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildRecommendationCard(LocalizedProduct product) {
@@ -2521,46 +2720,6 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     }
 
     return true;
-  }
-
-  void _cancelOrder(Order order) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Order #${order.id} cancelled (placeholder).')),
-    );
-    // TODO: Implement actual cancel logic
-  }
-
-  void _requestRefund(Order order) async {
-    try {
-      // Update order status in Firestore
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('orders')
-            .doc(order.id)
-            .update({
-          'status': 'refund_requested',
-          'refundRequestedAt': FieldValue.serverTimestamp(),
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Refund request submitted for order #${order.id}'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error requesting refund: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error requesting refund: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 
   void _sendOrderActionMessage(Order order) {
