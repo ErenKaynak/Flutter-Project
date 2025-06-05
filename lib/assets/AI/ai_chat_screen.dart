@@ -33,6 +33,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:math' show sin, pi;
 import 'package:cloud_firestore/cloud_firestore.dart' show FieldValue;
+import 'package:engineering_project/models/order_models.dart';
 
 enum SpecialColorTheme { red, blue, green }
 
@@ -1262,38 +1263,106 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
         return [];
       }
 
-      final cutoffDate = DateTime.now().subtract(Duration(days: days));
+      print('Fetching orders for user: ${user.uid}');
       
+      // Try fetching from main orders collection first
       final ordersSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
           .collection('orders')
-          .where('createdAt', isGreaterThanOrEqualTo: cutoffDate)
-          .orderBy('createdAt', descending: true)
+          .where('userId', isEqualTo: user.uid)
+          .orderBy('timestamp', descending: true)
           .get();
 
+      print('Found ${ordersSnapshot.docs.length} orders in main collection');
+
+      // If no orders found in main collection, try user's subcollection
       if (ordersSnapshot.docs.isEmpty) {
-        return [];
+        print('Trying user subcollection...');
+        final userOrdersSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('orders')
+            .orderBy('timestamp', descending: true)
+            .get();
+
+        print('Found ${userOrdersSnapshot.docs.length} orders in user subcollection');
+        
+        if (userOrdersSnapshot.docs.isEmpty) {
+          return [];
+        }
+
+        return userOrdersSnapshot.docs.map((doc) {
+          final data = doc.data();
+          print('Processing user order ${doc.id}:');
+          print('Order data: $data');
+          
+          // Get timestamp from various possible fields
+          DateTime orderDate;
+          try {
+            if (data['timestamp'] != null) {
+              orderDate = (data['timestamp'] as Timestamp).toDate();
+            } else if (data['createdAt'] != null) {
+              orderDate = (data['createdAt'] as Timestamp).toDate();
+            } else {
+              orderDate = DateTime.now(); // Fallback
+            }
+          } catch (e) {
+            print('Error parsing date: $e');
+            orderDate = DateTime.now(); // Fallback
+          }
+
+          return Order(
+            id: doc.id,
+            date: orderDate,
+            status: Order._parseOrderStatus(data['status'] as String? ?? 'pending'),
+            total: (data['total'] as num?)?.toDouble() ?? 0.0,
+            items: (data['items'] as List<dynamic>? ?? []).map((item) => OrderItem(
+              name: item['name'] as String? ?? 'Unknown Item',
+              quantity: item['quantity'] as int? ?? 1,
+              imagePath: item['imagePath'] as String?,
+            )).toList(),
+          );
+        }).toList();
       }
 
+      // Process orders from main collection
       return ordersSnapshot.docs.map((doc) {
         final data = doc.data();
+        print('Processing main order ${doc.id}:');
+        print('Order data: $data');
+
+        // Get timestamp from various possible fields
+        DateTime orderDate;
+        try {
+          if (data['timestamp'] != null) {
+            orderDate = (data['timestamp'] as Timestamp).toDate();
+          } else if (data['createdAt'] != null) {
+            orderDate = (data['createdAt'] as Timestamp).toDate();
+          } else {
+            orderDate = DateTime.now(); // Fallback
+          }
+        } catch (e) {
+          print('Error parsing date: $e');
+          orderDate = DateTime.now(); // Fallback
+        }
+
         return Order(
           id: doc.id,
-          date: (data['createdAt'] as Timestamp).toDate(),
+          date: orderDate,
           status: Order._parseOrderStatus(data['status'] as String? ?? 'pending'),
-          total: (data['total'] as num).toDouble(),
-          items: (data['items'] as List<dynamic>).map((item) => OrderItem(
-            name: item['name'] as String,
-            quantity: item['quantity'] as int,
+          total: (data['total'] as num?)?.toDouble() ?? 0.0,
+          items: (data['items'] as List<dynamic>? ?? []).map((item) => OrderItem(
+            name: item['name'] as String? ?? 'Unknown Item',
+            quantity: item['quantity'] as int? ?? 1,
             imagePath: item['imagePath'] as String?,
           )).toList(),
         );
       }).toList();
-    } catch (e) {
+
+    } catch (e, stackTrace) {
       print('Error fetching orders: $e');
+      print('Stack trace: $stackTrace');
       _messages.add(ChatMessage(
-        text: 'Sorry, I encountered an error while fetching your orders.',
+        text: 'Sorry, I encountered an error while fetching your orders. Error: $e',
         isUser: false,
       ));
       return [];
@@ -1305,9 +1374,8 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return null;
 
+      // Query the main orders collection instead of user's subcollection
       final orderDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
           .collection('orders')
           .doc(orderId)
           .get();
@@ -1315,6 +1383,10 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
       if (!orderDoc.exists) return null;
 
       final data = orderDoc.data()!;
+      
+      // Verify this order belongs to the current user
+      if (data['userId'] != user.uid) return null;
+
       return Order(
         id: orderDoc.id,
         date: (data['createdAt'] as Timestamp).toDate(),
@@ -2589,11 +2661,30 @@ class Order {
 
   /// Parses a string into an OrderStatus enum
   static OrderStatus _parseOrderStatus(String statusStr) {
-    final normalizedStatus = statusStr.toLowerCase().replaceAll(' ', '');
-    return OrderStatus.values.firstWhere(
-      (status) => status.toString().split('.').last.toLowerCase() == normalizedStatus,
-      orElse: () => OrderStatus.pending,
-    );
+    switch (statusStr.toLowerCase()) {
+      case 'pending':
+        return OrderStatus.pending;
+      case 'preparing':
+        return OrderStatus.preparing;
+      case 'on delivery':
+        return OrderStatus.onDelivery;
+      case 'delivered':
+        return OrderStatus.delivered;
+      case 'refund requested':
+        return OrderStatus.refundRequested;
+      case 'refund in review':
+        return OrderStatus.refundInReview;
+      case 'refund approved':
+        return OrderStatus.refundApproved;
+      case 'refund declined':
+        return OrderStatus.refundDeclined;
+      case 'refunded':
+        return OrderStatus.refunded;
+      case 'cancelled':
+        return OrderStatus.cancelled;
+      default:
+        return OrderStatus.pending;
+    }
   }
 }
 
@@ -2627,19 +2718,11 @@ class OrderItem {
 
 /// Represents a pending action on an order
 class _PendingOrderAction {
-  /// The order being acted upon
   final Order order;
-  
-  /// Callback for confirming the action
   final VoidCallback? onYes;
-  
-  /// Callback for canceling the action
   final VoidCallback? onNo;
-  
-  /// Message to display to the user
   final String messageText;
 
-  /// Creates a new _PendingOrderAction instance
   const _PendingOrderAction({
     required this.order,
     this.onYes,
@@ -2650,19 +2733,11 @@ class _PendingOrderAction {
 
 /// Represents a chat message in the conversation
 class ChatMessage {
-  /// The text content of the message
   final String text;
-  
-  /// Whether the message is from the user (true) or AI (false)
   final bool isUser;
-  
-  /// Optional list of orders associated with this message
   final List<Order>? orders;
-  
-  /// Optional list of recommended products
   final List<LocalizedProduct>? recommendedProducts;
 
-  /// Creates a new ChatMessage instance
   const ChatMessage({
     required this.text,
     required this.isUser,

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:engineering_project/models/order_models.dart';
 
 class NotificationService {
   static bool _isInitialized = false;
@@ -536,6 +537,34 @@ class NotificationService {
     } catch (e) {
       print('Error checking subscription status: $e');
       return false;
+    }
+  }
+
+  /// Parses a string into an OrderStatus enum
+  static OrderStatus _parseOrderStatus(String statusStr) {
+    switch (statusStr.toLowerCase()) {
+      case 'pending':
+        return OrderStatus.pending;
+      case 'preparing':
+        return OrderStatus.preparing;
+      case 'on delivery':
+        return OrderStatus.onDelivery;
+      case 'delivered':
+        return OrderStatus.delivered;
+      case 'refund requested':
+        return OrderStatus.refundRequested;
+      case 'refund in review':
+        return OrderStatus.refundInReview;
+      case 'refund approved':
+        return OrderStatus.refundApproved;
+      case 'refund declined':
+        return OrderStatus.refundDeclined;
+      case 'refunded':
+        return OrderStatus.refunded;
+      case 'cancelled':
+        return OrderStatus.cancelled;
+      default:
+        return OrderStatus.pending;
     }
   }
 }

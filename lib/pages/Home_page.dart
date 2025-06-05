@@ -1465,42 +1465,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     ),
                   ),
                   child: Stack(
-                    fit: StackFit.expand,
                     children: [
-                      Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(12),
-                          ),
-                          child: (product["image"].startsWith('http') ||
-                                  product["image"].startsWith('https'))
-                              ? Image.network(
-                                  product["image"],
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Image.asset(
-                                      'lib/assets/Images/placeholder.png',
-                                      fit: BoxFit.cover,
-                                    );
-                                  },
-                                )
-                              : Image.asset(
-                                  product["image"],
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(
-                                      Icons.image_not_supported,
-                                      size: 40,
-                                      color: Colors.grey[400],
-                                    );
-                                  },
-                                ),
-//TODO: FIX LINTER ISSUE HERE
-                    /*  Positioned(
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          product["image"],
+                          fit: BoxFit.cover,
+                          height: double.infinity,
+                          width: double.infinity,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[300],
+                              child: Icon(Icons.error),
+                            );
+                          },
+                        ),
+                      ),
+                      Positioned(
                         top: 8,
                         right: 8,
                         child: Container(
@@ -1512,7 +1493,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           child: GestureDetector(
                             onTap: () => toggleFavorite(product),
                             child: Icon(
-                              isFavorite
+                              favoriteProductIds.contains(product['id'])
                                   ? Icons.favorite
                                   : Icons.favorite_border,
                               color: themeNotifier.isSpecialModeActive
@@ -1524,11 +1505,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             ),
                           ),
                         ),
-                      ),*/
-                  ))],
+                      ),
+                    ],
                   ),
                 ),
-          ),
+              ),
               Flexible(
                 flex: 2,
                 child: Container(

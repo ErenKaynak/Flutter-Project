@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
+import 'package:engineering_project/models/order_models.dart';
 
 class OrderManagementPage extends StatefulWidget {
   const OrderManagementPage({Key? key}) : super(key: key);
@@ -44,9 +45,9 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
     super.dispose();
   }
 
-  Future<void> _updateOrderStatus(String orderId, String newStatus) async {
+  Future<void> _updateOrderStatus(String orderId, OrderStatus newStatus) async {
     try {
-      print('Starting order status update for order: $orderId, new status: $newStatus');
+      print('Starting order status update for order: $orderId, new status: ${newStatus.displayName}');
       
       final orderDoc = await FirebaseFirestore.instance
           .collection('orders')
@@ -61,7 +62,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
       print('Order data: $orderData');
       
       // --- REFUND LOGIC ---
-      if ((newStatus == 'Refund Approved' || newStatus == 'Refunded') && 
+      if ((newStatus == OrderStatus.refundApproved || newStatus == OrderStatus.refunded) && 
           orderData.containsKey('userId') && 
           orderData['userId'] != null) {
         print('Processing refund for order: $orderId');
@@ -167,19 +168,19 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
         // Update order status
         print('Updating order status');
         final orderRef = FirebaseFirestore.instance.collection('orders').doc(orderId);
-        batch.update(orderRef, {'status': newStatus});
+        batch.update(orderRef, {'status': newStatus.displayName});
 
         // Update user order status if exists
         print('Updating user order status');
         final userOrderRef = FirebaseFirestore.instance.collection('orders').doc(userId).collection('userOrders').doc(orderId);
-        batch.update(userOrderRef, {'status': newStatus});
+        batch.update(userOrderRef, {'status': newStatus.displayName});
 
         print('Committing batch operations');
         await batch.commit();
         print('Batch operations completed successfully');
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Order status updated to $newStatus, refund processed.')),
+          SnackBar(content: Text('Order status updated to ${newStatus.displayName}, refund processed.')),
         );
         return;
       }
@@ -189,7 +190,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
       await FirebaseFirestore.instance
           .collection('orders')
           .doc(orderId)
-          .update({'status': newStatus});
+          .update({'status': newStatus.displayName});
       
       // Update user's order if userId exists
       if (orderData.containsKey('userId') && orderData['userId'] != null) {
@@ -198,38 +199,29 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
         try {
           // First, try to get the user's orders collection
           final userOrdersCollection = FirebaseFirestore.instance
-              .collection('orders')
+              .collection('users')
               .doc(userId)
-              .collection('userOrders');
-              
-          // Create the user's order document with all necessary data
-          await userOrdersCollection.doc(orderId).set({
-            'status': newStatus,
-            'orderId': orderId,
-            'timestamp': orderData['timestamp'],
-            'totalAmount': orderData['totalAmount'] ?? orderData['total'],
-            'items': orderData['items'],
-            'customerName': orderData['customerName'],
-            'customerEmail': orderData['customerEmail'],
-            'customerPhone': orderData['customerPhone'],
-            'shippingAddress': orderData['shippingAddress'],
-            'trackingNumber': orderData['trackingNumber'],
-          }, SetOptions(merge: true));
+              .collection('orders');
           
-          print('Successfully updated user order: $userId, orderId: $orderId');
+          // Then update the specific order
+          await userOrdersCollection.doc(orderId).update({
+            'status': newStatus.displayName,
+          });
+          
+          print('Successfully updated user order status');
         } catch (e) {
-          print('Error updating user order: $e');
-          // Continue even if user order update fails
+          print('Error updating user order status: $e');
+          // Don't throw here, as the main order update was successful
         }
       }
       
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Order status updated to $newStatus')),
+        SnackBar(content: Text('Order status updated to ${newStatus.displayName}')),
       );
     } catch (e) {
       print('Error in _updateOrderStatus: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update order status: $e')),
+        SnackBar(content: Text('Error updating order status: $e')),
       );
     }
   }
@@ -1216,7 +1208,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
       onPressed: isActive
           ? null
           : () {
-              _updateOrderStatus(orderId, buttonStatus);
+              _updateOrderStatus(orderId, OrderStatus.values[OrderStatus.values.indexOf(OrderStatus.values.firstWhere((e) => e.displayName == buttonStatus))]);
             },
       child: Text(buttonStatus),
     );
