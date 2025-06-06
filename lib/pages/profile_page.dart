@@ -3,6 +3,7 @@ import 'package:engineering_project/assets/AI/ai_chat_screen.dart';
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/register_page.dart';
 import 'package:engineering_project/pages/wallet.dart';
+import 'package:engineering_project/pages/wheel_of_discount.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -1190,6 +1191,63 @@ class _ProfilePageState extends State<ProfilePage> {
             particleDrag: 0.05,
             maxBlastForce: 30,
             minBlastForce: 10,
+          ),
+        ),
+        Positioned(
+          right: 16,
+          bottom: 150, // Position above the AI chat button
+          child: Container(
+            height: 60,
+            width: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isDark
+                    ? [
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900
+                            : Colors.purple.shade900,
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade800
+                            : Colors.purple.shade800,
+                      ]
+                    : [
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade500
+                            : Colors.purple.shade500,
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                            : Colors.purple.shade400,
+                      ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: FloatingActionButton(
+              heroTag: 'wheelButton',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WheelOfDiscount(),
+                  ),
+                );
+              },
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              child: Icon(
+                Icons.casino,
+                size: 30,
+                color: Colors.white,
+              ),
+            ),
           ),
         ),
       ],
