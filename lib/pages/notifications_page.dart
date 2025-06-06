@@ -4,9 +4,20 @@ import 'package:engineering_project/assets/components/notification_service.dart'
 import 'package:engineering_project/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:engineering_project/pages/theme_notifier.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:engineering_project/pages/admin_notification_management.dart';
+import 'package:engineering_project/providers/discount_code_provider.dart';
 
-class NotificationsPage extends StatelessWidget {
+class NotificationsPage extends StatefulWidget {
   const NotificationsPage({Key? key}) : super(key: key);
+
+  @override
+  State<NotificationsPage> createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends State<NotificationsPage> {
+  final Set<String> selectedNotifications = {};
+  bool isSelectionMode = false;
 
   @override
   Widget build(BuildContext context) {
@@ -15,15 +26,53 @@ class NotificationsPage extends StatelessWidget {
     final specialColor = themeNotifier.isSpecialModeActive
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : null;
+    final user = FirebaseAuth.instance.currentUser;
+    final isAdmin = user?.email?.endsWith('@admin.com') ?? false;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.notifications),
         actions: [
-          IconButton(
-            icon: Icon(Icons.done_all),
-            onPressed: () => NotificationService.markAllAsRead(),
-          ),
+          if (isSelectionMode) ...[
+            IconButton(
+              icon: Icon(Icons.visibility),
+              onPressed: () {
+                NotificationService.markMultipleAsRead(selectedNotifications.toList());
+                setState(() {
+                  selectedNotifications.clear();
+                  isSelectionMode = false;
+                });
+              },
+            ),
+            IconButton(
+              icon: Icon(Icons.delete),
+              onPressed: () {
+                NotificationService.deleteMultipleNotifications(selectedNotifications.toList());
+                setState(() {
+                  selectedNotifications.clear();
+                  isSelectionMode = false;
+                });
+              },
+            ),
+            IconButton(
+              icon: Icon(Icons.close),
+              onPressed: () {
+                setState(() {
+                  selectedNotifications.clear();
+                  isSelectionMode = false;
+                });
+              },
+            ),
+          ] else ...[
+            IconButton(
+              icon: Icon(Icons.select_all),
+              onPressed: () {
+                setState(() {
+                  isSelectionMode = true;
+                });
+              },
+            ),
+          ],
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -71,71 +120,126 @@ class NotificationsPage extends StatelessWidget {
             );
           }
 
-          return ListView.builder(
-            itemCount: notifications.length,
-            itemBuilder: (context, index) {
-              final notification = notifications[index].data() as Map<String, dynamic>;
-              final isRead = notification['isRead'] ?? false;
-              final timestamp = (notification['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+          return Stack(
+            children: [
+              ListView.builder(
+                itemCount: notifications.length,
+                itemBuilder: (context, index) {
+                  final notification = notifications[index].data() as Map<String, dynamic>;
+                  final isRead = notification['isRead'] ?? false;
+                  final timestamp = (notification['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+                  final notificationId = notifications[index].id;
 
-              return Dismissible(
-                key: Key(notifications[index].id),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  alignment: Alignment.centerRight,
-                  padding: EdgeInsets.only(right: 20),
-                  color: Colors.red,
-                  child: Icon(
-                    Icons.delete,
-                    color: Colors.white,
-                  ),
-                ),
-                onDismissed: (direction) {
-                  // Handle notification deletion if needed
-                },
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: isRead
-                        ? Colors.grey
-                        : (themeNotifier.isSpecialModeActive
-                            ? specialColor
-                            : (themeNotifier.isBlackMode
-                                ? Theme.of(context).colorScheme.secondary
-                                : Colors.red)),
-                    child: Icon(
-                      _getNotificationIcon(notification['type']),
-                      color: Colors.white,
+                  return Dismissible(
+                    key: Key(notificationId),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: EdgeInsets.only(right: 20),
+                      color: Colors.red,
+                      child: Icon(
+                        Icons.delete,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  title: Text(
-                    notification['title'] ?? 'Notification',
-                    style: TextStyle(
-                      fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(notification['message'] ?? ''),
-                      SizedBox(height: 4),
-                      Text(
-                        _formatTimestamp(timestamp),
+                    onDismissed: (direction) {
+                      NotificationService.deleteNotification(notificationId);
+                    },
+                    child: ListTile(
+                      leading: isSelectionMode
+                          ? Checkbox(
+                              value: selectedNotifications.contains(notificationId),
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  if (value == true) {
+                                    selectedNotifications.add(notificationId);
+                                  } else {
+                                    selectedNotifications.remove(notificationId);
+                                  }
+                                });
+                              },
+                            )
+                          : CircleAvatar(
+                              backgroundColor: isRead
+                                  ? Colors.grey
+                                  : (themeNotifier.isSpecialModeActive
+                                      ? specialColor
+                                      : (themeNotifier.isBlackMode
+                                          ? Theme.of(context).colorScheme.secondary
+                                          : Colors.red)),
+                              child: Icon(
+                                _getNotificationIcon(notification['type']),
+                                color: Colors.white,
+                              ),
+                            ),
+                      title: Text(
+                        notification['title'] ?? 'Notification',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
+                          fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
                         ),
                       ),
-                    ],
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(notification['message'] ?? ''),
+                          SizedBox(height: 4),
+                          Text(
+                            _formatTimestamp(timestamp),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                      onTap: () {
+                        if (isSelectionMode) {
+                          setState(() {
+                            if (selectedNotifications.contains(notificationId)) {
+                              selectedNotifications.remove(notificationId);
+                            } else {
+                              selectedNotifications.add(notificationId);
+                            }
+                          });
+                        } else {
+                          if (!isRead) {
+                            NotificationService.markAsRead(notificationId);
+                          }
+                          // Handle discount code notification
+                          if (notification['type'] == 'promotion' && notification['discountCode'] != null) {
+                            final discountProvider = Provider.of<DiscountCodeProvider>(context, listen: false);
+                            discountProvider.saveDiscountFromNotification(notification);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Discount code saved to your promotions!'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  );
+                },
+              ),
+              if (isAdmin)
+                Positioned(
+                  bottom: 16,
+                  right: 16,
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AdminNotificationManagement(),
+                        ),
+                      );
+                    },
+                    child: Icon(Icons.send),
+                    tooltip: 'Send Notification',
                   ),
-                  onTap: () {
-                    if (!isRead) {
-                      NotificationService.markAsRead(notifications[index].id);
-                    }
-                    // Handle notification tap if needed
-                  },
                 ),
-              );
-            },
+            ],
           );
         },
       ),

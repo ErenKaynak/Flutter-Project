@@ -2878,7 +2878,7 @@ abstract class AppLocalizations {
   /// No description provided for @wheelManagement.
   ///
   /// In en, this message translates to:
-  /// **'Wheel Management'**
+  /// **'Wheel Of Discount'**
   String get wheelManagement;
 
   /// No description provided for @wheelItemsDescription.

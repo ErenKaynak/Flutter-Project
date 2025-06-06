@@ -1482,7 +1482,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discountUsed => 'Used';
 
   @override
-  String get wheelManagement => 'Wheel Management';
+  String get wheelManagement => 'Wheel Of Discount';
 
   @override
   String get wheelItemsDescription => 'Manage discount wheel items and their probabilities';

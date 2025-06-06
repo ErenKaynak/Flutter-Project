@@ -178,6 +178,7 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
         usageLimit: 1, // One-time use
         usageCount: 0,
         perUserLimit: 1, // One per user
+        receivedAt: DateTime.now(), // Add receivedAt
       );
 
       // Save to Firestore using the discount service

@@ -12,7 +12,9 @@ class DiscountCode {
   final int usageLimit;
   final int usageCount;
   final bool isActive;
-  final int perUserLimit; // New field for per-user usage limit
+  final int perUserLimit;
+  final bool isUsed;
+  final DateTime receivedAt;
 
   const DiscountCode({
     required this.id,
@@ -26,7 +28,9 @@ class DiscountCode {
     this.usageLimit = 0,
     this.usageCount = 0,
     this.isActive = true,
-    this.perUserLimit = 0, // Default to 0 (unlimited) if not specified
+    this.perUserLimit = 0,
+    this.isUsed = false,
+    required this.receivedAt,
   });
 
   double calculateDiscount(double originalAmount) {
@@ -34,7 +38,7 @@ class DiscountCode {
   }
 
   bool isValid() {
-    if (!isActive) return false;
+    if (!isActive || isUsed) return false;
     if (expiryDate != null && DateTime.now().isAfter(expiryDate!)) return false;
     if (usageLimit > 0 && usageCount >= usageLimit) return false;
     return true;
@@ -47,6 +51,7 @@ class DiscountCode {
 
   factory DiscountCode.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final receivedTimestamp = data['receivedAt'] as Timestamp?;
     return DiscountCode(
       id: doc.id,
       code: data['code'] ?? '',
@@ -64,10 +69,13 @@ class DiscountCode {
       usageCount: data['usageCount'] ?? 0,
       isActive: data['isActive'] ?? true,
       perUserLimit: data['perUserLimit'] ?? 0,
+      isUsed: data['isUsed'] ?? false,
+      receivedAt: receivedTimestamp != null ? receivedTimestamp.toDate() : DateTime.now(),
     );
   }
 
   factory DiscountCode.fromMap(Map<String, dynamic> data, String docId) {
+    final receivedTimestamp = data['receivedAt'] as Timestamp?;
     return DiscountCode(
       id: docId,
       code: data['code'] ?? '',
@@ -85,6 +93,8 @@ class DiscountCode {
       usageCount: data['usageCount'] ?? 0,
       isActive: data['isActive'] ?? true,
       perUserLimit: data['perUserLimit'] ?? 0,
+      isUsed: data['isUsed'] ?? false,
+      receivedAt: receivedTimestamp != null ? receivedTimestamp.toDate() : DateTime.now(),
     );
   }
 
@@ -101,6 +111,8 @@ class DiscountCode {
       'usageCount': usageCount,
       'isActive': isActive,
       'perUserLimit': perUserLimit,
+      'isUsed': isUsed,
+      'receivedAt': Timestamp.fromDate(receivedAt),
     };
   }
 }

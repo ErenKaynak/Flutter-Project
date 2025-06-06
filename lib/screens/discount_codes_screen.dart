@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:engineering_project/models/discount_code.dart';
+import 'package:engineering_project/assets/components/discount_code.dart';
 import 'package:engineering_project/providers/discount_code_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class DiscountCodesScreen extends StatefulWidget {
   const DiscountCodesScreen({Key? key}) : super(key: key);
@@ -18,10 +16,26 @@ class _DiscountCodesScreenState extends State<DiscountCodesScreen> {
   List<DiscountCode> _savedDiscounts = [];
   bool _isLoading = true;
 
+  late VoidCallback _discountCodeListener;
+
   @override
   void initState() {
     super.initState();
     _loadSavedDiscounts();
+
+    final discountProvider = Provider.of<DiscountCodeProvider>(context, listen: false);
+    _discountCodeListener = () {
+       // Re-fetch if needed, or rely on the provider's state if it were managing the list
+       // For now, we just load once in initState, as the list is fetched when the screen opens.
+    };
+    // discountProvider.addListener(_discountCodeListener); // No need to listen if we refetch
+  }
+  
+  @override
+  void dispose() {
+    // final discountProvider = Provider.of<DiscountCodeProvider>(context, listen: false);
+    // discountProvider.removeListener(_discountCodeListener); // Remove listener if added
+    super.dispose();
   }
 
   Future<void> _loadSavedDiscounts() async {
@@ -30,35 +44,18 @@ class _DiscountCodesScreenState extends State<DiscountCodesScreen> {
     });
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
-      final snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('savedDiscounts')
-          .get();
+      final discountProvider = Provider.of<DiscountCodeProvider>(context, listen: false);
+      final discounts = await discountProvider.getSavedDiscounts();
 
       setState(() {
-        _savedDiscounts = snapshot.docs.map((doc) {
-          final data = doc.data();
-          return DiscountCode(
-            id: doc.id,
-            code: data['code'] as String,
-            description: data['description'] as String,
-            value: (data['discountPercentage'] as num).toDouble(),
-            isPercent: data['isPercent'] as bool,
-            isUsed: data['isUsed'] as bool? ?? false,
-            expiryDate: (data['expiryDate'] as Timestamp).toDate(),
-            receivedAt: (data['receivedAt'] as Timestamp).toDate(),
-          );
-        }).toList();
+        _savedDiscounts = discounts;
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading saved discounts: $e');
+      print('Error loading saved discounts in DiscountCodesScreen: $e');
       setState(() {
         _isLoading = false;
+        _savedDiscounts = []; // Clear list on error
       });
     }
   }
@@ -76,9 +73,12 @@ class _DiscountCodesScreenState extends State<DiscountCodesScreen> {
   Widget _buildDiscountCard(BuildContext context, DiscountCode discount) {
     final isExpired = discount.expiryDate != null && 
                      discount.expiryDate!.isBefore(DateTime.now());
+     final isUsed = discount.usageCount > 0;
+     final bool isInactive = !discount.isActive || isExpired || (discount.usageLimit > 0 && discount.usageCount >= discount.usageLimit);
     
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: isInactive ? Colors.grey.shade200 : null,
       child: ListTile(
         title: Row(
           children: [
@@ -86,16 +86,17 @@ class _DiscountCodesScreenState extends State<DiscountCodesScreen> {
               discount.code,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                decoration: isExpired || discount.isUsed ? 
+                decoration: isInactive ? 
                   TextDecoration.lineThrough : null,
               ),
             ),
             const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.copy, size: 20),
-              onPressed: () => _copyToClipboard(discount.code),
-              tooltip: 'Copy code',
-            ),
+            if (!isInactive)
+              IconButton(
+                icon: const Icon(Icons.copy, size: 20),
+                onPressed: () => _copyToClipboard(discount.code),
+                tooltip: 'Copy code',
+              ),
           ],
         ),
         subtitle: Column(
@@ -104,18 +105,39 @@ class _DiscountCodesScreenState extends State<DiscountCodesScreen> {
             Text(discount.description),
             const SizedBox(height: 4),
             Text(
-              'Value: ${discount.getFormattedValue()}',
+              'Discount: ${discount.discountPercentage.toStringAsFixed(0)}%',
               style: const TextStyle(
                 fontWeight: FontWeight.w500,
               ),
             ),
+             if (discount.minOrderAmount > 0)
+               Text(
+                'Min Order: ₺${discount.minOrderAmount.toStringAsFixed(2)}',
+                 style: TextStyle(
+                   fontSize: 12,
+                   color: Colors.grey[600],
+                 ),
+               ),
             if (discount.expiryDate != null)
               Text(
                 'Expires: ${DateFormat('MMM dd, yyyy').format(discount.expiryDate!)}',
                 style: TextStyle(
                   color: isExpired ? Colors.red : null,
-                ),
+                   fontSize: 12,
+                ), 
               ),
+             if (discount.usageLimit > 0 || discount.perUserLimit > 0)
+               Text(
+                'Uses: ${discount.usageCount}' +
+                (discount.usageLimit > 0 ? '/${discount.usageLimit} total' : '') +
+                (discount.perUserLimit > 0 ? ' (${discount.perUserLimit} per user)' : ''),
+                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+               ),
+             if (isInactive)
+               Text(
+                isExpired ? 'Status: Expired' : (discount.usageLimit > 0 && discount.usageCount >= discount.usageLimit) ? 'Status: Limit Reached' : 'Status: Inactive',
+                 style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
+               ),
           ],
         ),
       ),

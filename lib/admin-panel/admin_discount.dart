@@ -1,6 +1,6 @@
 import 'package:engineering_project/assets/components/discount_code.dart';
 import 'package:engineering_project/assets/components/discount_service.dart';
-import 'package:engineering_project/notification-system/services/notification_service.dart';
+import 'package:engineering_project/assets/components/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -119,6 +119,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
         perUserLimit: _perUserLimitController.text.isEmpty 
             ? 0 
             : int.parse(_perUserLimitController.text),
+        receivedAt: DateTime.now(),
       );
 
       final success = await _discountService.createDiscountCode(newCode);
@@ -844,7 +845,6 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
           (context, index) {
             final code = _discountCodes[index];
             
-            // Simplified status check logic
             String statusText;
             Color statusColor;
             
@@ -894,13 +894,15 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                 ),
                 title: Row(
                   children: [
-                    Text(
-                      code.code,
-                      style: TextStyle(
-                        color: Theme.of(context).textTheme.titleLarge?.color,
+                    Expanded(
+                      child: Text(
+                        code.code,
+                        style: TextStyle(
+                          color: Theme.of(context).textTheme.titleLarge?.color,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Expanded(child: SizedBox()),
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
@@ -939,7 +941,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (statusText == 'Active')  // Only show for active discount codes
+                    if (statusText == 'Active')
                       IconButton(
                         icon: Icon(Icons.send, color: Colors.green),
                         tooltip: 'Send notification to users',
@@ -1231,44 +1233,41 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
     );
   }
 
-  Widget _buildDiscountCodeTile(DiscountCode code) {
-    return ExpansionTile(
-      title: Text(code.name),
-      subtitle: Text(code.code),
-      trailing: code.isActive 
-        ? IconButton(
-            icon: const Icon(Icons.send),
-            tooltip: 'Send as notification',
-            onPressed: () => _sendDiscountNotification(code),
-          )
-        : null,
-      children: [
-        // ...existing code...
-      ],
-    );
-  }
-
   Future<void> _sendDiscountNotification(DiscountCode code) async {
+    if (!mounted) return;
+    
     try {
-      final success = await NotificationService.sendDiscountNotification(
+      final success = await NotificationService.sendToAllUsers(
         title: 'Special Discount!',
         message: 'Use code ${code.code} to get ${code.discountPercentage}% off!',
-        discountCode: code.code,
-        discountPercentage: code.discountPercentage,
-        expiryDate: code.expiryDate,
-        discountId: code.id,
+        additionalData: {
+          'type': 'promotion',
+          'discountCode': code.code,
+          'discountPercentage': code.discountPercentage,
+          'discountId': code.id,
+          if (code.expiryDate != null) 'expiryDate': code.expiryDate!.toIso8601String(),
+        },
       );
+
+      if (!mounted) return;
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Discount notification sent!')),
+          const SnackBar(
+            content: Text('Discount notification sent!'),
+            backgroundColor: Colors.green,
+          ),
         );
       } else {
         throw Exception('Failed to send notification');
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error sending notification: $e')),
+        SnackBar(
+          content: Text('Error sending notification: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }

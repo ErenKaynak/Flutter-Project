@@ -9,7 +9,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../pages/theme_notifier.dart';
-import '../notification-system/services/notification_service.dart';
+import '../assets/components/notification_service.dart';
 
 class AdminNotificationManagement extends StatefulWidget {
   const AdminNotificationManagement({Key? key}) : super(key: key);
@@ -21,14 +21,16 @@ class AdminNotificationManagement extends StatefulWidget {
 class _AdminNotificationManagementState extends State<AdminNotificationManagement> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _discountCodeController = TextEditingController();
   bool _sendToAllUsers = true;
   List<String> _selectedUsers = [];
   bool _isLoading = false;
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
+  String _selectedType = 'general';
 
   // Fix Text widget constructor linting issues
-  Text _buildTitle(String text, {bool isBold = false}) {
+  Widget _buildTitle(String text, {bool isBold = false}) {
     return Text(
       text,
       style: TextStyle(
@@ -162,7 +164,7 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
             ),
             const SizedBox(height: 12),
             Text(
-              AppLocalizations.of(context).addFromUrl,
+              AppLocalizations.of(context)!.addFromUrl,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -181,6 +183,7 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
   void dispose() {
     _titleController.dispose();
     _messageController.dispose();
+    _discountCodeController.dispose();
     super.dispose();
   }
 
@@ -210,7 +213,7 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
   }
 
   Future<void> _sendNotification() async {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     
     if (_titleController.text.isEmpty || _messageController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -248,13 +251,11 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
       }
 
       // Create notification data
-      final notificationData = {
-        'title': _titleController.text,
-        'message': _messageController.text,
-        'timestamp': DateTime.now().toIso8601String(),
-        'sendToAll': _sendToAllUsers,
-        'read': false,
+      final additionalData = {
+        'type': _selectedType,
         if (imageUrl != null) 'imageUrl': imageUrl,
+        if (_selectedType == 'promotion' && _discountCodeController.text.isNotEmpty)
+          'discountCode': _discountCodeController.text,
       };
 
       bool success = false;
@@ -263,14 +264,14 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
         success = await NotificationService.sendToAllUsers(
           title: _titleController.text,
           message: _messageController.text,
-          additionalData: notificationData,
+          additionalData: additionalData,
         );
       } else if (_selectedUsers.isNotEmpty) {
         success = await NotificationService.sendToUsers(
           userIds: _selectedUsers,
           title: _titleController.text,
           message: _messageController.text,
-          additionalData: notificationData,
+          additionalData: additionalData,
         );
       } else {
         throw Exception('No users selected for targeted notification');
@@ -291,9 +292,11 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
         // Clear form
         _titleController.clear();
         _messageController.clear();
+        _discountCodeController.clear();
         setState(() {
           _imageFile = null;
           _selectedUsers = [];
+          _selectedType = 'general';
         });
       }
     } catch (e) {
@@ -379,7 +382,7 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
                         ],
                       ),
                       const SizedBox(height: 25),
-                      // Görsel ekleme bölümü
+                      // Image picker section
                       _buildImagePicker(),
                       const SizedBox(height: 25),
                       TextField(
@@ -412,6 +415,49 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
                         ),
                         maxLines: 4,
                       ),
+                      const SizedBox(height: 20),
+                      DropdownButtonFormField<String>(
+                        value: _selectedType,
+                        decoration: InputDecoration(
+                          labelText: 'Notification Type',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: themeColor, width: 2),
+                          ),
+                          prefixIcon: Icon(Icons.category, color: themeColor),
+                        ),
+                        items: [
+                          DropdownMenuItem(value: 'general', child: Text('General')),
+                          DropdownMenuItem(value: 'promotion', child: Text('Promotion')),
+                          DropdownMenuItem(value: 'order', child: Text('Order')),
+                          DropdownMenuItem(value: 'system', child: Text('System')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedType = value!;
+                          });
+                        },
+                      ),
+                      if (_selectedType == 'promotion') ...[
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: _discountCodeController,
+                          decoration: InputDecoration(
+                            labelText: 'Discount Code (Optional)',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: themeColor, width: 2),
+                            ),
+                            prefixIcon: Icon(Icons.local_offer, color: themeColor),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
                       Container(
                         decoration: BoxDecoration(

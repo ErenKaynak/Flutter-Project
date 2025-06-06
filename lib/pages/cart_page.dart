@@ -561,13 +561,8 @@ class _CartPageState extends State<CartPage> {
   bool _isProcessingPayment = false;
   bool _isLoading = true;
   String? _loginError;
-  final TextEditingController _discountCodeController = TextEditingController();
   final DiscountService _discountService = DiscountService();
   DiscountCode? _appliedDiscount;
-  bool _isApplyingDiscount = false;
-  String? _discountError;
-  List<DiscountCode> _savedDiscounts = [];
-  bool _isLoadingDiscounts = false;
 
   // Add helper function for price formatting
   String formatPrice(String price) {
@@ -594,7 +589,6 @@ class _CartPageState extends State<CartPage> {
   void initState() {
     super.initState();
     _checkLoginAndLoadCart();
-    _loadSavedDiscounts();
   }
 
   Future<void> _checkLoginAndLoadCart() async {
@@ -629,201 +623,12 @@ class _CartPageState extends State<CartPage> {
   @override
   void dispose() {
     _cartManager.removeListener(_updateCartState);
-    _discountCodeController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadSavedDiscounts() async {
-    setState(() {
-      _isLoadingDiscounts = true;
-    });
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
-      final snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('savedDiscounts')
-          .get();
-
-      setState(() {
-        _savedDiscounts = snapshot.docs.map((doc) {
-          final data = doc.data();
-          return DiscountCode(
-            id: doc.id,
-            code: data['code'] as String,
-            name: data['name'] as String? ?? 'Saved Discount',
-            description: data['description'] as String? ?? 'No description',
-            discountPercentage: (data['discountPercentage'] as num? ?? 0).toDouble(),
-            minOrderAmount: (data['minOrderAmount'] as num? ?? 0).toDouble(),
-            expiryDate: data['expiryDate'] != null 
-                ? (data['expiryDate'] as Timestamp).toDate() 
-                : null,
-            applicableCategories: data['applicableCategories'] != null 
-                ? List<String>.from(data['applicableCategories']) : null,
-            usageLimit: (data['usageLimit'] as int? ?? 0),
-            usageCount: (data['usageCount'] as int? ?? 0),
-            isActive: data['isActive'] as bool? ?? true,
-            perUserLimit: (data['perUserLimit'] as int? ?? 0),
-          );
-        }).toList();
-        _isLoadingDiscounts = false;
-      });
-    } catch (e) {
-      print('Error loading saved discounts: $e');
-      setState(() {
-        _isLoadingDiscounts = false;
-      });
-    }
-  }
-
-  void _showSavedDiscounts() {
-    showDialog(
-      context: context,
-      builder: (context) => SavedDiscountCodesDialog(
-        onDiscountSelected: (discount) {
-          setState(() {
-            _appliedDiscount = discount;
-            if (discount != null) {
-              _discountCodeController.text = discount.code;
-            }
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Discount code applied: ${discount?.discountPercentage ?? 'N/A'}% off',
-              ),
-            ),
-          );
-        },
-        savedDiscounts: _savedDiscounts,
-      ),
-    );
-  }
-
-  Future<void> _applyDiscountCode() async {
-    final code = _discountCodeController.text.trim();
-    if (code.isEmpty) {
-      setState(() {
-        _discountError = 'Please enter a discount code';
-      });
-      return;
-    }
-
-    setState(() {
-      _isApplyingDiscount = true;
-      _discountError = null;
-    });
-
-    try {
-      final discount = await _discountService.validateCode(code);
-
-      if (discount == null) {
-        setState(() {
-          _discountError = 'Invalid or expired discount code';
-        });
-        return;
-      }
-
-      if (_cartManager.totalPrice < discount.minOrderAmount) {
-         setState(() {
-          _discountError = 'Minimum order amount of ₺${discount.minOrderAmount.toStringAsFixed(2)} not met';
-        });
-        return;
-      }
-
-      if (discount.applicableCategories != null &&
-          discount.applicableCategories!.isNotEmpty) {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) return;
-
-        final cartItemsWithCategories = await Future.wait(
-          _cartManager.items.map((item) async {
-            final productDoc =
-                await FirebaseFirestore.instance
-                    .collection('products')
-                    .doc(item.id)
-                    .get();
-            final category = productDoc.data()?['category'] ?? '';
-            return {'item': item, 'category': category};
-          }),
-        );
-
-        final hasMatchingCategory = cartItemsWithCategories.any(
-          (item) => discount.isApplicableToCategory(item['category'] as String),
-        );
-
-        if (!hasMatchingCategory) {
-          setState(() {
-            _discountError =
-                'This code is not applicable to items in your cart';
-          });
-          return;
-        }
-      }
-
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final savedDiscountsRef = FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('savedDiscounts')
-            .doc(discount.id);
-
-        final savedDiscountDoc = await savedDiscountsRef.get();
-        if (!savedDiscountDoc.exists) {
-          await savedDiscountsRef.set({
-            'code': discount.code,
-            'discountPercentage': discount.discountPercentage,
-            'expiryDate': discount.expiryDate != null 
-                ? Timestamp.fromDate(discount.expiryDate!) 
-                : null,
-            'isUsed': false,
-            'receivedAt': Timestamp.now(),
-            'isPercent': true,
-            'description': discount.description,
-            'minOrderAmount': discount.minOrderAmount,
-            'name': discount.name,
-            'applicableCategories': discount.applicableCategories,
-            'usageLimit': discount.usageLimit,
-            'usageCount': discount.usageCount,
-            'isActive': discount.isActive,
-            'perUserLimit': discount.perUserLimit,
-          });
-        }
-      }
-
-      setState(() {
-        _appliedDiscount = discount;
-      });
-
-      await _loadSavedDiscounts();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Discount code applied: ${discount.discountPercentage}% off',
-          ),
-        ),
-      );
-    } catch (e) {
-      setState(() {
-        _discountError = 'Error applying discount: $e';
-      });
-    } finally {
-      setState(() {
-        _isApplyingDiscount = false;
-      });
-    }
   }
 
   void _removeDiscount() {
     setState(() {
       _appliedDiscount = null;
-      _discountCodeController.clear();
-      _discountError = null;
     });
   }
 
@@ -1300,9 +1105,6 @@ class _CartPageState extends State<CartPage> {
                                 onDiscountSelected: (discount) {
                                   setState(() {
                                     _appliedDiscount = discount;
-                                    if (discount != null) {
-                                      _discountCodeController.text = discount.code;
-                                    }
                                   });
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
@@ -1340,63 +1142,22 @@ class _CartPageState extends State<CartPage> {
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                               ),
+                              if (_appliedDiscount != null)
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.close,
+                                    size: 20,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: _removeDiscount,
+                                  padding: EdgeInsets.zero,
+                                  splashRadius: 20,
+                                ),
                               Icon(Icons.arrow_forward_ios, size: 16),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        l10n.enterDiscountCode,
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _discountCodeController,
-                              decoration: InputDecoration(
-                                hintText: l10n.enterDiscountCode,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
-                              ),
-                              onSubmitted: (_) => _applyDiscountCode(),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          _isApplyingDiscount
-                              ? const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                                  child: SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  ),
-                                )
-                              : TextButton(
-                                  onPressed: _applyDiscountCode,
-                                  child: Text(
-                                    l10n.apply,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(context).primaryColor,
-                                    ),
-                                  ),
-                                ),
-                        ],
-                      ),
-                      if (_discountError != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            _discountError!,
-                            style: TextStyle(color: Colors.red, fontSize: 12),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -1442,12 +1203,28 @@ class _CartPageState extends State<CartPage> {
                                 color: Colors.green.shade700,
                               ),
                             ),
-                            Text(
-                              '-${formatDoublePrice(_appliedDiscount!.calculateDiscount(_cartManager.totalPrice))}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.green.shade700,
-                              ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '-${formatDoublePrice(_appliedDiscount!.calculateDiscount(_cartManager.totalPrice))}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.green.shade700,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: _removeDiscount,
+                                  visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  splashRadius: 20,
+                                ),
+                              ],
                             ),
                           ],
                         ),

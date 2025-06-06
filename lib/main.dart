@@ -69,6 +69,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeNotifier()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider(create: (_) => DiscountCodeProvider()),
         StreamProvider<User?>.value(
           value: FirebaseAuth.instance.authStateChanges(),
           initialData: null,
@@ -78,6 +79,7 @@ class MyApp extends StatelessWidget {
         builder: (context, themeNotifier, child) {
           return MaterialApp(
             title: 'Engineering Project',
+            debugShowCheckedModeBanner: false,
             theme: ThemeData(
               primarySwatch: Colors.red,
               brightness: Brightness.light,
