@@ -32,10 +32,18 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
   late AnimationController _animationController;
   late Animation<double> _animation;
   StreamController<int> _selectedController = StreamController<int>.broadcast();
+  StreamSubscription<User?>? _authStateSubscription;
 
   @override
   void initState() {
     super.initState();
+    // Listen for auth state changes
+    _authStateSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
+      print('Auth state changed. User: ${user?.uid}');
+      // Re-check last spin date whenever the user changes
+      _checkLastSpinDate();
+    });
+    
     _checkLastSpinDate();
     _loadWheelItems().then((_) {
       setState(() {
@@ -57,21 +65,56 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
   void dispose() {
     _selectedController.close();
     _animationController.dispose();
+    _authStateSubscription?.cancel(); // Cancel the subscription
     super.dispose();
   }
 
   Future<void> _checkLastSpinDate() async {
-    final prefs = await SharedPreferences.getInstance();
-    final lastSpinDate = prefs.getString('last_spin_date');
-    
-    if (lastSpinDate != null) {
-      final lastSpin = DateTime.parse(lastSpinDate);
-      final now = DateTime.now();
-      final difference = now.difference(lastSpin).inDays;
-      
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
       setState(() {
-        _lastSpinDate = lastSpin;
-        hasSpunThisWeek = difference < 7;
+        hasSpunThisWeek = false;
+        _lastSpinDate = null;
+      });
+      return;
+    }
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('savedDiscounts')
+          .orderBy('receivedAt', descending: true)
+          .limit(1)
+          .get();
+      if (snapshot.docs.isNotEmpty) {
+        final data = snapshot.docs.first.data();
+        final lastSpinTimestamp = data['receivedAt'] as Timestamp?;
+        if (lastSpinTimestamp != null) {
+          final lastSpin = lastSpinTimestamp.toDate();
+          final now = DateTime.now();
+          final difference = now.difference(lastSpin).inDays;
+
+          setState(() {
+            _lastSpinDate = lastSpin;
+            hasSpunThisWeek = difference < 7;
+          });
+        } else {
+          setState(() {
+            hasSpunThisWeek = false;
+            _lastSpinDate = null;
+          });
+        }
+      } else {
+        setState(() {
+          hasSpunThisWeek = false;
+          _lastSpinDate = null;
+        });
+      }
+    } catch (e) {
+      print('Error checking last spin date from Firestore: $e');
+      setState(() {
+        hasSpunThisWeek = false;
+        _lastSpinDate = null;
       });
     }
   }
@@ -205,10 +248,6 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
           'description': 'Wheel of Fortune Discount - Minimum order amount: ₺10,000',
           'minOrderAmount': 10000, // Add minimum order amount
         });
-
-        // Save last spin date
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('last_spin_date', DateTime.now().toIso8601String());
 
         setState(() {
           hasSpunThisWeek = true;
