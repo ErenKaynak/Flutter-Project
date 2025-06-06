@@ -24,7 +24,7 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
   XFile? _webImageFile;
 
   // Available theme colors for banners
-  final List<String> themeColors = ['default', 'red', 'purple', 'blue', 'green', 'pink'];
+  final List<String> themeColors = ['red', 'purple', 'blue', 'green', 'orange', 'yellow'];
 
   Color _getThemeColor(String colorName) {
     switch (colorName) {
@@ -36,10 +36,12 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
         return Colors.blue;
       case 'green':
         return Colors.green;
-      case 'pink':
-        return Colors.pink;
+      case 'orange':
+        return Colors.orange;
+      case 'yellow':
+        return Colors.yellow;
       default:
-        return Colors.grey; // Default color when no specific theme is selected
+        return Colors.red; // Default color is now red
     }
   }
   
@@ -56,14 +58,18 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
 
   Future<void> _loadBanners() async {
     try {
+      print('Starting to load banners...'); // Debug log
       final QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('banners')
           .orderBy('order', descending: false)
           .get();
 
+      print('Fetched ${snapshot.docs.length} banners from Firestore'); // Debug log
+
       setState(() {
         banners = snapshot.docs.map((doc) {
           final data = doc.data() as Map<String, dynamic>;
+          print('Banner data: $data'); // Debug log for each banner
           return {
             'id': doc.id,
             'imageUrl': data['imageUrl'] ?? '',
@@ -71,12 +77,14 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
             'description': data['description'] ?? '',
             'order': data['order'] ?? 0,
             'isActive': data['isActive'] ?? true,
-            'themeColor': data['themeColor'] ?? 'default',
+            'themeColor': data['themeColor'] ?? 'red',
             'createdAt': data['createdAt'],
           };
         }).toList();
         _isLoading = false;
       });
+      
+      print('Loaded banners: $banners'); // Debug log final result
     } catch (e) {
       print('Error loading banners: $e');
       setState(() {
@@ -117,7 +125,7 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
     final TextEditingController titleController = TextEditingController(text: banner?['title'] ?? '');
     final TextEditingController descriptionController = TextEditingController(text: banner?['description'] ?? '');
     final TextEditingController orderController = TextEditingController(text: banner?['order']?.toString() ?? '0');
-    String selectedTheme = banner?['themeColor'] ?? 'default';
+    String selectedTheme = banner?['themeColor'] ?? 'red';
     bool isActive = banner?['isActive'] ?? true;
 
     showDialog(
@@ -488,6 +496,9 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
         : Colors.red;
     final l10n = AppLocalizations.of(context)!;
 
+    // Admin panel should show all banners
+    final displayedBanners = banners;
+
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
@@ -505,7 +516,7 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
                     valueColor: AlwaysStoppedAnimation<Color>(themeColor),
                   ),
                 Expanded(
-                  child: banners.isEmpty
+                  child: displayedBanners.isEmpty
                       ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -536,10 +547,10 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
                         )
                       : ReorderableListView.builder(
                           padding: EdgeInsets.all(16),
-                          itemCount: banners.length,
+                          itemCount: displayedBanners.length,
                           onReorder: _reorderBanners,
                           itemBuilder: (context, index) {
-                            final banner = banners[index];
+                            final banner = displayedBanners[index];
                             final themeColor = _getThemeColor(banner['themeColor'] ?? 'default');
                             
                             return Card(

@@ -621,34 +621,44 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<void> _fetchBanners() async {
     if (!mounted) return;
     
-    print('Starting to fetch banners...'); // Debug print
+    print('=== Fetching Banners Debug ===');
+    print('Starting to fetch banners...');
     
     try {
       setState(() {
-        _isBannersLoading = true; // Set loading state at the start
+        _isBannersLoading = true;
       });
 
       final QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('banners')
           .orderBy('order')
+          .where('isActive', isEqualTo: true)  // Only get active banners
           .get();
 
-      print('Fetched ${snapshot.docs.length} banners from Firestore'); // Debug print
+      print('Raw Firestore data:');
+      snapshot.docs.forEach((doc) {
+        print('Banner ${doc.id}:');
+        print('- Data: ${doc.data()}');
+      });
 
       if (!mounted) return;
 
       final List<Map<String, dynamic>> loadedBanners = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
-        print('Banner data: ${data}'); // Debug print
-        return {
+        final banner = {
           'id': doc.id,
           'imageUrl': data['imageUrl'] ?? '',
           'title': data['title'] ?? '',
           'description': data['description'] ?? '',
-          'themeColor': data['themeColor'] ?? 'default',
+          'themeColor': data['themeColor'] ?? 'red',
           'isActive': data['isActive'] ?? true,
         };
+        print('Processed banner: $banner');
+        return banner;
       }).toList();
+
+      print('Total banners loaded: ${loadedBanners.length}');
+      print('Banner themes: ${loadedBanners.map((b) => b['themeColor']).toList()}');
 
       if (!mounted) return;
 
@@ -657,9 +667,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         _isBannersLoading = false;
       });
       
-      print('Banners loaded successfully. Count: ${_banners.length}'); // Debug print
+      print('=== End Fetching Banners ===');
     } catch (e) {
-      print('Error fetching banners: $e'); // Debug print
+      print('Error fetching banners: $e');
       if (!mounted) return;
       setState(() {
         _banners = [];
@@ -970,7 +980,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildBannerSection() {
-    print('Building banner section. Loading: $_isBannersLoading, Banners count: ${_banners.length}'); // Debug print
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final currentTheme = themeNotifier.specialTheme.toString().split('.').last.toLowerCase();
+    
+    print('=== Banner Display Debug ===');
+    print('Special Mode Active: ${themeNotifier.isSpecialModeActive}');
+    print('Current Theme: $currentTheme');
+    print('Total Banners Available: ${_banners.length}');
+    print('Banner Themes: ${_banners.map((b) => b['themeColor']).toList()}');
+
+    // Filter banners based on special theme or show red themed banners by default
+    final displayedBanners = themeNotifier.isSpecialModeActive
+        ? _banners.where((banner) {
+            final bannerTheme = (banner['themeColor'] ?? '').toLowerCase();
+            final matches = bannerTheme == currentTheme;
+            print('Checking banner: theme=$bannerTheme, matches=$matches');
+            return matches;
+          }).toList()
+        : _banners.where((banner) => 
+            (banner['themeColor'] ?? '').toLowerCase() == 'red').toList();
+
+    print('Filtered Banners Count: ${displayedBanners.length}');
+    print('Filtered Banner Themes: ${displayedBanners.map((b) => b['themeColor']).toList()}');
+    print('=== End Banner Display ===');
 
     if (_isBannersLoading) {
       return Container(
@@ -986,7 +1018,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       );
     }
 
-    if (_banners.isEmpty) {
+    if (displayedBanners.isEmpty) {
       return Container(
         margin: EdgeInsets.symmetric(horizontal: 10),
         height: 180,
@@ -1018,7 +1050,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             }
           },
         ),
-        items: _banners.map((banner) {
+        items: displayedBanners.map((banner) {
           print('Building banner item: ${banner['imageUrl']}'); // Debug print
           return Builder(
             builder: (BuildContext context) {
@@ -1056,10 +1088,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         return Colors.blue;
       case 'green':
         return Colors.green;
-      case 'pink':
-        return Colors.pink;
+      case 'orange':
+        return Colors.orange;
+      case 'yellow':
+        return Colors.yellow;
       default:
-        return Colors.grey;
+        return Colors.red; // Default color is now red
     }
   }
 
