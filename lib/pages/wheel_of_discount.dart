@@ -304,8 +304,8 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
     final appBarColor = themeNotifier.isSpecialModeActive
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : isDarkMode
-            ? const Color(0xFF2C2C2C)
-            : Colors.white;
+            ? Colors.red.shade900
+            : Colors.red.shade700;
             
     final outlineColor = isDarkMode
         ? Colors.white.withOpacity(0.2)
@@ -330,14 +330,14 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
         title: Text(
           l10n.wheelManagement,
           style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black87,
+            color: isDarkMode || !themeNotifier.isSpecialModeActive ? Colors.white : Colors.black87,
             fontWeight: FontWeight.bold,
             fontSize: 24,
             letterSpacing: 1.2,
           ),
         ),
         iconTheme: IconThemeData(
-          color: isDarkMode ? Colors.white : Colors.black87,
+          color: isDarkMode || !themeNotifier.isSpecialModeActive ? Colors.white : Colors.black87,
           size: 28,
         ),
       ),

@@ -95,12 +95,11 @@ class _AddressScreenState extends State<AddressScreen> {
             l10n.myAddresses,
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
           ),
-          backgroundColor:
-              themeNotifier.isSpecialModeActive
-                  ? themeNotifier
-                      .getThemeColor(themeNotifier.specialTheme)
-                      .shade100
-                  : Colors.red.shade100,
+          backgroundColor: isDark 
+              ? Colors.red.shade900
+              : (themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade100
+                  : Colors.red.shade100),
           elevation: 0,
           iconTheme: IconThemeData(color: Colors.white),
         ),

@@ -366,9 +366,14 @@ class _WalletPageState extends State<WalletPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.myWallet),
+        title: Text(
+          l10n.myWallet,
+          style: TextStyle(
+            color: isDark ? Colors.white : Theme.of(context).textTheme.titleLarge?.color,
+          ),
+        ),
         elevation: 0,
-        backgroundColor: isDark ? Colors.black : Colors.white,
+        backgroundColor: isDark ? Colors.red.shade900 : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(15)),
         ),
@@ -490,8 +495,8 @@ class _WalletPageState extends State<WalletPage> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: themeNotifier.isSpecialModeActive
                                   ? specialColor
-                                  : (themeNotifier.isBlackMode
-                                      ? Theme.of(context).colorScheme.secondary
+                                  : (isDark
+                                      ? Colors.red.shade900
                                       : Colors.red.shade400),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(

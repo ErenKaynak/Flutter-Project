@@ -474,11 +474,11 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        backgroundColor: isDark ? Colors.red.shade900 : Theme.of(context).appBarTheme.backgroundColor,
         title: Text(
           l10n.orderHistory,
           style: TextStyle(
-            color: Theme.of(context).textTheme.titleLarge?.color,
+            color: isDark ? Colors.white : Theme.of(context).textTheme.titleLarge?.color,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -629,7 +629,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
             size: 80,
             color: themeNotifier.isSpecialModeActive
                 ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
-                : (isDark ? Colors.red.shade400 : Colors.red),
+                : (isDark ? Colors.red.shade900 : Colors.red),
           ),
           const SizedBox(height: 16),
           Text(
@@ -674,7 +674,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
             size: 80,
             color: themeNotifier.isSpecialModeActive
                 ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
-                : (isDark ? Colors.red.shade400 : Colors.red),
+                : (isDark ? Colors.red.shade900 : Colors.red),
           ),
           const SizedBox(height: 16),
           Text(

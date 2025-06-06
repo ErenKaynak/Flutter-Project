@@ -123,12 +123,11 @@ class _AddAddressPageState extends State<AddAddressPage> {
         surfaceTintColor: primaryColor,
         title: Text(l10n.addNewAddress, style: TextStyle(color: Colors.white)),
         leading: BackButton(color: Colors.white),
-        backgroundColor:
-            themeNotifier.isSpecialModeActive
-                ? themeNotifier
-                    .getThemeColor(themeNotifier.specialTheme)
-                    .shade700
-                : Colors.red.shade700,
+        backgroundColor: isDarkMode 
+            ? Colors.red.shade900
+            : (themeNotifier.isSpecialModeActive
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
+                : Colors.red.shade700),
         elevation: 2,
       ),
       body: Container(
