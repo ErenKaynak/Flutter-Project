@@ -711,5 +711,19 @@
     },
     "noDiscountsAvailable": "Mevcut indirim bulunmuyor",
     "loading": "Yükleniyor...",
-    "invalidDiscountCode": "Geçersiz indirim kodu"
+    "invalidDiscountCode": "Geçersiz indirim kodu",
+    "wheelManagement": "Çark Yönetimi",
+    "wheelItemsDescription": "İndirim çarkı öğelerini ve olasılıklarını yönetin",
+    "probability": "Olasılık",
+    "addNewDiscount": "Yeni İndirim Ekle",
+    "discountValue": "İndirim Değeri",
+    "pleaseEnterValue": "Lütfen bir değer girin",
+    "enterValidNumber": "Lütfen 1 ile 100 arasında geçerli bir sayı girin",
+    "congratulations": "Tebrikler!",
+    "betterLuckNextTime": "Bir dahaki sefere!",
+    "youWonDiscount": "Kazandınız",
+    "settingsSaved": "Ayarlar başarıyla kaydedildi",
+    "comeBackNextWeek": "Gelecek hafta tekrar gel!",
+    "spinning": "Çevriliyor...",
+    "spinTheWheel": "Çarkı Çevir!"
 }

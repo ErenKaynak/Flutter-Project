@@ -1480,4 +1480,46 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get discountUsed => 'Used';
+
+  @override
+  String get wheelManagement => 'إدارة العجلة';
+
+  @override
+  String get wheelItemsDescription => 'إدارة عناصر عجلة الخصم واحتمالاتها';
+
+  @override
+  String get probability => 'احتمال';
+
+  @override
+  String get addNewDiscount => 'إضافة خصم جديد';
+
+  @override
+  String get discountValue => 'قيمة الخصم';
+
+  @override
+  String get pleaseEnterValue => 'الرجاء إدخال قيمة';
+
+  @override
+  String get enterValidNumber => 'الرجاء إدخال رقم صحيح بين 1 و 100';
+
+  @override
+  String get congratulations => 'تهانينا!';
+
+  @override
+  String get betterLuckNextTime => 'حظاً أوفر في المرة القادمة!';
+
+  @override
+  String get youWonDiscount => 'لقد ربحت';
+
+  @override
+  String get settingsSaved => 'تم حفظ الإعدادات بنجاح';
+
+  @override
+  String get comeBackNextWeek => 'عد في الأسبوع القادم!';
+
+  @override
+  String get spinning => 'يدور...';
+
+  @override
+  String get spinTheWheel => 'أدر العجلة!';
 }

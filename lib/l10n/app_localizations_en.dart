@@ -1480,4 +1480,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discountUsed => 'Used';
+
+  @override
+  String get wheelManagement => 'Wheel Management';
+
+  @override
+  String get wheelItemsDescription => 'Manage discount wheel items and their probabilities';
+
+  @override
+  String get probability => 'Probability';
+
+  @override
+  String get addNewDiscount => 'Add New Discount';
+
+  @override
+  String get discountValue => 'Discount Value';
+
+  @override
+  String get pleaseEnterValue => 'Please enter a value';
+
+  @override
+  String get enterValidNumber => 'Please enter a valid number between 1 and 100';
+
+  @override
+  String get congratulations => 'Congratulations!';
+
+  @override
+  String get betterLuckNextTime => 'Better luck next time!';
+
+  @override
+  String get youWonDiscount => 'You won';
+
+  @override
+  String get settingsSaved => 'Settings saved successfully';
+
+  @override
+  String get comeBackNextWeek => 'Come back next week!';
+
+  @override
+  String get spinning => 'Spinning...';
+
+  @override
+  String get spinTheWheel => 'Spin the Wheel!';
 }

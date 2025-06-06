@@ -92,9 +92,9 @@ abstract class AppLocalizations {
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
-    Locale('ar'),
     Locale('en'),
-    Locale('tr')
+    Locale('tr'),
+    Locale('ar')
   ];
 
   /// No description provided for @appTitle.
@@ -2874,6 +2874,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Used'**
   String get discountUsed;
+
+  /// No description provided for @wheelManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Wheel Management'**
+  String get wheelManagement;
+
+  /// No description provided for @wheelItemsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage discount wheel items and their probabilities'**
+  String get wheelItemsDescription;
+
+  /// No description provided for @probability.
+  ///
+  /// In en, this message translates to:
+  /// **'Probability'**
+  String get probability;
+
+  /// No description provided for @addNewDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'Add New Discount'**
+  String get addNewDiscount;
+
+  /// No description provided for @discountValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Discount Value'**
+  String get discountValue;
+
+  /// No description provided for @pleaseEnterValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a value'**
+  String get pleaseEnterValue;
+
+  /// No description provided for @enterValidNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid number between 1 and 100'**
+  String get enterValidNumber;
+
+  /// No description provided for @congratulations.
+  ///
+  /// In en, this message translates to:
+  /// **'Congratulations!'**
+  String get congratulations;
+
+  /// No description provided for @betterLuckNextTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Better luck next time!'**
+  String get betterLuckNextTime;
+
+  /// No description provided for @youWonDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'You won'**
+  String get youWonDiscount;
+
+  /// No description provided for @settingsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings saved successfully'**
+  String get settingsSaved;
+
+  /// No description provided for @comeBackNextWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Come back next week!'**
+  String get comeBackNextWeek;
+
+  /// No description provided for @spinning.
+  ///
+  /// In en, this message translates to:
+  /// **'Spinning...'**
+  String get spinning;
+
+  /// No description provided for @spinTheWheel.
+  ///
+  /// In en, this message translates to:
+  /// **'Spin the Wheel!'**
+  String get spinTheWheel;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

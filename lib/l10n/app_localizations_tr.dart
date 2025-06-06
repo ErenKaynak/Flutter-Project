@@ -1480,4 +1480,46 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get discountUsed => 'Used';
+
+  @override
+  String get wheelManagement => 'Çark Yönetimi';
+
+  @override
+  String get wheelItemsDescription => 'İndirim çarkı öğelerini ve olasılıklarını yönetin';
+
+  @override
+  String get probability => 'Olasılık';
+
+  @override
+  String get addNewDiscount => 'Yeni İndirim Ekle';
+
+  @override
+  String get discountValue => 'İndirim Değeri';
+
+  @override
+  String get pleaseEnterValue => 'Lütfen bir değer girin';
+
+  @override
+  String get enterValidNumber => 'Lütfen 1 ile 100 arasında geçerli bir sayı girin';
+
+  @override
+  String get congratulations => 'Tebrikler!';
+
+  @override
+  String get betterLuckNextTime => 'Bir dahaki sefere!';
+
+  @override
+  String get youWonDiscount => 'Kazandınız';
+
+  @override
+  String get settingsSaved => 'Ayarlar başarıyla kaydedildi';
+
+  @override
+  String get comeBackNextWeek => 'Gelecek hafta tekrar gel!';
+
+  @override
+  String get spinning => 'Çevriliyor...';
+
+  @override
+  String get spinTheWheel => 'Çarkı Çevir!';
 }

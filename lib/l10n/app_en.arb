@@ -831,5 +831,19 @@
         }
     },
     "discountExpired": "Expired",
-    "discountUsed": "Used"
+    "discountUsed": "Used",
+    "wheelManagement": "Wheel Management",
+    "wheelItemsDescription": "Manage discount wheel items and their probabilities",
+    "probability": "Probability",
+    "addNewDiscount": "Add New Discount",
+    "discountValue": "Discount Value",
+    "pleaseEnterValue": "Please enter a value",
+    "enterValidNumber": "Please enter a valid number between 1 and 100",
+    "congratulations": "Congratulations!",
+    "betterLuckNextTime": "Better luck next time!",
+    "youWonDiscount": "You won",
+    "settingsSaved": "Settings saved successfully",
+    "comeBackNextWeek": "Come back next week!",
+    "spinning": "Spinning...",
+    "spinTheWheel": "Spin the Wheel!"
 }

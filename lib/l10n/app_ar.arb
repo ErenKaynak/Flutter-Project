@@ -210,5 +210,19 @@
                 "example": "100.00"
             }
         }
-    }
+    },
+    "wheelManagement": "إدارة العجلة",
+    "wheelItemsDescription": "إدارة عناصر عجلة الخصم واحتمالاتها",
+    "probability": "احتمال",
+    "addNewDiscount": "إضافة خصم جديد",
+    "discountValue": "قيمة الخصم",
+    "pleaseEnterValue": "الرجاء إدخال قيمة",
+    "enterValidNumber": "الرجاء إدخال رقم صحيح بين 1 و 100",
+    "congratulations": "تهانينا!",
+    "betterLuckNextTime": "حظاً أوفر في المرة القادمة!",
+    "youWonDiscount": "لقد ربحت",
+    "settingsSaved": "تم حفظ الإعدادات بنجاح",
+    "comeBackNextWeek": "عد في الأسبوع القادم!",
+    "spinning": "يدور...",
+    "spinTheWheel": "أدر العجلة!"
 }

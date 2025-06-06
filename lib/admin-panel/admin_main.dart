@@ -1,5 +1,6 @@
 import 'package:engineering_project/admin-panel/admin_banner_management.dart';
 import 'package:engineering_project/admin-panel/admin_categories.dart';
+import 'package:engineering_project/admin-panel/admin_wheel_management.dart';
 import 'package:engineering_project/admin-panel/admin_discount.dart';
 import 'package:engineering_project/admin-panel/admin_order_management.dart';
 import 'package:engineering_project/admin-panel/admin_photoUploader.dart';
@@ -458,6 +459,19 @@ class _AdminPageState extends State<AdminPage> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const BannerManagementPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.casino),
+                          title: Text(l10n.wheelManagement),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const WheelManagementPage(),
                               ),
                             );
                           },

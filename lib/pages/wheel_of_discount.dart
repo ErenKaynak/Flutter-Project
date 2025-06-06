@@ -4,6 +4,7 @@ import 'package:flutter_fortune_wheel/flutter_fortune_wheel.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
 
 class WheelOfDiscount extends StatefulWidget {
   const WheelOfDiscount({Key? key}) : super(key: key);
@@ -15,15 +16,14 @@ class WheelOfDiscount extends StatefulWidget {
 class _WheelOfDiscountState extends State<WheelOfDiscount> {
   bool isSpinning = false;
   bool hasSpunThisWeek = false;
-  final List<String> items = [
-    '5%', '10%', '15%', '20%', '25%', 'Try Again',
-    '30%', '40%', '50%', 'Try Again'
-  ];
+  List<Map<String, dynamic>> wheelItems = [];
+  List<FortuneItem> items = [];
 
   @override
   void initState() {
     super.initState();
     _checkLastSpinDate();
+    _loadWheelItems();
   }
 
   Future<void> _checkLastSpinDate() async {
@@ -38,6 +38,52 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> {
       setState(() {
         hasSpunThisWeek = difference < 7;
       });
+    }
+  }
+
+  Future<void> _loadWheelItems() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('settings')
+          .doc('wheel_settings')
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        setState(() {
+          wheelItems = List<Map<String, dynamic>>.from(data['items'] ?? []);
+          items = wheelItems.map((item) => FortuneItem(
+            child: Text(
+              item['value'],
+              style: TextStyle(fontSize: 20),
+            ),
+          )).toList();
+        });
+      } else {
+        // Default items if no settings exist
+        setState(() {
+          wheelItems = [
+            {'value': '5%', 'weight': 20},
+            {'value': '10%', 'weight': 15},
+            {'value': '15%', 'weight': 10},
+            {'value': '20%', 'weight': 8},
+            {'value': '25%', 'weight': 5},
+            {'value': 'Try Again', 'weight': 25},
+            {'value': '30%', 'weight': 3},
+            {'value': '40%', 'weight': 2},
+            {'value': '50%', 'weight': 1},
+            {'value': 'Try Again', 'weight': 11},
+          ];
+          items = wheelItems.map((item) => FortuneItem(
+            child: Text(
+              item['value'],
+              style: TextStyle(fontSize: 20),
+            ),
+          )).toList();
+        });
+      }
+    } catch (e) {
+      print('Error loading wheel items: $e');
     }
   }
 
@@ -66,7 +112,7 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Wheel of Discount'),
+        title: Text(AppLocalizations.of(context)!.wheelManagement),
       ),
       body: Center(
         child: Column(
@@ -77,9 +123,7 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> {
               child: FortuneWheel(
                 animateFirst: false,
                 selected: Stream.value(0),
-                items: items.map((item) => FortuneItem(
-                  child: Text(item, style: TextStyle(fontSize: 20)),
-                )).toList(),
+                items: items,
                 onFling: () {
                   if (!hasSpunThisWeek && !isSpinning) {
                     _spinWheel();
@@ -91,10 +135,10 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> {
             ElevatedButton(
               onPressed: hasSpunThisWeek || isSpinning ? null : _spinWheel,
               child: Text(hasSpunThisWeek 
-                ? 'Come back next week!' 
+                ? AppLocalizations.of(context)!.comeBackNextWeek
                 : isSpinning 
-                  ? 'Spinning...' 
-                  : 'Spin the Wheel!'),
+                  ? AppLocalizations.of(context)!.spinning
+                  : AppLocalizations.of(context)!.spinTheWheel),
             ),
           ],
         ),
@@ -109,8 +153,19 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> {
       isSpinning = true;
     });
 
-    final random = Random();
-    final selected = random.nextInt(items.length);
+    // Calculate weighted random selection
+    int totalWeight = wheelItems.fold(0, (sum, item) => sum + (item['weight'] as int));
+    int randomWeight = Random().nextInt(totalWeight);
+    int selected = 0;
+    int currentWeight = 0;
+
+    for (int i = 0; i < wheelItems.length; i++) {
+      currentWeight += wheelItems[i]['weight'] as int;
+      if (randomWeight < currentWeight) {
+        selected = i;
+        break;
+      }
+    }
 
     // Simulate spinning animation
     Future.delayed(Duration(seconds: 3), () {
@@ -118,17 +173,17 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> {
         isSpinning = false;
       });
 
-      if (items[selected] != 'Try Again') {
-        _saveSpinResult(items[selected]);
+      if (wheelItems[selected]['value'] != 'Try Again') {
+        _saveSpinResult(wheelItems[selected]['value']);
       }
 
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('Congratulations!'),
-          content: Text(items[selected] == 'Try Again' 
-              ? 'Better luck next time!' 
-              : 'You won ${items[selected]} discount!'),
+          title: Text(AppLocalizations.of(context)!.congratulations),
+          content: Text(wheelItems[selected]['value'] == 'Try Again'
+              ? AppLocalizations.of(context)!.betterLuckNextTime
+              : '${AppLocalizations.of(context)!.youWonDiscount} ${wheelItems[selected]['value']}!'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
