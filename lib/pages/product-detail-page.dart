@@ -155,9 +155,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     if (user != null) {
       try {
         final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
             .collection('favorites')
+            .doc(user.uid)
+            .collection('userFavorites')
             .doc(widget.productId)
             .get();
 
@@ -191,9 +191,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
     try {
       final favoriteRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
           .collection('favorites')
+          .doc(user.uid)
+          .collection('userFavorites')
           .doc(widget.productId);
 
       if (isFavorite) {
@@ -203,10 +203,32 @@ class _ProductDetailPageState extends State<ProductDetailPage>
           SnackBar(content: Text(l10n.removedFromFavorites)),
         );
       } else {
+        // Get current product data
+        final productDoc = await FirebaseFirestore.instance
+            .collection('products')
+            .doc(widget.productId)
+            .get();
+
+        if (!productDoc.exists) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.productNotFound)),
+          );
+          return;
+        }
+
+        final productData = productDoc.data()!;
+        
         await favoriteRef.set({
           'productId': widget.productId,
+          'name': productData['name'] ?? 'Unknown Product',
+          'price': productData['price']?.toString() ?? '0',
+          'image': productData['imagePath'] ?? 'lib/assets/Images/placeholder.png',
+          'category': productData['category'] ?? 'Uncategorized',
+          'description': productData['description'] ?? 'No description available',
+          'stock': productData['stock'] ?? 0,
           'addedAt': FieldValue.serverTimestamp(),
         });
+        
         setState(() => isFavorite = true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.addedToFavorites)),
@@ -215,7 +237,10 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     } catch (e) {
       print("❌ Error toggling favorite: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.failedToUpdateFavorites)),
+        SnackBar(
+          content: Text(l10n.failedToUpdateFavorites),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
