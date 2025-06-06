@@ -3,6 +3,8 @@ import 'package:engineering_project/assets/components/discount_service.dart';
 import 'package:engineering_project/assets/components/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../pages/theme_notifier.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:engineering_project/notification-system/models/notification_model.dart';
@@ -34,6 +36,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
   List<String> _allCategories = ["All"];  // Initialize with just "All"
   List<String> _selectedCategories = [];
   bool _isCreatingCode = false;
+  String _selectedFilter = 'all';
 
   @override
   void initState() {
@@ -229,6 +232,12 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
     }
   }
 
+  void _setFilter(String filter) {
+    setState(() {
+      _selectedFilter = filter;
+    });
+  }
+
   @override
   void dispose() {
     _codeController.dispose();
@@ -243,28 +252,31 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : (isDark ? Colors.red.shade900 : const Color(0xFFEF5350));
+    
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Discount Management'),
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        foregroundColor: Theme.of(context).textTheme.titleLarge?.color,
+        title: const Text('Discount Management', style: TextStyle(color: Colors.white)),
+        backgroundColor: themeColor,
         elevation: isDark ? 0 : 2,
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh, color: Theme.of(context).iconTheme.color),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _loadDiscountCodes,
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.red))
+          ? Center(child: CircularProgressIndicator(color: themeColor))
           : RefreshIndicator(
               onRefresh: _loadDiscountCodes,
-              color: Colors.red,
+              color: themeColor,
               child: CustomScrollView(
                 slivers: [
                   SliverToBoxAdapter(
@@ -289,11 +301,14 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                                 style: TextStyle(
                                   fontSize: 18, 
                                   fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
                                 ),
                               ),
                               Text(
                                 "${_discountCodes.length} codes",
-                                style: TextStyle(color: Colors.grey[600]),
+                                style: TextStyle(
+                                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                ),
                               ),
                             ],
                           ),
@@ -309,16 +324,20 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
   }
 
   Widget _buildHeaderSection() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : const Color(0xFFEF5350);
     
     return Container(
-      padding: EdgeInsets.all(16.0),
-      margin: EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(16.0),
+      margin: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark 
-              ? [Colors.red.shade900, Colors.grey.shade900]
-              : [Colors.red.shade300, Colors.white],
+              ? [const Color(0xFF1E1E1E), const Color(0xFF121212)]
+              : [themeColor.withOpacity(0.8), themeColor.withOpacity(0.6)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -327,7 +346,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
           BoxShadow(
             color: Colors.black12,
             blurRadius: 5,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -338,15 +357,15 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
             height: 60,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isDark ? Colors.red.shade900 : Colors.red.shade300,
+              color: isDark ? themeColor.withOpacity(0.2) : Colors.white.withOpacity(0.2),
             ),
             child: Icon(
               Icons.discount_outlined,
               size: 30,
-              color: Colors.white,
+              color: isDark ? themeColor : Colors.white,
             ),
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,7 +374,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   "Discount Manager",
                   style: TextStyle(
                     fontSize: 16,
-                    color: isDark ? Colors.grey[400] : Colors.black54,
+                    color: isDark ? Colors.grey[400] : Colors.white.withOpacity(0.8),
                   ),
                 ),
                 Text(
@@ -363,7 +382,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87,
+                    color: Colors.white,
                   ),
                 ),
               ],
@@ -375,20 +394,24 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
   }
 
   Widget _buildCategorySelector() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : const Color(0xFFEF5350);
     
     return Container(
       height: 60,
-      margin: EdgeInsets.only(top: 16, bottom: 8),
+      margin: const EdgeInsets.only(top: 16, bottom: 8),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: _allCategories.length,
         itemBuilder: (context, index) {
           final category = _allCategories[index];
           final isSelected = _selectedCategories.contains(category);
           return Padding(
-            padding: EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
               selected: isSelected,
               label: Text(category),
@@ -396,12 +419,10 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                 setState(() {
                   if (category == "All") {
                     if (selected) {
-                      // If "All" is selected, clear other selections
                       _selectedCategories = [];
                     }
                   } else {
                     if (selected) {
-                      // If a specific category is selected, remove "All" if it was selected
                       _selectedCategories.remove("All");
                       _selectedCategories.add(category);
                     } else {
@@ -410,23 +431,23 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   }
                 });
               },
-              backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+              backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.grey[50],
               selectedColor: isDark 
-                  ? Colors.red.shade900.withOpacity(0.5) 
-                  : Colors.red.shade50,
-              checkmarkColor: isDark ? Colors.white : Colors.red.shade700,
+                  ? themeColor.withOpacity(0.2)
+                  : themeColor.withOpacity(0.1),
+              checkmarkColor: themeColor,
               labelStyle: TextStyle(
                 color: isSelected
-                    ? (isDark ? Colors.white : Colors.red.shade700)
-                    : Theme.of(context).textTheme.bodyMedium?.color,
+                    ? themeColor
+                    : (isDark ? Colors.white : Colors.black87),
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
                   color: isSelected
-                      ? (isDark ? Colors.red.shade700 : Colors.red.shade400)
-                      : Colors.transparent,
+                      ? themeColor
+                      : (isDark ? Colors.grey[800]! : Colors.grey[300]!),
                 ),
               ),
             ),
@@ -437,43 +458,43 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
   }
 
   Widget _buildCreateDiscountForm() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : const Color(0xFFEF5350);
+
     final inputDecoration = InputDecoration(
       filled: true,
-      fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+          color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
         ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+          color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
         ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(
-          color: isDark ? Colors.red.shade700 : Colors.red.shade400,
-          width: 2,
-        ),
+        borderSide: BorderSide(color: themeColor, width: 2),
       ),
-      labelStyle: TextStyle(
-        color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8),
-      ),
+      prefixIconColor: themeColor,
+      suffixIconColor: themeColor,
+      labelStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
     );
 
     return Card(
-      elevation: isDark ? 1 : 3,
-      color: isDark ? Colors.grey.shade900 : Theme.of(context).cardColor,
+      elevation: isDark ? 0 : 2,
+      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: isDark 
-            ? BorderSide(color: Colors.grey.shade800)
+            ? BorderSide(color: Colors.grey[800]!)
             : BorderSide.none,
       ),
       child: Padding(
@@ -485,15 +506,19 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.add_circle, color: Colors.red.shade400),
-                  SizedBox(width: 8),
+                  Icon(Icons.add_circle, color: themeColor),
+                  const SizedBox(width: 8),
                   Text(
                     'Create New Discount Code',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
                   ),
                 ],
               ),
-              Divider(height: 24),
+              const Divider(height: 24),
               
               Text(
                 'Applicable Categories',
@@ -507,19 +532,19 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                 'Leave empty for all products',
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Center(
                 child: Container(
-                  padding: EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                      color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
                     ),
-                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.grey[50],
                   ),
                   child: Wrap(
                     spacing: 8,
@@ -529,13 +554,14 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                       return FilterChip(
                         label: Text(category),
                         selected: isSelected,
-                        selectedColor: Colors.red.shade100,
-                        checkmarkColor: Colors.red.shade700,
-                        backgroundColor: isDark ? Colors.grey.shade800 : Colors.white,
+                        selectedColor: themeColor.withOpacity(0.2),
+                        checkmarkColor: themeColor,
+                        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                         side: BorderSide(
-                          color: isSelected 
-                              ? Colors.red.shade400 
-                              : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+                          color: isSelected ? themeColor : (isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                        ),
+                        labelStyle: TextStyle(
+                          color: isSelected ? themeColor : (isDark ? Colors.white : Colors.black87),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -554,13 +580,13 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   ),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _codeController,
                 decoration: inputDecoration.copyWith(
                   labelText: 'Discount Code',
                   hintText: 'Enter a case-sensitive code',
-                  prefixIcon: Icon(Icons.code, color: Colors.red.shade300),
+                  prefixIcon: Icon(Icons.code, color: themeColor),
                 ),
                 textCapitalization: TextCapitalization.characters,
                 validator: (value) {
@@ -570,13 +596,13 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   return null;
                 },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,
                 decoration: inputDecoration.copyWith(
                   labelText: 'Discount Name',
                   hintText: 'Enter a name for the discount',
-                  prefixIcon: Icon(Icons.label, color: Colors.red.shade300),
+                  prefixIcon: Icon(Icons.label, color: themeColor),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -585,23 +611,23 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   return null;
                 },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _descriptionController,
                 decoration: inputDecoration.copyWith(
                   labelText: 'Description',
                   hintText: 'Enter a description (optional)',
-                  prefixIcon: Icon(Icons.description, color: Colors.red.shade300),
+                  prefixIcon: Icon(Icons.description, color: themeColor),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _discountPercentageController,
                 decoration: inputDecoration.copyWith(
                   labelText: 'Discount Percentage',
                   hintText: 'Enter a number from 1-99',
                   suffixText: '%',
-                  prefixIcon: Icon(Icons.percent, color: Colors.red.shade300),
+                  prefixIcon: Icon(Icons.percent, color: themeColor),
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
@@ -613,7 +639,6 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                     if (percentage <= 0 || percentage >= 100) {
                       return 'Enter a value between 1 and 99';
                     }
-                    // Ensure the value is positive
                     if (percentage < 0) {
                       return 'Discount percentage cannot be negative';
                     }
@@ -623,13 +648,13 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   return null;
                 },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _minOrderController,
                 decoration: inputDecoration.copyWith(
                   labelText: 'Minimum Order Amount',
                   hintText: 'Enter minimum order amount',
-                  prefixIcon: Icon(Icons.monetization_on, color: Colors.red.shade300),
+                  prefixIcon: Icon(Icons.monetization_on, color: themeColor),
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
@@ -647,13 +672,13 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   return null;
                 },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _usageLimitController,
                 decoration: inputDecoration.copyWith(
                   labelText: 'Total Usage Limit (Optional)',
                   hintText: 'Leave empty for unlimited total uses',
-                  prefixIcon: Icon(Icons.repeat, color: Colors.red.shade300),
+                  prefixIcon: Icon(Icons.repeat, color: themeColor),
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
@@ -670,13 +695,13 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   return null;
                 },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _perUserLimitController,
                 decoration: inputDecoration.copyWith(
                   labelText: 'Per-User Limit (Optional)',
                   hintText: 'Leave empty for unlimited uses per user',
-                  prefixIcon: Icon(Icons.person_outline, color: Colors.red.shade300),
+                  prefixIcon: Icon(Icons.person_outline, color: themeColor),
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
@@ -693,19 +718,25 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   return null;
                 },
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               Container(
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.grey[50],
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                    color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
                   ),
                 ),
                 child: CheckboxListTile(
-                  title: Text('Set Expiration Date'),
+                  title: Text(
+                    'Set Expiration Date',
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
                   value: _hasExpiry,
-                  activeColor: Colors.red.shade400,
+                  activeColor: themeColor,
+                  checkColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -726,18 +757,18 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                     onTap: _selectExpiryDate,
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                          color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
                         ),
-                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                        color: isDark ? const Color(0xFF1E1E1E) : Colors.grey[50],
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.calendar_today, color: Colors.red.shade300),
-                          SizedBox(width: 12),
+                          Icon(Icons.calendar_today, color: themeColor),
+                          const SizedBox(width: 12),
                           Text(
                             _selectedExpiryDate == null
                                 ? 'Select Expiry Date'
@@ -745,26 +776,26 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                             style: TextStyle(
                               fontSize: 16,
                               color: _selectedExpiryDate == null 
-                                  ? (isDark ? Colors.grey.shade400 : Colors.grey.shade700) 
+                                  ? (isDark ? Colors.grey[400] : Colors.grey[700]) 
                                   : (isDark ? Colors.white : Colors.black87),
                             ),
                           ),
-                          Spacer(),
-                          Icon(Icons.arrow_drop_down, color: Colors.grey),
+                          const Spacer(),
+                          Icon(Icons.arrow_drop_down, color: themeColor),
                         ],
                       ),
                     ),
                   ),
                 ),
-                SizedBox(height: 24),
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade400,
+                    backgroundColor: themeColor,
                     foregroundColor: Colors.white,
-                    elevation: 3,
+                    elevation: isDark ? 0 : 3,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -782,13 +813,14 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add_circle_outline),
-                            SizedBox(width: 8),
+                            Icon(Icons.add_circle_outline, color: Colors.white),
+                            const SizedBox(width: 8),
                             Text(
                               'CREATE DISCOUNT CODE',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1,
+                                color: Colors.white,
                               ),
                             ),
                           ],
@@ -803,7 +835,11 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
   }
 
   Widget _buildDiscountCodesList() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : const Color(0xFFEF5350);
 
     if (_discountCodes.isEmpty) {
       return SliverFillRemaining(
@@ -814,22 +850,22 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
               Icon(
                 Icons.discount_outlined,
                 size: 70,
-                color: isDark ? Colors.grey.shade600 : Colors.grey,
+                color: isDark ? Colors.grey[700] : Colors.grey[400],
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Text(
                 "No discount codes available",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).textTheme.titleLarge?.color,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 "Create a new discount code above",
                 style: TextStyle(
-                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
                 ),
               ),
             ],
@@ -839,7 +875,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
     }
 
     return SliverPadding(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
@@ -850,36 +886,38 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
             
             if (code.expiryDate != null && code.expiryDate!.isBefore(DateTime.now())) {
               statusText = 'Expired';
-              statusColor = Colors.red;
+              statusColor = themeColor;
             } else if (code.usageLimit > 0 && code.usageCount >= code.usageLimit) {
               statusText = 'Limit Reached';
-              statusColor = Colors.orange;
+              statusColor = themeColor.withOpacity(0.7);
             } else {
               statusText = 'Active';
-              statusColor = Colors.green;
+              statusColor = themeColor;
             }
             
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
-              elevation: isDark ? 1 : 2,
-              color: isDark ? Colors.grey.shade900 : Theme.of(context).cardColor,
+              elevation: isDark ? 0 : 2,
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
                 side: isDark 
-                    ? BorderSide(color: Colors.grey.shade800)
+                    ? BorderSide(color: Colors.grey[800]!)
                     : BorderSide.none,
               ),
               child: ExpansionTile(
-                tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                childrenPadding: EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
                 leading: Container(
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
+                    color: isDark ? themeColor.withOpacity(0.2) : themeColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade100),
+                    border: Border.all(
+                      color: isDark ? themeColor.withOpacity(0.3) : themeColor.withOpacity(0.2),
+                    ),
                   ),
                   child: Center(
                     child: Text(
@@ -887,7 +925,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.red.shade700,
+                        color: themeColor,
                       ),
                     ),
                   ),
@@ -898,21 +936,27 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                       child: Text(
                         code.code,
                         style: TextStyle(
-                          color: Theme.of(context).textTheme.titleLarge?.color,
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.bold,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: statusColor.withOpacity(0.3),
+                        ),
                       ),
                       child: Text(
                         statusText,
                         style: TextStyle(
                           color: statusColor,
                           fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
@@ -921,19 +965,19 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      'Total uses: ${(code.usageCount).toString()}/${code.usageLimit > 0 ? code.usageLimit.toString() : 'unlimited'}',
+                      'Total uses: ${code.usageCount}/${code.usageLimit > 0 ? code.usageLimit.toString() : 'unlimited'}',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
                       ),
                     ),
                     Text(
                       'Per user: ${code.perUserLimit > 0 ? code.perUserLimit.toString() : 'unlimited'} uses',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
                       ),
                     ),
                   ],
@@ -943,12 +987,12 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   children: [
                     if (statusText == 'Active')
                       IconButton(
-                        icon: Icon(Icons.send, color: Colors.green),
+                        icon: Icon(Icons.send, color: themeColor),
                         tooltip: 'Send notification to users',
                         onPressed: () => _showSendNotificationConfirmation(code),
                       ),
                     IconButton(
-                      icon: Icon(Icons.delete_outline, color: Colors.red),
+                      icon: Icon(Icons.delete_outline, color: themeColor),
                       onPressed: () => _showDeleteConfirmation(code),
                     ),
                   ],
@@ -957,39 +1001,45 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Divider(),
+                      const Divider(),
                       if (code.expiryDate != null)
                         _buildInfoRow(
                           'Expiry Date', 
                           DateFormat('yyyy-MM-dd').format(code.expiryDate!),
                           Icons.calendar_today,
+                          themeColor,
                         ),
                       if (code.applicableCategories != null && code.applicableCategories!.isNotEmpty)
                         _buildInfoRow(
                           'Categories', 
                           code.applicableCategories!.join(", "),
                           Icons.category,
+                          themeColor,
                         ),
                       _buildInfoRow(
                         'Total Usage', 
                         '${code.usageCount}${code.usageLimit > 0 ? ' of ${code.usageLimit}' : ' (unlimited)'}',
                         Icons.people,
+                        themeColor,
                       ),
                       _buildInfoRow(
                         'Per-User Limit', 
                         code.perUserLimit > 0 ? '${code.perUserLimit} uses per user' : 'Unlimited uses per user',
                         Icons.person_outline,
+                        themeColor,
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           OutlinedButton.icon(
-                            icon: Icon(Icons.delete),
-                            label: Text('Delete'),
+                            icon: Icon(Icons.delete, color: themeColor),
+                            label: Text(
+                              'Delete',
+                              style: TextStyle(color: themeColor),
+                            ),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.red,
-                              side: BorderSide(color: Colors.red),
+                              side: BorderSide(color: themeColor),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -1010,13 +1060,19 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
     );
   }
   
-  Widget _buildInfoRow(String label, String value, IconData icon) {
+  Widget _buildInfoRow(String label, String value, IconData icon, Color themeColor) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Colors.grey),
-          SizedBox(width: 8),
+          Icon(
+            icon,
+            size: 18,
+            color: themeColor,
+          ),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1025,7 +1081,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
                   ),
                 ),
                 Text(
@@ -1033,6 +1089,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
               ],
