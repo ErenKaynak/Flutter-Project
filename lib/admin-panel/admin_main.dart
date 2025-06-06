@@ -221,7 +221,7 @@ class _AdminPageState extends State<AdminPage> {
       backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
         title: Text(l10n.adminDashboard),
-        backgroundColor: themeColor,
+        backgroundColor: isDark ? Colors.red.shade900 : themeColor,
         elevation: isDark ? 0 : 2,
       ),
       body: SingleChildScrollView(

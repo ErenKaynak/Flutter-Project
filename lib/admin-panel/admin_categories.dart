@@ -421,7 +421,7 @@ Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFil
     return Scaffold(
       appBar: AppBar(
         title: Text('Category Management'),
-        backgroundColor: isDark ? Colors.black : Colors.red.shade700,
+        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
