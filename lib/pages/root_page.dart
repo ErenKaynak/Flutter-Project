@@ -264,109 +264,86 @@ class _RootScreenState extends State<RootScreen> {
     }
 
     return Scaffold(
-      body: PageView(
-        controller: controller,
-        physics: const NeverScrollableScrollPhysics(),
-        children: screens,
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16.0),
-            color:
-                themeNotifier.isSpecialModeActive
-                    ? themeNotifier
-                        .getThemeColor(themeNotifier.specialTheme)
-                        .shade100
-                    : isDark
-                    ? Colors.grey[900]
-                    : Colors.white,
-            boxShadow:
-                isDark
-                    ? []
-                    : [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
+      body: Stack(
+        children: [
+          PageView(
+            controller: controller,
+            physics: const NeverScrollableScrollPhysics(),
+            children: screens,
           ),
-          child: NavigationBar(
-            indicatorColor:
-                themeNotifier.isSpecialModeActive
-                    ? themeNotifier
-                        .getThemeColor(themeNotifier.specialTheme)
-                        .shade200
-                    : isDark
-                    ? Colors.grey[800]!
-                    : Colors.white,
-            height: kBottomNavigationBarHeight,
-            selectedIndex: currentScreen,
-            elevation: 0,
-            labelPadding: EdgeInsets.zero,
-            onDestinationSelected: (value) {
-              setState(() {
-                currentScreen = value;
-              });
-              controller.jumpToPage(currentScreen);
-            },
-            destinations: [
-              _buildNavigationDestination(Icons.home_outlined, 'Home', 0),
-              _buildNavigationDestination(
-                Icons.favorite_border_outlined,
-                'Favorites',
-                1,
-              ),
-              _buildNavigationDestination(
-                Icons.shopping_bag_outlined,
-                'Cart',
-                2,
-              ),
-              _buildNavigationDestination(
-                Icons.person_outline_rounded,
-                'Profile',
-                3,
-              ),
-            ],
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: _buildCustomBottomNavBar(),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  NavigationDestination _buildNavigationDestination(
-    IconData icon,
-    String label,
-    int index,
-  ) {
+  Widget _buildCustomBottomNavBar() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isSelected = currentScreen == index;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final l10n = AppLocalizations.of(context)!;
-
-    final labels = [
-      l10n.home,
-      l10n.favorites,
-      l10n.cart,
-      l10n.profile,
-    ];
-
-    return NavigationDestination(
-      icon: Icon(
-        icon,
-        color:
-            isSelected
-                ? (themeNotifier.isSpecialModeActive
-                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-                    : Colors.red)
-                : isDark
-                ? Colors.grey[400]
-                : Colors.black54,
-        size: 30,
+    
+    return Container(
+      // Main container for the floating bar
+      decoration: BoxDecoration(
+        color: isDark ? Colors.black.withOpacity(0.9) : Colors.white.withOpacity(0.9), // Consistent black/white background based on dark mode
+        borderRadius: BorderRadius.circular(30.0), // Adjusted rounded corners
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.4 : 0.1),
+            blurRadius: 10,
+            offset: Offset(0, 5),
+          ),
+        ],
       ),
-      label: labels[index],
+      padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 3.0), // Increased horizontal padding slightly, keep vertical
+      margin: const EdgeInsets.symmetric(horizontal: 150.0, vertical: 25.0), // Adjusted horizontal margin to compensate and center
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Distribute items evenly
+        children: [
+          _buildNavItem(Icons.home_outlined, 0),
+          _buildNavItem(Icons.favorite_border_outlined, 1),
+          _buildNavItem(Icons.shopping_bag_outlined, 2),
+          _buildNavItem(Icons.person_outline_rounded, 3),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, int index) {
+    final isSelected = currentScreen == index;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    
+    return InkWell(
+      onTap: () {
+        setState(() {
+          currentScreen = index;
+        });
+        controller.jumpToPage(index);
+      },
+      borderRadius: BorderRadius.circular(35.0), // More rounded effect for the tappable area
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0), // Reduced horizontal padding within each item
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? (themeNotifier.isSpecialModeActive 
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade600.withOpacity(0.9)
+                  : Colors.red.withOpacity(0.9))
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(30.0), // More rounded background for selected item
+        ),
+        child: Icon(
+          icon,
+          color: isSelected 
+              ? Colors.white 
+              : (themeNotifier.isSpecialModeActive 
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade200 
+                  : Theme.of(context).colorScheme.onSurface), // Use theme onSurface color for icon
+          size: 22,
+        ),
+      ),
     );
   }
 }
