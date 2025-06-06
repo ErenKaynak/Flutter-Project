@@ -62,7 +62,9 @@ void main() async {
   );
   
   // Initialize notification system (OneSignal + handlers)
-  await NotificationInitializer.initialize();
+  if (!kIsWeb) {
+    await NotificationInitializer.initialize();
+  }
 
   runApp(
     MultiProvider(
@@ -178,14 +180,16 @@ class AuthWrapper extends StatelessWidget {
         if (snapshot.hasData && snapshot.data != null) {
           // Update OneSignal with user info when authenticated
           final user = snapshot.data!;
-          NotificationInitializer.updateUserId(user.uid);
-          
-          // Set user tags for segmentation
-          if (user.displayName != null) {
-            NotificationInitializer.addUserTag("username", user.displayName!);
-          }
-          if (user.email != null) {
-            NotificationInitializer.addUserTag("email", user.email!);
+          if (!kIsWeb) {
+            NotificationInitializer.updateUserId(user.uid);
+            
+            // Set user tags for segmentation
+            if (user.displayName != null) {
+              NotificationInitializer.addUserTag("username", user.displayName!);
+            }
+            if (user.email != null) {
+              NotificationInitializer.addUserTag("email", user.email!);
+            }
           }
           WidgetsBinding.instance.addPostFrameCallback((_) {
             Navigator.pushReplacementNamed(context, '/root');
@@ -194,7 +198,9 @@ class AuthWrapper extends StatelessWidget {
         }
 
         // Clear OneSignal external user ID when logged out
-        NotificationInitializer.updateUserId(null);
+        if (!kIsWeb) {
+          NotificationInitializer.updateUserId(null);
+        }
         WidgetsBinding.instance.addPostFrameCallback((_) {
           Navigator.pushReplacementNamed(context, '/welcome');
         });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// A Navigator observer that reports navigation events to OneSignal for in-app messaging
 class OneSignalNavigationObserver extends NavigatorObserver {
@@ -9,24 +10,28 @@ class OneSignalNavigationObserver extends NavigatorObserver {
   
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    _sendRouteToOneSignal(route);
+    if (!kIsWeb) {
+      _sendRouteToOneSignal(route);
+    }
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    if (newRoute != null) {
+    if (!kIsWeb && newRoute != null) {
       _sendRouteToOneSignal(newRoute);
     }
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    if (previousRoute != null) {
+    if (!kIsWeb && previousRoute != null) {
       _sendRouteToOneSignal(previousRoute);
     }
   }
 
   void _sendRouteToOneSignal(Route<dynamic> route) {
+    if (kIsWeb) return;
+
     try {
       final String routeName = _getRouteName(route);
       debugPrint('$_tag: Current route: $routeName');

@@ -1,10 +1,18 @@
 import 'dart:math';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_fortune_wheel/flutter_fortune_wheel.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
+import 'package:engineering_project/pages/theme_notifier.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:engineering_project/assets/components/discount_code.dart';
+import 'package:engineering_project/assets/components/discount_service.dart';
+import 'package:engineering_project/screens/discount_codes_screen.dart';
 
 class WheelOfDiscount extends StatefulWidget {
   const WheelOfDiscount({Key? key}) : super(key: key);
@@ -13,17 +21,41 @@ class WheelOfDiscount extends StatefulWidget {
   State<WheelOfDiscount> createState() => _WheelOfDiscountState();
 }
 
-class _WheelOfDiscountState extends State<WheelOfDiscount> {
+class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProviderStateMixin {
   bool isSpinning = false;
   bool hasSpunThisWeek = false;
+  bool isInitialized = false;
   List<Map<String, dynamic>> wheelItems = [];
   List<FortuneItem> items = [];
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+  StreamController<int> _selectedController = StreamController<int>.broadcast();
 
   @override
   void initState() {
     super.initState();
     _checkLastSpinDate();
-    _loadWheelItems();
+    _loadWheelItems().then((_) {
+      setState(() {
+        isInitialized = true;
+      });
+    });
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+    _selectedController.add(0); // Initialize with first item
+  }
+
+  @override
+  void dispose() {
+    _selectedController.close();
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _checkLastSpinDate() async {
@@ -55,7 +87,10 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> {
           items = wheelItems.map((item) => FortuneItem(
             child: Text(
               item['value'],
-              style: TextStyle(fontSize: 20),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           )).toList();
         });
@@ -77,7 +112,10 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> {
           items = wheelItems.map((item) => FortuneItem(
             child: Text(
               item['value'],
-              style: TextStyle(fontSize: 20),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           )).toList();
         });
@@ -91,56 +129,267 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Save to Firestore
-    await FirebaseFirestore.instance.collection('users').doc(user.uid)
-        .collection('discounts').add({
-      'discount': discount,
-      'createdAt': FieldValue.serverTimestamp(),
-      'used': false,
-    });
+    try {
+      // Generate a unique discount code
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final random = Random().nextInt(1000);
+      final code = 'WHEEL${timestamp.toString().substring(8)}${random.toString().padLeft(3, '0')}';
+      
+      // Extract discount percentage from the wheel result
+      final discountPercentage = double.parse(discount.replaceAll('%', ''));
+      
+      // Create a new discount code
+      final discountCode = DiscountCode(
+        id: '', // Will be assigned by Firestore
+        code: code,
+        name: 'Wheel of Fortune Discount',
+        description: 'Won from the Wheel of Fortune!',
+        discountPercentage: discountPercentage,
+        minOrderAmount: 0, // No minimum order amount for wheel discounts
+        expiryDate: DateTime.now().add(const Duration(days: 7)), // Valid for 7 days
+        applicableCategories: null, // Applicable to all categories
+        usageLimit: 1, // One-time use
+        usageCount: 0,
+        perUserLimit: 1, // One per user
+      );
 
-    // Save last spin date
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('last_spin_date', DateTime.now().toIso8601String());
+      // Save to Firestore using the discount service
+      final discountService = DiscountService();
+      final success = await discountService.createDiscountCode(discountCode);
 
-    setState(() {
-      hasSpunThisWeek = true;
-    });
+      if (success) {
+        // Save last spin date
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('last_spin_date', DateTime.now().toIso8601String());
+
+        setState(() {
+          hasSpunThisWeek = true;
+        });
+
+        // Show success message with the code
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Your discount code is: $code'),
+              duration: const Duration(seconds: 5),
+              action: SnackBarAction(
+                label: 'Copy',
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: code));
+                },
+              ),
+            ),
+          );
+        }
+      } else {
+        throw Exception('Failed to create discount code');
+      }
+    } catch (e) {
+      print('Error saving spin result: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error saving your discount. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isBlack = themeNotifier.isBlackMode;
+    final isDarkMode = isDark || isBlack;
+    
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red.shade700;
+    
+    final backgroundColor = themeNotifier.isSpecialModeActive
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme).withOpacity(0.1)
+        : isDarkMode
+            ? Colors.black
+            : Colors.grey[100];
+            
+    final appBarColor = themeNotifier.isSpecialModeActive
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : isDarkMode
+            ? Colors.black
+            : Colors.white;
+            
+    final outlineColor = isDarkMode
+        ? Colors.white.withOpacity(0.2)
+        : themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).withOpacity(0.3)
+            : Colors.red.withOpacity(0.3);
+
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.wheelManagement),
+        backgroundColor: appBarColor,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(15)),
+        ),
+        elevation: 10,
+        title: Text(
+          l10n.wheelManagement,
+          style: TextStyle(
+            color: isDarkMode ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        iconTheme: IconThemeData(
+          color: isDarkMode ? Colors.white : Colors.black87,
+        ),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              height: 300,
-              child: FortuneWheel(
-                animateFirst: false,
-                selected: Stream.value(0),
-                items: items,
-                onFling: () {
-                  if (!hasSpunThisWeek && !isSpinning) {
-                    _spinWheel();
-                  }
-                },
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDarkMode
+                ? [
+                    themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900
+                        : Colors.grey[900]!,
+                    themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade800
+                        : Colors.grey[850]!,
+                  ]
+                : [
+                    themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade100
+                        : Colors.grey[100]!,
+                    themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade50
+                        : Colors.white,
+                  ],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (!isInitialized)
+                const CircularProgressIndicator()
+              else
+                Container(
+                  height: 350,
+                  width: 350,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: themeColor.withOpacity(0.3),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: FortuneWheel(
+                    animateFirst: false,
+                    selected: _selectedController.stream,
+                    items: items,
+                    onFling: null,
+                    styleStrategy: UniformStyleStrategy(
+                      color: themeColor,
+                      borderColor: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                      borderWidth: 2,
+                    ),
+                    physics: CircularPanPhysics(
+                      duration: const Duration(seconds: 3),
+                      curve: Curves.easeOutCubic,
+                    ),
+                    onAnimationEnd: () {
+                      setState(() {
+                        isSpinning = false;
+                      });
+                    },
+                    onAnimationStart: () {
+                      setState(() {
+                        isSpinning = true;
+                      });
+                    },
+                  ),
+                ),
+              const SizedBox(height: 40),
+              Container(
+                width: 200,
+                height: 50,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(25),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isDarkMode
+                        ? [
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900
+                                : Colors.red.shade900,
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade800
+                                : Colors.red.shade800,
+                          ]
+                        : [
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade500
+                                : Colors.red.shade500,
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                                : Colors.red.shade400,
+                          ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: themeColor.withOpacity(0.3),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: ElevatedButton(
+                  onPressed: (!isInitialized || hasSpunThisWeek || isSpinning) ? null : _spinWheel,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    !isInitialized
+                        ? 'Loading...'
+                        : hasSpunThisWeek 
+                            ? l10n.comeBackNextWeek
+                            : isSpinning 
+                                ? l10n.spinning
+                                : l10n.spinTheWheel,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: hasSpunThisWeek || isSpinning ? null : _spinWheel,
-              child: Text(hasSpunThisWeek 
-                ? AppLocalizations.of(context)!.comeBackNextWeek
-                : isSpinning 
-                  ? AppLocalizations.of(context)!.spinning
-                  : AppLocalizations.of(context)!.spinTheWheel),
-            ),
-          ],
+              if (hasSpunThisWeek)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Text(
+                    l10n.comeBackNextWeek,
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -167,27 +416,95 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> {
       }
     }
 
-    // Simulate spinning animation
-    Future.delayed(Duration(seconds: 3), () {
-      setState(() {
-        isSpinning = false;
-      });
+    // Calculate the number of full rotations (5) plus the selected position
+    final rotations = 5;
+    final selectedPosition = selected;
+    final totalItems = wheelItems.length;
+    final degreesPerItem = 360 / totalItems;
+    final targetRotation = (rotations * 360) + (selectedPosition * degreesPerItem);
 
+    // Animate the wheel
+    _animationController.reset();
+    _animation = Tween<double>(
+      begin: 0,
+      end: targetRotation,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _animationController.forward();
+
+    // Show result after animation
+    Future.delayed(const Duration(seconds: 3), () {
       if (wheelItems[selected]['value'] != 'Try Again') {
         _saveSpinResult(wheelItems[selected]['value']);
       }
 
+      final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final themeColor = themeNotifier.isSpecialModeActive 
+          ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+          : Colors.red.shade700;
+
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(AppLocalizations.of(context)!.congratulations),
-          content: Text(wheelItems[selected]['value'] == 'Try Again'
-              ? AppLocalizations.of(context)!.betterLuckNextTime
-              : '${AppLocalizations.of(context)!.youWonDiscount} ${wheelItems[selected]['value']}!'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+          title: Text(
+            AppLocalizations.of(context)!.congratulations,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                wheelItems[selected]['value'] == 'Try Again'
+                    ? AppLocalizations.of(context)!.betterLuckNextTime
+                    : '${AppLocalizations.of(context)!.youWonDiscount} ${wheelItems[selected]['value']}!',
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+              ),
+              if (wheelItems[selected]['value'] != 'Try Again') ...[
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    // Navigate to discount codes screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DiscountCodesScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.discount),
+                  label: const Text('View My Discounts'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ],
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('OK'),
+              child: Text(
+                'OK',
+                style: TextStyle(
+                  color: themeColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),

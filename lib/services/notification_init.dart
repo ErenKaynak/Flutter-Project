@@ -4,7 +4,7 @@ import 'notification_handler_new.dart';
 
 class NotificationInitializer {
   static const String _oneSignalAppId = 'bb5b6419-07c9-4b72-9d85-e2c121f05591';
-  static const String _oneSignalRestApiKey = 'os_v2_app_xnnwigihzffxfhmf4lasd4cvshp4lnkq7zsuoomolom6c6an5hh342rf54jd4eca3zykr2a6qbqo3cyls36fx27rzz3zh4rphqaaqty'; // Replace with your actual REST API key
+  static const String _oneSignalRestApiKey = 'os_v2_app_xnnwigihzffxfhmf4lasd4cvshp4lnkq7zsuoomolom6c6an5hh342rf54jd4eca3zykr2a6qbqo3cyls36fx27rzz3zh4rphqaaqty';
   
   static bool _isInitialized = false;
   static NotificationHandler? _handler;
@@ -18,6 +18,13 @@ class NotificationInitializer {
 
     try {
       debugPrint('Initializing notification system...');
+
+      // Skip OneSignal initialization on web platform
+      if (kIsWeb) {
+        debugPrint('Running on web platform - skipping OneSignal initialization');
+        _isInitialized = true;
+        return true;
+      }
 
       // Initialize the main notification service
       await NotificationService.initialize(
@@ -49,10 +56,7 @@ class NotificationInitializer {
 
   /// Update user ID when authentication state changes
   static Future<void> updateUserId(String? userId) async {
-    if (!_isInitialized) {
-      debugPrint('Notifications not initialized, cannot update user ID');
-      return;
-    }
+    if (!_isInitialized || kIsWeb) return;
 
     try {
       await NotificationService.updateUserId(userId);
@@ -64,10 +68,7 @@ class NotificationInitializer {
 
   /// Subscribe user to notifications
   static Future<bool> subscribeUser() async {
-    if (!_isInitialized) {
-      debugPrint('Notifications not initialized, cannot subscribe user');
-      return false;
-    }
+    if (!_isInitialized || kIsWeb) return false;
 
     try {
       final success = await NotificationService.subscribeUser();
@@ -81,10 +82,7 @@ class NotificationInitializer {
 
   /// Unsubscribe user from notifications
   static Future<bool> unsubscribeUser() async {
-    if (!_isInitialized) {
-      debugPrint('Notifications not initialized, cannot unsubscribe user');
-      return false;
-    }
+    if (!_isInitialized || kIsWeb) return false;
 
     try {
       final success = await NotificationService.unsubscribeUser();
@@ -98,9 +96,7 @@ class NotificationInitializer {
 
   /// Check if user is subscribed to notifications
   static Future<bool> isUserSubscribed() async {
-    if (!_isInitialized) {
-      return false;
-    }
+    if (!_isInitialized || kIsWeb) return false;
 
     try {
       return await NotificationService.isSubscribed();
@@ -112,10 +108,7 @@ class NotificationInitializer {
 
   /// Send test notification (admin function)
   static Future<bool> sendTestNotification() async {
-    if (!_isInitialized) {
-      debugPrint('Notifications not initialized, cannot send test notification');
-      return false;
-    }
+    if (!_isInitialized || kIsWeb) return false;
 
     try {
       return await NotificationService.sendTestNotification();
@@ -129,11 +122,11 @@ class NotificationInitializer {
   static bool get isInitialized => _isInitialized;
 
   /// Get configuration status
-  static bool get isConfigured => _isInitialized && NotificationService.isConfigured;
+  static bool get isConfigured => kIsWeb ? true : (_isInitialized && NotificationService.isConfigured);
 
   /// Add user tag for targeting
   static Future<void> addUserTag(String key, String value) async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || kIsWeb) return;
     
     try {
       await NotificationService.addTag(key, value);
@@ -145,7 +138,7 @@ class NotificationInitializer {
 
   /// Remove user tag
   static Future<void> removeUserTag(String key) async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || kIsWeb) return;
     
     try {
       await NotificationService.removeTag(key);
