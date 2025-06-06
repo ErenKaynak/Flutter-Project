@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:engineering_project/assets/components/discount_code.dart';
 import 'package:engineering_project/assets/components/discount_service.dart';
 import 'package:engineering_project/screens/discount_codes_screen.dart';
+import 'package:intl/intl.dart';
 
 class WheelOfDiscount extends StatefulWidget {
   const WheelOfDiscount({Key? key}) : super(key: key);
@@ -25,6 +26,7 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
   bool isSpinning = false;
   bool hasSpunThisWeek = false;
   bool isInitialized = false;
+  DateTime? _lastSpinDate;
   List<Map<String, dynamic>> wheelItems = [];
   List<FortuneItem> items = [];
   late AnimationController _animationController;
@@ -68,6 +70,7 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
       final difference = now.difference(lastSpin).inDays;
       
       setState(() {
+        _lastSpinDate = lastSpin;
         hasSpunThisWeek = difference < 7;
       });
     }
@@ -442,7 +445,9 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
                     !isInitialized
                         ? 'Loading...'
                         : hasSpunThisWeek 
-                            ? l10n.comeBackNextWeek
+                            ? _lastSpinDate != null
+                                ? '${l10n.comeBackNextWeek} (${DateFormat('MMM dd, yyyy').format(_lastSpinDate!.add(const Duration(days: 7)))})'
+                                : l10n.comeBackNextWeek
                             : isSpinning 
                                 ? l10n.spinning
                                 : l10n.spinTheWheel,
@@ -468,7 +473,9 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
                       ),
                     ),
                     child: Text(
-                      l10n.comeBackNextWeek,
+                      _lastSpinDate != null
+                          ? '${l10n.comeBackNextWeek} (${DateFormat('MMM dd, yyyy').format(_lastSpinDate!.add(const Duration(days: 7)))})'
+                          : l10n.comeBackNextWeek,
                       style: TextStyle(
                         color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                         fontSize: 16,
