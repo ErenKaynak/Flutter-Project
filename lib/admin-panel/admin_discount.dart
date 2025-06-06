@@ -256,7 +256,7 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
     final isDark = themeNotifier.isDarkMode;
     final themeColor = themeNotifier.isSpecialModeActive 
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : const Color(0xFFEF5350);
+        : (isDark ? Colors.red.shade900 : const Color(0xFFEF5350));
     
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],

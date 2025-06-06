@@ -184,7 +184,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     final isDark = themeNotifier.isDarkMode;
     final themeColor = themeNotifier.isSpecialModeActive 
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : Colors.red;
+        : (isDark ? Colors.red.shade900 : Colors.red);
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(

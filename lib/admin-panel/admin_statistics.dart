@@ -111,7 +111,7 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
     final isDark = themeNotifier.isDarkMode;
     final themeColor = themeNotifier.isSpecialModeActive 
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : Colors.red;
+        : (isDark ? Colors.red.shade900 : Colors.red);
 
     return Scaffold(
       appBar: AppBar(

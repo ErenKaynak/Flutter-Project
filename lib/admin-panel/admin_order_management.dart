@@ -506,7 +506,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
     final isDark = themeNotifier.isDarkMode;
     final themeColor = themeNotifier.isSpecialModeActive 
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : const Color(0xFFEF5350);
+        : (isDark ? Colors.red.shade900 : const Color(0xFFEF5350));
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,

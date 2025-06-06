@@ -591,7 +591,7 @@ class _AdminProductsState extends State<AdminProducts> {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final themeColor = themeNotifier.isSpecialModeActive 
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : Colors.red;
+        : (isDark ? Colors.red.shade900 : Colors.red);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
