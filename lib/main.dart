@@ -19,7 +19,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:engineering_project/providers/cart_provider.dart';
 import 'package:engineering_project/providers/language_provider.dart';
 import 'package:engineering_project/providers/discount_code_provider.dart';
-import 'package:engineering_project/pages/home_page.dart';
+import 'package:engineering_project/pages/Home-Page/home_page.dart';
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/services/auth_service.dart';
 import 'package:engineering_project/notification-system/services/notification_service.dart';
@@ -56,7 +56,9 @@ Future<void> loadSpecialModePreferences(ThemeNotifier themeNotifier) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: kIsWeb ? DefaultFirebaseOptions.web : DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 

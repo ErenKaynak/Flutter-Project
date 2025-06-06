@@ -2,7 +2,7 @@ import 'package:engineering_project/assets/components/discount_code.dart';
 import 'package:engineering_project/assets/components/discount_service.dart';
 import 'package:engineering_project/pages/checkout_page.dart';
 import 'package:engineering_project/pages/discount_page.dart';
-import 'package:engineering_project/pages/home_page.dart';
+import 'package:engineering_project/pages/Home-Page/home_page.dart';
 import 'package:engineering_project/pages/past_orders_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
