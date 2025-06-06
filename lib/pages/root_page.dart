@@ -298,9 +298,9 @@ class _RootScreenState extends State<RootScreen> {
         ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 3.0), // Increased horizontal padding slightly, keep vertical
-      margin: const EdgeInsets.symmetric(horizontal: 150.0, vertical: 25.0), // Adjusted horizontal margin to compensate and center
+      margin: const EdgeInsets.symmetric(horizontal: 100.0, vertical: 40.0), // Adjusted horizontal margin to compensate and center
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Distribute items evenly
+        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Distribute items evenly
         children: [
           _buildNavItem(Icons.home_outlined, 0),
           _buildNavItem(Icons.favorite_border_outlined, 1),
