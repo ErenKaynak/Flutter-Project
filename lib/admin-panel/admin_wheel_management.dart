@@ -160,7 +160,7 @@ class _WheelManagementPageState extends State<WheelManagementPage> {
       return Scaffold(
         appBar: AppBar(
           title: Text(AppLocalizations.of(context)!.wheelManagement),
-          backgroundColor: themeColor,
+          backgroundColor: isDark ? Colors.red.shade900 : themeColor,
         ),
         body: Center(child: CircularProgressIndicator()),
       );
@@ -169,7 +169,7 @@ class _WheelManagementPageState extends State<WheelManagementPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.wheelManagement),
-        backgroundColor: themeColor,
+        backgroundColor: isDark ? Colors.red.shade900 : themeColor,
         actions: [
           IconButton(
             icon: Icon(Icons.save),

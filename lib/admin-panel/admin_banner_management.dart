@@ -528,7 +528,7 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
       backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
         title: Text(l10n.bannerManagement),
-        backgroundColor: themeColor,
+        backgroundColor: isDark ? Colors.red.shade900 : themeColor,
         elevation: isDark ? 0 : 2,
       ),
       body: _isLoading
