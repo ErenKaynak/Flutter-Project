@@ -1,11 +1,10 @@
 import 'package:engineering_project/assets/components/cart_manager.dart';
 import 'package:engineering_project/pages/cart_page.dart' as CartPage;
 import 'package:engineering_project/pages/login_page.dart';
-import 'package:engineering_project/pages/notifications_page_new.dart';
+import 'package:engineering_project/pages/notifications_page.dart';
 import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:engineering_project/pages/search_page.dart';
 import 'package:engineering_project/pages/theme_notifier.dart';
-import 'package:engineering_project/pages/notifications_page.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -817,9 +816,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             : (themeNotifier.isBlackMode
                                 ? Theme.of(context).colorScheme.secondary
                                 : Colors.red),
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      constraints: BoxConstraints(minWidth: 16, minHeight: 16),
                       child: Text(
                         '${_cartManager.itemCount}',
                         style: TextStyle(
@@ -853,7 +851,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                
                                 Container(
                                   padding: EdgeInsets.all(16.0),
                                   margin: EdgeInsets.all(10.0),
@@ -954,10 +951,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 ),
                                 _buildBannerSection(),
                                 _buildCategoriesHeader(),
-                               _buildCategoriesRow(),
+                                _buildCategoriesRow(),
                                 SizedBox(height: 10),
                                 _buildProductsHeader(),
-                                
                               ],
                             ),
                           ),
@@ -1664,10 +1660,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ],
           ),
         ),
-      ));
-    }
+      ),
+    );
   }
-
+}
 
 class FavoritesPage extends StatefulWidget {
   final Function onFavoritesChanged;

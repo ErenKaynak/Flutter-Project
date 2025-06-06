@@ -9,7 +9,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../pages/theme_notifier.dart';
-import '../assets/components/notification_service.dart';
+import '../notification-system/services/notification_service.dart';
 
 class AdminNotificationManagement extends StatefulWidget {
   const AdminNotificationManagement({Key? key}) : super(key: key);

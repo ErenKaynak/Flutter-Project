@@ -4,6 +4,8 @@ import 'package:engineering_project/models/discount_code.dart';
 import 'package:engineering_project/providers/discount_code_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DiscountCodesScreen extends StatefulWidget {
   const DiscountCodesScreen({Key? key}) : super(key: key);
@@ -13,13 +15,52 @@ class DiscountCodesScreen extends StatefulWidget {
 }
 
 class _DiscountCodesScreenState extends State<DiscountCodesScreen> {
+  List<DiscountCode> _savedDiscounts = [];
+  bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();
-    // Load discount codes when screen opens
-    Future.microtask(() =>
-      context.read<DiscountCodeProvider>().loadDiscountCodes()
-    );
+    _loadSavedDiscounts();
+  }
+
+  Future<void> _loadSavedDiscounts() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('savedDiscounts')
+          .get();
+
+      setState(() {
+        _savedDiscounts = snapshot.docs.map((doc) {
+          final data = doc.data();
+          return DiscountCode(
+            id: doc.id,
+            code: data['code'] as String,
+            description: data['description'] as String,
+            value: (data['discountPercentage'] as num).toDouble(),
+            isPercent: data['isPercent'] as bool,
+            isUsed: data['isUsed'] as bool? ?? false,
+            expiryDate: (data['expiryDate'] as Timestamp).toDate(),
+            receivedAt: (data['receivedAt'] as Timestamp).toDate(),
+          );
+        }).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading saved discounts: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _copyToClipboard(String code) {
@@ -77,28 +118,6 @@ class _DiscountCodesScreenState extends State<DiscountCodesScreen> {
               ),
           ],
         ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) async {
-            if (value == 'delete') {
-              await context.read<DiscountCodeProvider>()
-                .deleteDiscountCode(discount.id);
-            } else if (value == 'markUsed') {
-              await context.read<DiscountCodeProvider>()
-                .markAsUsed(discount.id);
-            }
-          },
-          itemBuilder: (context) => [
-            if (!discount.isUsed)
-              const PopupMenuItem(
-                value: 'markUsed',
-                child: Text('Mark as used'),
-              ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Text('Delete'),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -109,27 +128,22 @@ class _DiscountCodesScreenState extends State<DiscountCodesScreen> {
       appBar: AppBar(
         title: const Text('My Discount Codes'),
       ),
-      body: Consumer<DiscountCodeProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading) {
-            return const Center(
+      body: _isLoading
+          ? const Center(
               child: CircularProgressIndicator(),
-            );
-          }
-
-          if (provider.discountCodes.isEmpty) {
-            return const Center(
-              child: Text('No discount codes available'),
-            );
-          }
-
-          return ListView.builder(
-            itemCount: provider.discountCodes.length,
-            itemBuilder: (context, index) => 
-              _buildDiscountCard(context, provider.discountCodes[index]),
-          );
-        },
-      ),
+            )
+          : _savedDiscounts.isEmpty
+              ? const Center(
+                  child: Text('No discount codes available'),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadSavedDiscounts,
+                  child: ListView.builder(
+                    itemCount: _savedDiscounts.length,
+                    itemBuilder: (context, index) => 
+                      _buildDiscountCard(context, _savedDiscounts[index]),
+                  ),
+                ),
     );
   }
 }

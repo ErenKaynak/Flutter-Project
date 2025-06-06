@@ -12,6 +12,7 @@ import 'dart:async';
 import 'package:engineering_project/pages/theme_notifier.dart';
 import 'package:provider/provider.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
 
 class CartItem {
   final String id;
@@ -415,12 +416,36 @@ class SavedDiscountCodesDialog extends StatelessWidget {
                 itemCount: savedDiscounts.length,
                 itemBuilder: (context, index) {
                   final discount = savedDiscounts[index];
+                  final isExpired = discount.expiryDate != null && 
+                                  discount.expiryDate!.isBefore(DateTime.now());
+                  
                   return ListTile(
-                    leading: Icon(Icons.discount_outlined),
-                    title: Text(discount.code),
-                    subtitle: Text('${discount.discountPercentage}% ${l10n.off}'),
+                    leading: Icon(
+                      Icons.discount_outlined,
+                      color: isExpired ? Colors.grey : Colors.amber,
+                    ),
+                    title: Text(
+                      discount.code,
+                      style: TextStyle(
+                        decoration: isExpired ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${discount.discountPercentage}% ${l10n.off}'),
+                        if (discount.expiryDate != null)
+                          Text(
+                            'Expires: ${DateFormat('MMM dd, yyyy').format(discount.expiryDate!)}',
+                            style: TextStyle(
+                              color: isExpired ? Colors.red : null,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
                     trailing: TextButton(
-                      onPressed: () {
+                      onPressed: isExpired ? null : () {
                         onDiscountSelected(discount);
                         Navigator.pop(context);
                       },
@@ -449,7 +474,7 @@ class DiscountOffersDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    
+
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -473,22 +498,6 @@ class DiscountOffersDialog extends StatelessWidget {
             ),
           ),
           const Divider(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: l10n.enterDiscountCode,
-                suffixText: l10n.apply,
-                suffixStyle: const TextStyle(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.bold,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ),
           Expanded(
             child: ListView.builder(
               shrinkWrap: true,
@@ -513,7 +522,7 @@ class DiscountOffersDialog extends StatelessWidget {
                     ),
                     title: Text(discount.name),
                     subtitle: Text(
-                      '${discount.description}\n${l10n.minOrderAmount}: ₺${discount.minOrderAmount}',
+                      '${discount.description}\n${AppLocalizations.of(context)!.minOrderAmount}: ₺${discount.minOrderAmount.toStringAsFixed(2)}',
                     ),
                     trailing: TextButton(
                       onPressed: () {
@@ -521,7 +530,7 @@ class DiscountOffersDialog extends StatelessWidget {
                         Navigator.pop(context);
                       },
                       child: Text(
-                        l10n.apply,
+                        AppLocalizations.of(context)!.apply,
                         style: const TextStyle(
                           color: Colors.blue,
                           fontWeight: FontWeight.bold,
@@ -557,6 +566,8 @@ class _CartPageState extends State<CartPage> {
   DiscountCode? _appliedDiscount;
   bool _isApplyingDiscount = false;
   String? _discountError;
+  List<DiscountCode> _savedDiscounts = [];
+  bool _isLoadingDiscounts = false;
 
   // Add helper function for price formatting
   String formatPrice(String price) {
@@ -583,6 +594,7 @@ class _CartPageState extends State<CartPage> {
   void initState() {
     super.initState();
     _checkLoginAndLoadCart();
+    _loadSavedDiscounts();
   }
 
   Future<void> _checkLoginAndLoadCart() async {
@@ -621,6 +633,76 @@ class _CartPageState extends State<CartPage> {
     super.dispose();
   }
 
+  Future<void> _loadSavedDiscounts() async {
+    setState(() {
+      _isLoadingDiscounts = true;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('savedDiscounts')
+          .get();
+
+      setState(() {
+        _savedDiscounts = snapshot.docs.map((doc) {
+          final data = doc.data();
+          return DiscountCode(
+            id: doc.id,
+            code: data['code'] as String,
+            name: data['name'] as String? ?? 'Saved Discount',
+            description: data['description'] as String? ?? 'No description',
+            discountPercentage: (data['discountPercentage'] as num? ?? 0).toDouble(),
+            minOrderAmount: (data['minOrderAmount'] as num? ?? 0).toDouble(),
+            expiryDate: data['expiryDate'] != null 
+                ? (data['expiryDate'] as Timestamp).toDate() 
+                : null,
+            applicableCategories: data['applicableCategories'] != null 
+                ? List<String>.from(data['applicableCategories']) : null,
+            usageLimit: (data['usageLimit'] as int? ?? 0),
+            usageCount: (data['usageCount'] as int? ?? 0),
+            isActive: data['isActive'] as bool? ?? true,
+            perUserLimit: (data['perUserLimit'] as int? ?? 0),
+          );
+        }).toList();
+        _isLoadingDiscounts = false;
+      });
+    } catch (e) {
+      print('Error loading saved discounts: $e');
+      setState(() {
+        _isLoadingDiscounts = false;
+      });
+    }
+  }
+
+  void _showSavedDiscounts() {
+    showDialog(
+      context: context,
+      builder: (context) => SavedDiscountCodesDialog(
+        onDiscountSelected: (discount) {
+          setState(() {
+            _appliedDiscount = discount;
+            if (discount != null) {
+              _discountCodeController.text = discount.code;
+            }
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Discount code applied: ${discount?.discountPercentage ?? 'N/A'}% off',
+              ),
+            ),
+          );
+        },
+        savedDiscounts: _savedDiscounts,
+      ),
+    );
+  }
+
   Future<void> _applyDiscountCode() async {
     final code = _discountCodeController.text.trim();
     if (code.isEmpty) {
@@ -641,6 +723,13 @@ class _CartPageState extends State<CartPage> {
       if (discount == null) {
         setState(() {
           _discountError = 'Invalid or expired discount code';
+        });
+        return;
+      }
+
+      if (_cartManager.totalPrice < discount.minOrderAmount) {
+         setState(() {
+          _discountError = 'Minimum order amount of ₺${discount.minOrderAmount.toStringAsFixed(2)} not met';
         });
         return;
       }
@@ -675,9 +764,42 @@ class _CartPageState extends State<CartPage> {
         }
       }
 
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final savedDiscountsRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('savedDiscounts')
+            .doc(discount.id);
+
+        final savedDiscountDoc = await savedDiscountsRef.get();
+        if (!savedDiscountDoc.exists) {
+          await savedDiscountsRef.set({
+            'code': discount.code,
+            'discountPercentage': discount.discountPercentage,
+            'expiryDate': discount.expiryDate != null 
+                ? Timestamp.fromDate(discount.expiryDate!) 
+                : null,
+            'isUsed': false,
+            'receivedAt': Timestamp.now(),
+            'isPercent': true,
+            'description': discount.description,
+            'minOrderAmount': discount.minOrderAmount,
+            'name': discount.name,
+            'applicableCategories': discount.applicableCategories,
+            'usageLimit': discount.usageLimit,
+            'usageCount': discount.usageCount,
+            'isActive': discount.isActive,
+            'perUserLimit': discount.perUserLimit,
+          });
+        }
+      }
+
       setState(() {
         _appliedDiscount = discount;
       });
+
+      await _loadSavedDiscounts();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -773,6 +895,15 @@ class _CartPageState extends State<CartPage> {
 
       if (_appliedDiscount != null) {
         await _discountService.applyDiscount(_appliedDiscount!.id);
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('savedDiscounts')
+              .doc(_appliedDiscount!.id)
+              .update({'isUsed': true});
+        }
       }
 
       final orderData = {
@@ -1157,49 +1288,116 @@ class _CartPageState extends State<CartPage> {
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
                   ),
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DiscountPage(
-                            onDiscountSelected: (discount) {
-                              setState(() {
-                                _appliedDiscount = discount;
-                              });
-                            },
-                            currentDiscount: _appliedDiscount,
-                            cartTotal: _cartManager.totalPrice,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DiscountPage(
+                                onDiscountSelected: (discount) {
+                                  setState(() {
+                                    _appliedDiscount = discount;
+                                    if (discount != null) {
+                                      _discountCodeController.text = discount.code;
+                                    }
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Discount code applied: ${discount?.discountPercentage ?? 'N/A'}% off',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                currentDiscount: _appliedDiscount,
+                                cartTotal: _cartManager.totalPrice,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _appliedDiscount != null
+                                      ? '${_appliedDiscount!.code} (${_appliedDiscount!.discountPercentage}% ${l10n.off})'
+                                      : l10n.discountAndPromotionCodes,
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward_ios, size: 16),
+                            ],
                           ),
                         ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Row(
+                      const SizedBox(height: 16),
+                      Text(
+                        l10n.enterDiscountCode,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.star,
-                            color: Colors.amber,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 12),
                           Expanded(
-                            child: Text(
-                              _appliedDiscount != null
-                                  ? '${_appliedDiscount!.code} (${_appliedDiscount!.discountPercentage}% ${l10n.off})'
-                                  : l10n.discountAndPromotionCodes,
-                              style: Theme.of(context).textTheme.titleMedium,
+                            child: TextField(
+                              controller: _discountCodeController,
+                              decoration: InputDecoration(
+                                hintText: l10n.enterDiscountCode,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+                              ),
+                              onSubmitted: (_) => _applyDiscountCode(),
                             ),
                           ),
-                          Icon(Icons.arrow_forward_ios, size: 16),
+                          const SizedBox(width: 8),
+                          _isApplyingDiscount
+                              ? const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                                  child: SizedBox(
+                                    height: 24,
+                                    width: 24,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                )
+                              : TextButton(
+                                  onPressed: _applyDiscountCode,
+                                  child: Text(
+                                    l10n.apply,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  ),
+                                ),
                         ],
                       ),
-                    ),
+                      if (_discountError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            _discountError!,
+                            style: TextStyle(color: Colors.red, fontSize: 12),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 Container(

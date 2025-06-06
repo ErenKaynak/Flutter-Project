@@ -84,15 +84,39 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
         final data = doc.data() as Map<String, dynamic>;
         setState(() {
           wheelItems = List<Map<String, dynamic>>.from(data['items'] ?? []);
-          items = wheelItems.map((item) => FortuneItem(
-            child: Text(
-              item['value'],
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+          items = wheelItems.asMap().entries.map((entry) {
+            int index = entry.key;
+            Map<String, dynamic> item = entry.value;
+            // Define a list of colors to cycle through
+            final List<Color> segmentColors = [
+              Colors.deepPurple.shade700,
+              Colors.amber.shade700,
+              Colors.teal.shade700,
+              Colors.red.shade700,
+              Colors.blue.shade700,
+              Colors.pink.shade700,
+              Colors.green.shade700,
+              Colors.orange.shade700,
+            ];
+            // Get color based on index, cycling through the list
+            final Color segmentColor = segmentColors[index % segmentColors.length];
+
+            return FortuneItem(
+              style: FortuneItemStyle(
+                color: segmentColor, // Assign the determined color
+                borderColor: Colors.black.withOpacity(0.4), // Keep border dark
+                borderWidth: 4, // Keep border thickness
               ),
-            ),
-          )).toList();
+              child: Text(
+                item['value'],
+                style: const TextStyle(
+                  fontSize: 18, // Keep font size
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white, // Keep text color white
+                ),
+              ),
+            );
+          }).toList();
         });
       } else {
         // Default items if no settings exist
@@ -138,14 +162,17 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
       // Extract discount percentage from the wheel result
       final discountPercentage = double.parse(discount.replaceAll('%', ''));
       
-      // Create a new discount code
+      // Create a new document reference first
+      final docRef = FirebaseFirestore.instance.collection('discountCodes').doc();
+      
+      // Create a new discount code with the generated document ID
       final discountCode = DiscountCode(
-        id: '', // Will be assigned by Firestore
+        id: docRef.id,
         code: code,
         name: 'Wheel of Fortune Discount',
-        description: 'Won from the Wheel of Fortune!',
+        description: 'Won from the Wheel of Fortune! Minimum order amount: ₺10,000',
         discountPercentage: discountPercentage,
-        minOrderAmount: 0, // No minimum order amount for wheel discounts
+        minOrderAmount: 10000, // Set minimum order amount to 10,000 TL
         expiryDate: DateTime.now().add(const Duration(days: 7)), // Valid for 7 days
         applicableCategories: null, // Applicable to all categories
         usageLimit: 1, // One-time use
@@ -158,6 +185,23 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
       final success = await discountService.createDiscountCode(discountCode);
 
       if (success) {
+        // Save to user's saved discounts collection
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('savedDiscounts')
+            .doc(docRef.id)
+            .set({
+          'code': code,
+          'discountPercentage': discountPercentage,
+          'expiryDate': Timestamp.fromDate(discountCode.expiryDate!),
+          'isUsed': false,
+          'receivedAt': Timestamp.now(),
+          'isPercent': true,
+          'description': 'Wheel of Fortune Discount - Minimum order amount: ₺10,000',
+          'minOrderAmount': 10000, // Add minimum order amount
+        });
+
         // Save last spin date
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('last_spin_date', DateTime.now().toIso8601String());
@@ -166,11 +210,11 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
           hasSpunThisWeek = true;
         });
 
-        // Show success message with the code
+        // Show success message with the code and minimum order amount
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Your discount code is: $code'),
+              content: Text('Your discount code is: $code\nMinimum order amount: ₺10,000'),
               duration: const Duration(seconds: 5),
               action: SnackBarAction(
                 label: 'Copy',
@@ -211,13 +255,13 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
     final backgroundColor = themeNotifier.isSpecialModeActive
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme).withOpacity(0.1)
         : isDarkMode
-            ? Colors.black
-            : Colors.grey[100];
+            ? const Color(0xFF1A1A1A)
+            : const Color(0xFFF5F5F5);
             
     final appBarColor = themeNotifier.isSpecialModeActive
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
         : isDarkMode
-            ? Colors.black
+            ? const Color(0xFF2C2C2C)
             : Colors.white;
             
     final outlineColor = isDarkMode
@@ -233,18 +277,25 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
       appBar: AppBar(
         backgroundColor: appBarColor,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(15)),
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(20),
+            bottomRight: Radius.circular(20),
+          ),
         ),
-        elevation: 10,
+        elevation: 15,
+        shadowColor: themeColor.withOpacity(0.5),
         title: Text(
           l10n.wheelManagement,
           style: TextStyle(
             color: isDarkMode ? Colors.white : Colors.black87,
             fontWeight: FontWeight.bold,
+            fontSize: 24,
+            letterSpacing: 1.2,
           ),
         ),
         iconTheme: IconThemeData(
           color: isDarkMode ? Colors.white : Colors.black87,
+          size: 28,
         ),
       ),
       body: Container(
@@ -256,15 +307,15 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
                 ? [
                     themeNotifier.isSpecialModeActive
                         ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900
-                        : Colors.grey[900]!,
+                        : const Color(0xFF2C2C2C),
                     themeNotifier.isSpecialModeActive
                         ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade800
-                        : Colors.grey[850]!,
+                        : const Color(0xFF1A1A1A),
                   ]
                 : [
                     themeNotifier.isSpecialModeActive
                         ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade100
-                        : Colors.grey[100]!,
+                        : const Color(0xFFF8F8F8),
                     themeNotifier.isSpecialModeActive
                         ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade50
                         : Colors.white,
@@ -279,50 +330,68 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
                 const CircularProgressIndicator()
               else
                 Container(
-                  height: 350,
-                  width: 350,
+                  height: 380,
+                  width: 380,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: themeColor.withOpacity(0.3),
+                        color: themeColor.withOpacity(0.4),
+                        blurRadius: 30,
+                        spreadRadius: 10,
+                      ),
+                      BoxShadow(
+                        color: isDarkMode ? Colors.black.withOpacity(0.3) : Colors.white.withOpacity(0.8),
                         blurRadius: 20,
-                        spreadRadius: 5,
+                        spreadRadius: -5,
                       ),
                     ],
                   ),
-                  child: FortuneWheel(
-                    animateFirst: false,
-                    selected: _selectedController.stream,
-                    items: items,
-                    onFling: null,
-                    styleStrategy: UniformStyleStrategy(
-                      color: themeColor,
-                      borderColor: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                      borderWidth: 2,
-                    ),
-                    physics: CircularPanPhysics(
-                      duration: const Duration(seconds: 3),
-                      curve: Curves.easeOutCubic,
-                    ),
-                    onAnimationEnd: () {
-                      setState(() {
-                        isSpinning = false;
-                      });
-                    },
-                    onAnimationStart: () {
-                      setState(() {
-                        isSpinning = true;
-                      });
-                    },
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              themeColor.withOpacity(0.2),
+                              themeColor.withOpacity(0.1),
+                              Colors.transparent,
+                            ],
+                            stops: const [0.0, 0.5, 1.0],
+                          ),
+                        ),
+                      ),
+                      FortuneWheel(
+                        animateFirst: false,
+                        selected: _selectedController.stream,
+                        items: items,
+                        onFling: null,
+                        physics: CircularPanPhysics(
+                          duration: const Duration(seconds: 3),
+                          curve: Curves.easeOutCubic,
+                        ),
+                        onAnimationEnd: () {
+                          setState(() {
+                            isSpinning = false;
+                          });
+                        },
+                        onAnimationStart: () {
+                          setState(() {
+                            isSpinning = true;
+                          });
+                        },
+                      ),
+                    ],
                   ),
                 ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 50),
               Container(
-                width: 200,
-                height: 50,
+                width: 220,
+                height: 60,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(30),
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -346,9 +415,14 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: themeColor.withOpacity(0.3),
+                      color: themeColor.withOpacity(0.4),
+                      blurRadius: 15,
+                      spreadRadius: 3,
+                    ),
+                    BoxShadow(
+                      color: isDarkMode ? Colors.black.withOpacity(0.2) : Colors.white.withOpacity(0.8),
                       blurRadius: 10,
-                      spreadRadius: 2,
+                      spreadRadius: -2,
                     ),
                   ],
                 ),
@@ -358,9 +432,10 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
                     backgroundColor: Colors.transparent,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
+                      borderRadius: BorderRadius.circular(30),
                     ),
                     elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                   ),
                   child: Text(
                     !isInitialized
@@ -371,20 +446,33 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
                                 ? l10n.spinning
                                 : l10n.spinTheWheel,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
                     ),
                   ),
                 ),
               ),
               if (hasSpunThisWeek)
                 Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: Text(
-                    l10n.comeBackNextWeek,
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                      fontSize: 14,
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? Colors.grey[800]?.withOpacity(0.5) : Colors.grey[200]?.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(
+                        color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      l10n.comeBackNextWeek,
+                      style: TextStyle(
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),
@@ -423,17 +511,8 @@ class _WheelOfDiscountState extends State<WheelOfDiscount> with SingleTickerProv
     final degreesPerItem = 360 / totalItems;
     final targetRotation = (rotations * 360) + (selectedPosition * degreesPerItem);
 
-    // Animate the wheel
-    _animationController.reset();
-    _animation = Tween<double>(
-      begin: 0,
-      end: targetRotation,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
-
-    _animationController.forward();
+    // Update the selected item stream to trigger the animation
+    _selectedController.add(selected);
 
     // Show result after animation
     Future.delayed(const Duration(seconds: 3), () {

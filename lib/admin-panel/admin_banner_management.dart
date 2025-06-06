@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:async';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../pages/theme_notifier.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -22,6 +24,8 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
   List<Map<String, dynamic>> banners = [];
   bool _isLoading = true;
   XFile? _webImageFile;
+  File? _imageFile;
+  final String clientId = '025f0e0a98cb8a7';
 
   // Available theme colors for banners
   final List<String> themeColors = ['default', 'red', 'purple', 'blue', 'green', 'pink'];
@@ -109,7 +113,53 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
       });
       _showBannerDialog(webImageFile: image);
     } else {
-      _showBannerDialog(imageFile: File(image.path));
+      setState(() {
+        _imageFile = File(image.path);
+      });
+      _showBannerDialog(imageFile: _imageFile);
+    }
+  }
+
+  Future<String?> _uploadImageToImgur(File? imageFile, XFile? webImageFile) async {
+    try {
+      final bytes = kIsWeb ? await webImageFile!.readAsBytes() : await imageFile!.readAsBytes();
+      
+      if (bytes.length > 10 * 1024 * 1024) {
+        throw Exception('Image size exceeds 10MB limit');
+      }
+
+      final base64Image = base64Encode(bytes);
+
+      var request = http.MultipartRequest('POST', Uri.parse('https://api.imgur.com/3/image'));
+      
+      request.headers.addAll({
+        'Authorization': 'Client-ID $clientId',
+      });
+
+      request.fields['image'] = base64Image;
+      request.fields['type'] = 'base64';
+
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('Upload request timed out');
+        },
+      );
+
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['success'] == true) {
+          return responseData['data']['link'];
+        }
+        throw Exception(responseData['data']['error'] ?? 'Unknown error occurred');
+      }
+
+      throw Exception('Upload failed with status code: ${response.statusCode}');
+    } catch (e) {
+      print('Error uploading image: $e');
+      rethrow;
     }
   }
 
@@ -297,26 +347,10 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
 
       // Upload new image if provided
       if (imageFile != null || webImageFile != null) {
-        final String fileName = 'banner_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final Reference storageRef = FirebaseStorage.instance
-            .ref()
-            .child('banners')
-            .child(fileName);
-
-        UploadTask uploadTask;
-        if (kIsWeb && webImageFile != null) {
-          // Handle web platform
-          final bytes = await webImageFile.readAsBytes();
-          uploadTask = storageRef.putData(bytes);
-        } else if (imageFile != null) {
-          // Handle mobile platforms
-          uploadTask = storageRef.putFile(imageFile);
-        } else {
-          throw Exception('No image file provided');
+        imageUrl = await _uploadImageToImgur(imageFile, webImageFile) ?? '';
+        if (imageUrl.isEmpty) {
+          throw Exception('Failed to upload image');
         }
-
-        final TaskSnapshot snapshot = await uploadTask;
-        imageUrl = await snapshot.ref.getDownloadURL();
       }
 
       final Map<String, dynamic> bannerData = {
@@ -374,6 +408,7 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
       setState(() {
         _isUploading = false;
         _webImageFile = null;
+        _imageFile = null;
       });
     }
   }
@@ -405,16 +440,6 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
     try {
       // Delete from Firestore
       await FirebaseFirestore.instance.collection('banners').doc(bannerId).delete();
-
-      // Delete image from Storage
-      if (imageUrl.isNotEmpty) {
-        try {
-          final Reference imageRef = FirebaseStorage.instance.refFromURL(imageUrl);
-          await imageRef.delete();
-        } catch (e) {
-          print('Error deleting image from storage: $e');
-        }
-      }
 
       await _loadBanners();
       

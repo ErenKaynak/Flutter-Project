@@ -1,73 +1,88 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
+import '../notification-system/models/notification_model.dart';
 
 class NotificationHandler {
-  final _firestore = FirebaseFirestore.instance;
-  final _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Future<void> initialize() async {
-    // Initialize OneSignal
-    OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
-
-    OneSignal.initialize('bb5b6419-07c9-4b72-9d85-e2c121f05591'); // Replace with your OneSignal App ID
-    
-    // Request permission
-    await OneSignal.Notifications.requestPermission(true);
-
-    // Set notification handlers
-    OneSignal.Notifications.addClickListener((event) {
-      final notification = event.notification;
-      final data = notification.additionalData;
-      
-      if (data?['type'] == 'discount') {
-        final discountId = data?['discountId'] as String?;
-        if (discountId != null) {
-          saveDiscountCode(discountId);
-        }
-      }
-    });
-
-    // Listen for new discount notifications in Firestore for backup
-    _firestore
-        .collection('notifications')
-        .where('type', isEqualTo: 'discount')
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .listen(_handleNewNotification);
-  }
-
-  void _handleNewNotification(QuerySnapshot snapshot) {
-    for (var change in snapshot.docChanges) {
-      if (change.type == DocumentChangeType.added) {
-        // Notifications are now handled by OneSignal
-        // This is kept for backup and history tracking
-      }
-    }
-  }
-
+  // Save a discount code from a notification
   Future<void> saveDiscountCode(String notificationId) async {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    final notificationDoc = await _firestore
-        .collection('notifications')
-        .doc(notificationId)
-        .get();
-    
-    if (!notificationDoc.exists) return;
+    try {
+      // Get the notification
+      final notificationDoc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('notifications')
+          .doc(notificationId)
+          .get();
 
-    final data = notificationDoc.data()!;
-    
-    await _firestore
+      if (!notificationDoc.exists) return;
+
+      final notification = NotificationModel.fromFirestore(notificationDoc);
+
+      // Save the discount code to user's saved discounts
+      if (notification.discountCode != null && notification.discountPercentage != null) {
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('saved_discounts')
+            .doc(notification.discountId ?? notification.discountCode)
+            .set({
+          'code': notification.discountCode,
+          'percentage': notification.discountPercentage,
+          'savedAt': FieldValue.serverTimestamp(),
+          'notificationId': notificationId,
+        });
+      }
+    } catch (e) {
+      print('Error saving discount code: $e');
+      rethrow;
+    }
+  }
+
+  // Get user's saved discount codes
+  Stream<List<Map<String, dynamic>>> getSavedDiscountCodes() {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value([]);
+
+    return _firestore
         .collection('users')
         .doc(user.uid)
-        .collection('savedDiscounts')
-        .doc(data['discountId'] as String)
-        .set({
-          'savedAt': FieldValue.serverTimestamp(),
-          'expiryDate': data['expiryDate'],
-          'used': false,
-        });
+        .collection('saved_discounts')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'id': doc.id,
+          'code': data['code'] as String,
+          'percentage': data['percentage'] as double,
+          'savedAt': (data['savedAt'] as Timestamp).toDate(),
+          'notificationId': data['notificationId'] as String,
+        };
+      }).toList();
+    });
   }
-}
+
+  // Delete a saved discount code
+  Future<void> deleteSavedDiscountCode(String discountId) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('saved_discounts')
+          .doc(discountId)
+          .delete();
+    } catch (e) {
+      print('Error deleting saved discount code: $e');
+      rethrow;
+    }
+  }
+} 

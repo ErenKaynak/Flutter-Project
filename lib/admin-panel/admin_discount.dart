@@ -1,10 +1,11 @@
 import 'package:engineering_project/assets/components/discount_code.dart';
 import 'package:engineering_project/assets/components/discount_service.dart';
-import 'package:engineering_project/services/notification_service.dart';
+import 'package:engineering_project/notification-system/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:engineering_project/notification-system/models/notification_model.dart';
 
 class DiscountAdminPage extends StatefulWidget {
   const DiscountAdminPage({Key? key}) : super(key: key);
@@ -610,6 +611,10 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
                     final percentage = double.parse(value);
                     if (percentage <= 0 || percentage >= 100) {
                       return 'Enter a value between 1 and 99';
+                    }
+                    // Ensure the value is positive
+                    if (percentage < 0) {
+                      return 'Discount percentage cannot be negative';
                     }
                   } catch (e) {
                     return 'Enter a valid number';
@@ -1245,16 +1250,15 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
 
   Future<void> _sendDiscountNotification(DiscountCode code) async {
     try {
-      final notificationService = NotificationService();
-      final success = await notificationService.sendDiscountNotification(
-        title: 'New Discount Available!',
-        message: 'Use code ${code.code} to get ${code.discountPercentage}% off',
+      final success = await NotificationService.sendDiscountNotification(
+        title: 'Special Discount!',
+        message: 'Use code ${code.code} to get ${code.discountPercentage}% off!',
         discountCode: code.code,
         discountPercentage: code.discountPercentage,
-        discountId: code.id,
         expiryDate: code.expiryDate,
+        discountId: code.id,
       );
-      
+
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Discount notification sent!')),
