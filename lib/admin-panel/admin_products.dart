@@ -1,10 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math' as Math;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:engineering_project/assets/AI/local_ai_config.dart';
 import 'package:engineering_project/assets/AI/local_ai_service.dart';
+import 'package:provider/provider.dart';
+import '../pages/theme_notifier.dart';
 import 'dart:io';
 import 'dart:async';  // Add this import for TimeoutException
 
@@ -586,17 +588,22 @@ class _AdminProductsState extends State<AdminProducts> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: themeColor,
         title: const Text('Manage Products', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: isDark ? 0 : 2,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showProductDialog(),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: themeColor,
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: Column(
@@ -608,8 +615,8 @@ class _AdminProductsState extends State<AdminProducts> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: isDark
-                    ? [Colors.red.shade900, Colors.grey.shade900]
-                    : [Colors.red.shade300, Colors.white],
+                    ? [themeColor, Colors.grey.shade900]
+                    : [themeColor.withOpacity(0.3), Colors.white],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -629,7 +636,7 @@ class _AdminProductsState extends State<AdminProducts> {
                 Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.red.shade900 : Colors.red.shade300,
+                    color: isDark ? themeColor : themeColor.withOpacity(0.3),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -705,7 +712,7 @@ class _AdminProductsState extends State<AdminProducts> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: Theme.of(context).primaryColor,
+                    color: themeColor,
                     width: 2,
                   ),
                 ),
@@ -735,11 +742,11 @@ class _AdminProductsState extends State<AdminProducts> {
                       });
                     },
                     backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-                    selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
-                    checkmarkColor: Theme.of(context).primaryColor,
+                    selectedColor: themeColor.withOpacity(0.2),
+                    checkmarkColor: themeColor,
                     labelStyle: TextStyle(
                       color: isSelected
-                          ? Theme.of(context).primaryColor
+                          ? themeColor
                           : Theme.of(context).textTheme.bodyMedium?.color,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
@@ -747,7 +754,7 @@ class _AdminProductsState extends State<AdminProducts> {
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
                         color: isSelected
-                            ? Theme.of(context).primaryColor
+                            ? themeColor
                             : Colors.transparent,
                       ),
                     ),
@@ -850,7 +857,7 @@ class _AdminProductsState extends State<AdminProducts> {
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: ExpansionTile(
                         collapsedIconColor: Theme.of(context).iconTheme.color,
-                        iconColor: Theme.of(context).primaryColor,
+                        iconColor: themeColor,
                         leading: imagePath.isNotEmpty
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
@@ -870,7 +877,7 @@ class _AdminProductsState extends State<AdminProducts> {
                               )
                             : Icon(
                                 Icons.inventory_2,
-                                color: Theme.of(context).primaryColor,
+                                color: themeColor,
                                 size: 40,
                               ),
                         title: Text(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../pages/theme_notifier.dart';
 
 class AdminStatisticsPage extends StatefulWidget {
   const AdminStatisticsPage({Key? key}) : super(key: key);
@@ -105,15 +107,25 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Statistics'),
-        backgroundColor: Colors.red[700],
+        backgroundColor: themeColor,
+        elevation: isDark ? 0 : 2,
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(
+              color: themeColor,
+            ))
           : RefreshIndicator(
               onRefresh: fetchStatistics,
+              color: themeColor,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
@@ -131,6 +143,11 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
   }
 
   Widget _buildTimeFrameSelector() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: timeFrames.map((frame) {
@@ -146,7 +163,7 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
                 fetchStatistics();
               }
             },
-            selectedColor: Colors.red[700],
+            selectedColor: themeColor,
             labelStyle: TextStyle(
               color: isSelected ? Colors.white : Colors.black,
             ),
@@ -157,6 +174,11 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
   }
 
   Widget _buildStatisticsCards() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
+
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -166,39 +188,48 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
       children: [
         _buildStatCard(
           'Total Revenue',
-          '₺${totalRevenue.toStringAsFixed(2)}',
+          '₺${NumberFormat('#,##0.00', 'tr_TR').format(totalRevenue)}',
           Icons.monetization_on,
-          Colors.green,
+          themeColor,
         ),
         _buildStatCard(
           'Products Sold',
-          totalProducts.toString(),
+          NumberFormat('#,##0', 'tr_TR').format(totalProducts),
           Icons.inventory,
-          Colors.blue,
+          themeColor,
         ),
         _buildStatCard(
           'Total Users',
-          totalUsers.toString(),
+          NumberFormat('#,##0', 'tr_TR').format(totalUsers),
           Icons.people,
-          Colors.orange,
+          themeColor,
         ),
         _buildStatCard(
           'Total Orders',
-          totalOrders.toString(),
+          NumberFormat('#,##0', 'tr_TR').format(totalOrders),
           Icons.shopping_cart,
-          Colors.purple,
+          themeColor,
         ),
       ],
     );
   }
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: isDark ? Colors.grey[900] : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -217,7 +248,7 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
           Text(
             title,
             style: TextStyle(
-              color: color,
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
               fontWeight: FontWeight.w500,
             ),
           ),

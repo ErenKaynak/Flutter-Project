@@ -7,6 +7,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'package:engineering_project/models/order_models.dart';
+import 'package:provider/provider.dart';
+import '../pages/theme_notifier.dart';
 
 class OrderManagementPage extends StatefulWidget {
   const OrderManagementPage({Key? key}) : super(key: key);
@@ -227,29 +229,34 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
   }
 
   void _updateTrackingNumber(String orderId, String currentTracking) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : const Color(0xFFEF5350);
+    
     TextEditingController trackingController = TextEditingController(text: currentTracking);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: Theme.of(context).dialogBackgroundColor,
+          backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           title: Text(
             'Update Tracking Number',
-            style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
           ),
           content: TextField(
             controller: trackingController,
-            style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
             decoration: InputDecoration(
               hintText: 'Enter tracking number',
-              hintStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+              hintStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
               enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+                borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
               ),
               focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                borderSide: BorderSide(color: themeColor),
               ),
             ),
           ),
@@ -296,18 +303,24 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                   
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Tracking number updated')),
+                    SnackBar(
+                      content: const Text('Tracking number updated'),
+                      backgroundColor: themeColor,
+                    ),
                   );
                 } catch (e) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to update tracking number: $e')),
+                    SnackBar(
+                      content: Text('Failed to update tracking number: $e'),
+                      backgroundColor: Colors.red,
+                    ),
                   );
                 }
               },
               child: Text(
                 'UPDATE',
-                style: TextStyle(color: Theme.of(context).primaryColor),
+                style: TextStyle(color: themeColor),
               ),
             ),
           ],
@@ -489,12 +502,16 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : const Color(0xFFEF5350);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: themeColor,
         title: Text(
           'Order Management',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -518,8 +535,8 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: isDark
-                    ? [Colors.red.shade900, Colors.grey.shade900]
-                    : [Colors.red.shade300, Colors.white],
+                    ? [themeColor, Colors.grey.shade900]
+                    : [themeColor.withOpacity(0.3), Colors.white],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -545,7 +562,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                     Container(
                       padding: EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.red.shade900 : Colors.red.shade300,
+                        color: isDark ? themeColor : themeColor.withOpacity(0.3),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -1059,19 +1076,24 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
   }
 
   Widget _buildCustomerInfo(Map<String, dynamic> data) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : const Color(0xFFEF5350);
+    
     final customerName = data['customerName'] ?? 'N/A';
     final customerEmail = data['customerEmail'] ?? 'N/A';
     final customerPhone = data['customerPhone'] ?? 'N/A';
     final shippingAddress = data['shippingAddress'] ?? 'No address provided';
 
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.grey.shade900.withOpacity(0.3) : Colors.grey.shade50,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+          color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
         ),
       ),
       child: Column(
@@ -1082,69 +1104,69 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Theme.of(context).textTheme.titleMedium?.color,
+              color: isDark ? Colors.white : Colors.black87,
             ),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           
           // Customer Details
           Row(
             children: [
               Icon(Icons.person_outline, 
                 size: 20,
-                color: Theme.of(context).iconTheme.color,
+                color: themeColor,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   customerName,
                   style: TextStyle(
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           
           // Email
           Row(
             children: [
               Icon(Icons.email_outlined,
                 size: 20,
-                color: Theme.of(context).iconTheme.color,
+                color: themeColor,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   customerEmail,
                   style: TextStyle(
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           
           // Phone
           Row(
             children: [
               Icon(Icons.phone_outlined,
                 size: 20,
-                color: Theme.of(context).iconTheme.color,
+                color: themeColor,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 customerPhone,
                 style: TextStyle(
-                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
             ],
           ),
           
-          Divider(height: 24),
+          const Divider(height: 24),
           
           // Shipping Address
           Text(
@@ -1152,23 +1174,23 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Theme.of(context).textTheme.titleMedium?.color,
+              color: isDark ? Colors.white : Colors.black87,
             ),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(Icons.location_on_outlined,
                 size: 20,
-                color: Theme.of(context).iconTheme.color,
+                color: themeColor,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   shippingAddress,
                   style: TextStyle(
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
               ),
@@ -1251,7 +1273,11 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
     required String label,
     required Color color,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : const Color(0xFFEF5350);
     
     return InkWell(
       onTap: () {
@@ -1264,18 +1290,18 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
       },
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: _selectedFilter == label.replaceAll(' Orders', '') || 
                  (label == 'Refund Requests' && _selectedFilter == 'Refund Requested')
-              ? color.withOpacity(0.1)
+              ? themeColor.withOpacity(0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           children: [
             Container(
-              padding: EdgeInsets.all(8),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 shape: BoxShape.circle,
@@ -1286,7 +1312,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                 size: 24,
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               count.toString(),
               style: TextStyle(
@@ -1299,7 +1325,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: isDark ? Colors.grey[400] : Colors.black54,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
               ),
             ),
           ],
