@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'cart_page.dart';
 import 'profile_page.dart';
 import 'search_page.dart' as FavoritesPage;
-import 'home_page.dart' as HomePage;
+import 'Home-Page/home_page.dart' as HomePage;
 import 'package:engineering_project/assets/components/auth_service.dart';
 import 'theme_notifier.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
