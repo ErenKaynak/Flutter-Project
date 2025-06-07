@@ -448,8 +448,8 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
               style: const TextStyle(color: Colors.white),
             ),
             backgroundColor: isDark 
-                ? Colors.black
-                : Colors.red.shade700,
+                ? themeColor.shade900
+                : themeColor.shade700,
             foregroundColor: Colors.white,
             elevation: 0,
           ),
