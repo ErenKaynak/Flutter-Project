@@ -16,8 +16,14 @@ import 'package:engineering_project/pages/Home-Page/widgets/banner_section.dart'
 import 'package:engineering_project/pages/Home-Page/widgets/categories_section.dart';
 import 'package:engineering_project/pages/Home-Page/widgets/product_grid.dart';
 import 'dart:async';
+import 'package:flutter/rendering.dart';
 
 class HomePage extends StatefulWidget {
+  // Callback for scroll events to notify parent
+  final ValueChanged<ScrollDirection>? onScroll;
+
+  const HomePage({Key? key, this.onScroll}) : super(key: key);
+
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -615,6 +621,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             borderRadius: BorderRadius.all(Radius.circular(15)),
           ),
           elevation: 10,
+          leading: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Image.asset(
+              themeNotifier.isSpecialModeActive
+                  ? 'lib/assets/Images/app-icon-light-${themeNotifier.specialTheme.toString().split('.').last}.png'
+                  : 'lib/assets/Images/app-icon-light.png',
+              fit: BoxFit.contain,
+            ),
+          ),
           title: Container(
             height: 40,
             child: TextField(
