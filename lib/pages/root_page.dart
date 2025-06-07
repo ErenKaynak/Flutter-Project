@@ -8,6 +8,7 @@ import 'Home-Page/home_page.dart' as HomePage;
 import 'package:engineering_project/assets/components/auth_service.dart';
 import 'theme_notifier.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:flutter/rendering.dart';
 
 // Import or create an admin page
 class AdminPage extends StatefulWidget {
@@ -194,6 +195,18 @@ class _RootScreenState extends State<RootScreen> {
   bool isLoading = true;
   bool _mounted = true;
 
+  // State variable to control if the bottom nav bar is collapsed
+  bool _isNavBarCollapsed = false;
+
+  // List of icons for the navigation bar items
+  final List<IconData> _navIcons = [
+    Icons.home_outlined,       // Home
+    Icons.favorite_border_outlined, // Favorites
+    Icons.shopping_bag_outlined,  // Cart
+    Icons.person_outline_rounded, // Profile
+    Icons.admin_panel_settings_outlined, // Admin (add if applicable)
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -266,29 +279,57 @@ class _RootScreenState extends State<RootScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          PageView(
-            controller: controller,
-            physics: const NeverScrollableScrollPhysics(),
-            children: screens,
+          NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is UserScrollNotification) {
+                final direction = notification.direction;
+                // Handle scroll direction for collapse/expand animation
+                if (direction == ScrollDirection.reverse && !_isNavBarCollapsed) { // Scroll up to collapse
+                  setState(() {
+                    _isNavBarCollapsed = true;
+                  });
+                } else if (direction == ScrollDirection.forward && _isNavBarCollapsed) { // Scroll down to expand
+                  setState(() {
+                    _isNavBarCollapsed = false;
+                  });
+                }
+              }
+              // Continue to bubble the notification up the tree
+              return false;
+            },
+            child: PageView(
+              controller: controller,
+              physics: const NeverScrollableScrollPhysics(),
+              children: screens,
+            ),
           ),
           Align(
             alignment: Alignment.bottomCenter,
-            child: _buildCustomBottomNavBar(),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeInOut,
+              width: _isNavBarCollapsed ? 50.0 : 500,
+              height: kBottomNavigationBarHeight,
+              alignment: _isNavBarCollapsed ? Alignment.bottomLeft : Alignment.bottomCenter,
+              margin: _isNavBarCollapsed 
+                  ? const EdgeInsets.only(right: 300, bottom: 30)
+                  : const EdgeInsets.symmetric(horizontal: 100.0, vertical: 30.0),
+              child: _buildCustomBottomNavBar(_isNavBarCollapsed, currentScreen),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCustomBottomNavBar() {
+  Widget _buildCustomBottomNavBar(bool isCollapsed, int selectedIndex) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     
     return Container(
-      // Main container for the floating bar
       decoration: BoxDecoration(
-        color: isDark ? Colors.black.withOpacity(0.9) : Colors.white.withOpacity(0.9), // Consistent black/white background based on dark mode
-        borderRadius: BorderRadius.circular(30.0), // Adjusted rounded corners
+        color: isDark ? Colors.black.withOpacity(0.9) : Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(30.0),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(isDark ? 0.4 : 0.1),
@@ -297,21 +338,40 @@ class _RootScreenState extends State<RootScreen> {
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 3.0), // Increased horizontal padding slightly, keep vertical
-      margin: const EdgeInsets.symmetric(horizontal: 100.0, vertical: 40.0), // Adjusted horizontal margin to compensate and center
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Distribute items evenly
-        children: [
-          _buildNavItem(Icons.home_outlined, 0),
-          _buildNavItem(Icons.favorite_border_outlined, 1),
-          _buildNavItem(Icons.shopping_bag_outlined, 2),
-          _buildNavItem(Icons.person_outline_rounded, 3),
-        ],
+      padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 3.0),
+      child: AnimatedCrossFade(
+        duration: const Duration(milliseconds: 400),
+        crossFadeState: isCollapsed ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+        firstChild: InkWell(
+          onTap: () {
+            if (_isNavBarCollapsed) {
+              setState(() {
+                _isNavBarCollapsed = false;
+              });
+            }
+          },
+          borderRadius: BorderRadius.circular(30.0),
+          child: SizedBox(
+            width: 50.0,
+            child: Center(
+              child: _buildNavItem(_navIcons[selectedIndex], selectedIndex, isCollapsed),
+            ),
+          ),
+        ),
+        secondChild: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildNavItem(_navIcons[0], 0, isCollapsed),
+            _buildNavItem(_navIcons[1], 1, isCollapsed),
+            _buildNavItem(_navIcons[2], 2, isCollapsed),
+            _buildNavItem(_navIcons[3], 3, isCollapsed),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildNavItem(IconData icon, int index) {
+  Widget _buildNavItem(IconData icon, int index, bool isCollapsed) {
     final isSelected = currentScreen == index;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
@@ -323,16 +383,18 @@ class _RootScreenState extends State<RootScreen> {
         });
         controller.jumpToPage(index);
       },
-      borderRadius: BorderRadius.circular(35.0), // More rounded effect for the tappable area
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0), // Reduced horizontal padding within each item
+      borderRadius: BorderRadius.circular(5.0),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        padding: isCollapsed && !isSelected ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
         decoration: BoxDecoration(
           color: isSelected 
               ? (themeNotifier.isSpecialModeActive 
                   ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade600.withOpacity(0.9)
                   : Colors.red.withOpacity(0.9))
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(30.0), // More rounded background for selected item
+          borderRadius: BorderRadius.circular(30.0),
         ),
         child: Icon(
           icon,
@@ -340,11 +402,24 @@ class _RootScreenState extends State<RootScreen> {
               ? Colors.white 
               : (themeNotifier.isSpecialModeActive 
                   ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade200 
-                  : Theme.of(context).colorScheme.onSurface), // Use theme onSurface color for icon
-          size: 22,
+                  : Theme.of(context).colorScheme.onSurface),
+          size: 20,
         ),
       ),
     );
+  }
+
+  // Method to handle scroll direction changes from HomePage
+  void _handleScroll(ScrollDirection direction) {
+    if (direction == ScrollDirection.reverse && !_isNavBarCollapsed) { // Scroll up to collapse
+      setState(() {
+        _isNavBarCollapsed = true;
+      });
+    } else if (direction == ScrollDirection.forward && _isNavBarCollapsed) { // Scroll down to expand
+      setState(() {
+        _isNavBarCollapsed = false;
+      });
+    }
   }
 }
 
