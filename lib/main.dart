@@ -77,8 +77,8 @@ class MyApp extends StatelessWidget {
           initialData: null,
         ),
       ],
-      child: Consumer<ThemeNotifier>(
-        builder: (context, themeNotifier, child) {
+      child: Consumer2<ThemeNotifier, LanguageProvider>(
+        builder: (context, themeNotifier, languageProvider, child) {
           return MaterialApp(
             title: 'Engineering Project',
             debugShowCheckedModeBanner: false,
@@ -91,6 +91,7 @@ class MyApp extends StatelessWidget {
               brightness: Brightness.dark,
             ),
             themeMode: themeNotifier.themeMode,
+            locale: languageProvider.currentLocale,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const AuthWrapper(),

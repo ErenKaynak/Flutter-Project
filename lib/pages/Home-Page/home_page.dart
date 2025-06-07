@@ -57,6 +57,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   StreamSubscription<QuerySnapshot>? _categoriesSubscription;
 
+  // Add new variables for layout configuration
+  List<Map<String, dynamic>> _layoutComponents = [];
+  bool _isLayoutLoading = true;
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +68,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _cartManager.addListener(_updateUI);
     _getUserProfile();
     _setupCategoriesListener();
+    _loadLayoutConfiguration();
     
     Future.microtask(() {
       if (mounted) {
@@ -606,6 +611,186 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
+  Future<void> _loadLayoutConfiguration() async {
+    try {
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('layout_configuration')
+          .doc('homepage')
+          .get();
+
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data() as Map<String, dynamic>;
+        final List<dynamic> savedComponents = data['components'] ?? [];
+        
+        if (savedComponents.isNotEmpty) {
+          setState(() {
+            _layoutComponents = savedComponents.map((component) => Map<String, dynamic>.from(component)).toList();
+            _layoutComponents.sort((a, b) => (a['order'] as int).compareTo(b['order'] as int));
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading layout configuration: $e');
+    } finally {
+      setState(() {
+        _isLayoutLoading = false;
+      });
+    }
+  }
+
+  Widget _buildComponent(String componentId, {
+    required bool isDark,
+    required ThemeNotifier themeNotifier,
+    required Color? specialColor,
+  }) {
+    switch (componentId) {
+      case 'welcome':
+        return Container(
+          padding: EdgeInsets.all(16.0),
+          margin: EdgeInsets.all(10.0),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: themeNotifier.isSpecialModeActive
+                  ? [
+                      specialColor ?? Colors.red,
+                      isDark
+                          ? Colors.grey.shade900
+                          : Colors.grey.shade100,
+                    ]
+                  : (themeNotifier.isBlackMode
+                      ? [
+                          Theme.of(context).colorScheme.secondary,
+                          Colors.grey.shade900,
+                        ]
+                      : (isDark
+                          ? [
+                              Colors.red.shade900,
+                              Colors.grey.shade900,
+                            ]
+                          : [
+                              Colors.red.shade500,
+                              Colors.red.shade100,
+                            ])),
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: isDark ? Colors.black26 : Colors.black12,
+                blurRadius: 5,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: themeNotifier.isSpecialModeActive
+                    ? specialColor
+                    : (isDark ? Colors.red.shade700 : Colors.red.shade300),
+                backgroundImage: _userProfilePicture != null && _userProfilePicture!.isNotEmpty
+                    ? NetworkImage(_userProfilePicture!)
+                    : null,
+                child: _userProfilePicture == null || _userProfilePicture!.isEmpty
+                    ? Icon(Icons.person, size: 36, color: Colors.white)
+                    : null,
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)!.welcome,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: isDark ? Colors.grey[400] : Colors.black54,
+                      ),
+                    ),
+                    Text(
+                      _userName,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      case 'banner':
+        return BannerSection(
+          banners: _banners,
+          isLoading: _isBannersLoading,
+          onPageChanged: (index, reason) {
+            if (mounted) {
+              setState(() {
+                _currentBannerIndex = index;
+              });
+            }
+          },
+        );
+      case 'categories':
+        return CategoriesSection(
+          categories: categories,
+          selectedCategory: _selectedCategory,
+          onCategorySelected: _selectCategory,
+        );
+      case 'mostViewed':
+        return MostViewedSection(
+          onProductTap: _navigateToProductDetail,
+          onAddToCart: _addToCart,
+          onToggleFavorite: toggleFavorite,
+          favoriteProductIds: favoriteProductIds,
+          animationControllers: _animationControllers,
+          isAddingToCartMap: _isAddingToCartMap,
+          vsync: this,
+          selectedCategory: _selectedCategory,
+        );
+      case 'bestDeals':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: EdgeInsets.all(10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _selectedCategory == "All"
+                        ? AppLocalizations.of(context)!.bestDeals
+                        : _selectedCategory,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    AppLocalizations.of(context)!.products(filteredProducts.length),
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+            ProductGrid(
+              products: filteredProducts,
+              favoriteProductIds: favoriteProductIds,
+              animationControllers: _animationControllers,
+              isAddingToCartMap: _isAddingToCartMap,
+              onAddToCart: _addToCart,
+              onToggleFavorite: toggleFavorite,
+              onProductTap: _navigateToProductDetail,
+              vsync: this,
+            ),
+          ],
+        );
+      default:
+        return SizedBox.shrink();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -786,7 +971,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             SizedBox(width: 20),
           ],
         ),
-        body: _isLoading
+        body: _isLoading || _isLayoutLoading
             ? Center(child: CircularProgressIndicator())
             : RefreshIndicator(
                 onRefresh: _loadInitialData,
@@ -828,161 +1013,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           SliverToBoxAdapter(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(16.0),
-                                  margin: EdgeInsets.all(10.0),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: themeNotifier.isSpecialModeActive
-                                          ? [
-                                              specialColor ?? Colors.red,
-                                              isDark
-                                                  ? Colors.grey.shade900
-                                                  : Colors.grey.shade100,
-                                            ]
-                                          : (themeNotifier.isBlackMode
-                                              ? [
-                                                  Theme.of(context)
-                                                      .colorScheme
-                                                      .secondary,
-                                                  Colors.grey.shade900,
-                                                ]
-                                              : (isDark
-                                                  ? [
-                                                      Colors.red.shade900,
-                                                      Colors.grey.shade900,
-                                                    ]
-                                                  : [
-                                                      Colors.red.shade500,
-                                                      Colors.red.shade100,
-                                                    ])),
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: isDark
-                                            ? Colors.black26
-                                            : Colors.black12,
-                                        blurRadius: 5,
-                                        offset: Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 30,
-                                        backgroundColor:
-                                            themeNotifier.isSpecialModeActive
-                                                ? specialColor
-                                                : (isDark
-                                                    ? Colors.red.shade700
-                                                    : Colors.red.shade300),
-                                        backgroundImage: _userProfilePicture !=
-                                                    null &&
-                                                _userProfilePicture!.isNotEmpty
-                                            ? NetworkImage(_userProfilePicture!)
-                                            : null,
-                                        child: _userProfilePicture == null ||
-                                                _userProfilePicture!.isEmpty
-                                            ? Icon(
-                                                Icons.person,
-                                                size: 36,
-                                                color: Colors.white,
-                                              )
-                                            : null,
-                                      ),
-                                      SizedBox(width: 16),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              AppLocalizations.of(context)!
-                                                  .welcome,
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                color: isDark
-                                                    ? Colors.grey[400]
-                                                    : Colors.black54,
-                                              ),
-                                            ),
-                                            Text(
-                                              _userName,
-                                              style: TextStyle(
-                                                fontSize: 24,
-                                                fontWeight: FontWeight.bold,
-                                                color: isDark
-                                                    ? Colors.white
-                                                    : Colors.black87,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                BannerSection(
-                                  banners: _banners,
-                                  isLoading: _isBannersLoading,
-                                  onPageChanged: (index, reason) {
-                                    if (mounted) {
-                                      setState(() {
-                                        _currentBannerIndex = index;
-                                      });
-                                    }
-                                  },
-                                ),
-                                CategoriesSection(
-                                  categories: categories,
-                                  selectedCategory: _selectedCategory,
-                                  onCategorySelected: _selectCategory,
-                                ),
-                                MostViewedSection(
-                                  onProductTap: _navigateToProductDetail,
-                                  onAddToCart: _addToCart,
-                                  onToggleFavorite: toggleFavorite,
-                                  favoriteProductIds: favoriteProductIds,
-                                  animationControllers: _animationControllers,
-                                  isAddingToCartMap: _isAddingToCartMap,
-                                  vsync: this,
-                                  selectedCategory: _selectedCategory,
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.all(10),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        _selectedCategory == "All"
-                                            ? AppLocalizations.of(context)!.bestDeals
-                                            : _selectedCategory,
-                                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                      ),
-                                      Text(
-                                        AppLocalizations.of(context)!.products(filteredProducts.length),
-                                        style: TextStyle(color: Colors.grey[600]),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                              children: _layoutComponents
+                                  .where((component) => component['enabled'] == true)
+                                  .map((component) => _buildComponent(
+                                    component['id'],
+                                    isDark: isDark,
+                                    themeNotifier: themeNotifier,
+                                    specialColor: specialColor,
+                                  ))
+                                  .toList(),
                             ),
-                          ),
-                          ProductGrid(
-                            products: filteredProducts,
-                            favoriteProductIds: favoriteProductIds,
-                            animationControllers: _animationControllers,
-                            isAddingToCartMap: _isAddingToCartMap,
-                            onAddToCart: _addToCart,
-                            onToggleFavorite: toggleFavorite,
-                            onProductTap: _navigateToProductDetail,
-                            vsync: this,
                           ),
                         ],
                       ),

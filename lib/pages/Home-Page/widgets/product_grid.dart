@@ -28,41 +28,42 @@ class ProductGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (products.isEmpty) {
-      return SliverToBoxAdapter(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.only(top: 50),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.search_off, size: 70, color: Colors.grey),
-                SizedBox(height: 16),
-                Text(
-                  AppLocalizations.of(context)!.noProductsFound,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  AppLocalizations.of(context)!.tryDifferentSearch,
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-              ],
-            ),
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.only(top: 50),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.search_off, size: 70, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                AppLocalizations.of(context)!.noProductsFound,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text(
+                AppLocalizations.of(context)!.tryDifferentSearch,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ],
           ),
         ),
       );
     }
 
-    return SliverPadding(
+    return Padding(
       padding: EdgeInsets.all(10),
-      sliver: SliverGrid(
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 5,
           mainAxisSpacing: 10,
           childAspectRatio: 0.5,
         ),
-        delegate: SliverChildBuilderDelegate((context, index) {
+        itemCount: products.length,
+        itemBuilder: (context, index) {
           final product = products[index];
           final String productId = product['id']?.toString() ?? '';
           final int stock = product["stock"] is int ? product["stock"] : 0;
@@ -79,7 +80,7 @@ class ProductGrid extends StatelessWidget {
             onToggleFavorite: () => onToggleFavorite(product),
             onTap: () => onProductTap(product),
           );
-        }, childCount: products.length),
+        },
       ),
     );
   }

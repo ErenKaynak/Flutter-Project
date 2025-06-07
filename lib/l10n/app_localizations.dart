@@ -2140,8 +2140,8 @@ abstract class AppLocalizations {
   /// No description provided for @updateStock.
   ///
   /// In en, this message translates to:
-  /// **'Update stock for {productName}'**
-  String updateStock(String productName);
+  /// **'Update Stock for {productName}'**
+  String updateStock(Object productName);
 
   /// No description provided for @newStockAmount.
   ///
@@ -2158,7 +2158,7 @@ abstract class AppLocalizations {
   /// No description provided for @pleaseEnterValidNumber.
   ///
   /// In en, this message translates to:
-  /// **'Please enter a valid number'**
+  /// **'Please enter a valid number.'**
   String get pleaseEnterValidNumber;
 
   /// No description provided for @checkingStockLevels.
@@ -2176,25 +2176,25 @@ abstract class AppLocalizations {
   /// No description provided for @noLowStockProducts.
   ///
   /// In en, this message translates to:
-  /// **'No products with low stock'**
+  /// **'No low stock products.'**
   String get noLowStockProducts;
 
   /// No description provided for @lowStockProductsCount.
   ///
   /// In en, this message translates to:
-  /// **'{count} products with low stock'**
+  /// **'{count} product(s) with low stock'**
   String lowStockProductsCount(int count);
 
   /// No description provided for @promoCodes.
   ///
   /// In en, this message translates to:
-  /// **'Promo Codes'**
+  /// **'Promo Codes & Discounts'**
   String get promoCodes;
 
   /// No description provided for @createPromocodesAndDiscounts.
   ///
   /// In en, this message translates to:
-  /// **'Create Promocodes and Discounts'**
+  /// **'Create and manage promocodes and discounts.'**
   String get createPromocodesAndDiscounts;
 
   /// No description provided for @salesStatistics.
@@ -2206,19 +2206,19 @@ abstract class AppLocalizations {
   /// No description provided for @viewSalesAnalytics.
   ///
   /// In en, this message translates to:
-  /// **'View sales analytics and charts'**
+  /// **'View sales analytics.'**
   String get viewSalesAnalytics;
 
   /// No description provided for @assistantTommySettings.
   ///
   /// In en, this message translates to:
-  /// **'Assistant Tommy\'s Settings'**
+  /// **'Assistant Tommy Settings'**
   String get assistantTommySettings;
 
   /// No description provided for @configureTommyAvailability.
   ///
   /// In en, this message translates to:
-  /// **'Configure Tommy\'s availability'**
+  /// **'Configure Assistant Tommy availability.'**
   String get configureTommyAvailability;
 
   /// No description provided for @enableAssistantTommy.
@@ -2272,7 +2272,7 @@ abstract class AppLocalizations {
   /// No description provided for @configureAppSettings.
   ///
   /// In en, this message translates to:
-  /// **'Configure app settings'**
+  /// **'Configure application settings.'**
   String get configureAppSettings;
 
   /// No description provided for @ratingCount.
@@ -2296,7 +2296,7 @@ abstract class AppLocalizations {
   /// No description provided for @viewAndManageBugReports.
   ///
   /// In en, this message translates to:
-  /// **'View and manage bug reports'**
+  /// **'View and manage bug reports.'**
   String get viewAndManageBugReports;
 
   /// No description provided for @bugTitle.
@@ -2878,7 +2878,7 @@ abstract class AppLocalizations {
   /// No description provided for @wheelManagement.
   ///
   /// In en, this message translates to:
-  /// **'Wheel Of Discount'**
+  /// **'Wheel Management'**
   String get wheelManagement;
 
   /// No description provided for @wheelItemsDescription.
@@ -2964,6 +2964,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Most Viewed Products'**
   String get mostViewed;
+
+  /// No description provided for @country.
+  ///
+  /// In en, this message translates to:
+  /// **'Country'**
+  String get country;
+
+  /// No description provided for @selectCountry.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Country'**
+  String get selectCountry;
+
+  /// No description provided for @pleaseSelectCountry.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a country'**
+  String get pleaseSelectCountry;
+
+  /// No description provided for @homepageLayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Homepage Layout'**
+  String get homepageLayout;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

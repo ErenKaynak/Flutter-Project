@@ -12,6 +12,7 @@ class ForgotPasswordPage extends StatefulWidget {
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _emailController = TextEditingController();
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -20,7 +21,29 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   }
 
   Future passwordReset() async {
+    // Clear previous error message
+    setState(() {
+      _errorMessage = null;
+    });
+
+    // Validate email field
+    if (_emailController.text.trim().isEmpty) {
+      setState(() {
+        _errorMessage = 'Please enter your email address';
+      });
+      return;
+    }
+
     try {
+      // Check if email exists
+      final methods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(_emailController.text.trim());
+      if (methods.isEmpty) {
+        setState(() {
+          _errorMessage = 'No account found with this email address';
+        });
+        return;
+      }
+
       await FirebaseAuth.instance.sendPasswordResetEmail(
         email: _emailController.text.trim(),
       );
@@ -35,12 +58,27 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       );
     } on FirebaseAuthException catch (e) {
       print(e);
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(content: Text(e.message.toString()));
-        },
-      );
+      String errorMessage;
+      switch (e.code) {
+        case 'invalid-email':
+          errorMessage = 'Please enter a valid email address';
+          break;
+        case 'user-not-found':
+          errorMessage = 'No account found with this email address';
+          break;
+        case 'too-many-requests':
+          errorMessage = 'Too many attempts. Please try again later';
+          break;
+        default:
+          errorMessage = 'An error occurred. Please try again';
+      }
+      setState(() {
+        _errorMessage = errorMessage;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'An unexpected error occurred. Please try again';
+      });
     }
   }
 
@@ -221,6 +259,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                   : Colors.red.shade700,
                           width: 2,
                         ),
+                      ),
+                      errorText: _errorMessage,
+                      errorStyle: TextStyle(
+                        color: Colors.red,
+                        fontSize: 14,
                       ),
                     ),
                   ),

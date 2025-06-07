@@ -9,6 +9,7 @@ import 'package:engineering_project/admin-panel/admin_user.dart';
 import 'package:engineering_project/admin-panel/admin_statistics.dart';
 import 'package:engineering_project/admin-panel/admin_bug_reports.dart';
 import 'package:engineering_project/admin-panel/admin_notification_management.dart';
+import 'package:engineering_project/admin-panel/admin_homepage_layout.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -489,6 +490,19 @@ class _AdminPageState extends State<AdminPage> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const WheelManagementPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.sort),
+                          title: Text('Homepage Layout'),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const HomepageLayoutPage(),
                               ),
                             );
                           },

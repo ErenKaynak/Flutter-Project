@@ -1093,8 +1093,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String updateStock(String productName) {
-    return 'Update stock for $productName';
+  String updateStock(Object productName) {
+    return 'Update Stock for $productName';
   }
 
   @override
@@ -1104,7 +1104,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get enterNewStockAmount => 'Enter new stock amount';
 
   @override
-  String get pleaseEnterValidNumber => 'Please enter a valid number';
+  String get pleaseEnterValidNumber => 'Please enter a valid number.';
 
   @override
   String get checkingStockLevels => 'Checking stock levels...';
@@ -1113,30 +1113,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lowStockAlerts => 'Low Stock Alerts';
 
   @override
-  String get noLowStockProducts => 'No products with low stock';
+  String get noLowStockProducts => 'No low stock products.';
 
   @override
   String lowStockProductsCount(int count) {
-    return '$count products with low stock';
+    return '$count product(s) with low stock';
   }
 
   @override
-  String get promoCodes => 'Promo Codes';
+  String get promoCodes => 'Promo Codes & Discounts';
 
   @override
-  String get createPromocodesAndDiscounts => 'Create Promocodes and Discounts';
+  String get createPromocodesAndDiscounts => 'Create and manage promocodes and discounts.';
 
   @override
   String get salesStatistics => 'Sales Statistics';
 
   @override
-  String get viewSalesAnalytics => 'View sales analytics and charts';
+  String get viewSalesAnalytics => 'View sales analytics.';
 
   @override
-  String get assistantTommySettings => 'Assistant Tommy\'s Settings';
+  String get assistantTommySettings => 'Assistant Tommy Settings';
 
   @override
-  String get configureTommyAvailability => 'Configure Tommy\'s availability';
+  String get configureTommyAvailability => 'Configure Assistant Tommy availability.';
 
   @override
   String get enableAssistantTommy => 'Enable Assistant Tommy';
@@ -1163,7 +1163,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get photoUploader => 'Photo Uploader';
 
   @override
-  String get configureAppSettings => 'Configure app settings';
+  String get configureAppSettings => 'Configure application settings.';
 
   @override
   String ratingCount(int count) {
@@ -1177,7 +1177,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bugReports => 'Bug Reports';
 
   @override
-  String get viewAndManageBugReports => 'View and manage bug reports';
+  String get viewAndManageBugReports => 'View and manage bug reports.';
 
   @override
   String get bugTitle => 'Bug Title';
@@ -1482,7 +1482,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discountUsed => 'Used';
 
   @override
-  String get wheelManagement => 'Wheel Of Discount';
+  String get wheelManagement => 'Wheel Management';
 
   @override
   String get wheelItemsDescription => 'Manage discount wheel items and their probabilities';
@@ -1525,4 +1525,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mostViewed => 'Most Viewed Products';
+
+  @override
+  String get country => 'Country';
+
+  @override
+  String get selectCountry => 'Select Country';
+
+  @override
+  String get pleaseSelectCountry => 'Please select a country';
+
+  @override
+  String get homepageLayout => 'Homepage Layout';
 }

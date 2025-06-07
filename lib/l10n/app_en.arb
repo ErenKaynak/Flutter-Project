@@ -620,21 +620,19 @@
             }
         }
     },
-    "updateStock": "Update stock for {productName}",
+    "updateStock": "Update Stock for {productName}",
     "@updateStock": {
         "placeholders": {
-            "productName": {
-                "type": "String"
-            }
+            "productName": {}
         }
     },
     "newStockAmount": "New Stock Amount",
     "enterNewStockAmount": "Enter new stock amount",
-    "pleaseEnterValidNumber": "Please enter a valid number",
+    "pleaseEnterValidNumber": "Please enter a valid number.",
     "checkingStockLevels": "Checking stock levels...",
     "lowStockAlerts": "Low Stock Alerts",
-    "noLowStockProducts": "No products with low stock",
-    "lowStockProductsCount": "{count} products with low stock",
+    "noLowStockProducts": "No low stock products.",
+    "lowStockProductsCount": "{count} product(s) with low stock",
     "@lowStockProductsCount": {
         "placeholders": {
             "count": {
@@ -642,12 +640,12 @@
             }
         }
     },
-    "promoCodes": "Promo Codes",
-    "createPromocodesAndDiscounts": "Create Promocodes and Discounts",
+    "promoCodes": "Promo Codes & Discounts",
+    "createPromocodesAndDiscounts": "Create and manage promocodes and discounts.",
     "salesStatistics": "Sales Statistics",
-    "viewSalesAnalytics": "View sales analytics and charts",
-    "assistantTommySettings": "Assistant Tommy's Settings",
-    "configureTommyAvailability": "Configure Tommy's availability",
+    "viewSalesAnalytics": "View sales analytics.",
+    "assistantTommySettings": "Assistant Tommy Settings",
+    "configureTommyAvailability": "Configure Assistant Tommy availability.",
     "enableAssistantTommy": "Enable Assistant Tommy",
     "tommyAvailable": "Tommy is currently available",
     "tommyDisabled": "Tommy is currently disabled",
@@ -656,7 +654,7 @@
     "tommyHiding": "Tommy is hiding in the closet !",
     "close": "Close",
     "photoUploader": "Photo Uploader",
-    "configureAppSettings": "Configure app settings",
+    "configureAppSettings": "Configure application settings.",
     "ratingCount": "{count} ratings",
     "@ratingCount": {
         "placeholders": {
@@ -667,7 +665,7 @@
     },
     "reportBug": "Report Bug",
     "bugReports": "Bug Reports",
-    "viewAndManageBugReports": "View and manage bug reports",
+    "viewAndManageBugReports": "View and manage bug reports.",
     "bugTitle": "Bug Title",
     "enterBugTitle": "Enter a title for the bug",
     "bugDescription": "Bug Description",
@@ -832,7 +830,7 @@
     },
     "discountExpired": "Expired",
     "discountUsed": "Used",
-    "wheelManagement": "Wheel Of Discount",
+    "wheelManagement": "Wheel Management",
     "wheelItemsDescription": "Manage discount wheel items and their probabilities",
     "probability": "Probability",
     "addNewDiscount": "Add New Discount",
@@ -846,5 +844,9 @@
     "comeBackNextWeek": "Come back next week!",
     "spinning": "Spinning...",
     "spinTheWheel": "Spin the Wheel!",
-    "mostViewed": "Most Viewed Products"
+    "mostViewed": "Most Viewed Products",
+    "country": "Country",
+    "selectCountry": "Select Country",
+    "pleaseSelectCountry": "Please select a country",
+    "homepageLayout": "Homepage Layout"
 }

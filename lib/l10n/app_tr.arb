@@ -537,11 +537,11 @@
             }
         }
     },
-    "updateStock": "{productName} için stok güncelle",
+    "updateStock": "{productName} için Stok Güncelle",
     "@updateStock": {
         "placeholders": {
             "productName": {
-                "type": "String"
+                "type": "Object"
             }
         }
     },

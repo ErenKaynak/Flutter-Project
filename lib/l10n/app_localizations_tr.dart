@@ -1093,8 +1093,8 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String updateStock(String productName) {
-    return '$productName için stok güncelle';
+  String updateStock(Object productName) {
+    return '$productName için Stok Güncelle';
   }
 
   @override
@@ -1525,4 +1525,16 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get mostViewed => 'En Çok Görüntülenen Ürünler';
+
+  @override
+  String get country => 'Country';
+
+  @override
+  String get selectCountry => 'Select Country';
+
+  @override
+  String get pleaseSelectCountry => 'Please select a country';
+
+  @override
+  String get homepageLayout => 'Homepage Layout';
 }

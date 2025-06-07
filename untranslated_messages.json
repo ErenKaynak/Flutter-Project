@@ -309,7 +309,11 @@
     "apply",
     "minOrderAmount",
     "discountExpired",
-    "discountUsed"
+    "discountUsed",
+    "country",
+    "selectCountry",
+    "pleaseSelectCountry",
+    "homepageLayout"
   ],
 
   "tr": [
@@ -326,6 +330,10 @@
     "selectUsersFirst",
     "uploadingImage",
     "discountExpired",
-    "discountUsed"
+    "discountUsed",
+    "country",
+    "selectCountry",
+    "pleaseSelectCountry",
+    "homepageLayout"
   ]
 }
