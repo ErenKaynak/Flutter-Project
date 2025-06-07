@@ -34,6 +34,14 @@ class _BannerSectionState extends State<BannerSection> {
         : widget.banners.where((banner) => 
             (banner['themeColor'] ?? '').toLowerCase() == 'red').toList();
 
+    // --- DEBUGGING CODE START ---
+    // This code will be removed after diagnosing the issue.
+    print('--- BANNER DEBUG INFO ---');
+    print('Number of banners after filtering: ${displayedBanners.length}');
+    print('Banners list content: $displayedBanners');
+    print('--- END OF DEBUG INFO ---');
+    // --- DEBUGGING CODE END ---
+
     if (widget.isLoading) {
       return Container(
         margin: EdgeInsets.symmetric(horizontal: 10),
@@ -62,16 +70,64 @@ class _BannerSectionState extends State<BannerSection> {
       );
     }
 
+    // If there is only one banner, display it as a static image to prevent disappearing on swipe.
+    if (displayedBanners.length == 1) {
+      final banner = displayedBanners.first;
+      return Container(
+        margin: EdgeInsets.symmetric(horizontal: 10),
+        height: 180,
+        width: MediaQuery.of(context).size.width,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.network(
+            banner['imageUrl'],
+            fit: BoxFit.cover,
+            loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Center(
+                child: CircularProgressIndicator(
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                      : null,
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                color: Colors.grey[300],
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red, size: 40),
+                      SizedBox(height: 8),
+                      Text(
+                        'Image failed to load',
+                        style: TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 10),
       height: 180,
       child: CarouselSlider(
         options: CarouselOptions(
           height: 180,
-          autoPlay: true,
+          autoPlay: displayedBanners.length > 1,
           autoPlayInterval: Duration(seconds: 3),
           enlargeCenterPage: true,
           viewportFraction: 1.0,
+          enableInfiniteScroll: true,
           onPageChanged: widget.onPageChanged,
         ),
         items: displayedBanners.map((banner) {
@@ -84,10 +140,34 @@ class _BannerSectionState extends State<BannerSection> {
                   child: Image.network(
                     banner['imageUrl'],
                     fit: BoxFit.cover,
+                    loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      );
+                    },
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
                         color: Colors.grey[300],
-                        child: Icon(Icons.error),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error_outline, color: Colors.red, size: 40),
+                              SizedBox(height: 8),
+                              Text(
+                                'Image failed to load',
+                                style: TextStyle(color: Colors.red),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
                       );
                     },
                   ),
