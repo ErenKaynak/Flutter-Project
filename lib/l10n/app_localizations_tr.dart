@@ -1522,4 +1522,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get spinTheWheel => 'Çarkı Çevir!';
+
+  @override
+  String get mostViewed => 'En Çok Görüntülenen Ürünler';
 }

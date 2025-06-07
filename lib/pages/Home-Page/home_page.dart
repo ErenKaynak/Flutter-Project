@@ -17,6 +17,7 @@ import 'package:engineering_project/pages/Home-Page/widgets/categories_section.d
 import 'package:engineering_project/pages/Home-Page/widgets/product_grid.dart';
 import 'dart:async';
 import 'package:flutter/rendering.dart';
+import 'package:engineering_project/pages/Home-Page/widgets/most_viewed_section.dart';
 
 class HomePage extends StatefulWidget {
   // Callback for scroll events to notify parent
@@ -937,6 +938,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                   categories: categories,
                                   selectedCategory: _selectedCategory,
                                   onCategorySelected: _selectCategory,
+                                ),
+                                MostViewedSection(
+                                  onProductTap: _navigateToProductDetail,
+                                  onAddToCart: _addToCart,
+                                  onToggleFavorite: toggleFavorite,
+                                  favoriteProductIds: favoriteProductIds,
+                                  animationControllers: _animationControllers,
+                                  isAddingToCartMap: _isAddingToCartMap,
+                                  vsync: this,
+                                  selectedCategory: _selectedCategory,
                                 ),
                                 Padding(
                                   padding: EdgeInsets.all(10),

@@ -326,46 +326,58 @@ class _RootScreenState extends State<RootScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Colors.black.withOpacity(0.9) : Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(30.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.4 : 0.1),
-            blurRadius: 10,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 3.0),
-      child: AnimatedCrossFade(
-        duration: const Duration(milliseconds: 400),
-        crossFadeState: isCollapsed ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-        firstChild: InkWell(
-          onTap: () {
-            if (_isNavBarCollapsed) {
-              setState(() {
-                _isNavBarCollapsed = false;
-              });
-            }
-          },
+    return GestureDetector(
+      onHorizontalDragEnd: (DragEndDetails details) {
+        // Toggle state for both left and right swipes
+        if (details.primaryVelocity != 0) { // Any horizontal swipe
+          setState(() {
+            _isNavBarCollapsed = !_isNavBarCollapsed;
+          });
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? Colors.black.withOpacity(0.9) : Colors.white.withOpacity(0.9),
           borderRadius: BorderRadius.circular(30.0),
-          child: SizedBox(
-            width: 50.0,
-            child: Center(
-              child: _buildNavItem(_navIcons[selectedIndex], selectedIndex, isCollapsed),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.4 : 0.1),
+              blurRadius: 10,
+              offset: Offset(0, 5),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 3.0),
+        child: AnimatedCrossFade(
+          duration: const Duration(milliseconds: 400),
+          crossFadeState: isCollapsed ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+          firstChild: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _isNavBarCollapsed = false;
+                });
+              },
+              borderRadius: BorderRadius.circular(30.0),
+              child: Container(
+                width: 50.0,
+                height: 50.0,
+                child: Center(
+                  child: _buildNavItem(_navIcons[selectedIndex], selectedIndex, isCollapsed),
+                ),
+              ),
             ),
           ),
-        ),
-        secondChild: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildNavItem(_navIcons[0], 0, isCollapsed),
-            _buildNavItem(_navIcons[1], 1, isCollapsed),
-            _buildNavItem(_navIcons[2], 2, isCollapsed),
-            _buildNavItem(_navIcons[3], 3, isCollapsed),
-          ],
+          secondChild: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildNavItem(_navIcons[0], 0, isCollapsed),
+              _buildNavItem(_navIcons[1], 1, isCollapsed),
+              _buildNavItem(_navIcons[2], 2, isCollapsed),
+              _buildNavItem(_navIcons[3], 3, isCollapsed),
+            ],
+          ),
         ),
       ),
     );

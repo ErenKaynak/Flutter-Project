@@ -2958,6 +2958,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Spin the Wheel!'**
   String get spinTheWheel;
+
+  /// No description provided for @mostViewed.
+  ///
+  /// In en, this message translates to:
+  /// **'Most Viewed Products'**
+  String get mostViewed;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
