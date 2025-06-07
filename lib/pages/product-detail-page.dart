@@ -99,6 +99,14 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         // Add debug print for raw data
         print('Raw Firestore Data: ${doc.data()}');
         
+        // Increment view count
+        await FirebaseFirestore.instance
+            .collection('products')
+            .doc(widget.productId)
+            .update({
+          'viewCount': FieldValue.increment(1)
+        });
+        
         final localizedProduct = LocalizedProduct.fromFirestore(doc);
         
         if (mounted) {

@@ -1522,4 +1522,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get spinTheWheel => 'أدر العجلة!';
+
+  @override
+  String get mostViewed => 'المنتجات الأكثر مشاهدة';
 }
