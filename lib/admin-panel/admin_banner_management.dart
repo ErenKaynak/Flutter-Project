@@ -527,8 +527,12 @@ class _BannerManagementPageState extends State<BannerManagementPage> {
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
-        title: Text(l10n.bannerManagement),
-        backgroundColor: isDark ? Colors.red.shade900 : themeColor,
+        title: Text(
+          l10n.bannerManagement,
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+        foregroundColor: Colors.white,
         elevation: isDark ? 0 : 2,
       ),
       body: _isLoading

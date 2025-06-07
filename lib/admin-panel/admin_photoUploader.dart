@@ -285,8 +285,12 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Photo Uploader'),
-        backgroundColor: isDark ? Colors.red.shade900 : Colors.white,
+        title: const Text(
+          'Photo Uploader',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+        foregroundColor: Colors.white,
         elevation: isDark ? 0 : 2,
       ),
       body: SingleChildScrollView(

@@ -420,8 +420,13 @@ Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFil
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Category Management'),
+        title: const Text(
+          'Category Management',
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+        foregroundColor: Colors.white,
+        elevation: isDark ? 0 : 2,
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
@@ -508,8 +513,8 @@ Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFil
                                 children: [
                                   ElevatedButton.icon(
                                     onPressed: _pickImage,
-                                    icon: Icon(Icons.image),
-                                    label: Text('Select Icon'),
+                                    icon: const Icon(Icons.image, color: Colors.white),
+                                    label: const Text('Select Icon', style: TextStyle(color: Colors.white)),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.red.shade700,
                                     ),
@@ -527,7 +532,7 @@ Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFil
                             SizedBox(height: 16),
                             ElevatedButton(
                               onPressed: _addCategory,
-                              child: Text('Add Category'),
+                              child: const Text('Add Category', style: TextStyle(color: Colors.white)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red.shade700,
                                 minimumSize: Size(double.infinity, 48),

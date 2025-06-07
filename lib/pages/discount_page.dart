@@ -87,11 +87,22 @@ class _DiscountPageState extends State<DiscountPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.discountAndPromotionCodes),
-        elevation: 0,
+        title: Text(
+          l10n.discountAndPromotionCodes,
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: isDark 
+            ? Colors.red.shade900 
+            : Colors.red.shade700,
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+          size: 24,
+        ),
+        elevation: isDark ? 0 : 2,
       ),
       body: SingleChildScrollView(
         child: Padding(

@@ -111,12 +111,16 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
     final isDark = themeNotifier.isDarkMode;
     final themeColor = themeNotifier.isSpecialModeActive 
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : (isDark ? Colors.red.shade900 : Colors.red);
+        : (isDark ? Colors.red.shade900 : Colors.red.shade700);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Statistics'),
-        backgroundColor: themeColor,
+        title: const Text(
+          'Admin Statistics',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+        foregroundColor: Colors.white,
         elevation: isDark ? 0 : 2,
       ),
       body: isLoading

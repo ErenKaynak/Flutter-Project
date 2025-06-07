@@ -184,18 +184,29 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     final isDark = themeNotifier.isDarkMode;
     final themeColor = themeNotifier.isSpecialModeActive 
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : (isDark ? Colors.red.shade900 : Colors.red);
+        : (isDark ? Colors.red.shade900 : Colors.red.shade700);
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
-        title: Text(l10n.userManagement),
+        title: Text(
+          l10n.userManagement,
+          style: TextStyle(
+            color: Colors.white,
+          ),
+        ),
+        iconTheme: IconThemeData(
+          color: Colors.white,
+        ),
         backgroundColor: themeColor,
         elevation: isDark ? 0 : 2,
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh),
+            icon: Icon(
+              Icons.refresh,
+              color: Colors.white,
+            ),
             onPressed: _loadUsers,
           ),
         ],

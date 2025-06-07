@@ -591,14 +591,15 @@ class _AdminProductsState extends State<AdminProducts> {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final themeColor = themeNotifier.isSpecialModeActive 
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : (isDark ? Colors.red.shade900 : Colors.red);
+        : (isDark ? Colors.red.shade900 : Colors.red.shade700);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: themeColor,
+        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
         title: const Text('Manage Products', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
+        foregroundColor: Colors.white,
         elevation: isDark ? 0 : 2,
       ),
       floatingActionButton: FloatingActionButton(

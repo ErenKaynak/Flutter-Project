@@ -82,7 +82,15 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.notificationManagement),
+        title: Text(
+          AppLocalizations.of(context)!.notificationManagement,
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Theme.of(context).brightness == Brightness.dark 
+            ? Colors.red.shade900 
+            : Colors.red.shade700,
+        foregroundColor: Colors.white,
+        elevation: Theme.of(context).brightness == Brightness.dark ? 0 : 2,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),

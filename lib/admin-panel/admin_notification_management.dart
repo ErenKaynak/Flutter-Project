@@ -328,9 +328,15 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
     
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.notificationManagement),
-        backgroundColor: isDark ? Colors.red.shade900 : themeColor,
-        elevation: isDark ? 0 : 2,
+        title: Text(
+          AppLocalizations.of(context)!.notificationManagement,
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Theme.of(context).brightness == Brightness.dark 
+            ? Colors.red.shade900 
+            : Colors.red.shade700,
+        foregroundColor: Colors.white,
+        elevation: Theme.of(context).brightness == Brightness.dark ? 0 : 2,
       ),
       body: Container(
         decoration: BoxDecoration(

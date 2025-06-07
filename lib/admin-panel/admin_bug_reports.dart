@@ -13,13 +13,18 @@ class BugReportsPage extends StatelessWidget {
     final isDark = themeNotifier.isDarkMode;
     final themeColor = themeNotifier.isSpecialModeActive 
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : (isDark ? Colors.red.shade900 : Colors.red);
+        : (isDark ? Colors.red.shade900 : Colors.red.shade700);
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.bugReports),
-        backgroundColor: themeColor,
+        title: Text(
+          l10n.bugReports,
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+        foregroundColor: Colors.white,
+        elevation: isDark ? 0 : 2,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
