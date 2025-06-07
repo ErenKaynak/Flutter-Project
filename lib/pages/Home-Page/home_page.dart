@@ -689,7 +689,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               children: [
                 IconButton(
                   icon: const Icon(Icons.notifications),
-                  color: isDark ? Colors.white : Colors.black,
+                  color: themeNotifier.isSpecialModeActive
+                      ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                      : isDark ? Colors.red.shade900 : Colors.black,
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -739,7 +741,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 IconButton(
                   icon: Icon(
                     Icons.shopping_cart,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                        : isDark ? Colors.red.shade900 : Colors.black,
                   ),
                   onPressed: () {
                     if (mounted) {

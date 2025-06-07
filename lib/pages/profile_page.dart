@@ -52,7 +52,9 @@ class LanguageSelector extends StatelessWidget {
     return PopupMenuButton<String>(
       icon: Icon(
         Icons.language,
-        color: isDark ? Colors.white : Colors.black87,
+        color: themeNotifier.isSpecialModeActive 
+            ? Colors.white 
+            : isDark ? Colors.white : Colors.black87,
       ),
       onSelected: (String languageCode) {
         languageProvider.changeLanguage(languageCode);
@@ -623,7 +625,9 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Text(
                 l10n.profile,
                 style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
+                  color: themeNotifier.isSpecialModeActive 
+                      ? Colors.white 
+                      : isDark ? Colors.white : Colors.black87,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -633,7 +637,9 @@ class _ProfilePageState extends State<ProfilePage> {
               IconButton(
                 icon: Icon(
                   Icons.edit,
-                  color: isDark ? Colors.white : Colors.black87,
+                  color: themeNotifier.isSpecialModeActive 
+                      ? Colors.white 
+                      : isDark ? Colors.white : Colors.black87,
                 ),
                 onPressed: _showEditProfileDialog,
               ),
