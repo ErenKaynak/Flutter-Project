@@ -98,8 +98,8 @@ class _AddressScreenState extends State<AddressScreen> {
           backgroundColor: isDark 
               ? Colors.red.shade900
               : (themeNotifier.isSpecialModeActive
-                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade100
-                  : Colors.red.shade100),
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
+                  : Colors.red.shade700),
           elevation: 0,
           iconTheme: IconThemeData(color: Colors.white),
         ),

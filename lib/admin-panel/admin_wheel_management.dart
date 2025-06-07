@@ -160,7 +160,9 @@ class _WheelManagementPageState extends State<WheelManagementPage> {
       return Scaffold(
         appBar: AppBar(
           title: Text(AppLocalizations.of(context)!.wheelManagement),
-          backgroundColor: isDark ? Colors.red.shade900 : themeColor,
+          backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+          foregroundColor: Colors.white,
+          elevation: isDark ? 0 : 2,
         ),
         body: Center(child: CircularProgressIndicator()),
       );
@@ -168,11 +170,16 @@ class _WheelManagementPageState extends State<WheelManagementPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.wheelManagement),
-        backgroundColor: isDark ? Colors.red.shade900 : themeColor,
+        title: Text(
+          AppLocalizations.of(context)!.wheelManagement,
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+        foregroundColor: Colors.white,
+        elevation: isDark ? 0 : 2,
         actions: [
           IconButton(
-            icon: Icon(Icons.save),
+            icon: const Icon(Icons.save, color: Colors.white),
             onPressed: _saveWheelItems,
           ),
         ],
@@ -236,8 +243,8 @@ class _WheelManagementPageState extends State<WheelManagementPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddItemDialog,
-        child: Icon(Icons.add),
-        backgroundColor: themeColor,
+        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
       ),
     );
   }

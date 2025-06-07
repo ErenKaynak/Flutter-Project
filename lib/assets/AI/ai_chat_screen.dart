@@ -1631,8 +1631,10 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
 
       if (mounted) {
         setState(() {
-          // Check if the role is admin
-          _isAdmin = userDoc.exists && userDoc.data()?['role'] == 'admin';
+          // Check if the role is admin and user is verified
+          _isAdmin = userDoc.exists && 
+                    userDoc.data()?['role'] == 'admin' && 
+                    user.emailVerified;
           print('Setting admin status to: $_isAdmin'); // Debug print
         });
       }
@@ -1645,7 +1647,10 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
           .listen((doc) {
         if (mounted) {
           setState(() {
-            _isAdmin = doc.exists && doc.data()?['role'] == 'admin';
+            // Check if the role is admin and user is verified
+            _isAdmin = doc.exists && 
+                      doc.data()?['role'] == 'admin' && 
+                      FirebaseAuth.instance.currentUser?.emailVerified == true;
             print('Admin status updated from listener: $_isAdmin'); // Debug print
           });
         }
@@ -1685,14 +1690,12 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     print('Getting filtered starters. Is admin: $_isAdmin'); // Debug print
     final List<String> starters = List.from(_conversationStarters);
 
+    // If user is not admin, remove admin-only options
     if (!_isAdmin) {
-      return starters
-          .where(
-            (starter) =>
-                !starter.toLowerCase().contains('add new product') &&
-                !starter.toLowerCase().contains('update product'),
-          )
-          .toList();
+      starters.removeWhere((starter) => 
+        starter == 'addNewProduct' || 
+        starter == 'updateProduct'
+      );
     }
 
     return starters;

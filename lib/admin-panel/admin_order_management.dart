@@ -511,7 +511,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: themeColor,
+        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
         title: Text(
           'Order Management',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -520,7 +520,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: Icon(Icons.file_download),
+            icon: Icon(Icons.file_download, color: Colors.white),
             onPressed: _exportOrdersToCSV,
             tooltip: 'Export to CSV',
           ),

@@ -474,18 +474,19 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: isDark ? Colors.red.shade900 : Theme.of(context).appBarTheme.backgroundColor,
+        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
         title: Text(
           l10n.orderHistory,
           style: TextStyle(
-            color: isDark ? Colors.white : Theme.of(context).textTheme.titleLarge?.color,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
         elevation: isDark ? 0 : 2,
+        iconTheme: IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh, color: Theme.of(context).iconTheme.color),
+            icon: Icon(Icons.refresh, color: Colors.white),
             onPressed: _fetchOrders,
           ),
         ],

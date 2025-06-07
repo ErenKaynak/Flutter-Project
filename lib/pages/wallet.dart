@@ -369,11 +369,14 @@ class _WalletPageState extends State<WalletPage> {
         title: Text(
           l10n.myWallet,
           style: TextStyle(
-            color: isDark ? Colors.white : Theme.of(context).textTheme.titleLarge?.color,
+            color: Colors.white,
           ),
         ),
+        iconTheme: IconThemeData(
+          color: Colors.white,
+        ),
         elevation: 0,
-        backgroundColor: isDark ? Colors.red.shade900 : Colors.white,
+        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(15)),
         ),
@@ -971,6 +974,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
   Widget _buildCardItem(Map<String, dynamic> card) {
     final isSelected = _selectedCard?['id'] == card['id'];
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () {
@@ -982,11 +986,12 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark ? Colors.red.shade900 : Colors.red.shade700)
+              : Colors.transparent,
           border: Border.all(
             color: isSelected
-                ? (themeNotifier.isSpecialModeActive
-                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
-                    : Colors.red.shade400)
+                ? (isDark ? Colors.red.shade900 : Colors.red.shade700)
                 : Colors.grey.shade300,
             width: 2,
           ),
@@ -996,11 +1001,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
           children: [
             Icon(
               Icons.credit_card,
-              color: isSelected
-                  ? (themeNotifier.isSpecialModeActive
-                      ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
-                      : Colors.red.shade400)
-                  : Colors.grey,
+              color: isSelected ? Colors.white : Colors.grey,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1009,11 +1010,17 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                 children: [
                   Text(
                     '**** **** **** ${card['cardNumber'].substring(card['cardNumber'].length - 4)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isSelected ? Colors.white : null,
+                    ),
                   ),
                   Text(
                     card['cardHolder'],
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    style: TextStyle(
+                      color: isSelected ? Colors.white70 : Colors.grey[600],
+                      fontSize: 12
+                    ),
                   ),
                 ],
               ),
@@ -1021,9 +1028,7 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
             if (isSelected)
               Icon(
                 Icons.check_circle,
-                color: themeNotifier.isSpecialModeActive
-                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
-                    : Colors.red.shade400,
+                color: Colors.white,
               ),
           ],
         ),

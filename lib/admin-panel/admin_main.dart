@@ -220,8 +220,17 @@ class _AdminPageState extends State<AdminPage> {
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.white,
       appBar: AppBar(
-        title: Text(l10n.adminDashboard),
-        backgroundColor: isDark ? Colors.red.shade900 : themeColor,
+        title: Text(
+          l10n.adminDashboard,
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.white,
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
         elevation: isDark ? 0 : 2,
       ),
       body: SingleChildScrollView(
