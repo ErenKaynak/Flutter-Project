@@ -511,16 +511,22 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
         title: Text(
           'Order Management',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+        foregroundColor: Colors.white,
         elevation: isDark ? 0 : 2,
-        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: Icon(Icons.file_download, color: Colors.white),
+            icon: const Icon(Icons.file_download),
             onPressed: _exportOrdersToCSV,
             tooltip: 'Export to CSV',
           ),
@@ -752,11 +758,17 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                       setState(() => _selectedFilter = selected ? status : "All");
                     },
                     backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-                    selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
-                    checkmarkColor: Theme.of(context).primaryColor,
+                    selectedColor: themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme).withOpacity(0.2)
+                        : Colors.red.withOpacity(0.2),
+                    checkmarkColor: themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                        : Colors.red,
                     labelStyle: TextStyle(
                       color: isSelected
-                          ? Theme.of(context).primaryColor
+                          ? (themeNotifier.isSpecialModeActive
+                              ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                              : Colors.red)
                           : Theme.of(context).textTheme.bodyMedium?.color,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
@@ -764,7 +776,9 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
                         color: isSelected
-                            ? Theme.of(context).primaryColor
+                            ? (themeNotifier.isSpecialModeActive
+                                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                : Colors.red)
                             : Colors.transparent,
                       ),
                     ),

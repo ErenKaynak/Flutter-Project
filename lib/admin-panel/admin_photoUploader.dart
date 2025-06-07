@@ -8,6 +8,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import '../pages/theme_notifier.dart';
 
 class PhotoUploaderPage extends StatefulWidget {
   const PhotoUploaderPage({super.key});
@@ -281,7 +283,11 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
     
     return Scaffold(
       appBar: AppBar(
@@ -289,7 +295,13 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
           'Photo Uploader',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
         foregroundColor: Colors.white,
         elevation: isDark ? 0 : 2,
       ),
@@ -304,8 +316,20 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: isDark 
-                    ? [Colors.red.shade900, Colors.grey.shade900]
-                    : [Colors.red.shade500, Colors.red.shade100],
+                    ? [
+                        themeNotifier.isSpecialModeActive 
+                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900
+                            : Colors.red.shade900,
+                        Colors.grey.shade900
+                      ]
+                    : [
+                        themeNotifier.isSpecialModeActive 
+                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade500
+                            : Colors.red.shade500,
+                        themeNotifier.isSpecialModeActive 
+                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade100
+                            : Colors.red.shade100,
+                      ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -402,7 +426,9 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
                                   : Icon(Icons.upload),
                               label: Text(_isLoading ? 'Uploading...' : 'Upload'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red.shade400,
+                                backgroundColor: themeNotifier.isSpecialModeActive
+                                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                    : Colors.red.shade400,
                                 foregroundColor: Colors.white,
                                 padding: EdgeInsets.symmetric(vertical: 12),
                                 shape: RoundedRectangleBorder(
@@ -452,7 +478,9 @@ class _PhotoUploaderPageState extends State<PhotoUploaderPage> {
                         Icon(
                           Icons.add_photo_alternate,
                           size: 48,
-                          color: Colors.red.shade400,
+                          color: themeNotifier.isSpecialModeActive
+                              ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                              : Colors.red.shade400,
                         ),
                         SizedBox(height: 16),
                         Text(

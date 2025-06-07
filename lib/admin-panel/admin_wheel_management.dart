@@ -170,16 +170,22 @@ class _WheelManagementPageState extends State<WheelManagementPage> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
         title: Text(
           AppLocalizations.of(context)!.wheelManagement,
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
         foregroundColor: Colors.white,
         elevation: isDark ? 0 : 2,
         actions: [
           IconButton(
-            icon: const Icon(Icons.save, color: Colors.white),
+            icon: const Icon(Icons.save),
             onPressed: _saveWheelItems,
           ),
         ],
@@ -244,7 +250,13 @@ class _WheelManagementPageState extends State<WheelManagementPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddItemDialog,
         child: const Icon(Icons.add, color: Colors.white),
-        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
       ),
     );
   }

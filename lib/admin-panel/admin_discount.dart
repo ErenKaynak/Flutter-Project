@@ -262,7 +262,13 @@ class _DiscountAdminPageState extends State<DiscountAdminPage> {
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       appBar: AppBar(
         title: const Text('Discount Management', style: TextStyle(color: Colors.white)),
-        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
         foregroundColor: Colors.white,
         elevation: isDark ? 0 : 2,
         actions: [

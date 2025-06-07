@@ -150,6 +150,7 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
   }
 
   Widget _buildImagePlaceholder() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     return Center(
       child: Container(
         width: double.infinity,
@@ -160,7 +161,9 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
             Icon(
               Icons.add_photo_alternate,
               size: 56,
-              color: Theme.of(context).primaryColor.withOpacity(0.7),
+              color: themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                  : Colors.red,
             ),
             const SizedBox(height: 12),
             Text(
@@ -168,9 +171,9 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? Colors.white70 
-                    : Colors.black54,
+                color: themeNotifier.isSpecialModeActive
+                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                    : Colors.red,
               ),
             ),
           ],
@@ -332,11 +335,15 @@ class _AdminNotificationManagementState extends State<AdminNotificationManagemen
           AppLocalizations.of(context)!.notificationManagement,
           style: const TextStyle(color: Colors.white),
         ),
-        backgroundColor: Theme.of(context).brightness == Brightness.dark 
-            ? Colors.red.shade900 
-            : Colors.red.shade700,
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
         foregroundColor: Colors.white,
-        elevation: Theme.of(context).brightness == Brightness.dark ? 0 : 2,
+        elevation: isDark ? 0 : 2,
       ),
       body: Container(
         decoration: BoxDecoration(

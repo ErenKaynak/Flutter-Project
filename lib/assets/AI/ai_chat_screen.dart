@@ -443,10 +443,14 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(l10n.aiChatTitle),
+            title: Text(
+              l10n.aiChatTitle,
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: isDark 
                 ? Colors.black
-                : themeColor,
+                : Colors.red.shade700,
+            foregroundColor: Colors.white,
             elevation: 0,
           ),
           body: Column(

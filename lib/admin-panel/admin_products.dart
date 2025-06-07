@@ -596,9 +596,14 @@ class _AdminProductsState extends State<AdminProducts> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
-        title: const Text('Manage Products', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
+        title: const Text('Manage Products', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         foregroundColor: Colors.white,
         elevation: isDark ? 0 : 2,
       ),
@@ -901,7 +906,12 @@ class _AdminProductsState extends State<AdminProducts> {
                               tooltip: 'Edit',
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
+                              icon: Icon(
+                                Icons.delete,
+                                color: themeNotifier.isSpecialModeActive
+                                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                    : Colors.red,
+                              ),
                               onPressed: () => deleteProduct(doc.id),
                               tooltip: 'Delete',
                             ),

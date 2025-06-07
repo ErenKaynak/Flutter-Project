@@ -140,9 +140,19 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> with SingleTi
     return Scaffold(
       backgroundColor: isDark ? Colors.grey[900] : Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Admin Statistics'),
-        backgroundColor: themeColor,
-        elevation: 0,
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
+        title: const Text(
+          'Admin Statistics',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        foregroundColor: Colors.white,
+        elevation: isDark ? 0 : 2,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,

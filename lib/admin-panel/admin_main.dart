@@ -222,15 +222,23 @@ class _AdminPageState extends State<AdminPage> {
       appBar: AppBar(
         title: Text(
           l10n.adminDashboard,
-          style: TextStyle(
-            color: isDark ? Colors.white : Colors.white,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
           ),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
+        foregroundColor: Colors.white,
         elevation: isDark ? 0 : 2,
       ),
       body: SingleChildScrollView(

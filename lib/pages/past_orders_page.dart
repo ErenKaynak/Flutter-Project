@@ -474,16 +474,22 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
         title: Text(
           l10n.orderHistory,
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
         elevation: isDark ? 0 : 2,
-        iconTheme: IconThemeData(color: Colors.white),
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: Icon(Icons.refresh, color: Colors.white),
@@ -738,15 +744,15 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
               backgroundColor: Theme.of(context).cardColor,
               selectedColor: themeNotifier.isSpecialModeActive
                   ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade100
-                  : Theme.of(context).primaryColor.withOpacity(0.2),
+                  : Colors.red.withOpacity(0.2),
               checkmarkColor: themeNotifier.isSpecialModeActive
                   ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-                  : Theme.of(context).primaryColor,
+                  : Colors.red,
               labelStyle: TextStyle(
                 color: isSelected
                     ? (themeNotifier.isSpecialModeActive
                         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-                        : Theme.of(context).primaryColor)
+                        : Colors.red)
                     : Theme.of(context).textTheme.bodyMedium?.color,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),

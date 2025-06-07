@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:math';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:provider/provider.dart';
+import 'package:engineering_project/pages/theme_notifier.dart';
 
 class CategoryManagementPage extends StatefulWidget {
   @override
@@ -417,14 +419,21 @@ Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFil
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
         title: const Text(
           'Category Management',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
         foregroundColor: Colors.white,
         elevation: isDark ? 0 : 2,
       ),
@@ -516,7 +525,9 @@ Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFil
                                     icon: const Icon(Icons.image, color: Colors.white),
                                     label: const Text('Select Icon', style: TextStyle(color: Colors.white)),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red.shade700,
+                                      backgroundColor: themeNotifier.isSpecialModeActive
+                                          ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                          : Colors.red.shade700,
                                     ),
                                   ),
                                   SizedBox(width: 16),
@@ -534,7 +545,9 @@ Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFil
                               onPressed: _addCategory,
                               child: const Text('Add Category', style: TextStyle(color: Colors.white)),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red.shade700,
+                                backgroundColor: themeNotifier.isSpecialModeActive
+                                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                    : Colors.red.shade700,
                                 minimumSize: Size(double.infinity, 48),
                               ),
                             ),
@@ -611,7 +624,12 @@ Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFil
                                       onPressed: () => _editCategory(category),
                                     ),
                                     IconButton(
-                                      icon: Icon(Icons.delete, color: Colors.red),
+                                      icon: Icon(
+                                        Icons.delete,
+                                        color: themeNotifier.isSpecialModeActive
+                                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                            : Colors.red,
+                                      ),
                                       onPressed: () async {
                                         // Check for affected products first
                                         final productsSnapshot = await FirebaseFirestore.instance
