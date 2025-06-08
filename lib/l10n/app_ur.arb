@@ -496,5 +496,9 @@
                 "type": "String"
             }
         }
-    }
+    },
+    "invalidExpiryDate": "غلط میعاد ختم ہونے کی تاریخ",
+    "invalidCvv": "غلط CVV",
+    "deliveryFee": "ترسیل کی فیس",
+    "edit": "ترمیم"
 } 

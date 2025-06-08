@@ -1558,4 +1558,16 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get cardHolder => 'کارڈ ہولڈر';
+
+  @override
+  String get invalidExpiryDate => 'غلط میعاد ختم ہونے کی تاریخ';
+
+  @override
+  String get invalidCvv => 'غلط CVV';
+
+  @override
+  String get deliveryFee => 'ترسیل کی فیس';
+
+  @override
+  String get edit => 'ترمیم';
 }

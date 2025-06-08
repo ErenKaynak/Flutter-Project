@@ -3032,6 +3032,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Card Holder'**
   String get cardHolder;
+
+  /// No description provided for @invalidExpiryDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid expiry date'**
+  String get invalidExpiryDate;
+
+  /// No description provided for @invalidCvv.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid CVV'**
+  String get invalidCvv;
+
+  /// No description provided for @deliveryFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery Fee'**
+  String get deliveryFee;
+
+  /// No description provided for @edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get edit;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

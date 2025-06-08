@@ -10,6 +10,7 @@ import 'theme_notifier.dart';
 import 'package:flutter/foundation.dart';
 import 'package:engineering_project/pages/pin_entry_screen.dart';
 import 'package:intl/intl.dart';
+import 'dart:math';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({Key? key}) : super(key: key);
@@ -424,15 +425,7 @@ class _WalletPageState extends State<WalletPage> {
         ),
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark
-                ? [themeColor.shade900, Colors.grey.shade900]
-                : [themeColor.shade500, themeColor.shade100],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        color: Colors.white,
         child: _isLoading
             ? Center(
                 child: CircularProgressIndicator(
@@ -457,7 +450,9 @@ class _WalletPageState extends State<WalletPage> {
                           width: double.infinity,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Color(0xFF232B5D), Color(0xFF181A20)],
+                              colors: isDark 
+                                ? [themeColor.shade900, themeColor.shade800]
+                                : [themeColor.shade700, themeColor.shade600],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -479,7 +474,7 @@ class _WalletPageState extends State<WalletPage> {
                               Text(
                                 l10n.currentBalance,
                                 style: TextStyle(
-                                  color: isDark ? Colors.grey[400] : Colors.white,
+                                  color: Colors.white.withOpacity(0.9),
                                   fontSize: 16,
                                 ),
                               ),
@@ -496,7 +491,7 @@ class _WalletPageState extends State<WalletPage> {
                               Text(
                                 l10n.cashbackInfo,
                                 style: TextStyle(
-                                  color: isDark ? Colors.grey[400] : Colors.white70,
+                                  color: Colors.white.withOpacity(0.8),
                                   fontSize: 14,
                                 ),
                               ),
@@ -772,8 +767,7 @@ class _WalletPageState extends State<WalletPage> {
                   ),
                 ),
               ),
-      ),
-    );
+    ));
   }
 
   Widget _getCardNetworkLogo(String cardNumber) {
@@ -847,7 +841,9 @@ class _WalletPageState extends State<WalletPage> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF232B5D), Color(0xFF181A20)],
+                  colors: isDark 
+                    ? [themeColor.shade900, themeColor.shade800]
+                    : [themeColor.shade700, themeColor.shade600],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -915,7 +911,10 @@ class _WalletPageState extends State<WalletPage> {
                         ),
                       ),
                       // Contactless Icon
-                      Icon(Icons.wifi, color: Colors.white, size: 32),
+                      Transform.rotate(
+                        angle: pi / 2,
+                        child: Icon(Icons.wifi, color: Colors.white, size: 32),
+                      ),
                     ],
                   ),
                   SizedBox(height: 18),
@@ -1005,11 +1004,11 @@ class _WalletPageState extends State<WalletPage> {
             // Mastercard logo sağ alt köşe
             Positioned(
               right: 20,
-              bottom: 20,
+              bottom: 10,
               child: Image.asset(
                 'lib/assets/Images/mastercard-logo.png',
-                width: 64,
-                height: 44,
+                width: 80,
+                height: 55,
               ),
             ),
           ],

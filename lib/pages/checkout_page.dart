@@ -13,73 +13,6 @@ import 'package:engineering_project/assets/components/email_service.dart';
 import 'dart:math';
 import 'package:flutter/services.dart'; // Add this import
 
-class CardNumberInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    var text = newValue.text;
-
-    if (newValue.selection.baseOffset == 0) {
-      return newValue;
-    }
-
-    var buffer = StringBuffer();
-    for (int i = 0; i < text.length; i++) {
-      buffer.write(text[i]);
-      var nonZeroIndex = i + 1;
-      if (nonZeroIndex % 4 == 0 && nonZeroIndex != text.length) {
-        buffer.write(' ');
-      }
-    }
-
-    var string = buffer.toString();
-    return newValue.copyWith(
-      text: string,
-      selection: TextSelection.collapsed(offset: string.length),
-    );
-  }
-}
-
-class ExpiryDateInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    var text = newValue.text;
-
-    if (newValue.selection.baseOffset == 0) {
-      return newValue;
-    }
-
-    var buffer = StringBuffer();
-    for (int i = 0; i < text.length; i++) {
-      buffer.write(text[i]);
-      var nonZeroIndex = i + 1;
-      if (nonZeroIndex % 2 == 0 && nonZeroIndex != text.length) {
-        buffer.write('/');
-      }
-    }
-
-    var string = buffer.toString();
-
-    // Month validation: only allow 01-12 for the first two digits
-    if (string.length >= 2) {
-      final month = int.tryParse(string.substring(0, 2)) ?? 0;
-      if (month > 12) {
-        string = '12' + (string.length > 2 ? string.substring(2) : '');
-      }
-    }
-
-    return newValue.copyWith(
-      text: string,
-      selection: TextSelection.collapsed(offset: string.length),
-    );
-  }
-}
-
 class CheckoutPage extends StatefulWidget {
   final double subtotal;
   final DiscountCode? appliedDiscount;
@@ -111,6 +44,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   final _expiryDateController = TextEditingController();
   final _cvvController = TextEditingController();
   bool _isAddingNewCard = false;
+  bool _isCardFlipped = false;
 
   double _walletBalance = 0.0;
 
@@ -329,6 +263,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     cardNumber: _cardNumberController.text,
                     cardHolderName: _cardHolderController.text,
                     expiryDate: _expiryDateController.text,
+                    cvv: _cvvController.text,
+                    isFlipped: _isCardFlipped,
+                    onFlip: () {
+                      setState(() {
+                        _isCardFlipped = !_isCardFlipped;
+                      });
+                    },
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -342,14 +283,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ),
                     ),
                     keyboardType: TextInputType.number,
-                    maxLength: 19,
+                    maxLength: 16,
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
-                      CardNumberInputFormatter(),
                     ],
-                    onChanged: (value) {
-                      setState(() {}); // Trigger rebuild for visual update
-                    },
+                    onChanged: (value) => setState(() {}),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -387,9 +325,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           maxLength: 5,
                           inputFormatters: [
                             FilteringTextInputFormatter.digitsOnly,
-                            ExpiryDateInputFormatter(),
+                            _ExpiryDateFormatter(),
                           ],
-                          onChanged: (value) => setState(() {}),
+                          onChanged: (value) {
+                            if (value.length == 2 && !value.contains('/')) {
+                              _expiryDateController.text = '$value/';
+                              _expiryDateController.selection = TextSelection.fromPosition(
+                                TextPosition(offset: _expiryDateController.text.length),
+                              );
+                            }
+                            setState(() {});
+                          },
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -636,6 +582,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
       final month = int.parse(parts[0]);
       final year = 2000 + int.parse(parts[1]);
 
+      if (month < 1 || month > 12) return true;
+
       final now = DateTime.now();
       final cardExpiry = DateTime(year, month + 1, 0);
 
@@ -662,12 +610,43 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   MaterialPageRoute(builder: (context) => AddAddressPage()),
                 );
                 if (result == true) {
-                  _loadSavedAddresses();
+                  await _loadSavedAddresses();
+                  if (mounted) {
+                    setState(() {});
+                  }
                 }
               },
               icon: const Icon(Icons.add),
               label: Text(l10n.addNew),
             ),
+            if (_selectedAddress != null)
+              TextButton.icon(
+                onPressed: () async {
+                  final addressDoc = await FirebaseFirestore.instance
+                      .collection('addresses')
+                      .doc(_selectedAddress!['id'])
+                      .get();
+                  
+                  if (addressDoc.exists) {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AddAddressPage(
+                          addressToEdit: addressDoc,
+                        ),
+                      ),
+                    );
+                    if (result == true) {
+                      await _loadSavedAddresses();
+                      if (mounted) {
+                        setState(() {});
+                      }
+                    }
+                  }
+                },
+                icon: const Icon(Icons.edit),
+                label: Text(l10n.edit),
+              ),
           ],
         ),
         const SizedBox(height: 8),
@@ -692,14 +671,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(
-                    color:
-                        isSelected
-                            ? (themeNotifier.isSpecialModeActive
-                                ? themeNotifier.getThemeColor(
-                                  themeNotifier.specialTheme,
-                                )
-                                : Colors.red)
-                            : Colors.grey.shade300,
+                    color: isSelected
+                        ? (themeNotifier.isSpecialModeActive
+                            ? themeNotifier.getThemeColor(
+                              themeNotifier.specialTheme,
+                            )
+                            : Colors.red)
+                        : Colors.grey.shade300,
                     width: isSelected ? 2 : 1,
                   ),
                 ),
@@ -707,7 +685,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   value: address,
                   groupValue: _selectedAddress,
                   onChanged: (value) {
-                    setState(() => _selectedAddress = value);
+                    setState(() {
+                      _selectedAddress = value;
+                    });
                   },
                   title: Row(
                     children: [
@@ -715,12 +695,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         address['addressType'] == 'Home'
                             ? Icons.home
                             : Icons.work,
-                        color:
-                            themeNotifier.isSpecialModeActive
-                                ? themeNotifier.getThemeColor(
-                                  themeNotifier.specialTheme,
-                                )
-                                : Colors.red,
+                        color: themeNotifier.isSpecialModeActive
+                            ? themeNotifier.getThemeColor(
+                              themeNotifier.specialTheme,
+                            )
+                            : Colors.red,
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -1546,16 +1525,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
     required String cardNumber,
     required String cardHolderName,
     required String expiryDate,
+    required String cvv,
+    required bool isFlipped,
+    required VoidCallback onFlip,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final themeColor = themeNotifier.isSpecialModeActive
-        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : Colors.red;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    String masked = '**** **** **** ';
-    String last4 = cardNumber.isNotEmpty ? cardNumber.substring(cardNumber.length - min(4, cardNumber.length)) : '';
+    final isSpecialMode = themeNotifier.isSpecialModeActive;
+    final specialThemeColor = themeNotifier.getThemeColor(themeNotifier.specialTheme);
 
     final embossTextStyle = TextStyle(
       color: Colors.white,
@@ -1570,10 +1547,64 @@ class _CheckoutPageState extends State<CheckoutPage> {
       ],
     );
 
+    return GestureDetector(
+      onTap: onFlip,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(right: 16),
+        height: 240,
+        child: TweenAnimationBuilder(
+          tween: Tween<double>(
+            begin: 0,
+            end: (isFlipped || cvv.isNotEmpty) ? 180 : 0,
+          ),
+          duration: Duration(milliseconds: 500),
+          builder: (context, double value, child) {
+            return Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.identity()
+                ..setEntry(3, 2, 0.001)
+                ..rotateY((value * pi) / 180),
+              child: value < 90
+                  ? _buildCardFront(
+                      cardNumber: cardNumber,
+                      cardHolderName: cardHolderName,
+                      expiryDate: expiryDate,
+                      masked: '**** **** **** ',
+                      last4: cardNumber.isNotEmpty ? cardNumber.substring(cardNumber.length - min(4, cardNumber.length)) : '',
+                      embossTextStyle: embossTextStyle,
+                      themeColor: isSpecialMode ? specialThemeColor : Colors.red,
+                    )
+                  : Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()..rotateY(pi),
+                      child: _buildCardBack(
+                        themeColor: isSpecialMode ? specialThemeColor : Colors.red,
+                        cvv: cvv,
+                      ),
+                    ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardFront({
+    required String cardNumber,
+    required String cardHolderName,
+    required String expiryDate,
+    required String masked,
+    required String last4,
+    required TextStyle embossTextStyle,
+    required Color themeColor,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isSpecialMode = themeNotifier.isSpecialModeActive;
+    final specialThemeColor = themeNotifier.getThemeColor(themeNotifier.specialTheme);
+
     return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(right: 16),
-      height: 240,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -1592,7 +1623,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF232B5D), Color(0xFF181A20)],
+                  colors: isSpecialMode
+                      ? [
+                          specialThemeColor.shade900,
+                          specialThemeColor.shade800,
+                        ]
+                      : [
+                          Colors.red.shade900,
+                          Colors.red.shade800,
+                        ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -1660,7 +1699,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         ),
                       ),
                       // Contactless Icon
-                      Icon(Icons.wifi, color: Colors.white, size: 32),
+                      Transform.rotate(
+                        angle: pi / 2,
+                        child: Icon(Icons.wifi, color: Colors.white, size: 32),
+                      ),
                     ],
                   ),
                   SizedBox(height: 18),
@@ -1692,22 +1734,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           children: [
                             Flexible(
                               child: Text(
-                                cardNumber.length <= 12 ? masked : cardNumber.substring(0, cardNumber.length - 4),
+                                cardNumber.isEmpty 
+                                  ? '**** **** **** ' 
+                                  : cardNumber.replaceAllMapped(
+                                      RegExp(r'.{4}'),
+                                      (match) => '${match.group(0)} ',
+                                    ).trim(),
                                 style: embossTextStyle.copyWith(
                                   fontSize: 16,
                                   letterSpacing: 1.5,
                                   fontFamily: 'monospace',
                                 ),
                                 overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Text(
-                              last4,
-                              style: embossTextStyle.copyWith(
-                                fontSize: 22,
-                                letterSpacing: 2,
-                                fontFamily: 'monospace',
-                                color: Colors.white,
                               ),
                             ),
                           ],
@@ -1764,11 +1802,141 @@ class _CheckoutPageState extends State<CheckoutPage> {
             // Mastercard logo
             Positioned(
               right: 20,
+              bottom: 5,
+              child: Container(
+                width: 120,
+                height: 82,
+                alignment: Alignment.bottomRight,
+                child: Image.asset(
+                  'lib/assets/Images/mastercard-logo.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardBack({
+    required Color themeColor,
+    required String cvv,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isSpecialMode = themeNotifier.isSpecialModeActive;
+    final specialThemeColor = themeNotifier.getThemeColor(themeNotifier.specialTheme);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: themeColor.withOpacity(0.4),
+            blurRadius: 25,
+            offset: Offset(0, 10),
+          )
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            // Background Gradient
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isSpecialMode
+                      ? [
+                          specialThemeColor.shade900,
+                          specialThemeColor.shade800,
+                        ]
+                      : [
+                          Colors.red.shade900,
+                          Colors.red.shade800,
+                        ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+            // Magnetic Strip
+            Positioned(
+              top: 40,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 50,
+                color: Colors.black,
+              ),
+            ),
+            // Signature Panel
+            Positioned(
+              top: 100,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 50,
+                color: Colors.white,
+                child: Center(
+                  child: Text(
+                    'Authorized Signature',
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // CVV Panel
+            Positioned(
+              top: 160,
+              right: 20,
+              child: Container(
+                width: 60,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Center(
+                  child: Text(
+                    cvv.isEmpty ? '***' : cvv,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Paradise Bank Logo and Text at bottom left
+            Positioned(
+              left: 20,
               bottom: 20,
-              child: Image.asset(
-                'lib/assets/Images/mastercard-logo.png',
-                width: 64,
-                height: 44,
+              child: Row(
+                children: [
+                  Image.asset(
+                    Theme.of(context).brightness == Brightness.dark
+                        ? 'lib/assets/Images/app-icon-dark.png'
+                        : 'lib/assets/Images/app-icon-light.png',
+                    width: 24,
+                    height: 24,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Paradise Bank',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -1821,6 +1989,8 @@ class AddCardForm extends StatefulWidget {
 }
 
 class _AddCardFormState extends State<AddCardForm> {
+  bool _isCardFlipped = false;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -1832,6 +2002,13 @@ class _AddCardFormState extends State<AddCardForm> {
           cardNumber: widget.cardNumberController.text,
           cardHolderName: widget.cardHolderController.text,
           expiryDate: widget.expiryDateController.text,
+          cvv: widget.cvvController.text,
+          isFlipped: _isCardFlipped,
+          onFlip: () {
+            setState(() {
+              _isCardFlipped = !_isCardFlipped;
+            });
+          },
         ),
         const SizedBox(height: 16),
         TextField(
@@ -1845,10 +2022,9 @@ class _AddCardFormState extends State<AddCardForm> {
             ),
           ),
           keyboardType: TextInputType.number,
-          maxLength: 19,
+          maxLength: 16,
           inputFormatters: [
             FilteringTextInputFormatter.digitsOnly,
-            CardNumberInputFormatter(),
           ],
           onChanged: (value) => setState(() {}),
         ),
@@ -1888,9 +2064,17 @@ class _AddCardFormState extends State<AddCardForm> {
                 maxLength: 5,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
-                  ExpiryDateInputFormatter(),
+                  _ExpiryDateFormatter(),
                 ],
-                onChanged: (value) => setState(() {}),
+                onChanged: (value) {
+                  if (value.length == 2 && !value.contains('/')) {
+                    widget.expiryDateController.text = '$value/';
+                    widget.expiryDateController.selection = TextSelection.fromPosition(
+                      TextPosition(offset: widget.expiryDateController.text.length),
+                    );
+                  }
+                  setState(() {});
+                },
               ),
             ),
             const SizedBox(width: 16),
@@ -1943,16 +2127,14 @@ class _AddCardFormState extends State<AddCardForm> {
     required String cardNumber,
     required String cardHolderName,
     required String expiryDate,
+    required String cvv,
+    required bool isFlipped,
+    required VoidCallback onFlip,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final themeColor = themeNotifier.isSpecialModeActive
-        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : Colors.red;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    String masked = '**** **** **** ';
-    String last4 = cardNumber.isNotEmpty ? cardNumber.substring(cardNumber.length - min(4, cardNumber.length)) : '';
+    final isSpecialMode = themeNotifier.isSpecialModeActive;
+    final specialThemeColor = themeNotifier.getThemeColor(themeNotifier.specialTheme);
 
     final embossTextStyle = TextStyle(
       color: Colors.white,
@@ -1967,10 +2149,64 @@ class _AddCardFormState extends State<AddCardForm> {
       ],
     );
 
+    return GestureDetector(
+      onTap: onFlip,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(right: 16),
+        height: 240,
+        child: TweenAnimationBuilder(
+          tween: Tween<double>(
+            begin: 0,
+            end: (isFlipped || cvv.isNotEmpty) ? 180 : 0,
+          ),
+          duration: Duration(milliseconds: 500),
+          builder: (context, double value, child) {
+            return Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.identity()
+                ..setEntry(3, 2, 0.001)
+                ..rotateY((value * pi) / 180),
+              child: value < 90
+                  ? _buildCardFront(
+                      cardNumber: cardNumber,
+                      cardHolderName: cardHolderName,
+                      expiryDate: expiryDate,
+                      masked: '**** **** **** ',
+                      last4: cardNumber.isNotEmpty ? cardNumber.substring(cardNumber.length - min(4, cardNumber.length)) : '',
+                      embossTextStyle: embossTextStyle,
+                      themeColor: isSpecialMode ? specialThemeColor : Colors.red,
+                    )
+                  : Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()..rotateY(pi),
+                      child: _buildCardBack(
+                        themeColor: isSpecialMode ? specialThemeColor : Colors.red,
+                        cvv: cvv,
+                      ),
+                    ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardFront({
+    required String cardNumber,
+    required String cardHolderName,
+    required String expiryDate,
+    required String masked,
+    required String last4,
+    required TextStyle embossTextStyle,
+    required Color themeColor,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isSpecialMode = themeNotifier.isSpecialModeActive;
+    final specialThemeColor = themeNotifier.getThemeColor(themeNotifier.specialTheme);
+
     return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(right: 16),
-      height: 240,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -1989,7 +2225,15 @@ class _AddCardFormState extends State<AddCardForm> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF232B5D), Color(0xFF181A20)],
+                  colors: isSpecialMode
+                      ? [
+                          specialThemeColor.shade900,
+                          specialThemeColor.shade800,
+                        ]
+                      : [
+                          Colors.red.shade900,
+                          Colors.red.shade800,
+                        ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -2057,7 +2301,10 @@ class _AddCardFormState extends State<AddCardForm> {
                         ),
                       ),
                       // Contactless Icon
-                      Icon(Icons.wifi, color: Colors.white, size: 32),
+                      Transform.rotate(
+                        angle: pi / 2,
+                        child: Icon(Icons.wifi, color: Colors.white, size: 32),
+                      ),
                     ],
                   ),
                   SizedBox(height: 18),
@@ -2089,22 +2336,18 @@ class _AddCardFormState extends State<AddCardForm> {
                           children: [
                             Flexible(
                               child: Text(
-                                cardNumber.length <= 12 ? masked : cardNumber.substring(0, cardNumber.length - 4),
+                                cardNumber.isEmpty 
+                                  ? '**** **** **** ' 
+                                  : cardNumber.replaceAllMapped(
+                                      RegExp(r'.{4}'),
+                                      (match) => '${match.group(0)} ',
+                                    ).trim(),
                                 style: embossTextStyle.copyWith(
                                   fontSize: 16,
                                   letterSpacing: 1.5,
                                   fontFamily: 'monospace',
                                 ),
                                 overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Text(
-                              last4,
-                              style: embossTextStyle.copyWith(
-                                fontSize: 22,
-                                letterSpacing: 2,
-                                fontFamily: 'monospace',
-                                color: Colors.white,
                               ),
                             ),
                           ],
@@ -2161,11 +2404,141 @@ class _AddCardFormState extends State<AddCardForm> {
             // Mastercard logo
             Positioned(
               right: 20,
+              bottom: 5,
+              child: Container(
+                width: 120,
+                height: 82,
+                alignment: Alignment.bottomRight,
+                child: Image.asset(
+                  'lib/assets/Images/mastercard-logo.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardBack({
+    required Color themeColor,
+    required String cvv,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isSpecialMode = themeNotifier.isSpecialModeActive;
+    final specialThemeColor = themeNotifier.getThemeColor(themeNotifier.specialTheme);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: themeColor.withOpacity(0.4),
+            blurRadius: 25,
+            offset: Offset(0, 10),
+          )
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            // Background Gradient
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isSpecialMode
+                      ? [
+                          specialThemeColor.shade900,
+                          specialThemeColor.shade800,
+                        ]
+                      : [
+                          Colors.red.shade900,
+                          Colors.red.shade800,
+                        ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+            // Magnetic Strip
+            Positioned(
+              top: 40,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 50,
+                color: Colors.black,
+              ),
+            ),
+            // Signature Panel
+            Positioned(
+              top: 100,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 50,
+                color: Colors.white,
+                child: Center(
+                  child: Text(
+                    'Authorized Signature',
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // CVV Panel
+            Positioned(
+              top: 160,
+              right: 20,
+              child: Container(
+                width: 60,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Center(
+                  child: Text(
+                    cvv.isEmpty ? '***' : cvv,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Paradise Bank Logo and Text at bottom left
+            Positioned(
+              left: 20,
               bottom: 20,
-              child: Image.asset(
-                'lib/assets/Images/mastercard-logo.png',
-                width: 64,
-                height: 44,
+              child: Row(
+                children: [
+                  Image.asset(
+                    Theme.of(context).brightness == Brightness.dark
+                        ? 'lib/assets/Images/app-icon-dark.png'
+                        : 'lib/assets/Images/app-icon-light.png',
+                    width: 24,
+                    height: 24,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Paradise Bank',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -2204,6 +2577,8 @@ class _AddCardFormState extends State<AddCardForm> {
       final month = int.parse(parts[0]);
       final year = 2000 + int.parse(parts[1]);
 
+      if (month < 1 || month > 12) return true;
+
       final now = DateTime.now();
       final cardExpiry = DateTime(year, month + 1, 0);
 
@@ -2211,5 +2586,39 @@ class _AddCardFormState extends State<AddCardForm> {
     } catch (e) {
       return true;
     }
+  }
+}
+
+class _ExpiryDateFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text;
+    if (text.isEmpty) {
+      return newValue;
+    }
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < text.length; i++) {
+      if (i == 2 && !text.contains('/')) {
+        buffer.write('/');
+      }
+      buffer.write(text[i]);
+    }
+
+    String newText = buffer.toString();
+    if (newText.length > 2) {
+      final month = int.tryParse(newText.substring(0, 2)) ?? 0;
+      if (month > 12) {
+        newText = '12/${newText.substring(3)}';
+      }
+    }
+
+    return TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newText.length),
+    );
   }
 }

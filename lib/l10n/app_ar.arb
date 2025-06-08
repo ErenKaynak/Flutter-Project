@@ -238,5 +238,9 @@
     "spinTheWheel": "أدر العجلة!",
     "mostViewed": "المنتجات الأكثر مشاهدة",
     "noSavedCards": "لا توجد رموز خصم محفوظة",
-    "myCards": "بطاقاتي"
+    "myCards": "بطاقاتي",
+    "invalidExpiryDate": "تاريخ انتهاء غير صالح",
+    "invalidCvv": "رمز CVV غير صالح",
+    "deliveryFee": "رسوم التوصيل",
+    "edit": "تعديل"
 }

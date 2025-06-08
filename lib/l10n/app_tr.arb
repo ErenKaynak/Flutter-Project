@@ -730,5 +730,9 @@
     "spinning": "Çevriliyor...",
     "spinTheWheel": "Çarkı Çevir!",
     "mostViewed": "En Çok Görüntülenen Ürünler",
-    "cardHolder": "Kart Sahibi"
+    "cardHolder": "Kart Sahibi",
+    "invalidExpiryDate": "Geçersiz son kullanma tarihi",
+    "invalidCvv": "Geçersiz CVV",
+    "deliveryFee": "Kargo Ücreti",
+    "edit": "Düzenle"
 }

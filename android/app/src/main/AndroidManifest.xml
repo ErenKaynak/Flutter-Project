@@ -67,6 +67,10 @@
             android:name="com.onesignal.NotificationAccentColor.DEFAULT"
             android:value="FFFF0000"/> <!-- Replace with your desired accent color -->
 
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyDFYH2YvsVidC2ssabxM7ixKAMj6umhhK8"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

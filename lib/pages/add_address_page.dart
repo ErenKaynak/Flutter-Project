@@ -24,7 +24,7 @@ class AddAddressPage extends StatefulWidget {
 class _AddAddressPageState extends State<AddAddressPage> {
   final _formKey = GlobalKey<FormState>();
   final _scrollController = ScrollController();
-  final String _apiKey = 'AIzaSyDFYH2YvsVidC2ssabxM7ixKAMj6umhhK8'; // Replace with your API key
+  final _apiKey = 'AIzaSyDFYH2YvsVidC2ssabxM7ixKAMj6umhhK8';
 
   // Add TextEditingControllers
   final TextEditingController _firstNameController = TextEditingController();
@@ -48,6 +48,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
   double? longitude;
   String? addressId;
   bool isAddressVerified = false;
+  bool isLoadingCountries = false;
+  bool isLoadingCities = false;
+  List<String> cities = [];
 
   // Focus nodes to manage keyboard focus
   final FocusNode _lastNameFocus = FocusNode();
@@ -74,11 +77,33 @@ class _AddAddressPageState extends State<AddAddressPage> {
     'Japan': ['Tokyo', 'Yokohama', 'Osaka', 'Nagoya', 'Sapporo', 'Fukuoka', 'Kobe', 'Kyoto', 'Kawasaki', 'Saitama'],
   };
 
+  // Map of local country names to English names
+  final Map<String, String> countryNameMap = {
+    'Türkiye': 'Turkey',
+    'United States of America': 'United States',
+    'United Kingdom of Great Britain and Northern Ireland': 'United Kingdom',
+    'Deutschland': 'Germany',
+    'République française': 'France',
+    'Repubblica Italiana': 'Italy',
+    'Reino de España': 'Spain',
+    'Canada': 'Canada',
+    'Commonwealth of Australia': 'Australia',
+    '日本': 'Japan',
+  };
+
   // List of countries for the dropdown
-  List<String> get countries => countryCities.keys.toList();
+  List<String> get availableCountries => countryCities.keys.toList();
 
   // Get cities for the selected country
-  List<String> get citiesForSelectedCountry => countryCities[country] ?? [];
+  List<String> get citiesForSelectedCountry {
+    if (country.isEmpty) return [];
+    final cities = countryCities[country] ?? [];
+    // If the current city is not in the list and not empty, add it
+    if (city.isNotEmpty && !cities.contains(city)) {
+      return [...cities, city];
+    }
+    return cities;
+  }
 
   @override
   void initState() {
@@ -98,7 +123,9 @@ class _AddAddressPageState extends State<AddAddressPage> {
       _apartmentController.text = data['apartment'] ?? '';
       _floorController.text = data['floor'] ?? '';
       _doorNoController.text = data['doorNo'] ?? '';
-      country = data['country'] ?? '';
+      // Normalize country name
+      String rawCountry = data['country'] ?? '';
+      country = countryNameMap[rawCountry] ?? rawCountry;
       state = data['state'] ?? '';
       city = data['city'] ?? '';
       postalCode = data['postalCode'] ?? '';
@@ -427,16 +454,11 @@ class _AddAddressPageState extends State<AddAddressPage> {
                           ],
                         ),
                         SizedBox(height: 16),
-                        _buildCountryDropdown(
+                        _buildLocationSelector(
                           isDarkMode: isDarkMode,
+                          primaryColor: primaryColor,
                           accentColor: accentColor,
-                          bgColor: textFieldBgColor,
-                        ),
-                        SizedBox(height: 16),
-                        _buildCityDropdown(
-                          isDarkMode: isDarkMode,
-                          accentColor: accentColor,
-                          bgColor: textFieldBgColor,
+                          cardColor: cardColor,
                         ),
                         SizedBox(height: 16),
                         _buildTextField(
@@ -683,100 +705,84 @@ class _AddAddressPageState extends State<AddAddressPage> {
     );
   }
 
-  Widget _buildCountryDropdown({
+  Widget _buildLocationSelector({
     required bool isDarkMode,
+    required Color primaryColor,
     required Color accentColor,
-    required Color bgColor,
+    required Color cardColor,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        labelText: l10n.country,
-        filled: true,
-        fillColor: bgColor,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(
-            color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: accentColor, width: 2),
-        ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        labelStyle: TextStyle(color: isDarkMode ? Colors.grey.shade300 : null),
-      ),
-      value: country.isEmpty ? null : country,
-      hint: Text(l10n.selectCountry),
-      dropdownColor: isDarkMode ? Color(0xFF2C2C2C) : Colors.white,
-      style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
-      validator: (val) {
-        if (val == null || val.isEmpty) {
-          return l10n.pleaseSelectCountry;
-        }
-        return null;
-      },
-      items: countries.map((String country) {
-        return DropdownMenuItem<String>(
-          value: country,
-          child: Text(country),
-        );
-      }).toList(),
-      onChanged: (val) {
-        setState(() {
-          country = val!;
-          city = ''; // Reset city when country changes
-        });
-      },
-    );
-  }
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
-  Widget _buildCityDropdown({
-    required bool isDarkMode,
-    required Color accentColor,
-    required Color bgColor,
-  }) {
-    final l10n = AppLocalizations.of(context)!;
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        labelText: l10n.city,
-        filled: true,
-        fillColor: bgColor,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(
-            color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+    return _buildInputCard(
+      cardColor: cardColor,
+      child: Column(
+        children: [
+          DropdownButtonFormField<String>(
+            value: country.isEmpty ? null : country,
+            decoration: InputDecoration(
+              labelText: l10n.country,
+              prefixIcon: Icon(Icons.public),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            items: availableCountries.map((String country) {
+              return DropdownMenuItem<String>(
+                value: country,
+                child: Text(country),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                setState(() {
+                  country = newValue;
+                  // Reset city when country changes
+                  if (!citiesForSelectedCountry.contains(city)) {
+                    city = '';
+                  }
+                });
+              }
+            },
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return l10n.pleaseSelectCountry;
+              }
+              return null;
+            },
           ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: accentColor, width: 2),
-        ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        labelStyle: TextStyle(color: isDarkMode ? Colors.grey.shade300 : null),
+          SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: city.isEmpty ? null : city,
+            decoration: InputDecoration(
+              labelText: l10n.city,
+              prefixIcon: Icon(Icons.location_city),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            items: citiesForSelectedCountry.map((String city) {
+              return DropdownMenuItem<String>(
+                value: city,
+                child: Text(city),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                setState(() {
+                  city = newValue;
+                });
+              }
+            },
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return l10n.pleaseSelectCity;
+              }
+              return null;
+            },
+          ),
+        ],
       ),
-      value: city.isEmpty ? null : city,
-      hint: Text(l10n.selectCity),
-      dropdownColor: isDarkMode ? Color(0xFF2C2C2C) : Colors.white,
-      style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
-      validator: (val) {
-        if (val == null || val.isEmpty) {
-          return l10n.pleaseSelectCity;
-        }
-        return null;
-      },
-      items: citiesForSelectedCountry.map((String city) {
-        return DropdownMenuItem<String>(
-          value: city,
-          child: Text(city),
-        );
-      }).toList(),
-      onChanged: country.isEmpty ? null : (val) {
-        setState(() {
-          city = val!;
-        });
-      },
     );
   }
 
@@ -1063,62 +1069,45 @@ class _AddAddressPageState extends State<AddAddressPage> {
       // Construct the address string
       final address = '${_streetController.text}, ${_neighborhoodController.text}, ${city}, ${state}, ${country}, ${postalCode}';
       
-      // URL encode the address
-      final encodedAddress = Uri.encodeComponent(address);
+      // Use the geocoding package to get location from address
+      List<Location> locations = await locationFromAddress(address);
       
-      // Make the API request
-      final response = await http.get(
-        Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?address=$encodedAddress&key=$_apiKey'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+      if (locations.isNotEmpty) {
+        Location location = locations.first;
         
-        if (data['status'] == 'OK') {
-          final result = data['results'][0];
-          final location = result['geometry']['location'];
+        // Update state with verified location
+        setState(() {
+          latitude = location.latitude;
+          longitude = location.longitude;
+          isAddressVerified = true;
+        });
+
+        // Get address details from coordinates
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          location.latitude,
+          location.longitude,
+        );
+
+        if (placemarks.isNotEmpty) {
+          Placemark place = placemarks.first;
           
-          // Update state with verified location
-          setState(() {
-            latitude = location['lat'];
-            longitude = location['lng'];
-            isAddressVerified = true;
-          });
-
           // Update address components with verified data
-          for (var component in result['address_components']) {
-            final types = component['types'] as List;
-            if (types.contains('street_number')) {
-              _buildingNoController.text = component['long_name'];
-            } else if (types.contains('route')) {
-              _streetController.text = component['long_name'];
-            } else if (types.contains('sublocality')) {
-              _neighborhoodController.text = component['long_name'];
-            } else if (types.contains('country')) {
-              country = component['long_name'];
-            } else if (types.contains('administrative_area_level_1')) {
-              state = component['long_name'];
-            } else if (types.contains('locality')) {
-              city = component['long_name'];
-            } else if (types.contains('postal_code')) {
-              postalCode = component['long_name'];
-            }
-          }
-
-          // Dismiss loading dialog
-          if (Navigator.canPop(context)) {
-            Navigator.pop(context);
-          }
-          _showSuccessSnackBar('Address verified successfully!');
-        } else {
           setState(() {
-            isAddressVerified = false;
+            _streetController.text = place.street ?? _streetController.text;
+            _neighborhoodController.text = place.subLocality ?? _neighborhoodController.text;
+            _buildingNoController.text = place.subThoroughfare ?? _buildingNoController.text;
+            country = place.country ?? country;
+            state = place.administrativeArea ?? state;
+            city = place.locality ?? city;
+            postalCode = place.postalCode ?? postalCode;
           });
-          if (Navigator.canPop(context)) {
-            Navigator.pop(context);
-          }
-          _showErrorSnackBar('Could not verify address. Please check the details.');
         }
+
+        // Dismiss loading dialog
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+        _showSuccessSnackBar('Address verified successfully!');
       } else {
         setState(() {
           isAddressVerified = false;
@@ -1126,7 +1115,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
         if (Navigator.canPop(context)) {
           Navigator.pop(context);
         }
-        _showErrorSnackBar('Error verifying address: ${response.statusCode}');
+        _showErrorSnackBar('Could not verify address. Please check the details.');
       }
     } catch (e) {
       setState(() {
@@ -1171,60 +1160,52 @@ class _AddAddressPageState extends State<AddAddressPage> {
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // Get address from coordinates
-      final response = await http.get(
-        Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?latlng=${position.latitude},${position.longitude}&key=$_apiKey'),
+      // Get address from coordinates using geocoding package
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'OK') {
-          final result = data['results'][0];
-          final addressComponents = result['address_components'];
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks.first;
+        
+        setState(() {
+          latitude = position.latitude;
+          longitude = position.longitude;
+          isAddressVerified = true;
           
-          setState(() {
-            latitude = position.latitude;
-            longitude = position.longitude;
-            isAddressVerified = true;
-          });
-
           // Update address fields with current location data
-          for (var component in addressComponents) {
-            final types = component['types'] as List;
-            if (types.contains('street_number')) {
-              _buildingNoController.text = component['long_name'];
-            } else if (types.contains('route')) {
-              _streetController.text = component['long_name'];
-            } else if (types.contains('sublocality')) {
-              _neighborhoodController.text = component['long_name'];
-            } else if (types.contains('country')) {
-              country = component['long_name'];
-            } else if (types.contains('administrative_area_level_1')) {
-              state = component['long_name'];
-            } else if (types.contains('locality')) {
-              city = component['long_name'];
-            } else if (types.contains('postal_code')) {
-              postalCode = component['long_name'];
-            }
-          }
+          _streetController.text = place.street ?? '';
+          _neighborhoodController.text = place.subLocality ?? '';
+          _buildingNoController.text = place.subThoroughfare ?? '';
+          country = place.country ?? '';
+          state = place.administrativeArea ?? '';
+          city = place.locality ?? '';
+          postalCode = place.postalCode ?? '';
+        });
 
-          // Dismiss loading dialog
-          if (Navigator.canPop(context)) {
-            Navigator.pop(context);
-          }
-          _showSuccessSnackBar('Location detected successfully!');
-        } else {
-          if (Navigator.canPop(context)) {
-            Navigator.pop(context);
-          }
-          _showErrorSnackBar('Could not get address from coordinates');
+        // Dismiss loading dialog
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
         }
+        _showSuccessSnackBar('Location updated successfully!');
+      } else {
+        setState(() {
+          isAddressVerified = false;
+        });
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+        _showErrorSnackBar('Could not get address from current location.');
       }
     } catch (e) {
+      setState(() {
+        isAddressVerified = false;
+      });
       if (Navigator.canPop(context)) {
         Navigator.pop(context);
       }
-      _showErrorSnackBar('Error getting location: $e');
+      _showErrorSnackBar('Error getting current location: $e');
     }
   }
 }

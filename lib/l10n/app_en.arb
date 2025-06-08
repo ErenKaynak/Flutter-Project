@@ -854,5 +854,9 @@
     "pleaseSelectCountry": "Please select a country",
     "homepageLayout": "Homepage Layout",
     "cashbackReversal": "Cashback Reversal",
-    "cardHolder": "Card Holder"
+    "cardHolder": "Card Holder",
+    "invalidExpiryDate": "Invalid expiry date",
+    "invalidCvv": "Invalid CVV",
+    "deliveryFee": "Delivery Fee",
+    "edit": "Edit"
 }

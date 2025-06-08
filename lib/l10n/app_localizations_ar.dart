@@ -1558,4 +1558,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get cardHolder => 'اسم حامل البطاقة';
+
+  @override
+  String get invalidExpiryDate => 'تاريخ انتهاء غير صالح';
+
+  @override
+  String get invalidCvv => 'رمز CVV غير صالح';
+
+  @override
+  String get deliveryFee => 'رسوم التوصيل';
+
+  @override
+  String get edit => 'تعديل';
 }

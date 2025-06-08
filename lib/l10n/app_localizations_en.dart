@@ -1558,4 +1558,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cardHolder => 'Card Holder';
+
+  @override
+  String get invalidExpiryDate => 'Invalid expiry date';
+
+  @override
+  String get invalidCvv => 'Invalid CVV';
+
+  @override
+  String get deliveryFee => 'Delivery Fee';
+
+  @override
+  String get edit => 'Edit';
 }

@@ -1558,4 +1558,16 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get cardHolder => 'Kart Sahibi';
+
+  @override
+  String get invalidExpiryDate => 'Geçersiz son kullanma tarihi';
+
+  @override
+  String get invalidCvv => 'Geçersiz CVV';
+
+  @override
+  String get deliveryFee => 'Kargo Ücreti';
+
+  @override
+  String get edit => 'Düzenle';
 }
