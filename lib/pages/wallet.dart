@@ -826,7 +826,7 @@ class _WalletPageState extends State<WalletPage> {
     );
 
     return Container(
-      width: 350,
+      width: 360,
       margin: const EdgeInsets.only(right: 16),
       height: 240,
       decoration: BoxDecoration(
@@ -884,7 +884,7 @@ class _WalletPageState extends State<WalletPage> {
             ),
             // Card Content
             Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(20.0),
               child: Column(
                 mainAxisSize: MainAxisSize.max,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -940,30 +940,26 @@ class _WalletPageState extends State<WalletPage> {
                             child: Icon(Icons.sd_card_rounded,
                                 color: Colors.black.withOpacity(0.1), size: 30)),
                       ),
-                      SizedBox(width: 4),
+                      SizedBox(width: 8),
                       Flexible(
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
                               masked,
                               style: embossTextStyle.copyWith(
-                                fontSize: 18,
+                                fontSize: 16,
                                 letterSpacing: 1.5,
                                 fontFamily: 'monospace',
                               ),
                             ),
-                            Padding(
-                              padding: const EdgeInsets.only(left: 2.0),
-                              child: Text(
-                                last4,
-                                style: embossTextStyle.copyWith(
-                                  fontSize: 14,
-                                  letterSpacing: 1.5,
-                                  fontFamily: 'monospace',
-                                  color: Colors.white,
-                                ),
+                            Text(
+                              last4,
+                              style: embossTextStyle.copyWith(
+                                fontSize: 16,
+                                letterSpacing: 1.5,
+                                fontFamily: 'monospace',
+                                color: Colors.white,
                               ),
                             ),
                           ],
