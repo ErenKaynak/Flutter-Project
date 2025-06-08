@@ -940,10 +940,11 @@ class _WalletPageState extends State<WalletPage> {
                             child: Icon(Icons.sd_card_rounded,
                                 color: Colors.black.withOpacity(0.1), size: 30)),
                       ),
-                      SizedBox(width: 8),
+                      SizedBox(width: 4),
                       Flexible(
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
                               masked,
@@ -953,13 +954,16 @@ class _WalletPageState extends State<WalletPage> {
                                 fontFamily: 'monospace',
                               ),
                             ),
-                            Text(
-                              last4,
-                              style: embossTextStyle.copyWith(
-                                fontSize: 18,
-                                letterSpacing: 1.5,
-                                fontFamily: 'monospace',
-                                color: Colors.white,
+                            Padding(
+                              padding: const EdgeInsets.only(left: 2.0),
+                              child: Text(
+                                last4,
+                                style: embossTextStyle.copyWith(
+                                  fontSize: 14,
+                                  letterSpacing: 1.5,
+                                  fontFamily: 'monospace',
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ],
