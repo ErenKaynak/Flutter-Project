@@ -123,6 +123,7 @@ flutter:
     - lib/assets/Images/case.png
     - lib/assets/Images/cpu.png
     - lib/assets/Images/powersupply.png
+    - lib/assets/Images/mastercard-logo.png
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

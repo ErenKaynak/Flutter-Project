@@ -116,6 +116,7 @@
     "setAsDefault": "Set as Default",
     "myOrders": "My Orders",
     "myWallet": "My Wallet",
+    "myCards": "My Cards",
     "appearance": "Appearance",
     "adminPanel": "Admin Panel",
     "referralCode": "Your Referral Code",
@@ -336,7 +337,7 @@
         "description": "Description for order management section"
     },
     "currentBalance": "Current Balance",
-    "cashbackInfo": "1% Cashback on all purchases",
+    "cashbackInfo": "You can earn cashback rewards on eligible purchases.",
     "addMoney": "Add Money",
     "transactionHistory": "Transaction History",
     "transactionsCount": "{count} transactions",

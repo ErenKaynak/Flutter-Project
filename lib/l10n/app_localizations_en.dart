@@ -285,6 +285,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myWallet => 'My Wallet';
 
   @override
+  String get myCards => 'My Cards';
+
+  @override
   String get appearance => 'Appearance';
 
   @override
@@ -625,7 +628,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get currentBalance => 'Current Balance';
 
   @override
-  String get cashbackInfo => '1% Cashback on all purchases';
+  String get cashbackInfo => 'You can earn cashback rewards on eligible purchases.';
 
   @override
   String get addMoney => 'Add Money';

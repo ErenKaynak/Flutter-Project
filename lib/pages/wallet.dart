@@ -24,6 +24,7 @@ class _WalletPageState extends State<WalletPage> {
   bool _isLoading = true;
   bool _isAuthenticated = false;
   List<Map<String, dynamic>> _transactions = [];
+  List<Map<String, dynamic>> _savedCards = [];
   final _walletAuthService = WalletAuthService();
   final _pinController = TextEditingController();
   String? _error;
@@ -157,6 +158,29 @@ class _WalletPageState extends State<WalletPage> {
   Future<void> _loadWalletData() async {
     await _fetchWalletBalance();
     await _fetchTransactions();
+    await _fetchSavedCards();
+  }
+
+  Future<void> _fetchSavedCards() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final cardsSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('cards')
+          .get();
+
+      if (mounted) {
+        setState(() {
+          _savedCards = cardsSnapshot.docs
+              .map((doc) => {'id': doc.id, ...doc.data()})
+              .toList();
+        });
+      }
+    } catch (e) {
+      print('Error loading saved cards: $e');
+    }
   }
 
   Future<void> _fetchTransactions() async {
@@ -302,11 +326,29 @@ class _WalletPageState extends State<WalletPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder:
-          (context) => AddMoneyBottomSheet(
-            savedCards: savedCards,
-            onAddMoney: _addBalance,
-          ),
+      builder: (context) {
+        final mediaQuery = MediaQuery.of(context);
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return SingleChildScrollView(
+              controller: scrollController,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: mediaQuery.size.height * 0.95,
+                ),
+                child: AddMoneyBottomSheet(
+                  savedCards: savedCards,
+                  onAddMoney: _addBalance,
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -360,9 +402,9 @@ class _WalletPageState extends State<WalletPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final l10n = AppLocalizations.of(context)!;
-    final specialColor = themeNotifier.isSpecialModeActive
+    final themeColor = themeNotifier.isSpecialModeActive
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : null;
+        : Colors.red;
 
     return Scaffold(
       appBar: AppBar(
@@ -376,7 +418,7 @@ class _WalletPageState extends State<WalletPage> {
           color: Colors.white,
         ),
         elevation: 0,
-        backgroundColor: isDark ? Colors.red.shade900 : Colors.red.shade700,
+        backgroundColor: isDark ? themeColor.shade900 : themeColor.shade700,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(15)),
         ),
@@ -385,18 +427,8 @@ class _WalletPageState extends State<WalletPage> {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: isDark
-                ? [
-                    themeNotifier.isSpecialModeActive
-                        ? (specialColor?.shade900 ?? Colors.red.shade900)
-                        : Colors.red.shade900,
-                    Colors.grey.shade900,
-                  ]
-                : [
-                    themeNotifier.isSpecialModeActive
-                        ? (specialColor?.shade50 ?? Colors.red.shade50)
-                        : Colors.red.shade50,
-                    Colors.white,
-                  ],
+                ? [themeColor.shade900, Colors.grey.shade900]
+                : [themeColor.shade500, themeColor.shade100],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -404,11 +436,9 @@ class _WalletPageState extends State<WalletPage> {
         child: _isLoading
             ? Center(
                 child: CircularProgressIndicator(
-                  color: themeNotifier.isSpecialModeActive
-                      ? specialColor
-                      : (themeNotifier.isBlackMode
-                          ? Theme.of(context).colorScheme.secondary
-                          : Colors.red),
+                  color: themeNotifier.isBlackMode
+                      ? Theme.of(context).colorScheme.secondary
+                      : themeColor,
                 ),
               )
             : RefreshIndicator(
@@ -427,21 +457,7 @@ class _WalletPageState extends State<WalletPage> {
                           width: double.infinity,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: isDark
-                                  ? [
-                                      themeNotifier.isSpecialModeActive
-                                          ? (specialColor?.shade900 ?? Colors.red.shade900)
-                                          : Colors.red.shade900,
-                                      Colors.grey.shade900,
-                                    ]
-                                  : [
-                                      themeNotifier.isSpecialModeActive
-                                          ? (specialColor?.shade500 ?? Colors.red.shade500)
-                                          : Colors.red.shade500,
-                                      themeNotifier.isSpecialModeActive
-                                          ? (specialColor?.shade100 ?? Colors.red.shade100)
-                                          : Colors.red.shade100,
-                                    ],
+                              colors: [Color(0xFF232B5D), Color(0xFF181A20)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -450,9 +466,7 @@ class _WalletPageState extends State<WalletPage> {
                               BoxShadow(
                                 color: isDark
                                     ? Colors.black26
-                                    : (themeNotifier.isSpecialModeActive
-                                        ? (specialColor?.shade200.withOpacity(0.5) ?? Colors.red.shade200.withOpacity(0.5))
-                                        : Colors.red.shade200.withOpacity(0.5)),
+                                    : themeColor.shade200.withOpacity(0.5),
                                 blurRadius: 10,
                                 offset: const Offset(0, 5),
                               ),
@@ -489,6 +503,28 @@ class _WalletPageState extends State<WalletPage> {
                             ],
                           ),
                         ),
+                        if (_savedCards.isNotEmpty) ...[
+                          const SizedBox(height: 24),
+                          Text(
+                            l10n.myCards,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            height: 200,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _savedCards.length,
+                              itemBuilder: (context, index) {
+                                return _buildCreditCardWidget(_savedCards[index]);
+                              },
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
@@ -496,11 +532,7 @@ class _WalletPageState extends State<WalletPage> {
                           child: ElevatedButton(
                             onPressed: _showAddMoneyDialog,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: themeNotifier.isSpecialModeActive
-                                  ? specialColor
-                                  : (isDark
-                                      ? Colors.red.shade900
-                                      : Colors.red.shade400),
+                              backgroundColor: isDark ? themeColor.shade900 : themeColor.shade400,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -515,6 +547,11 @@ class _WalletPageState extends State<WalletPage> {
                               ),
                             ),
                           ),
+                        ),
+                        const SizedBox(height: 24),
+                        Divider(
+                          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                          thickness: 1,
                         ),
                         const SizedBox(height: 24),
                         Container(
@@ -635,9 +672,7 @@ class _WalletPageState extends State<WalletPage> {
                                                           ? Colors.blue.withOpacity(0.1)
                                                           : isCashbackReversal
                                                               ? Colors.orange.withOpacity(0.1)
-                                                              : (themeNotifier.isSpecialModeActive
-                                                                  ? specialColor?.withOpacity(0.1) ?? Colors.red.withOpacity(0.1)
-                                                                  : Colors.red.withOpacity(0.1)),
+                                                              : themeColor.withOpacity(0.1),
                                                   shape: BoxShape.circle,
                                                 ),
                                                 child: Icon(
@@ -654,9 +689,7 @@ class _WalletPageState extends State<WalletPage> {
                                                           ? Colors.blue
                                                           : isCashbackReversal
                                                               ? Colors.orange
-                                                              : (themeNotifier.isSpecialModeActive
-                                                                  ? specialColor
-                                                                  : Colors.red),
+                                                              : themeColor,
                                                 ),
                                               ),
                                               SizedBox(width: 16),
@@ -707,9 +740,7 @@ class _WalletPageState extends State<WalletPage> {
                                                               ? Colors.blue
                                                               : isCashbackReversal
                                                                   ? Colors.orange
-                                                                  : (themeNotifier.isSpecialModeActive
-                                                                      ? specialColor
-                                                                      : Colors.red),
+                                                                  : themeColor,
                                                       fontWeight: FontWeight.bold,
                                                       fontSize: 16,
                                                     ),
@@ -740,8 +771,247 @@ class _WalletPageState extends State<WalletPage> {
                     ),
                   ),
                 ),
+              ),
+      ),
+    );
+  }
+
+  Widget _getCardNetworkLogo(String cardNumber) {
+    if (cardNumber.startsWith('4')) {
+      return Text('VISA',
+          style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              fontStyle: FontStyle.italic));
+    } else if (cardNumber.startsWith('5')) {
+      return Row(
+        children: [
+          Icon(Icons.circle, color: Colors.redAccent.withOpacity(0.9), size: 28),
+          Transform.translate(
+              offset: Offset(-16, 0),
+              child: Icon(Icons.circle,
+                  color: Colors.orangeAccent.withOpacity(0.9), size: 28)),
+        ],
+      );
+    }
+    return SizedBox.shrink();
+  }
+
+  Widget _buildCreditCardWidget(Map<String, dynamic> card) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final themeColor = themeNotifier.isSpecialModeActive
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    String cardNumber = card['cardNumber'] ?? '0000000000000000';
+    String masked = '**** **** **** ';
+    String last4 = cardNumber.substring(cardNumber.length - 4);
+    String cardHolder = card['cardHolder']?.toUpperCase() ?? 'CARDHOLDER NAME';
+    String expiryDate = card['expiryDate'] ?? 'MM/YY';
+
+    // Emboss text style for a realistic raised effect
+    final embossTextStyle = TextStyle(
+      color: Colors.white,
+      fontSize: 16,
+      fontWeight: FontWeight.bold,
+      shadows: [
+        Shadow(
+          blurRadius: 1.0,
+          color: Colors.black.withOpacity(0.3),
+          offset: Offset(1, 1),
+        ),
+      ],
+    );
+
+    return Container(
+      width: 350,
+      margin: const EdgeInsets.only(right: 16),
+      height: 240,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: themeColor.withOpacity(0.4),
+            blurRadius: 25,
+            offset: Offset(0, 10),
+          )
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            // Background Gradient
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF232B5D), Color(0xFF181A20)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
+            ),
+            // Subtle background pattern
+            Positioned(
+              right: -100,
+              bottom: -100,
+              child: Icon(
+                Icons.wallet_outlined,
+                size: 250,
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+            // Glossy Shine Effect
+            Positioned.fill(
+              child: Transform.rotate(
+                angle: 0.9,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.2),
+                        Colors.white.withOpacity(0.0),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: [0.0, 0.5],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Card Content
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Image.asset(
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? 'lib/assets/Images/app-icon-dark.png'
+                                  : 'lib/assets/Images/app-icon-light.png',
+                              width: 32,
+                              height: 32,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Paradise Bank',
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.8),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Contactless Icon
+                      Icon(Icons.wifi, color: Colors.white, size: 32),
+                    ],
+                  ),
+                  SizedBox(height: 18),
+                  // Chip and Card Number
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 55,
+                        height: 40,
+                        margin: const EdgeInsets.only(right: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.yellow[600]?.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(8),
+                          gradient: LinearGradient(
+                            colors: [Colors.yellow.shade600, Colors.yellow.shade800],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Center(
+                            child: Icon(Icons.sd_card_rounded,
+                                color: Colors.black.withOpacity(0.1), size: 30)),
+                      ),
+                      SizedBox(width: 8),
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              masked,
+                              style: embossTextStyle.copyWith(
+                                fontSize: 18,
+                                letterSpacing: 1.5,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                            Text(
+                              last4,
+                              style: embossTextStyle.copyWith(
+                                fontSize: 18,
+                                letterSpacing: 1.5,
+                                fontFamily: 'monospace',
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 18),
+                  // Card Holder and Expiry
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('CARD HOLDER',
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 10)),
+                          Text(cardHolder, style: embossTextStyle),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('EXPIRES',
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 10)),
+                          Text(expiryDate, style: embossTextStyle),
+                        ],
+                      ),
+                      // Card Network Logo
+                      _getCardNetworkLogo(cardNumber)
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Mastercard logo sağ alt köşe
+            Positioned(
+              right: 20,
+              bottom: 20,
+              child: Image.asset(
+                'lib/assets/Images/mastercard-logo.png',
+                width: 64,
+                height: 44,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -757,47 +1027,71 @@ class _WalletPageState extends State<WalletPage> {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final l10n = AppLocalizations.of(context)!;
 
-    return Container(
-      padding: EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.transactionDetails,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          SizedBox(height: 20),
-          _detailRow(l10n.type, isDeposit ? l10n.deposit : isRefund ? l10n.refunded : isCashbackReversal ? 'Cashback Reversal' : l10n.purchase),
-          _detailRow(
-            l10n.amount,
-            isDeposit
-                ? _formatPriceWithSign(transaction['amount'], true)
-                : isRefund
+    return DraggableScrollableSheet(
+      initialChildSize: 0.4,
+      minChildSize: 0.2,
+      maxChildSize: 0.75,
+      builder: (_, controller) => Container(
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SingleChildScrollView(
+          controller: controller,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                l10n.transactionDetails,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              SizedBox(height: 20),
+              _detailRow(l10n.type, isDeposit ? l10n.deposit : isRefund ? l10n.refunded : isCashbackReversal ? 'Cashback Reversal' : l10n.purchase),
+              _detailRow(
+                l10n.amount,
+                isDeposit
                     ? _formatPriceWithSign(transaction['amount'], true)
-                    : isCashbackReversal
-                        ? _formatPriceWithSign(transaction['amount'], false)
-                        : _formatPriceWithSign(transaction['amount'], false),
+                    : isRefund
+                        ? _formatPriceWithSign(transaction['amount'], true)
+                        : isCashbackReversal
+                            ? _formatPriceWithSign(transaction['amount'], false)
+                            : _formatPriceWithSign(transaction['amount'], false),
+              ),
+              if (transaction['cashback'] != null && transaction['cashback'] > 0)
+                _detailRow(
+                  'Cashback',
+                  _formatPrice(transaction['cashback']),
+                ),
+              _detailRow(l10n.date, _formatDate(transaction['timestamp'])),
+              _detailRow(
+                l10n.status,
+                transaction['status']?.toUpperCase() ?? 'COMPLETED',
+              ),
+              _detailRow(
+                l10n.method,
+                transaction['method']?.replaceAll('_', ' ').toUpperCase() ?? 'WALLET',
+              ),
+              if (transaction['reference'] != null)
+                _detailRow(l10n.reference, transaction['reference']),
+              if ((isRefund || isCashbackReversal) && transaction['description'] != null)
+                _detailRow(l10n.description, transaction['description']),
+              SizedBox(height: 20),
+            ],
           ),
-          if (transaction['cashback'] != null && transaction['cashback'] > 0)
-            _detailRow(
-              'Cashback',
-              _formatPrice(transaction['cashback']),
-            ),
-          _detailRow(l10n.date, _formatDate(transaction['timestamp'])),
-          _detailRow(
-            l10n.status,
-            transaction['status']?.toUpperCase() ?? 'COMPLETED',
-          ),
-          _detailRow(
-            l10n.method,
-            transaction['method']?.replaceAll('_', ' ').toUpperCase() ?? 'WALLET',
-          ),
-          if (transaction['reference'] != null)
-            _detailRow(l10n.reference, transaction['reference']),
-          if ((isRefund || isCashbackReversal) && transaction['description'] != null)
-            _detailRow(l10n.description, transaction['description']),
-        ],
+        ),
       ),
     );
   }
@@ -851,122 +1145,155 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
   final RegExp _numberPattern = RegExp(r'^\d+$');
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.savedCards.isNotEmpty) {
+      _selectedCard = widget.savedCards.firstWhere(
+        (card) => card['isDefault'] == true,
+        orElse: () => widget.savedCards.first,
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final l10n = AppLocalizations.of(context)!;
+    final mediaQuery = MediaQuery.of(context);
 
     return Container(
+      constraints: BoxConstraints(
+        maxHeight: mediaQuery.size.height * 0.85,
+      ),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+        bottom: mediaQuery.viewInsets.bottom + 16,
         left: 16,
         right: 16,
         top: 16,
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.addMoneyToWallet,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-              ],
-              decoration: InputDecoration(
-                labelText: l10n.amount,
-                prefixText: '₺',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                hintText: '0.00',
-                errorText: _validateAmount(_amountController.text, l10n),
-              ),
-              onChanged: (value) {
-                setState(() {});
-              },
-            ),
-            const SizedBox(height: 20),
-            if (!_showAddCard && widget.savedCards.isNotEmpty) ...[
-              Text(
-                l10n.selectCard,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 10),
-              ...widget.savedCards.map((card) => _buildCardItem(card)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.addMoneyToWallet,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _amountController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
             ],
-            if (_showAddCard) ...[_buildAddCardForm()],
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _showAddCard = !_showAddCard;
-                });
-              },
-              child: Text(_showAddCard ? l10n.useCard : l10n.addNewCard),
+            decoration: InputDecoration(
+              labelText: l10n.amount,
+              prefixText: '₺',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              hintText: '0.00',
+              errorText: _validateAmount(_amountController.text, l10n),
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () async {
-                  final amount = double.tryParse(_amountController.text);
-                  if (amount == null || amount <= 0) {
+            onChanged: (value) {
+              setState(() {});
+            },
+          ),
+          const SizedBox(height: 20),
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!_showAddCard && widget.savedCards.isNotEmpty) ...[
+                    Text(
+                      l10n.selectCard,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 10),
+                    ...widget.savedCards.map((card) => _buildCardItem(card)),
+                  ],
+                  if (_showAddCard) ...[_buildAddCardForm()],
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _showAddCard = !_showAddCard;
+                      });
+                    },
+                    child: Text(_showAddCard ? l10n.useCard : l10n.addNewCard),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: () async {
+                final amountString = _amountController.text.replaceAll(',', '.');
+                final amount = double.tryParse(amountString);
+                
+                if (amount == null || amount <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(l10n.enterValidAmount),
+                    ),
+                  );
+                  return;
+                }
+
+                if (amount > 10000) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(l10n.maximumAmount),
+                    ),
+                  );
+                  return;
+                }
+
+                if (_showAddCard) {
+                  if (_cardNumberError != null ||
+                      _expiryError != null ||
+                      _cvvError != null ||
+                      _cardNumberController.text.isEmpty ||
+                      _cardHolderController.text.isEmpty ||
+                      _expiryController.text.isEmpty ||
+                      _cvvController.text.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(l10n.enterValidAmount),
+                        content: Text(l10n.fillCardDetails),
                       ),
                     );
                     return;
                   }
 
-                  if (_showAddCard) {
-                    if (_cardNumberError != null ||
-                        _expiryError != null ||
-                        _cvvError != null ||
-                        _cardNumberController.text.isEmpty ||
-                        _cardHolderController.text.isEmpty ||
-                        _expiryController.text.isEmpty ||
-                        _cvvController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.fillCardDetails),
-                        ),
-                      );
-                      return;
-                    }
+                  await _saveNewCard();
+                } else if (_selectedCard == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.pleaseSelectCard)),
+                  );
+                  return;
+                }
 
-                    await _saveNewCard();
-                  } else if (_selectedCard == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.pleaseSelectCard)),
-                    );
-                    return;
-                  }
-
-                  widget.onAddMoney(amount);
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: themeNotifier.isSpecialModeActive
-                      ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
-                      : Colors.red.shade400,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                widget.onAddMoney(amount);
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: themeNotifier.isSpecialModeActive
+                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                    : Colors.red.shade400,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(l10n.addMoney),
               ),
+              child: Text(l10n.addMoney),
             ),
-            const SizedBox(height: 20),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -976,61 +1303,76 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedCard = isSelected ? null : card;
-        });
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (isDark ? Colors.red.shade900 : Colors.red.shade700)
-              : Colors.transparent,
-          border: Border.all(
-            color: isSelected
-                ? (isDark ? Colors.red.shade900 : Colors.red.shade700)
-                : Colors.grey.shade300,
-            width: 2,
-          ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _selectedCard = isSelected ? null : card;
+            });
+          },
           borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.credit_card,
-              color: isSelected ? Colors.white : Colors.grey,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '**** **** **** ${card['cardNumber'].substring(card['cardNumber'].length - 4)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? Colors.white : null,
-                    ),
-                  ),
-                  Text(
-                    card['cardHolder'],
-                    style: TextStyle(
-                      color: isSelected ? Colors.white70 : Colors.grey[600],
-                      fontSize: 12
-                    ),
-                  ),
-                ],
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? (isDark ? Colors.red.shade900 : Colors.red.shade700)
+                  : Colors.transparent,
+              border: Border.all(
+                color: isSelected
+                    ? (isDark ? Colors.red.shade900 : Colors.red.shade700)
+                    : Colors.grey.shade300,
+                width: 2,
               ),
+              borderRadius: BorderRadius.circular(12),
             ),
-            if (isSelected)
-              Icon(
-                Icons.check_circle,
-                color: Colors.white,
-              ),
-          ],
+            child: Row(
+              children: [
+                Icon(
+                  Icons.credit_card,
+                  color: isSelected ? Colors.white : Colors.grey,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '**** **** **** ${card['cardNumber'].substring(card['cardNumber'].length - 4)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? Colors.white : null,
+                          fontSize: 14,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        card['cardHolder'],
+                        style: TextStyle(
+                          color: isSelected ? Colors.white70 : Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                if (isSelected)
+                  Icon(
+                    Icons.check_circle,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1039,10 +1381,16 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
   Widget _buildAddCardForm() {
     final l10n = AppLocalizations.of(context)!;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.addNewCard, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 16),
+        Text(
+          l10n.addNewCard,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 12),
         TextField(
           controller: _cardNumberController,
           keyboardType: TextInputType.number,
@@ -1060,13 +1408,14 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
           },
           decoration: InputDecoration(
             labelText: l10n.cardNumber,
-            prefixIcon: const Icon(Icons.credit_card),
+            prefixIcon: const Icon(Icons.credit_card, size: 20),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             errorText: _cardNumberError,
             counterText: '',
+            contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         TextField(
           controller: _cardHolderController,
           textCapitalization: TextCapitalization.characters,
@@ -1081,17 +1430,18 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
           ],
           decoration: InputDecoration(
             labelText: l10n.cardHolderName,
-            prefixIcon: const Icon(Icons.person),
+            prefixIcon: const Icon(Icons.person, size: 20),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             errorText: _cardHolderController.text.isEmpty
                 ? null
                 : !_namePattern.hasMatch(_cardHolderController.text)
                     ? l10n.onlyLettersAllowed
                     : null,
+            contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
           ),
           onChanged: (value) => setState(() {}),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
@@ -1125,14 +1475,15 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                 },
                 decoration: InputDecoration(
                   labelText: 'MM/YY',
-                  prefixIcon: const Icon(Icons.calendar_today),
+                  prefixIcon: const Icon(Icons.calendar_today, size: 20),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   errorText: _expiryError,
                   counterText: '',
+                  contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
               child: TextField(
                 controller: _cvvController,
@@ -1154,10 +1505,11 @@ class _AddMoneyBottomSheetState extends State<AddMoneyBottomSheet> {
                 },
                 decoration: InputDecoration(
                   labelText: 'CVV',
-                  prefixIcon: const Icon(Icons.security),
+                  prefixIcon: const Icon(Icons.security, size: 20),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   errorText: _cvvError,
                   counterText: '',
+                  contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                 ),
               ),
             ),

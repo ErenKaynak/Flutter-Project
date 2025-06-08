@@ -285,6 +285,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get myWallet => 'محفظتي';
 
   @override
+  String get myCards => 'بطاقاتي';
+
+  @override
   String get appearance => 'المظهر';
 
   @override
@@ -625,13 +628,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get currentBalance => 'Current Balance';
 
   @override
-  String get cashbackInfo => '1% Cashback on all purchases';
+  String get cashbackInfo => 'يمكنك كسب مكافآت استرداد نقدي على المشتريات المؤهلة.';
 
   @override
-  String get addMoney => 'Add Money';
+  String get addMoney => 'إضافة أموال';
 
   @override
-  String get transactionHistory => 'Transaction History';
+  String get transactionHistory => 'سجل المعاملات';
 
   @override
   String transactionsCount(int count) {

@@ -285,6 +285,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get myWallet => 'Cüzdanım';
 
   @override
+  String get myCards => 'Kartlarım';
+
+  @override
   String get appearance => 'Görünüm';
 
   @override

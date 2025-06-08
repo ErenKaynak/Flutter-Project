@@ -637,6 +637,12 @@ abstract class AppLocalizations {
   /// **'My Wallet'**
   String get myWallet;
 
+  /// No description provided for @myCards.
+  ///
+  /// In en, this message translates to:
+  /// **'My Cards'**
+  String get myCards;
+
   /// No description provided for @appearance.
   ///
   /// In en, this message translates to:
@@ -1276,7 +1282,7 @@ abstract class AppLocalizations {
   /// No description provided for @cashbackInfo.
   ///
   /// In en, this message translates to:
-  /// **'1% Cashback on all purchases'**
+  /// **'You can earn cashback rewards on eligible purchases.'**
   String get cashbackInfo;
 
   /// No description provided for @addMoney.
