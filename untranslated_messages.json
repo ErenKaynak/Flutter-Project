@@ -1,5 +1,7 @@
 {
   "ar": [
+    "urdu",
+    "imageUrl",
     "enterCode",
     "discountApplied",
     "percentOff",
@@ -22,7 +24,6 @@
     "addNew",
     "noSavedAddresses",
     "creditCards",
-    "noSavedCards",
     "payWithCreditCard",
     "payWithWallet",
     "availableBalance",
@@ -50,7 +51,6 @@
     "deleteCard",
     "deleteCardConfirmation",
     "defaultCard",
-    "expires",
     "ok",
     "cannotReorder",
     "outOfStockItems",
@@ -69,6 +69,9 @@
     "orderManagement",
     "viewAndProcessOrders",
     "currentBalance",
+    "cashbackInfo",
+    "addMoney",
+    "transactionHistory",
     "transactionsCount",
     "noTransactions",
     "transactionsWillAppear",
@@ -310,11 +313,14 @@
     "country",
     "selectCountry",
     "pleaseSelectCountry",
-    "homepageLayout"
+    "homepageLayout",
+    "cashbackReversal"
   ],
 
   "tr": [
+    "urdu",
     "productQuantity",
+    "imageUrl",
     "notApplicableDiscount",
     "bannerManagement",
     "noBannersFound",
@@ -331,6 +337,14 @@
     "country",
     "selectCountry",
     "pleaseSelectCountry",
-    "homepageLayout"
+    "homepageLayout",
+    "cashbackReversal"
+  ],
+
+  "ur": [
+    "urdu",
+    "imageUrl",
+    "myCards",
+    "cashbackReversal"
   ]
 }

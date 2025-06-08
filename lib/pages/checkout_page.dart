@@ -10,6 +10,75 @@ import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
 import 'package:engineering_project/assets/components/email_service.dart';
+import 'dart:math';
+import 'package:flutter/services.dart'; // Add this import
+
+class CardNumberInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var text = newValue.text;
+
+    if (newValue.selection.baseOffset == 0) {
+      return newValue;
+    }
+
+    var buffer = StringBuffer();
+    for (int i = 0; i < text.length; i++) {
+      buffer.write(text[i]);
+      var nonZeroIndex = i + 1;
+      if (nonZeroIndex % 4 == 0 && nonZeroIndex != text.length) {
+        buffer.write(' ');
+      }
+    }
+
+    var string = buffer.toString();
+    return newValue.copyWith(
+      text: string,
+      selection: TextSelection.collapsed(offset: string.length),
+    );
+  }
+}
+
+class ExpiryDateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var text = newValue.text;
+
+    if (newValue.selection.baseOffset == 0) {
+      return newValue;
+    }
+
+    var buffer = StringBuffer();
+    for (int i = 0; i < text.length; i++) {
+      buffer.write(text[i]);
+      var nonZeroIndex = i + 1;
+      if (nonZeroIndex % 2 == 0 && nonZeroIndex != text.length) {
+        buffer.write('/');
+      }
+    }
+
+    var string = buffer.toString();
+
+    // Month validation: only allow 01-12 for the first two digits
+    if (string.length >= 2) {
+      final month = int.tryParse(string.substring(0, 2)) ?? 0;
+      if (month > 12) {
+        string = '12' + (string.length > 2 ? string.substring(2) : '');
+      }
+    }
+
+    return newValue.copyWith(
+      text: string,
+      selection: TextSelection.collapsed(offset: string.length),
+    );
+  }
+}
 
 class CheckoutPage extends StatefulWidget {
   final double subtotal;
@@ -41,15 +110,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
   final _cardHolderController = TextEditingController();
   final _expiryDateController = TextEditingController();
   final _cvvController = TextEditingController();
+  bool _isAddingNewCard = false;
 
   double _walletBalance = 0.0;
 
   @override
   void initState() {
     super.initState();
-    _loadSavedAddresses();
-    _loadSavedCards();
-    _fetchWalletBalance();
+    _initializeData();
   }
 
   @override
@@ -71,32 +139,55 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return total + shippingCost;
   }
 
-  Future<void> _loadSavedAddresses() async {
+  Future<void> _initializeData() async {
     setState(() => _isLoading = true);
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final snapshot =
-            await FirebaseFirestore.instance
-                .collection('addresses')
-                .where('userId', isEqualTo: user.uid)
-                .orderBy('createdAt', descending: true)
-                .get();
+      if (user == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
 
-        final addresses =
-            snapshot.docs.map((doc) {
-              final data = doc.data();
-              return {
-                'id': doc.id,
-                'label': data['label'] ?? 'Address',
-                'fullAddress': _formatAddress(data),
-                'firstName': data['firstName'] ?? '',
-                'lastName': data['lastName'] ?? '',
-                'phone': data['phone'] ?? '',
-                'addressType': data['addressType'] ?? 'Home',
-              };
-            }).toList();
+      // Load all data in parallel
+      await Future.wait([
+        _loadSavedAddresses(),
+        _loadSavedCards(),
+        _fetchWalletBalance(),
+      ]);
+    } catch (e) {
+      print('Error initializing checkout page: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
+  Future<void> _loadSavedAddresses() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final snapshot = await FirebaseFirestore.instance
+          .collection('addresses')
+          .where('userId', isEqualTo: user.uid)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      final addresses = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'id': doc.id,
+          'label': data['label'] ?? 'Address',
+          'fullAddress': _formatAddress(data),
+          'firstName': data['firstName'] ?? '',
+          'lastName': data['lastName'] ?? '',
+          'phone': data['phone'] ?? '',
+          'addressType': data['addressType'] ?? 'Home',
+        };
+      }).toList();
+
+      if (mounted) {
         setState(() {
           _savedAddresses = addresses;
           if (addresses.isNotEmpty) {
@@ -106,29 +197,25 @@ class _CheckoutPageState extends State<CheckoutPage> {
       }
     } catch (e) {
       print('Error loading addresses: $e');
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 
   Future<void> _loadSavedCards() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final snapshot =
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .collection('cards')
-                .get();
+      if (user == null) return;
 
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('cards')
+          .get();
+
+      if (mounted) {
         setState(() {
-          _savedCards =
-              snapshot.docs
-                  .map(
-                    (doc) => CreditCard.fromMap({...doc.data(), 'id': doc.id}),
-                  )
-                  .toList();
+          _savedCards = snapshot.docs
+              .map((doc) => CreditCard.fromMap({...doc.data(), 'id': doc.id}))
+              .toList();
 
           if (_savedCards.isNotEmpty) {
             _selectedCard = _savedCards.firstWhere(
@@ -144,17 +231,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Future<void> _fetchWalletBalance() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
     try {
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('wallets')
-              .doc(user.uid)
-              .get();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
 
-      if (doc.exists) {
+      final doc = await FirebaseFirestore.instance
+          .collection('wallets')
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists && mounted) {
         setState(() {
           _walletBalance = (doc.data()?['balance'] ?? 0.0).toDouble();
         });
@@ -220,144 +306,149 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Future<void> _addNewCard() async {
+    final l10n = AppLocalizations.of(context)!;
     return showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            backgroundColor: Theme.of(context).cardColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
-            title: const Text(
-              'Add New Card',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            content: SingleChildScrollView(
-              child: Container(
-                width: double.maxFinite,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: _cardNumberController,
-                      decoration: InputDecoration(
-                        labelText: 'Card Number',
-                        hintText: '1234 5678 9012 3456',
-                        prefixIcon: Icon(Icons.credit_card),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      keyboardType: TextInputType.number,
-                      maxLength: 19,
-                      onChanged: (value) {
-                        if (value.length > 0) {
-                          value = value.replaceAll(' ', '');
-                          final buffer = StringBuffer();
-                          for (int i = 0; i < value.length; i++) {
-                            buffer.write(value[i]);
-                            if ((i + 1) % 4 == 0 && i != value.length - 1) {
-                              buffer.write(' ');
-                            }
-                          }
-                          _cardNumberController.value = TextEditingValue(
-                            text: buffer.toString(),
-                            selection: TextSelection.collapsed(
-                              offset: buffer.length,
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _cardHolderController,
-                      decoration: InputDecoration(
-                        labelText: 'Card Holder Name',
-                        hintText: 'JOHN DOE',
-                        prefixIcon: Icon(Icons.person),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      textCapitalization: TextCapitalization.characters,
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _expiryDateController,
-                            decoration: InputDecoration(
-                              labelText: 'Expiry Date',
-                              hintText: 'MM/YY',
-                              prefixIcon: Icon(Icons.date_range),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              errorText:
-                                  _expiryDateController.text.isNotEmpty &&
-                                          _isCardExpired(
-                                            _expiryDateController.text,
-                                          )
-                                      ? 'Card is expired'
-                                      : null,
-                            ),
-                            keyboardType: TextInputType.number,
-                            maxLength: 5,
-                            onChanged: _formatExpiryDate,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextField(
-                            controller: _cvvController,
-                            decoration: InputDecoration(
-                              labelText: 'CVV',
-                              hintText: '123',
-                              prefixIcon: Icon(Icons.security),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            keyboardType: TextInputType.number,
-                            maxLength: 3,
-                            obscureText: true,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('CANCEL'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  if (_validateCardInputs()) {
-                    await _saveCard();
-                    Navigator.pop(context);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      Provider.of<ThemeNotifier>(context).isSpecialModeActive
-                          ? Provider.of<ThemeNotifier>(context).getThemeColor(
-                            Provider.of<ThemeNotifier>(context).specialTheme,
-                          )
-                          : Colors.red,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text('SAVE'),
-              ),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: Theme.of(context).cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
           ),
+          title: Text(
+            l10n.addNewCard,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Container(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildCardVisualization(
+                    cardNumber: _cardNumberController.text,
+                    cardHolderName: _cardHolderController.text,
+                    expiryDate: _expiryDateController.text,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _cardNumberController,
+                    decoration: InputDecoration(
+                      labelText: l10n.cardNumber,
+                      hintText: '1234 5678 9012 3456',
+                      prefixIcon: Icon(Icons.credit_card),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    keyboardType: TextInputType.number,
+                    maxLength: 19,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      CardNumberInputFormatter(),
+                    ],
+                    onChanged: (value) {
+                      setState(() {}); // Trigger rebuild for visual update
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _cardHolderController,
+                    decoration: InputDecoration(
+                      labelText: l10n.cardHolderName,
+                      hintText: 'JOHN DOE',
+                      prefixIcon: Icon(Icons.person),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    textCapitalization: TextCapitalization.characters,
+                    onChanged: (value) => setState(() {}),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _expiryDateController,
+                          decoration: InputDecoration(
+                            labelText: l10n.expiryDate,
+                            hintText: 'MM/YY',
+                            prefixIcon: Icon(Icons.calendar_today),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            errorText: _expiryDateController.text.isNotEmpty &&
+                                    _isCardExpired(_expiryDateController.text)
+                                ? l10n.cardIsExpired
+                                : null,
+                          ),
+                          keyboardType: TextInputType.number,
+                          maxLength: 5,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            ExpiryDateInputFormatter(),
+                          ],
+                          onChanged: (value) => setState(() {}),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextField(
+                          controller: _cvvController,
+                          decoration: InputDecoration(
+                            labelText: l10n.cvv,
+                            hintText: '123',
+                            prefixIcon: Icon(Icons.security),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          keyboardType: TextInputType.number,
+                          maxLength: 3,
+                          obscureText: true,
+                          onChanged: (value) => setState(() {}),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _cardNumberController.clear();
+                _cardHolderController.clear();
+                _expiryDateController.clear();
+                _cvvController.clear();
+                Navigator.pop(context);
+              },
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (_validateCardInputs()) {
+                  await _saveCard();
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Provider.of<ThemeNotifier>(context).isSpecialModeActive
+                    ? Provider.of<ThemeNotifier>(context).getThemeColor(
+                        Provider.of<ThemeNotifier>(context).specialTheme,
+                      )
+                    : Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(l10n.save),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -440,130 +531,47 @@ class _CheckoutPageState extends State<CheckoutPage> {
       }
 
       if (paymentSuccess) {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) throw Exception('User not logged in');
-
         final batch = FirebaseFirestore.instance.batch();
         final orderRef = createdOrderId != null
             ? FirebaseFirestore.instance.collection('orders').doc(createdOrderId)
             : FirebaseFirestore.instance.collection('orders').doc();
 
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) throw Exception('User not logged in');
+
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        final userData = userDoc.data() as Map<String, dynamic>?;
+
         final orderData = {
           'userId': user.uid,
-          'orderNumber': orderRef.id.substring(0, 8),
+          'userEmail': user.email,
+          'userName': userData?['name'] ?? user.displayName ?? 'Anonymous User',
           'items': widget.items.map((item) => item.toMap()).toList(),
-          'subtotal': widget.subtotal,
-          'shippingCost': shippingCost,
-          'discountCode': widget.appliedDiscount?.code,
-          'discountPercentage':
-              widget.appliedDiscount?.discountPercentage ?? 0.0,
-          'discountAmount':
-              widget.appliedDiscount?.calculateDiscount(widget.subtotal) ?? 0.0,
           'totalAmount': total,
-          'total': total,
-          'status': 'Pending',
+          'shippingAddress': _selectedAddress?['fullAddress'] ?? 'No address provided',
           'paymentMethod': _selectedPaymentMethod,
-          'paymentDetails':
-              _selectedPaymentMethod == 'Credit Card'
-                  ? {
-                    'cardId': _selectedCard?.id,
-                    'lastFourDigits': _selectedCard?.cardNumber.substring(
-                      _selectedCard!.cardNumber.length - 4,
-                    ),
-                  }
-                  : null,
-          'shippingAddress': _selectedAddress!['fullAddress'],
-          'addressDetails': _selectedAddress,
-          'timestamp': FieldValue.serverTimestamp(),
-          'createdAt': FieldValue.serverTimestamp(),
-          'customerName':
-              '${_selectedAddress!['firstName']} ${_selectedAddress!['lastName']}',
-          'customerPhone': _selectedAddress!['phone'],
-          'customerEmail': user.email,
+          'status': 'pending',
+          'orderDate': FieldValue.serverTimestamp(),
           'trackingNumber': '',
         };
 
         batch.set(orderRef, orderData);
 
+        // Create a user-specific order document
         final userOrderRef = FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
-            .collection('orders')
+            .collection('userOrders')
             .doc(orderRef.id);
 
         batch.set(userOrderRef, orderData);
 
-        for (var item in widget.items) {
-          final productRef = FirebaseFirestore.instance
-              .collection('products')
-              .doc(item.id);
-          batch.update(productRef, {
-            'stock': FieldValue.increment(-item.quantity),
-          });
-        }
-
-        if (widget.appliedDiscount != null) {
-          try {
-            final discountRef = FirebaseFirestore.instance
-                .collection('discountCodes')
-                .doc(widget.appliedDiscount!.id);
-
-            batch.update(discountRef, {'usageCount': FieldValue.increment(1)});
-
-            final usageRef =
-                FirebaseFirestore.instance
-                    .collection('discountCodes')
-                    .doc(widget.appliedDiscount!.id)
-                    .collection('usage')
-                    .doc();
-
-            batch.set(usageRef, {
-              'userId': user.uid,
-              'orderId': orderRef.id,
-              'usedAt': FieldValue.serverTimestamp(),
-              'discountAmount': widget.appliedDiscount!.calculateDiscount(
-                widget.subtotal,
-              ),
-            });
-          } catch (e) {
-            print('Error updating discount code usage: $e');
-          }
-        }
-
         await batch.commit();
 
-        // Send email receipt
-        try {
-          await EmailService.sendReceipt(
-            context: context,
-            customerEmail: user.email ?? '',
-            customerName: '${_selectedAddress!['firstName']} ${_selectedAddress!['lastName']}',
-            orderNumber: orderRef.id.substring(0, 8),
-            items: widget.items.map((item) => {
-              'name': item.name,
-              'quantity': item.quantity,
-              'price': double.parse(item.price),
-            }).toList(),
-            totalAmount: total,
-            orderDate: DateTime.now(),
-            shippingAddress: _selectedAddress!['fullAddress'],
-          );
-        } catch (e) {
-          print('Error sending email receipt: $e');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Sipariş başarıyla oluşturuldu fakat onay maili gönderilemedi. Lütfen müşteri hizmetleriyle iletişime geçin.'),
-                duration: Duration(seconds: 5),
-                action: SnackBarAction(
-                  label: 'TAMAM',
-                  onPressed: () {},
-                ),
-              ),
-            );
-          }
-        }
-
+        // Clear the cart using the CartManager from cart_page.dart
         final cartManager = CartManager();
         await cartManager.clearCart();
 
@@ -571,11 +579,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder:
-                  (_) => OrderSuccessPage(
-                    orderId: orderRef.id,
-                    totalAmount: total,
-                  ),
+              builder: (_) => OrderSuccessPage(
+                orderId: orderRef.id,
+                totalAmount: total,
+              ),
             ),
           );
         }
@@ -635,29 +642,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return cardExpiry.isBefore(DateTime(now.year, now.month, 1));
     } catch (e) {
       return true;
-    }
-  }
-
-  void _formatExpiryDate(String value) {
-    if (value.length > 0) {
-      value = value.replaceAll('/', '');
-      if (value.length >= 2) {
-        final month = int.tryParse(value.substring(0, 2)) ?? 0;
-        if (month > 12) {
-          value = '12' + value.substring(2);
-        }
-      }
-      final buffer = StringBuffer();
-      for (int i = 0; i < value.length; i++) {
-        buffer.write(value[i]);
-        if (i == 1 && i != value.length - 1) {
-          buffer.write('/');
-        }
-      }
-      _expiryDateController.value = TextEditingValue(
-        text: buffer.toString(),
-        selection: TextSelection.collapsed(offset: buffer.length),
-      );
     }
   }
 
@@ -775,21 +759,50 @@ class _CheckoutPageState extends State<CheckoutPage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             TextButton.icon(
-              onPressed: _addNewCard,
-              icon: const Icon(Icons.add),
-              label: Text(l10n.addNew),
+              onPressed: () {
+                setState(() {
+                  _isAddingNewCard = !_isAddingNewCard;
+                  if (!_isAddingNewCard) {
+                    _cardNumberController.clear();
+                    _cardHolderController.clear();
+                    _expiryDateController.clear();
+                    _cvvController.clear();
+                  }
+                });
+              },
+              icon: Icon(_isAddingNewCard ? Icons.close : Icons.add),
+              label: Text(_isAddingNewCard ? l10n.cancel : l10n.addNew),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        if (_savedCards.isEmpty)
+        if (_isAddingNewCard)
+          AnimatedContainer(
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: AddCardForm(
+              cardNumberController: _cardNumberController,
+              cardHolderController: _cardHolderController,
+              expiryDateController: _expiryDateController,
+              cvvController: _cvvController,
+              onSave: () async {
+                if (_validateCardInputs()) {
+                  await _saveCard();
+                  setState(() {
+                    _isAddingNewCard = false;
+                  });
+                }
+              },
+            ),
+          ),
+        if (_savedCards.isEmpty && !_isAddingNewCard)
           Card(
             child: Padding(
               padding: EdgeInsets.all(16),
               child: Text(l10n.noSavedCards),
             ),
           )
-        else
+        else if (!_isAddingNewCard)
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -804,34 +817,30 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 background: Container(
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 20),
-                  color:
-                      themeNotifier.isSpecialModeActive
-                          ? themeNotifier.getThemeColor(
-                            themeNotifier.specialTheme,
-                          )
-                          : Colors.red,
+                  color: themeNotifier.isSpecialModeActive
+                      ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                      : Colors.red,
                   child: const Icon(Icons.delete, color: Colors.white),
                 ),
                 confirmDismiss: (direction) async {
                   return await showDialog(
                     context: context,
-                    builder:
-                        (context) => AlertDialog(
-                          title: const Text('Delete Card'),
-                          content: const Text(
-                            'Are you sure you want to delete this card?',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('CANCEL'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text('DELETE'),
-                            ),
-                          ],
+                    builder: (context) => AlertDialog(
+                      title: const Text('Delete Card'),
+                      content: const Text(
+                        'Are you sure you want to delete this card?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('CANCEL'),
                         ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('DELETE'),
+                        ),
+                      ],
+                    ),
                   );
                 },
                 onDismissed: (direction) async {
@@ -851,14 +860,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: BorderSide(
-                      color:
-                          isSelected
-                              ? (themeNotifier.isSpecialModeActive
-                                  ? themeNotifier.getThemeColor(
-                                    themeNotifier.specialTheme,
-                                  )
-                                  : Colors.red)
-                              : Colors.grey.shade300,
+                      color: isSelected
+                          ? (themeNotifier.isSpecialModeActive
+                              ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                              : Colors.red)
+                          : Colors.grey.shade300,
                       width: isSelected ? 2 : 1,
                     ),
                   ),
@@ -872,12 +878,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       children: [
                         Icon(
                           Icons.credit_card,
-                          color:
-                              themeNotifier.isSpecialModeActive
-                                  ? themeNotifier.getThemeColor(
-                                    themeNotifier.specialTheme,
-                                  )
-                                  : Colors.red,
+                          color: themeNotifier.isSpecialModeActive
+                              ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                              : Colors.red,
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -890,12 +893,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(card.cardHolder),
-                        Text('Expires: ${card.expiryDate}'),
-                        if (card.isDefault)
-                          const Text(
-                            'Default Card',
-                            style: TextStyle(color: Colors.green),
-                          ),
+                        Text(l10n.expires(card.expiryDate)),
                       ],
                     ),
                     isThreeLine: true,
@@ -1542,5 +1540,676 @@ class _CheckoutPageState extends State<CheckoutPage> {
       RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
       (Match m) => '${m[1]},',
     )}';
+  }
+
+  Widget _buildCardVisualization({
+    required String cardNumber,
+    required String cardHolderName,
+    required String expiryDate,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final themeColor = themeNotifier.isSpecialModeActive
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    String masked = '**** **** **** ';
+    String last4 = cardNumber.isNotEmpty ? cardNumber.substring(cardNumber.length - min(4, cardNumber.length)) : '';
+
+    final embossTextStyle = TextStyle(
+      color: Colors.white,
+      fontSize: 16,
+      fontWeight: FontWeight.bold,
+      shadows: [
+        Shadow(
+          blurRadius: 1.0,
+          color: Colors.black.withOpacity(0.3),
+          offset: Offset(1, 1),
+        ),
+      ],
+    );
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(right: 16),
+      height: 240,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: themeColor.withOpacity(0.4),
+            blurRadius: 25,
+            offset: Offset(0, 10),
+          )
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            // Background Gradient
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF232B5D), Color(0xFF181A20)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+            // Subtle background pattern
+            Positioned(
+              right: -100,
+              bottom: -100,
+              child: Icon(
+                Icons.wallet_outlined,
+                size: 250,
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+            // Glossy Shine Effect
+            Positioned.fill(
+              child: Transform.rotate(
+                angle: 0.9,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.2),
+                        Colors.white.withOpacity(0.0),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: [0.0, 0.5],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Card Content
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Image.asset(
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? 'lib/assets/Images/app-icon-dark.png'
+                                  : 'lib/assets/Images/app-icon-light.png',
+                              width: 32,
+                              height: 32,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Paradise Bank',
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.8),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Contactless Icon
+                      Icon(Icons.wifi, color: Colors.white, size: 32),
+                    ],
+                  ),
+                  SizedBox(height: 18),
+                  // Chip and Card Number
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 55,
+                        height: 40,
+                        margin: const EdgeInsets.only(right: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.yellow[600]?.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(8),
+                          gradient: LinearGradient(
+                            colors: [Colors.yellow.shade600, Colors.yellow.shade800],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Center(
+                            child: Icon(Icons.sd_card_rounded,
+                                color: Colors.black.withOpacity(0.1), size: 30)),
+                      ),
+                      SizedBox(width: 8),
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                cardNumber.length <= 12 ? masked : cardNumber.substring(0, cardNumber.length - 4),
+                                style: embossTextStyle.copyWith(
+                                  fontSize: 16,
+                                  letterSpacing: 1.5,
+                                  fontFamily: 'monospace',
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              last4,
+                              style: embossTextStyle.copyWith(
+                                fontSize: 22,
+                                letterSpacing: 2,
+                                fontFamily: 'monospace',
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 18),
+                  // Card Holder and Expiry
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(l10n.cardHolder,
+                                style: TextStyle(
+                                    color: Colors.white.withOpacity(0.7),
+                                    fontSize: 10)),
+                            Text(
+                              cardHolderName.isEmpty ? 'CARD HOLDER' : cardHolderName.toUpperCase(),
+                              style: embossTextStyle,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.expires(expiryDate),
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 10)),
+                            Text(
+                              expiryDate.isEmpty ? 'MM/YY' : expiryDate,
+                              style: embossTextStyle,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Card Network Logo
+                      _getCardNetworkLogo(cardNumber)
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Mastercard logo
+            Positioned(
+              right: 20,
+              bottom: 20,
+              child: Image.asset(
+                'lib/assets/Images/mastercard-logo.png',
+                width: 64,
+                height: 44,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _getCardNetworkLogo(String cardNumber) {
+    if (cardNumber.startsWith('4')) {
+      return Text('VISA',
+          style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              fontStyle: FontStyle.italic));
+    } else if (cardNumber.startsWith('5')) {
+      return Row(
+        children: [
+          Icon(Icons.circle, color: Colors.redAccent.withOpacity(0.9), size: 28),
+          Transform.translate(
+              offset: Offset(-16, 0),
+              child: Icon(Icons.circle,
+                  color: Colors.orangeAccent.withOpacity(0.9), size: 28)),
+        ],
+      );
+    }
+    return SizedBox.shrink();
+  }
+}
+
+class AddCardForm extends StatefulWidget {
+  final TextEditingController cardNumberController;
+  final TextEditingController cardHolderController;
+  final TextEditingController expiryDateController;
+  final TextEditingController cvvController;
+  final VoidCallback onSave;
+
+  const AddCardForm({
+    Key? key,
+    required this.cardNumberController,
+    required this.cardHolderController,
+    required this.expiryDateController,
+    required this.cvvController,
+    required this.onSave,
+  }) : super(key: key);
+
+  @override
+  State<AddCardForm> createState() => _AddCardFormState();
+}
+
+class _AddCardFormState extends State<AddCardForm> {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
+    return Column(
+      children: [
+        _buildCardVisualization(
+          cardNumber: widget.cardNumberController.text,
+          cardHolderName: widget.cardHolderController.text,
+          expiryDate: widget.expiryDateController.text,
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: widget.cardNumberController,
+          decoration: InputDecoration(
+            labelText: l10n.cardNumber,
+            hintText: '1234 5678 9012 3456',
+            prefixIcon: Icon(Icons.credit_card),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          keyboardType: TextInputType.number,
+          maxLength: 19,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            CardNumberInputFormatter(),
+          ],
+          onChanged: (value) => setState(() {}),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: widget.cardHolderController,
+          decoration: InputDecoration(
+            labelText: l10n.cardHolderName,
+            hintText: 'JOHN DOE',
+            prefixIcon: Icon(Icons.person),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          textCapitalization: TextCapitalization.characters,
+          onChanged: (value) => setState(() {}),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: widget.expiryDateController,
+                decoration: InputDecoration(
+                  labelText: l10n.expiryDate,
+                  hintText: 'MM/YY',
+                  prefixIcon: Icon(Icons.calendar_today),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  errorText: widget.expiryDateController.text.isNotEmpty &&
+                          _isCardExpired(widget.expiryDateController.text)
+                      ? l10n.cardIsExpired
+                      : null,
+                ),
+                keyboardType: TextInputType.number,
+                maxLength: 5,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  ExpiryDateInputFormatter(),
+                ],
+                onChanged: (value) => setState(() {}),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextField(
+                controller: widget.cvvController,
+                decoration: InputDecoration(
+                  labelText: l10n.cvv,
+                  hintText: '123',
+                  prefixIcon: Icon(Icons.security),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                keyboardType: TextInputType.number,
+                maxLength: 3,
+                obscureText: true,
+                onChanged: (value) => setState(() {}),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: widget.onSave,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: themeNotifier.isSpecialModeActive
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                : Colors.red,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            minimumSize: const Size(double.infinity, 50),
+          ),
+          child: Text(
+            l10n.save,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCardVisualization({
+    required String cardNumber,
+    required String cardHolderName,
+    required String expiryDate,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final themeColor = themeNotifier.isSpecialModeActive
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : Colors.red;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    String masked = '**** **** **** ';
+    String last4 = cardNumber.isNotEmpty ? cardNumber.substring(cardNumber.length - min(4, cardNumber.length)) : '';
+
+    final embossTextStyle = TextStyle(
+      color: Colors.white,
+      fontSize: 16,
+      fontWeight: FontWeight.bold,
+      shadows: [
+        Shadow(
+          blurRadius: 1.0,
+          color: Colors.black.withOpacity(0.3),
+          offset: Offset(1, 1),
+        ),
+      ],
+    );
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(right: 16),
+      height: 240,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: themeColor.withOpacity(0.4),
+            blurRadius: 25,
+            offset: Offset(0, 10),
+          )
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            // Background Gradient
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF232B5D), Color(0xFF181A20)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+            // Subtle background pattern
+            Positioned(
+              right: -100,
+              bottom: -100,
+              child: Icon(
+                Icons.wallet_outlined,
+                size: 250,
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+            // Glossy Shine Effect
+            Positioned.fill(
+              child: Transform.rotate(
+                angle: 0.9,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.2),
+                        Colors.white.withOpacity(0.0),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: [0.0, 0.5],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Card Content
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Image.asset(
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? 'lib/assets/Images/app-icon-dark.png'
+                                  : 'lib/assets/Images/app-icon-light.png',
+                              width: 32,
+                              height: 32,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Paradise Bank',
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.8),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Contactless Icon
+                      Icon(Icons.wifi, color: Colors.white, size: 32),
+                    ],
+                  ),
+                  SizedBox(height: 18),
+                  // Chip and Card Number
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 55,
+                        height: 40,
+                        margin: const EdgeInsets.only(right: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.yellow[600]?.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(8),
+                          gradient: LinearGradient(
+                            colors: [Colors.yellow.shade600, Colors.yellow.shade800],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Center(
+                            child: Icon(Icons.sd_card_rounded,
+                                color: Colors.black.withOpacity(0.1), size: 30)),
+                      ),
+                      SizedBox(width: 8),
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                cardNumber.length <= 12 ? masked : cardNumber.substring(0, cardNumber.length - 4),
+                                style: embossTextStyle.copyWith(
+                                  fontSize: 16,
+                                  letterSpacing: 1.5,
+                                  fontFamily: 'monospace',
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              last4,
+                              style: embossTextStyle.copyWith(
+                                fontSize: 22,
+                                letterSpacing: 2,
+                                fontFamily: 'monospace',
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 18),
+                  // Card Holder and Expiry
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(l10n.cardHolder,
+                                style: TextStyle(
+                                    color: Colors.white.withOpacity(0.7),
+                                    fontSize: 10)),
+                            Text(
+                              cardHolderName.isEmpty ? 'CARD HOLDER' : cardHolderName.toUpperCase(),
+                              style: embossTextStyle,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.expires(expiryDate),
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 10)),
+                            Text(
+                              expiryDate.isEmpty ? 'MM/YY' : expiryDate,
+                              style: embossTextStyle,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Card Network Logo
+                      _getCardNetworkLogo(cardNumber)
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Mastercard logo
+            Positioned(
+              right: 20,
+              bottom: 20,
+              child: Image.asset(
+                'lib/assets/Images/mastercard-logo.png',
+                width: 64,
+                height: 44,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _getCardNetworkLogo(String cardNumber) {
+    if (cardNumber.startsWith('4')) {
+      return Text('VISA',
+          style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              fontStyle: FontStyle.italic));
+    } else if (cardNumber.startsWith('5')) {
+      return Row(
+        children: [
+          Icon(Icons.circle, color: Colors.redAccent.withOpacity(0.9), size: 28),
+          Transform.translate(
+              offset: Offset(-16, 0),
+              child: Icon(Icons.circle,
+                  color: Colors.orangeAccent.withOpacity(0.9), size: 28)),
+        ],
+      );
+    }
+    return SizedBox.shrink();
+  }
+
+  bool _isCardExpired(String expiryDate) {
+    try {
+      final parts = expiryDate.split('/');
+      if (parts.length != 2) return true;
+
+      final month = int.parse(parts[0]);
+      final year = 2000 + int.parse(parts[1]);
+
+      final now = DateTime.now();
+      final cardExpiry = DateTime(year, month + 1, 0);
+
+      return cardExpiry.isBefore(DateTime(now.year, now.month, 1));
+    } catch (e) {
+      return true;
+    }
   }
 }

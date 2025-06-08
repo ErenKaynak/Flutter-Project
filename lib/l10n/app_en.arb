@@ -20,8 +20,11 @@
     "english": "English",
     "turkish": "Turkish",
     "arabic": "Arabic",
+    "urdu": "Urdu",
     "darkMode": "Dark Mode",
     "specialMode": "Special Mode",
+    "passwordlessSignIn": "Passwordless Sign In",
+    "wheelOfDiscount": "Wheel of Discount",
     "addToCart": "ADD TO CART",
     "outOfStock": "OUT OF STOCK",
     "removeFromFavorites": "Remove from favorites",
@@ -100,7 +103,7 @@
             }
         }
     },
-    "fillAllFields": "Please fill all required fields",
+    "fillAllFields": "Please fill all fields",
     "pleaseEnterFirstName": "Please enter first name",
     "pleaseEnterLastName": "Please enter last name",
     "pleaseEnterPhoneNumber": "Please enter phone number",
@@ -116,17 +119,17 @@
     "setAsDefault": "Set as Default",
     "myOrders": "My Orders",
     "myWallet": "My Wallet",
-    "myCards": "My Cards",
     "appearance": "Appearance",
     "adminPanel": "Admin Panel",
-    "referralCode": "Your Referral Code",
+    "referralCode": "Referral Code",
     "copiedToClipboard": "Copied to clipboard",
     "changeProfilePicture": "Change Profile Picture",
-    "takePhoto": "Take a photo",
-    "chooseFromGallery": "Choose from gallery",
+    "takePhoto": "Take Photo",
+    "chooseFromGallery": "Choose from Gallery",
     "addFromUrl": "Add from URL",
     "removePhoto": "Remove Photo",
     "enterImageUrl": "Enter Image URL",
+    "imageUrl": "Image URL",
     "add": "Add",
     "sort": "Sort",
     "priceLowToHigh": "Price: Low to High",
@@ -148,7 +151,7 @@
     "authentication": "Authentication",
     "createAccount": "Create Account",
     "addYourName": "Add Your Name",
-    "admin": "ADMIN",
+    "admin": "Admin",
     "guestUser": "Guest",
     "signInToAccess": "Sign in to access all features",
     "yourReferralCode": "Your Referral Code",
@@ -218,12 +221,13 @@
     "continueShopping": "CONTINUE SHOPPING",
     "cardExpired": "Your card is expired, please try again",
     "pleaseSelectAddress": "Please select an address",
-    "pleaseSelectCard": "Please select a credit card",
+    "pleaseSelectCard": "Please select a card",
     "deliveryAddress": "Delivery Address",
     "addNew": "Add New",
     "noSavedAddresses": "No saved addresses",
     "creditCards": "Credit Cards",
     "noSavedCards": "No saved cards",
+    "myCards": "My Cards",
     "payWithCreditCard": "Pay with credit card",
     "payWithWallet": "Pay with Wallet",
     "availableBalance": "Available Balance: ₺{amount}",
@@ -272,8 +276,7 @@
     "@expires": {
         "placeholders": {
             "date": {
-                "type": "String",
-                "description": "Expiration date"
+                "type": "String"
             }
         }
     },
@@ -337,7 +340,7 @@
         "description": "Description for order management section"
     },
     "currentBalance": "Current Balance",
-    "cashbackInfo": "You can earn cashback rewards on eligible purchases.",
+    "cashbackInfo": "1% Cashback on all purchases",
     "addMoney": "Add Money",
     "transactionHistory": "Transaction History",
     "transactionsCount": "{count} transactions",
@@ -668,10 +671,10 @@
     "bugReports": "Bug Reports",
     "viewAndManageBugReports": "View and manage bug reports.",
     "bugTitle": "Bug Title",
-    "enterBugTitle": "Enter a title for the bug",
+    "enterBugTitle": "Enter bug title",
     "bugDescription": "Bug Description",
-    "describeBugInDetail": "Please describe the bug in detail",
-    "pleaseEnterBugDetails": "Please enter both title and description",
+    "describeBugInDetail": "Describe the bug in detail",
+    "pleaseEnterBugDetails": "Please enter bug title and description",
     "bugReportSubmitted": "Bug report submitted successfully",
     "errorSubmittingBugReport": "Error submitting bug report",
     "reportedBy": "Reported by",
@@ -849,5 +852,7 @@
     "country": "Country",
     "selectCountry": "Select Country",
     "pleaseSelectCountry": "Please select a country",
-    "homepageLayout": "Homepage Layout"
+    "homepageLayout": "Homepage Layout",
+    "cashbackReversal": "Cashback Reversal",
+    "cardHolder": "Card Holder"
 }

@@ -72,10 +72,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arabic => 'Arabic';
 
   @override
+  String get urdu => 'Urdu';
+
+  @override
   String get darkMode => 'Dark Mode';
 
   @override
   String get specialMode => 'Special Mode';
+
+  @override
+  String get passwordlessSignIn => 'Passwordless Sign In';
+
+  @override
+  String get wheelOfDiscount => 'Wheel of Discount';
 
   @override
   String get addToCart => 'ADD TO CART';
@@ -237,7 +246,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get fillAllFields => 'Please fill all required fields';
+  String get fillAllFields => 'Please fill all fields';
 
   @override
   String get pleaseEnterFirstName => 'Please enter first name';
@@ -285,16 +294,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myWallet => 'My Wallet';
 
   @override
-  String get myCards => 'My Cards';
-
-  @override
   String get appearance => 'Appearance';
 
   @override
   String get adminPanel => 'Admin Panel';
 
   @override
-  String get referralCode => 'Your Referral Code';
+  String get referralCode => 'Referral Code';
 
   @override
   String get copiedToClipboard => 'Copied to clipboard';
@@ -303,10 +309,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changeProfilePicture => 'Change Profile Picture';
 
   @override
-  String get takePhoto => 'Take a photo';
+  String get takePhoto => 'Take Photo';
 
   @override
-  String get chooseFromGallery => 'Choose from gallery';
+  String get chooseFromGallery => 'Choose from Gallery';
 
   @override
   String get addFromUrl => 'Add from URL';
@@ -316,6 +322,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get enterImageUrl => 'Enter Image URL';
+
+  @override
+  String get imageUrl => 'Image URL';
 
   @override
   String get add => 'Add';
@@ -354,7 +363,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addYourName => 'Add Your Name';
 
   @override
-  String get admin => 'ADMIN';
+  String get admin => 'Admin';
 
   @override
   String get guestUser => 'Guest';
@@ -459,7 +468,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pleaseSelectAddress => 'Please select an address';
 
   @override
-  String get pleaseSelectCard => 'Please select a credit card';
+  String get pleaseSelectCard => 'Please select a card';
 
   @override
   String get deliveryAddress => 'Delivery Address';
@@ -475,6 +484,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noSavedCards => 'No saved cards';
+
+  @override
+  String get myCards => 'My Cards';
 
   @override
   String get payWithCreditCard => 'Pay with credit card';
@@ -628,7 +640,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get currentBalance => 'Current Balance';
 
   @override
-  String get cashbackInfo => 'You can earn cashback rewards on eligible purchases.';
+  String get cashbackInfo => '1% Cashback on all purchases';
 
   @override
   String get addMoney => 'Add Money';
@@ -1186,16 +1198,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bugTitle => 'Bug Title';
 
   @override
-  String get enterBugTitle => 'Enter a title for the bug';
+  String get enterBugTitle => 'Enter bug title';
 
   @override
   String get bugDescription => 'Bug Description';
 
   @override
-  String get describeBugInDetail => 'Please describe the bug in detail';
+  String get describeBugInDetail => 'Describe the bug in detail';
 
   @override
-  String get pleaseEnterBugDetails => 'Please enter both title and description';
+  String get pleaseEnterBugDetails => 'Please enter bug title and description';
 
   @override
   String get bugReportSubmitted => 'Bug report submitted successfully';
@@ -1540,4 +1552,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homepageLayout => 'Homepage Layout';
+
+  @override
+  String get cashbackReversal => 'Cashback Reversal';
+
+  @override
+  String get cardHolder => 'Card Holder';
 }

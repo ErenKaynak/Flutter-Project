@@ -72,10 +72,19 @@ class AppLocalizationsTr extends AppLocalizations {
   String get arabic => 'Arapça';
 
   @override
+  String get urdu => 'Urdu';
+
+  @override
   String get darkMode => 'Karanlık Mod';
 
   @override
   String get specialMode => 'Özel Mod';
+
+  @override
+  String get passwordlessSignIn => 'Şifresiz Giriş';
+
+  @override
+  String get wheelOfDiscount => 'İndirim Çarkı';
 
   @override
   String get addToCart => 'SEPETE EKLE';
@@ -285,9 +294,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get myWallet => 'Cüzdanım';
 
   @override
-  String get myCards => 'Kartlarım';
-
-  @override
   String get appearance => 'Görünüm';
 
   @override
@@ -316,6 +322,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get enterImageUrl => 'Resim URL\'sini girin';
+
+  @override
+  String get imageUrl => 'Image URL';
 
   @override
   String get add => 'Ekle';
@@ -477,6 +486,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get noSavedCards => 'Kayıtlı kart bulunamadı';
 
   @override
+  String get myCards => 'Kartlarım';
+
+  @override
   String get payWithCreditCard => 'Kredi kartı ile öde';
 
   @override
@@ -563,7 +575,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String expires(String date) {
-    return 'Son Kullanma: $date';
+    return 'Son Kullanma Tarihi: $date';
   }
 
   @override
@@ -1540,4 +1552,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get homepageLayout => 'Homepage Layout';
+
+  @override
+  String get cashbackReversal => 'Cashback Reversal';
+
+  @override
+  String get cardHolder => 'Kart Sahibi';
 }

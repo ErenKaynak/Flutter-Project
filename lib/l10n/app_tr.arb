@@ -22,6 +22,8 @@
     "arabic": "Arapça",
     "darkMode": "Karanlık Mod",
     "specialMode": "Özel Mod",
+    "passwordlessSignIn": "Şifresiz Giriş",
+    "wheelOfDiscount": "İndirim Çarkı",
     "addToCart": "SEPETE EKLE",
     "outOfStock": "STOKTA YOK",
     "removeFromFavorites": "Favorilerden Kaldır",
@@ -325,6 +327,7 @@
     "insufficientBalance": "Yetersiz bakiye",
     "creditCards": "Kredi Kartları",
     "noSavedCards": "Kayıtlı kart bulunamadı",
+    "myCards": "Kartlarım",
     "orderSummary": "Sipariş Özeti",
     "addMoreForFreeShipping": "₺{amount} daha ekleyin, ücretsiz kargo fırsatından yararlanın",
     "@addMoreForFreeShipping": {
@@ -356,7 +359,7 @@
     "cancel": "İPTAL",
     "delete": "SİL",
     "defaultCard": "Varsayılan Kart",
-    "expires": "Son Kullanma: {date}",
+    "expires": "Son Kullanma Tarihi: {date}",
     "@expires": {
         "placeholders": {
             "date": {
@@ -727,5 +730,5 @@
     "spinning": "Çevriliyor...",
     "spinTheWheel": "Çarkı Çevir!",
     "mostViewed": "En Çok Görüntülenen Ürünler",
-    "myCards": "Kartlarım"
+    "cardHolder": "Kart Sahibi"
 }

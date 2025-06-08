@@ -343,6 +343,7 @@ class WelcomeScreen extends StatelessWidget {
                             buildLanguageButton('en', l10n.english, '🇺🇸'),
                             buildLanguageButton('tr', l10n.turkish, '🇹🇷'),
                             buildLanguageButton('ar', l10n.arabic, '🇸🇦'),
+                            buildLanguageButton('ur', l10n.urdu, '🇵🇰'),
                           ],
                         ),
                       ],

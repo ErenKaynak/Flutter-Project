@@ -87,6 +87,15 @@ class LanguageSelector extends StatelessWidget {
             ],
           ),
         ),
+        PopupMenuItem<String>(
+          value: 'ur',
+          child: Row(
+            children: [
+              Text('🇵🇰 '),
+              Text(l10n.urdu),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -164,32 +173,33 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _handleProfileTitleTap() {
+    if (!mounted) return;
+    
     setState(() {
       _tapCount++;
       if (_tapCount >= 3) {
         final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false); 
-        _showSpecialModeToggle = true; // Always show toggle when condition met
+        _showSpecialModeToggle = true;
         
-        // If special mode is already active from a previous session, show colors immediately
         if (themeNotifier.isSpecialModeActive) {
           isColorPickerVisible = true;
           print("Profile title tapped 3 times. Special mode was already active. Showing color picker.");
         } else {
-          // If not active, the switch will handle showing the color picker when turned on.
-          // isColorPickerVisible will be false initially if mode wasn't active.
-           print("Profile title tapped 3 times. Special mode not active. Toggle is now visible.");
+          print("Profile title tapped 3 times. Special mode not active. Toggle is now visible.");
         }
 
-        _tapCount = 0; // Reset tap count
+        _tapCount = 0;
         print("Profile title tapped 3 times. Playing confetti.");
         _confettiController.play();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.specialMode),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.specialMode),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       }
     });
   }
@@ -459,9 +469,9 @@ class _ProfilePageState extends State<ProfilePage> {
             title: Text(l10n.enterImageUrl),
             content: TextField(
               controller: urlController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'https://example.com/image.jpg',
-                labelText: 'Image URL',
+                labelText: l10n.imageUrl,
               ),
             ),
             actions: [
@@ -915,7 +925,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 themeNotifier,
                               ),
                               buildButton(
-                                "Wheel Of Discount",
+                                l10n.wheelOfDiscount,
                                 Icons.casino,
                                 () {
                                   Navigator.push(
@@ -934,7 +944,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 themeNotifier,
                               ),
                               buildButton(
-                                'Passwordless Sign In',
+                                l10n.passwordlessSignIn,
                                 passwordlessEnabled ? Icons.fingerprint : Icons.lock_outline,
                                 () {
                                   if (!isPasswordlessLoading) _togglePasswordless(!passwordlessEnabled);
@@ -1426,9 +1436,9 @@ class _ProfilePageState extends State<ProfilePage> {
           loadedTheme = SpecialTheme.none; // Default to none on error
         }
       }
-      themeNotifier.setSpecialTheme(loadedTheme); // This also updates isSpecialModeActive in notifier
-      if (loadedTheme != SpecialTheme.none) {
-         if (mounted) {
+      if (mounted) {
+        themeNotifier.setSpecialTheme(loadedTheme); // This also updates isSpecialModeActive in notifier
+        if (loadedTheme != SpecialTheme.none) {
           setState(() {
             _showSpecialModeToggle = true; // Show the toggle if a theme was active
             isColorPickerVisible = true; // Show colors if a theme was active
@@ -1437,9 +1447,10 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } else {
       // Ensure special mode is off in notifier if not persisted as active
-      themeNotifier.setSpecialTheme(SpecialTheme.none);
+      if (mounted) {
+        themeNotifier.setSpecialTheme(SpecialTheme.none);
+      }
     }
-    // No need to explicitly call _saveSpecialModeActiveState or _saveSpecialTheme here as we are loading
   }
 
   Future<void> _saveSpecialModeActiveState(bool isActive) async {
@@ -1453,27 +1464,48 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadPasswordlessSetting() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    if (doc.exists && doc.data()!.containsKey('passwordless_enabled')) {
-      setState(() {
-        passwordlessEnabled = doc['passwordless_enabled'] == true;
-      });
+    if (!mounted) return;
+    
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+      
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (mounted && doc.exists && doc.data()!.containsKey('passwordless_enabled')) {
+        setState(() {
+          passwordlessEnabled = doc['passwordless_enabled'] == true;
+        });
+      }
+    } catch (e) {
+      print('Error loading passwordless setting: $e');
     }
   }
 
   Future<void> _togglePasswordless(bool value) async {
+    if (!mounted) return;
     setState(() { isPasswordlessLoading = true; });
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-    await FirebaseFirestore.instance.collection('users').doc(uid).set({
-      'passwordless_enabled': value,
-    }, SetOptions(merge: true));
-    setState(() {
-      passwordlessEnabled = value;
-      isPasswordlessLoading = false;
-    });
+    
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+      
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'passwordless_enabled': value,
+      }, SetOptions(merge: true));
+      
+      if (mounted) {
+        setState(() {
+          passwordlessEnabled = value;
+          isPasswordlessLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isPasswordlessLoading = false;
+        });
+      }
+    }
   }
 
   @override

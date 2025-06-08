@@ -72,10 +72,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get arabic => 'العربية';
 
   @override
+  String get urdu => 'Urdu';
+
+  @override
   String get darkMode => 'الوضع الداكن';
 
   @override
   String get specialMode => 'الوضع الخاص';
+
+  @override
+  String get passwordlessSignIn => 'تسجيل الدخول بدون كلمة مرور';
+
+  @override
+  String get wheelOfDiscount => 'عجلة الخصم';
 
   @override
   String get addToCart => 'أضف إلى السلة';
@@ -285,9 +294,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get myWallet => 'محفظتي';
 
   @override
-  String get myCards => 'بطاقاتي';
-
-  @override
   String get appearance => 'المظهر';
 
   @override
@@ -316,6 +322,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get enterImageUrl => 'أدخل رابط الصورة';
+
+  @override
+  String get imageUrl => 'Image URL';
 
   @override
   String get add => 'إضافة';
@@ -459,7 +468,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get pleaseSelectAddress => 'Please select an address';
 
   @override
-  String get pleaseSelectCard => 'Please select a credit card';
+  String get pleaseSelectCard => 'Please select a card';
 
   @override
   String get deliveryAddress => 'Delivery Address';
@@ -474,7 +483,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get creditCards => 'Credit Cards';
 
   @override
-  String get noSavedCards => 'No saved cards';
+  String get noSavedCards => 'لا توجد رموز خصم محفوظة';
+
+  @override
+  String get myCards => 'بطاقاتي';
 
   @override
   String get payWithCreditCard => 'Pay with credit card';
@@ -563,7 +575,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String expires(String date) {
-    return 'Expires: $date';
+    return 'تاريخ الانتهاء: $date';
   }
 
   @override
@@ -628,13 +640,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get currentBalance => 'Current Balance';
 
   @override
-  String get cashbackInfo => 'يمكنك كسب مكافآت استرداد نقدي على المشتريات المؤهلة.';
+  String get cashbackInfo => '1% Cashback on all purchases';
 
   @override
-  String get addMoney => 'إضافة أموال';
+  String get addMoney => 'Add Money';
 
   @override
-  String get transactionHistory => 'سجل المعاملات';
+  String get transactionHistory => 'Transaction History';
 
   @override
   String transactionsCount(int count) {
@@ -1186,16 +1198,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get bugTitle => 'Bug Title';
 
   @override
-  String get enterBugTitle => 'Enter a title for the bug';
+  String get enterBugTitle => 'Enter bug title';
 
   @override
   String get bugDescription => 'Bug Description';
 
   @override
-  String get describeBugInDetail => 'Please describe the bug in detail';
+  String get describeBugInDetail => 'Describe the bug in detail';
 
   @override
-  String get pleaseEnterBugDetails => 'Please enter both title and description';
+  String get pleaseEnterBugDetails => 'Please enter bug title and description';
 
   @override
   String get bugReportSubmitted => 'Bug report submitted successfully';
@@ -1540,4 +1552,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get homepageLayout => 'Homepage Layout';
+
+  @override
+  String get cashbackReversal => 'Cashback Reversal';
+
+  @override
+  String get cardHolder => 'اسم حامل البطاقة';
 }

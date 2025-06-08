@@ -8,6 +8,7 @@ import 'package:intl/intl.dart' as intl;
 import 'app_localizations_ar.dart';
 import 'app_localizations_en.dart';
 import 'app_localizations_tr.dart';
+import 'app_localizations_ur.dart';
 
 // ignore_for_file: type=lint
 
@@ -94,7 +95,8 @@ abstract class AppLocalizations {
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
     Locale('tr'),
-    Locale('ar')
+    Locale('ar'),
+    Locale('ur')
   ];
 
   /// No description provided for @appTitle.
@@ -223,6 +225,12 @@ abstract class AppLocalizations {
   /// **'Arabic'**
   String get arabic;
 
+  /// No description provided for @urdu.
+  ///
+  /// In en, this message translates to:
+  /// **'Urdu'**
+  String get urdu;
+
   /// No description provided for @darkMode.
   ///
   /// In en, this message translates to:
@@ -234,6 +242,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Special Mode'**
   String get specialMode;
+
+  /// No description provided for @passwordlessSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwordless Sign In'**
+  String get passwordlessSignIn;
+
+  /// No description provided for @wheelOfDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'Wheel of Discount'**
+  String get wheelOfDiscount;
 
   /// No description provided for @addToCart.
   ///
@@ -544,7 +564,7 @@ abstract class AppLocalizations {
   /// No description provided for @fillAllFields.
   ///
   /// In en, this message translates to:
-  /// **'Please fill all required fields'**
+  /// **'Please fill all fields'**
   String get fillAllFields;
 
   /// No description provided for @pleaseEnterFirstName.
@@ -637,12 +657,6 @@ abstract class AppLocalizations {
   /// **'My Wallet'**
   String get myWallet;
 
-  /// No description provided for @myCards.
-  ///
-  /// In en, this message translates to:
-  /// **'My Cards'**
-  String get myCards;
-
   /// No description provided for @appearance.
   ///
   /// In en, this message translates to:
@@ -658,7 +672,7 @@ abstract class AppLocalizations {
   /// No description provided for @referralCode.
   ///
   /// In en, this message translates to:
-  /// **'Your Referral Code'**
+  /// **'Referral Code'**
   String get referralCode;
 
   /// No description provided for @copiedToClipboard.
@@ -676,13 +690,13 @@ abstract class AppLocalizations {
   /// No description provided for @takePhoto.
   ///
   /// In en, this message translates to:
-  /// **'Take a photo'**
+  /// **'Take Photo'**
   String get takePhoto;
 
   /// No description provided for @chooseFromGallery.
   ///
   /// In en, this message translates to:
-  /// **'Choose from gallery'**
+  /// **'Choose from Gallery'**
   String get chooseFromGallery;
 
   /// No description provided for @addFromUrl.
@@ -702,6 +716,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter Image URL'**
   String get enterImageUrl;
+
+  /// No description provided for @imageUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Image URL'**
+  String get imageUrl;
 
   /// No description provided for @add.
   ///
@@ -778,7 +798,7 @@ abstract class AppLocalizations {
   /// No description provided for @admin.
   ///
   /// In en, this message translates to:
-  /// **'ADMIN'**
+  /// **'Admin'**
   String get admin;
 
   /// No description provided for @guestUser.
@@ -964,7 +984,7 @@ abstract class AppLocalizations {
   /// No description provided for @pleaseSelectCard.
   ///
   /// In en, this message translates to:
-  /// **'Please select a credit card'**
+  /// **'Please select a card'**
   String get pleaseSelectCard;
 
   /// No description provided for @deliveryAddress.
@@ -996,6 +1016,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No saved cards'**
   String get noSavedCards;
+
+  /// No description provided for @myCards.
+  ///
+  /// In en, this message translates to:
+  /// **'My Cards'**
+  String get myCards;
 
   /// No description provided for @payWithCreditCard.
   ///
@@ -1282,7 +1308,7 @@ abstract class AppLocalizations {
   /// No description provided for @cashbackInfo.
   ///
   /// In en, this message translates to:
-  /// **'You can earn cashback rewards on eligible purchases.'**
+  /// **'1% Cashback on all purchases'**
   String get cashbackInfo;
 
   /// No description provided for @addMoney.
@@ -2314,7 +2340,7 @@ abstract class AppLocalizations {
   /// No description provided for @enterBugTitle.
   ///
   /// In en, this message translates to:
-  /// **'Enter a title for the bug'**
+  /// **'Enter bug title'**
   String get enterBugTitle;
 
   /// No description provided for @bugDescription.
@@ -2326,13 +2352,13 @@ abstract class AppLocalizations {
   /// No description provided for @describeBugInDetail.
   ///
   /// In en, this message translates to:
-  /// **'Please describe the bug in detail'**
+  /// **'Describe the bug in detail'**
   String get describeBugInDetail;
 
   /// No description provided for @pleaseEnterBugDetails.
   ///
   /// In en, this message translates to:
-  /// **'Please enter both title and description'**
+  /// **'Please enter bug title and description'**
   String get pleaseEnterBugDetails;
 
   /// No description provided for @bugReportSubmitted.
@@ -2994,6 +3020,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Homepage Layout'**
   String get homepageLayout;
+
+  /// No description provided for @cashbackReversal.
+  ///
+  /// In en, this message translates to:
+  /// **'Cashback Reversal'**
+  String get cashbackReversal;
+
+  /// No description provided for @cardHolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Card Holder'**
+  String get cardHolder;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
@@ -3005,7 +3043,7 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['ar', 'en', 'tr'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['ar', 'en', 'tr', 'ur'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -3019,6 +3057,7 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
     case 'ar': return AppLocalizationsAr();
     case 'en': return AppLocalizationsEn();
     case 'tr': return AppLocalizationsTr();
+    case 'ur': return AppLocalizationsUr();
   }
 
   throw FlutterError(
