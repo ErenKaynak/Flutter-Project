@@ -826,7 +826,7 @@ class _WalletPageState extends State<WalletPage> {
     );
 
     return Container(
-      width: 360,
+      width: 370,
       margin: const EdgeInsets.only(right: 16),
       height: 240,
       decoration: BoxDecoration(
@@ -945,19 +945,22 @@ class _WalletPageState extends State<WalletPage> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              masked,
-                              style: embossTextStyle.copyWith(
-                                fontSize: 16,
-                                letterSpacing: 1.5,
-                                fontFamily: 'monospace',
+                            Flexible(
+                              child: Text(
+                                masked,
+                                style: embossTextStyle.copyWith(
+                                  fontSize: 16,
+                                  letterSpacing: 1.5,
+                                  fontFamily: 'monospace',
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             Text(
                               last4,
                               style: embossTextStyle.copyWith(
-                                fontSize: 16,
-                                letterSpacing: 1.5,
+                                fontSize: 22,
+                                letterSpacing: 2,
                                 fontFamily: 'monospace',
                                 color: Colors.white,
                               ),
