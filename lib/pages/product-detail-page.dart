@@ -39,16 +39,18 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   late Animation<double> _tickAnimation;
   bool _isAddingToCart = false;
 
+  // YENİ: Kullanıcı ürünü satın aldı mı kontrolü
+  bool canComment = false;
+  final TextEditingController _commentController = TextEditingController();
+  int _commentRating = 5;
+
   @override
   void initState() {
     super.initState();
-
     _colorAnimationController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 300),
     );
-
-    // Initialize color animation with ThemeNotifier
     _colorAnimationController.addListener(() {
       if (mounted) setState(() {});
     });
@@ -56,16 +58,15 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       vsync: this,
       duration: Duration(milliseconds: 500),
     );
-
     _tickAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _tickAnimationController,
         curve: Curves.elasticOut,
       ),
     );
-
     _loadProductData();
     _checkFavoriteStatus();
+    _checkIfCanComment(); // YENİ
   }
 
   @override
@@ -367,6 +368,121 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     if (difference.inHours < 1) return l10n.minutesAgo(difference.inMinutes);
     if (difference.inDays < 1) return l10n.hoursAgo(difference.inHours);
     return DateFormat('MMM d, yyyy').format(date);
+  }
+
+  // YENİ: Kullanıcı ürünü satın aldı mı kontrolü
+  Future<bool> _hasUserPurchasedProduct() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    final orders = await FirebaseFirestore.instance
+        .collection('orders')
+        .where('userId', isEqualTo: user.uid)
+        .get();
+    for (var order in orders.docs) {
+      final items = order['items'] as List<dynamic>? ?? [];
+      if (items.any((item) => item['id'] == widget.productId)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void _checkIfCanComment() async {
+    bool purchased = await _hasUserPurchasedProduct();
+    if (mounted) setState(() => canComment = purchased);
+  }
+
+  // YENİ: Yorum gönderme fonksiyonu
+  Future<void> _submitComment(String comment, int rating) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    await FirebaseFirestore.instance
+        .collection('comments')
+        .doc(widget.productId)
+        .collection('userComments')
+        .add({
+      'userId': user.uid,
+      'comment': comment,
+      'rating': rating,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    await _updateProductRating();
+    setState(() {
+      _commentController.clear();
+      _commentRating = 5;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Yorumunuz gönderildi!')),
+    );
+  }
+
+  // YENİ: Ürün rating ve yorum sayısını güncelle
+  Future<void> _updateProductRating() async {
+    final commentsSnapshot = await FirebaseFirestore.instance
+        .collection('comments')
+        .doc(widget.productId)
+        .collection('userComments')
+        .get();
+
+    final ratings = commentsSnapshot.docs
+        .map((doc) => (doc.data()['rating'] ?? 0) as int)
+        .where((r) => r > 0)
+        .toList();
+
+    double avg = 0;
+    if (ratings.isNotEmpty) {
+      avg = ratings.reduce((a, b) => a + b) / ratings.length;
+    }
+
+    await FirebaseFirestore.instance
+        .collection('products')
+        .doc(widget.productId)
+        .update({
+      'averageRating': double.parse(avg.toStringAsFixed(1)),
+      'totalRatings': ratings.length,
+      'ratingCount': ratings.length,
+    });
+  }
+
+  // YENİ: Yorum formu widget'ı
+  Widget _buildCommentForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Yorumunuzu bırakın:', style: TextStyle(fontWeight: FontWeight.bold)),
+        SizedBox(height: 8),
+        Row(
+          children: List.generate(5, (index) => IconButton(
+            icon: Icon(
+              index < _commentRating ? Icons.star : Icons.star_border,
+              color: Colors.amber,
+            ),
+            onPressed: () {
+              setState(() {
+                _commentRating = index + 1;
+              });
+            },
+          )),
+        ),
+        TextField(
+          controller: _commentController,
+          decoration: InputDecoration(
+            hintText: 'Yorumunuz...',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        ),
+        SizedBox(height: 8),
+        ElevatedButton(
+          onPressed: () async {
+            if (_commentController.text.trim().isNotEmpty) {
+              await _submitComment(_commentController.text.trim(), _commentRating);
+            }
+          },
+          child: Text('Gönder'),
+        ),
+      ],
+    );
   }
 
   @override
@@ -1073,6 +1189,11 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (canComment) // YENİ: Sadece satın alanlar için
+                      Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: _buildCommentForm(),
+                      ),
                     Padding(
                       padding: EdgeInsets.all(20),
                       child: Row(

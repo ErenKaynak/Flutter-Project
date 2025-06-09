@@ -61,6 +61,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   List<Map<String, dynamic>> _layoutComponents = [];
   bool _isLayoutLoading = true;
 
+  StreamSubscription<QuerySnapshot>? _productsSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -69,13 +71,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _getUserProfile();
     _setupCategoriesListener();
     _loadLayoutConfiguration();
-    
+    _listenProducts();
     Future.microtask(() {
       if (mounted) {
         _loadBanners();
       }
     });
-
     _searchController.addListener(() {
       if (mounted) {
         setState(() {
@@ -83,7 +84,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         });
       }
     });
-
     _loadInitialData();
   }
 
@@ -111,6 +111,37 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
   }
 
+  void _listenProducts() {
+    _productsSubscription?.cancel();
+    _productsSubscription = FirebaseFirestore.instance
+        .collection('products')
+        .snapshots()
+        .listen((snapshot) {
+      final List<Map<String, dynamic>> loadedProducts = [];
+      snapshot.docs.forEach((doc) {
+        final data = doc.data() as Map<String, dynamic>?;
+        if (data != null && doc.id != null && doc.id.isNotEmpty) {
+          loadedProducts.add({
+            'id': doc.id,
+            'name': data['name'] ?? 'Unknown Product',
+            'price': data['price']?.toString() ?? '0',
+            'category': data['category'] ?? 'Uncategorized',
+            'image': data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
+            'description': data['description'] ?? 'No description available',
+            'stock': data['stock'] ?? 0,
+            'averageRating': (data['averageRating'] ?? 0.0).toDouble(),
+            'ratingCount': data['ratingCount'] ?? 0,
+          });
+        }
+      });
+      if (mounted) {
+        setState(() {
+          products = loadedProducts;
+        });
+      }
+    });
+  }
+
   Future<void> _loadInitialData() async {
     if (!mounted) return;
 
@@ -119,7 +150,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
 
     try {
-      await fetchProducts();
       await fetchFavorites();
 
       if (mounted && !_isDisposed) {
@@ -149,11 +179,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _searchController.dispose();
     _cartManager.removeListener(_updateUI);
     _categoriesSubscription?.cancel();
-    
+    _productsSubscription?.cancel();
     // Dispose all animation controllers
     _animationControllers.forEach((_, controller) => controller.dispose());
     _animationControllers.clear(); // Clear the map after disposing
-
     super.dispose();
   }
 
@@ -234,50 +263,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     } catch (e) {
       print('Error initializing animation controllers: $e');
-    }
-  }
-
-  Future<void> fetchProducts() async {
-    if (!mounted) return;
-
-    try {
-      final QuerySnapshot snapshot =
-          await FirebaseFirestore.instance.collection('products').get();
-
-      final List<Map<String, dynamic>> loadedProducts = [];
-
-      snapshot.docs.forEach((doc) {
-        final data = doc.data() as Map<String, dynamic>?;
-
-        if (data != null && doc.id != null && doc.id.isNotEmpty) {
-          print('Product: ${data['name']}, Image path: ${data['imagePath']}');
-          String priceString = data['price']?.toString() ?? '0';
-
-          loadedProducts.add({
-            'id': doc.id,
-            'name': data['name'] ?? 'Unknown Product',
-            'price': priceString,
-            'category': data['category'] ?? 'Uncategorized',
-            'image': data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
-            'description': data['description'] ?? 'No description available',
-            'stock': data['stock'] ?? 0,
-            'averageRating': (data['averageRating'] ?? 0.0).toDouble(),
-            'ratingCount': data['ratingCount'] ?? 0,
-          });
-        }
-      });
-
-      // Initialize controllers here, before setState
-      _initializeAnimationControllers(loadedProducts);
-
-      if (!mounted) return;
-
-      setState(() {
-        products = loadedProducts;
-      });
-
-    } catch (error) {
-      print('Error fetching products: $error');
     }
   }
 

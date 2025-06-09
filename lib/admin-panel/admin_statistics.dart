@@ -508,10 +508,17 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
       MaterialPageRoute(
         builder: (context) => Scaffold(
           appBar: AppBar(
-            title: Text('Detailed Reports'),
-            backgroundColor: Provider.of<ThemeNotifier>(context).isSpecialModeActive
-                ? Provider.of<ThemeNotifier>(context).getThemeColor(Provider.of<ThemeNotifier>(context).specialTheme)
-                : Colors.red,
+            backgroundColor: Provider.of<ThemeNotifier>(context).isDarkMode
+                ? Colors.red.shade900
+                : Colors.red.shade700,
+            title: const Text(
+              'Detailed Reports',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            foregroundColor: Colors.white,
           ),
           body: SingleChildScrollView(
             padding: EdgeInsets.all(16),
