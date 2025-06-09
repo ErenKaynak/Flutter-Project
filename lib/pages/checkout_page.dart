@@ -500,13 +500,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
           'shippingAddress': _selectedAddress?['fullAddress'] ?? 'No address provided',
           'paymentMethod': _selectedPaymentMethod,
           'status': 'pending',
-          'orderDate': FieldValue.serverTimestamp(),
+          'timestamp': FieldValue.serverTimestamp(),
           'trackingNumber': '',
         };
 
         batch.set(orderRef, orderData);
 
-        // Create a user-specific order document
+        // Kullanıcıya özel sipariş belgesi oluşturuluyor
         final userOrderRef = FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
@@ -515,11 +515,39 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
         batch.set(userOrderRef, orderData);
 
+        // --- STOK GÜNCELLEME ---
+        for (final item in widget.items) {
+          final productId = item.id;
+          final quantity = item.quantity;
+          final productRef = FirebaseFirestore.instance.collection('products').doc(productId);
+          batch.update(productRef, {
+            'stock': FieldValue.increment(-quantity),
+          });
+        }
+        // --- STOK GÜNCELLEME SONU ---
+
         await batch.commit();
 
         // Clear the cart using the CartManager from cart_page.dart
         final cartManager = CartManager();
         await cartManager.clearCart();
+
+        // Send order confirmation email
+        try {
+          await EmailService.sendReceipt(
+            context: context,
+            customerEmail: user.email ?? '',
+            customerName: userData?['name'] ?? user.displayName ?? 'Anonymous User',
+            orderNumber: orderRef.id,
+            items: widget.items.map((item) => item.toMap()).toList(),
+            totalAmount: total,
+            orderDate: DateTime.now(),
+            shippingAddress: _selectedAddress?['fullAddress'] ?? 'No address provided',
+          );
+        } catch (e) {
+          print('Error sending order confirmation email: $e');
+          // Don't throw the error as the order was already created successfully
+        }
 
         if (mounted) {
           Navigator.pushReplacement(
@@ -903,8 +931,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
         itemCount: widget.items.length,
         separatorBuilder:
             (context, index) => Divider(
-              color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-            ),
+          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+        ),
         itemBuilder: (context, index) {
           final item = widget.items[index];
           return Padding(

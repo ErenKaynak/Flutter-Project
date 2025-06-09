@@ -103,7 +103,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 .collection('orders')
                 .doc(user.uid)
                 .collection('userOrders')
-                .orderBy('orderDate', descending: true)
+                .orderBy('timestamp', descending: true)
                 .get();
 
         print(
@@ -123,7 +123,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           loadedOrders.add({
             'id': doc.id,
             'orderNumber': doc.id.substring(0, 8),
-            'timestamp': data['orderDate'] ?? Timestamp.now(),
+            'timestamp': data['timestamp'] ?? Timestamp.now(),
             'total': data['totalAmount'] ?? 0,
             'status': standardizedStatus,
             'items': itemsData,
