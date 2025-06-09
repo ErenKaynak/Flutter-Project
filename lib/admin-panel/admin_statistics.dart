@@ -534,39 +534,35 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
                   ),
                 ),
                 SizedBox(height: 24),
-                Shimmer.fromColors(
-                  baseColor: Colors.grey[300]!,
-                  highlightColor: Colors.grey[100]!,
-                  child: Column(
-                    children: [
-                      _buildReportCard(
-                        'Top Selling Products',
-                        Icons.trending_up,
-                        Provider.of<ThemeNotifier>(context).isSpecialModeActive
-                            ? Provider.of<ThemeNotifier>(context).getThemeColor(Provider.of<ThemeNotifier>(context).specialTheme)
-                            : Colors.red,
-                        () => _showDetailedReport('Top Selling Products'),
-                      ),
-                      SizedBox(height: 16),
-                      _buildReportCard(
-                        'Customer Analytics',
-                        Icons.people,
-                        Provider.of<ThemeNotifier>(context).isSpecialModeActive
-                            ? Provider.of<ThemeNotifier>(context).getThemeColor(Provider.of<ThemeNotifier>(context).specialTheme)
-                            : Colors.red,
-                        () => _showDetailedReport('Customer Analytics'),
-                      ),
-                      SizedBox(height: 16),
-                      _buildReportCard(
-                        'Order Status',
-                        Icons.shopping_cart,
-                        Provider.of<ThemeNotifier>(context).isSpecialModeActive
-                            ? Provider.of<ThemeNotifier>(context).getThemeColor(Provider.of<ThemeNotifier>(context).specialTheme)
-                            : Colors.red,
-                        () => _showDetailedReport('Order Status'),
-                      ),
-                    ],
-                  ),
+                Column(
+                  children: [
+                    _buildReportCard(
+                      'Top Selling Products',
+                      Icons.trending_up,
+                      Provider.of<ThemeNotifier>(context).isSpecialModeActive
+                          ? Provider.of<ThemeNotifier>(context).getThemeColor(Provider.of<ThemeNotifier>(context).specialTheme)
+                          : Colors.red,
+                      () => _showDetailedReport('Top Selling Products'),
+                    ),
+                    SizedBox(height: 16),
+                    _buildReportCard(
+                      'Customer Analytics',
+                      Icons.people,
+                      Provider.of<ThemeNotifier>(context).isSpecialModeActive
+                          ? Provider.of<ThemeNotifier>(context).getThemeColor(Provider.of<ThemeNotifier>(context).specialTheme)
+                          : Colors.red,
+                      () => _showDetailedReport('Customer Analytics'),
+                    ),
+                    SizedBox(height: 16),
+                    _buildReportCard(
+                      'Order Status',
+                      Icons.shopping_cart,
+                      Provider.of<ThemeNotifier>(context).isSpecialModeActive
+                          ? Provider.of<ThemeNotifier>(context).getThemeColor(Provider.of<ThemeNotifier>(context).specialTheme)
+                          : Colors.red,
+                      () => _showDetailedReport('Order Status'),
+                    ),
+                  ],
                 ),
               ],
             ),
