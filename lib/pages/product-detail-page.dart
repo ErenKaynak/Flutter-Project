@@ -377,6 +377,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     final orders = await FirebaseFirestore.instance
         .collection('orders')
         .where('userId', isEqualTo: user.uid)
+        .where('status', whereIn: ['Delivered', 'delivered'])
         .get();
     for (var order in orders.docs) {
       final items = order['items'] as List<dynamic>? ?? [];
