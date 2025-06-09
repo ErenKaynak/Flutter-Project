@@ -1104,7 +1104,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String stockRemaining(int stock) {
-    return '$stock آئٹمز باقی ہیں';
+    return 'باقی اسٹاک: $stock';
   }
 
   @override
@@ -1125,14 +1125,14 @@ class AppLocalizationsUr extends AppLocalizations {
   String get checkingStockLevels => 'اسٹاک کی سطحیں چیک کر رہا ہے...';
 
   @override
-  String get lowStockAlerts => 'کم اسٹاک کی اطلاعات';
+  String get lowStockAlerts => 'انتباہات';
 
   @override
   String get noLowStockProducts => 'کم اسٹاک والی کوئی پروڈکٹس نہیں۔';
 
   @override
   String lowStockProductsCount(int count) {
-    return '$count کم اسٹاک والی پروڈکٹس';
+    return '$count پروڈکٹس کا اسٹاک کم ہے';
   }
 
   @override

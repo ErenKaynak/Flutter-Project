@@ -634,9 +634,9 @@
     "enterNewStockAmount": "Enter new stock amount",
     "pleaseEnterValidNumber": "Please enter a valid number.",
     "checkingStockLevels": "Checking stock levels...",
-    "lowStockAlerts": "Low Stock Alerts",
+    "lowStockAlerts": "Alerts",
     "noLowStockProducts": "No low stock products.",
-    "lowStockProductsCount": "{count} product(s) with low stock",
+    "lowStockProductsCount": "{count} products have low stock",
     "@lowStockProductsCount": {
         "placeholders": {
             "count": {

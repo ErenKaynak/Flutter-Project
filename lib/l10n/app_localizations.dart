@@ -2202,7 +2202,7 @@ abstract class AppLocalizations {
   /// No description provided for @lowStockAlerts.
   ///
   /// In en, this message translates to:
-  /// **'Low Stock Alerts'**
+  /// **'Alerts'**
   String get lowStockAlerts;
 
   /// No description provided for @noLowStockProducts.
@@ -2214,7 +2214,7 @@ abstract class AppLocalizations {
   /// No description provided for @lowStockProductsCount.
   ///
   /// In en, this message translates to:
-  /// **'{count} product(s) with low stock'**
+  /// **'{count} products have low stock'**
   String lowStockProductsCount(int count);
 
   /// No description provided for @promoCodes.

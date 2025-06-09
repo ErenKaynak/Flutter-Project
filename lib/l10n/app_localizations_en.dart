@@ -1125,14 +1125,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get checkingStockLevels => 'Checking stock levels...';
 
   @override
-  String get lowStockAlerts => 'Low Stock Alerts';
+  String get lowStockAlerts => 'Alerts';
 
   @override
   String get noLowStockProducts => 'No low stock products.';
 
   @override
   String lowStockProductsCount(int count) {
-    return '$count product(s) with low stock';
+    return '$count products have low stock';
   }
 
   @override

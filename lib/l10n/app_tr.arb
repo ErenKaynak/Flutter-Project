@@ -532,7 +532,7 @@
     "mustBeLoggedIn": "Giriş yapmalısınız",
     "pleaseLoginToAddFavorites": "Favorilere eklemek için lütfen giriş yapın",
     "justNow": "Az önce",
-    "stockRemaining": "{stock} ürün kaldı",
+    "stockRemaining": "Kalan Stok: {stock}",
     "@stockRemaining": {
         "placeholders": {
             "stock": {
@@ -540,7 +540,7 @@
             }
         }
     },
-    "updateStock": "{productName} için Stok Güncelle",
+    "updateStock": "{productName} için Stoğu Güncelle",
     "@updateStock": {
         "placeholders": {
             "productName": {
@@ -554,9 +554,9 @@
     "adminDashboard": "Yönetici Paneli",
     "adminControls": "Yönetici Kontrolleri",
     "checkingStockLevels": "Stok seviyeleri kontrol ediliyor...",
-    "lowStockAlerts": "Düşük Stok Uyarıları",
+    "lowStockAlerts": "Uyarılar",
     "noLowStockProducts": "Düşük stoklu ürün yok",
-    "lowStockProductsCount": "{count} ürün düşük stokta",
+    "lowStockProductsCount": "{count} ürünün stoğu az",
     "@lowStockProductsCount": {
         "placeholders": {
             "count": {

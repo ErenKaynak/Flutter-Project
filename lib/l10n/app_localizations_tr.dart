@@ -1104,12 +1104,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String stockRemaining(int stock) {
-    return '$stock ürün kaldı';
+    return 'Kalan Stok: $stock';
   }
 
   @override
   String updateStock(Object productName) {
-    return '$productName için Stok Güncelle';
+    return '$productName için Stoğu Güncelle';
   }
 
   @override
@@ -1125,14 +1125,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get checkingStockLevels => 'Stok seviyeleri kontrol ediliyor...';
 
   @override
-  String get lowStockAlerts => 'Düşük Stok Uyarıları';
+  String get lowStockAlerts => 'Uyarılar';
 
   @override
   String get noLowStockProducts => 'Düşük stoklu ürün yok';
 
   @override
   String lowStockProductsCount(int count) {
-    return '$count ürün düşük stokta';
+    return '$count ürünün stoğu az';
   }
 
   @override
