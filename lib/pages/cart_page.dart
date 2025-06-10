@@ -13,6 +13,7 @@ import 'package:engineering_project/pages/theme_notifier.dart';
 import 'package:provider/provider.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:engineering_project/assets/components/email_service.dart';
 
 class CartItem {
   final String id;
@@ -747,6 +748,23 @@ class _CartPageState extends State<CartPage> {
 
       await batch.commit();
       await _cartManager.clearCart();
+
+      // Send order confirmation email
+      try {
+        await EmailService.sendReceipt(
+          context: context,
+          customerEmail: user.email ?? '',
+          customerName: userData?['name'] ?? user.displayName ?? 'Anonymous User',
+          orderNumber: userOrderRef.id,
+          items: _cartManager.items.map((item) => item.toMap()).toList(),
+          totalAmount: totalAmount,
+          orderDate: DateTime.now(),
+          shippingAddress: shippingAddress,
+        );
+      } catch (e) {
+        print('Error sending order confirmation email: $e');
+        // Don't throw the error as the order was already created successfully
+      }
 
       if (mounted) {
         Navigator.of(context).pushReplacement(

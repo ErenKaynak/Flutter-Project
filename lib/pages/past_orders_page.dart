@@ -205,6 +205,13 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         print('Error fetching from orders collection: $e');
       }
 
+      // Sort all orders by timestamp in descending order
+      loadedOrders.sort((a, b) {
+        final Timestamp aTime = a['timestamp'] as Timestamp;
+        final Timestamp bTime = b['timestamp'] as Timestamp;
+        return bTime.compareTo(aTime);
+      });
+
       setState(() {
         _orders = loadedOrders;
         _isLoading = false;

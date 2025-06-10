@@ -25,7 +25,7 @@ class EmailService {
     required String shippingAddress,
     required String languageCode,
   }) {
-    final currencyFormat = NumberFormat.currency(symbol: '₺');
+    final currencyFormat = NumberFormat.currency(symbol: '₺', decimalDigits: 2);
     final dateFormat = DateFormat('MMMM dd, yyyy');
     
     // Language-specific text
@@ -41,8 +41,8 @@ class EmailService {
         'product': 'Product',
         'quantity': 'Quantity',
         'price': 'Price',
-        'total': 'Toplam',
-        'totalAmount': 'Toplam Tutar',
+        'total': 'Total',
+        'totalAmount': 'Total Amount',
         'viewOrderStatus': 'View Order Status',
         'support': 'If you have any questions, please contact our support team.',
         'copyright': '© 2024 Paradise PC Components. All rights reserved.',
@@ -204,8 +204,8 @@ class EmailService {
                 <tr>
                   <td>${item['name']}</td>
                   <td>${item['quantity']}</td>
-                  <td>${currencyFormat.format(item['price'])}</td>
-                  <td>${currencyFormat.format(item['price'] * item['quantity'])}</td>
+                  <td>${currencyFormat.format(double.parse(item['price'].toString()))}</td>
+                  <td>${currencyFormat.format(double.parse(item['price'].toString()) * (item['quantity'] as num))}</td>
                 </tr>
               ''').join('')}
             </tbody>

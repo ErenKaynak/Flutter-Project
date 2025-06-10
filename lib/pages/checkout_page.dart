@@ -515,6 +515,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
         batch.set(userOrderRef, orderData);
 
+        // Send order confirmation email
+        await EmailService.sendReceipt(
+          context: context,
+          customerEmail: user.email ?? '',
+          customerName: userData?['name'] ?? user.displayName ?? 'Anonymous User',
+          orderNumber: orderRef.id,
+          items: widget.items.map((item) => item.toMap()).toList(),
+          totalAmount: total,
+          orderDate: DateTime.now(),
+          shippingAddress: _selectedAddress?['fullAddress'] ?? 'No address provided',
+        );
+
         // --- STOK GÜNCELLEME ---
         for (final item in widget.items) {
           final productId = item.id;
@@ -531,23 +543,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         // Clear the cart using the CartManager from cart_page.dart
         final cartManager = CartManager();
         await cartManager.clearCart();
-
-        // Send order confirmation email
-        try {
-          await EmailService.sendReceipt(
-            context: context,
-            customerEmail: user.email ?? '',
-            customerName: userData?['name'] ?? user.displayName ?? 'Anonymous User',
-            orderNumber: orderRef.id,
-            items: widget.items.map((item) => item.toMap()).toList(),
-            totalAmount: total,
-            orderDate: DateTime.now(),
-            shippingAddress: _selectedAddress?['fullAddress'] ?? 'No address provided',
-          );
-        } catch (e) {
-          print('Error sending order confirmation email: $e');
-          // Don't throw the error as the order was already created successfully
-        }
 
         if (mounted) {
           Navigator.pushReplacement(
