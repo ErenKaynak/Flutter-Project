@@ -1032,7 +1032,7 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                 ),
                 Divider(height: 28, thickness: 1, color: isDark ? Colors.white12 : Colors.grey[200]),
                 Text(
-                  order.items.map((item) => 
+                  'Order details:\n' + order.items.map((item) => 
                     '${item.quantity}x ${item.name}').join('\n'),
                   style: TextStyle(
                     fontSize: 17,
@@ -1040,34 +1040,46 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                     color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
-                if (order.status == OrderStatus.pending || order.status == OrderStatus.delivered) ...[
-                  SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (order.status == OrderStatus.pending)
-                        OutlinedButton.icon(
-                          onPressed: () => _showCancelOrderDialog(order),
-                          icon: Icon(Icons.cancel, color: Colors.red),
-                          label: Text('Cancel Order'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            side: BorderSide(color: Colors.red),
+                SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          _pendingOrderAction?.onYes?.call();
+                          setState(() => _pendingOrderAction = null);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: themeColor,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                      if (order.status == OrderStatus.delivered)
-                        OutlinedButton.icon(
-                          onPressed: () => _showRefundRequestDialog(order),
-                          icon: Icon(Icons.money_off, color: Colors.orange),
-                          label: Text('Request Refund'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.orange,
-                            side: BorderSide(color: Colors.orange),
+                        child: Text('Yes', style: TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          _pendingOrderAction?.onNo?.call();
+                          setState(() => _pendingOrderAction = null);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: themeColor,
+                          side: BorderSide(color: themeColor),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                    ],
-                  ),
-                ],
+                        child: Text('No', style: TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -1875,6 +1887,9 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
   void _showProductSearchDialog() {
     final TextEditingController searchController = TextEditingController();
     final l10n = AppLocalizations.of(context)!;
+    // Move these outside the builder so they persist
+    List<LocalizedProduct> searchResults = [];
+    bool isSearching = false;
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -1886,10 +1901,6 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
             final themeColor = themeNotifier.isSpecialModeActive 
                 ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
                 : Colors.red;
-            // Move searchResults and isSearching into the StatefulBuilder scope
-            List<LocalizedProduct> searchResults = [];
-            bool isSearching = false;
-
             return Dialog(
               backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
               shape: RoundedRectangleBorder(
@@ -1918,10 +1929,16 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                         border: OutlineInputBorder(),
                       ),
                       onChanged: (value) async {
+                        print('[DEBUG] Product search query: '
+                            '\u001b[32m' + value + '\u001b[0m');
                         setState(() {
                           isSearching = true;
                         });
                         final results = await _searchProducts(value);
+                        print('[DEBUG] Search returned '+results.length.toString()+' results');
+                        for (final p in results) {
+                          print('[DEBUG] Found product: ' + p.name);
+                        }
                         setState(() {
                           searchResults = results;
                           isSearching = false;
@@ -1939,7 +1956,7 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                           itemBuilder: (context, index) {
                             final product = searchResults[index];
                             return ListTile(
-                              leading: product.imageUrl != null && product.imageUrl.isNotEmpty
+                              leading: product.imageUrl.isNotEmpty
                                   ? Image.network(product.imageUrl, width: 40, height: 40, fit: BoxFit.cover)
                                   : null,
                               title: Text(product.name),
@@ -2176,6 +2193,25 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Future<List<String>> _getProductExplanations(List<LocalizedProduct> products, String userQuery) async {
+    List<String> explanations = [];
+    try {
+      for (var product in products) {
+        final response = await LocalAIService.getChatCompletion(
+          'Why would ${product.name} be a good choice based on this request: "$userQuery"? Keep it under 50 words.',
+          'You are a PC hardware expert. Be concise and clear.'
+        );
+
+        explanations.add(response);
+      }
+    } catch (e) {
+      print('Error getting product explanations: $e');
+      // Return generic explanations if AI service fails
+      explanations = List.filled(products.length, 'This component matches your requirements.');
+    }
+    return explanations;
   }
 
   Future<void> _checkAdminStatus() async {
@@ -2593,37 +2629,6 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     }
   }
 
-  Future<List<String>> _getProductExplanations(
-    List<LocalizedProduct> products, 
-    String userQuery,
-  ) async {
-    final List<String> explanations = [];
-    
-    for (final product in products) {
-      try {
-        // Get AI explanation for each product based on user's query
-        final prompt = '''
-        Based on the user query "$userQuery", explain why this product is recommended:
-        Product: ${product.name}
-        Category: ${product.category}
-        Price: ₺${product.price}
-        ''';
-        
-        final explanation = await LocalAIService.getChatCompletion(
-          prompt,
-          'You are a PC expert. Explain product recommendations in 1-2 sentences. Focus on key benefits.',
-        );
-        
-        explanations.add(explanation);
-      } catch (e) {
-        print('Error getting explanation for ${product.name}: $e');
-        explanations.add('A recommended component for your build.');
-      }
-    }
-    
-    return explanations;
-  }
-
   Future<List<LocalizedProduct>> _searchProducts(String query) async {
     try {
       final lowerQuery = query.toLowerCase();
@@ -2631,7 +2636,13 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
 
       return snapshot.docs
           .map((doc) => LocalizedProduct.fromFirestore(doc))
-          .where((product) => product.name.toLowerCase().contains(lowerQuery))
+          .where((product) {
+            // Search in name, category, and all descriptions
+            final nameMatch = product.name.toLowerCase().contains(lowerQuery);
+            final categoryMatch = product.category.toLowerCase().contains(lowerQuery);
+            final descriptionMatch = product.descriptions.values.any((desc) => desc.toLowerCase().contains(lowerQuery));
+            return nameMatch || categoryMatch || descriptionMatch;
+          })
           .toList();
     } catch (e) {
       print('Error searching products: $e');
@@ -3139,8 +3150,7 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                     ],
                   ),
                 ),
-              ),
-            );
+              ));
           },
         );
       },
@@ -3199,8 +3209,9 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
 
   Future<List<String>> _fetchCategories() async {
     try {
-      final snapshot = await FirebaseFirestore.instance.collection('categories').get();
-      return snapshot.docs.map((doc) => doc.id).toList();
+      final snapshot = await FirebaseFirestore.instance.collection('categories').orderBy('name').get();
+      // Use the 'name' field for display, not the document ID
+      return snapshot.docs.map((doc) => doc.data()['name']?.toString() ?? doc.id).toList();
     } catch (e) {
       print('Error fetching categories: $e');
       return [];
