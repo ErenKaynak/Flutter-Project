@@ -388,9 +388,33 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     return false;
   }
 
+  // YENİ: Kullanıcı daha önce yorum yaptı mı kontrolü
+  Future<bool> _hasUserAlreadyCommented() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    final commentsSnapshot = await FirebaseFirestore.instance
+        .collection('comments')
+        .doc(widget.productId)
+        .collection('userComments')
+        .where('userId', isEqualTo: user.uid)
+        .limit(1)
+        .get();
+    return commentsSnapshot.docs.isNotEmpty;
+  }
+
   void _checkIfCanComment() async {
     bool purchased = await _hasUserPurchasedProduct();
-    if (mounted) setState(() => canComment = purchased);
+    if (!purchased) {
+      if (mounted) setState(() => canComment = false);
+      return;
+    }
+    // Satın almışsa, daha önce yorum yapıp yapmadığını kontrol et
+    bool alreadyCommented = await _hasUserAlreadyCommented();
+    if (mounted) {
+      setState(() {
+        canComment = !alreadyCommented;
+      });
+    }
   }
 
   // YENİ: Yorum gönderme fonksiyonu
@@ -411,6 +435,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     setState(() {
       _commentController.clear();
       _commentRating = 5;
+      canComment = false; // Yorum yapıldı, formu gizle
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Yorumunuz gönderildi!')),
