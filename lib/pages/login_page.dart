@@ -167,10 +167,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
           // Sign out the user immediately
           await FirebaseAuth.instance.signOut();
           
-          if (context.mounted) {
-            Navigator.pop(context);
-            setState(() { emailError = 'This account has been disabled by an administrator.'; });
-          }
+          if (context.mounted) Navigator.pop(context);
+          setState(() { emailError = 'This account has been disabled by an administrator.'; });
           return;
         }
       }
@@ -375,28 +373,37 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   }
 
   void _passwordlessSignIn() async {
+    if (!mounted) return;
+    
     final email = emailController.text.trim();
     if (email.isEmpty) {
+      if (!mounted) return;
       setState(() { emailError = 'Please enter your email.'; });
       return;
     }
+
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
+
     try {
       // 1. Check biometrics
       final walletAuthService = WalletAuthService();
       final canBiometric = await walletAuthService.isBiometricsAvailable();
       if (!canBiometric) {
-        Navigator.pop(context);
+        if (!mounted) return;
+        if (context.mounted) Navigator.pop(context);
         setState(() { emailError = 'Biometrics not available on this device.'; });
         return;
       }
+
       final authenticated = await walletAuthService.authenticateWithBiometrics();
       if (!authenticated) {
-        Navigator.pop(context);
+        if (!mounted) return;
+        if (context.mounted) Navigator.pop(context);
         setState(() { emailError = 'Biometric authentication failed.'; });
         return;
       }
@@ -407,11 +414,14 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}),
       );
+
+      if (!mounted) return;
       if (response.statusCode != 200) {
-        Navigator.pop(context);
+        if (context.mounted) Navigator.pop(context);
         setState(() { emailError = 'Failed to get custom token: ${response.body}'; });
         return;
       }
+
       final token = jsonDecode(response.body)['token'];
 
       // 3. Sign in with custom token
@@ -430,6 +440,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
           // Sign out the user immediately
           await FirebaseAuth.instance.signOut();
           
+          if (!mounted) return;
           if (context.mounted) {
             Navigator.pop(context);
             setState(() { emailError = 'This account has been disabled by an administrator.'; });
@@ -438,16 +449,20 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         }
       }
 
-      if (context.mounted) Navigator.pop(context);
+      if (!mounted) return;
       if (context.mounted) {
+        Navigator.pop(context); // Pop loading dialog
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const RootScreen()),
           (Route<dynamic> route) => false,
         );
       }
     } catch (e) {
-      if (context.mounted) Navigator.pop(context);
-      setState(() { emailError = 'Passwordless sign in failed. Please try again.'; });
+      if (!mounted) return;
+      if (context.mounted) {
+        Navigator.pop(context);
+        setState(() { emailError = 'Passwordless sign in failed. Please try again.'; });
+      }
       print('Passwordless sign in error: $e');
     }
   }

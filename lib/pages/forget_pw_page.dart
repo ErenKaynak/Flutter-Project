@@ -35,15 +35,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     }
 
     try {
-      // Check if email exists
-      final methods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(_emailController.text.trim());
-      if (methods.isEmpty) {
-        setState(() {
-          _errorMessage = 'No account found with this email address';
-        });
-        return;
-      }
-
       await FirebaseAuth.instance.sendPasswordResetEmail(
         email: _emailController.text.trim(),
       );
