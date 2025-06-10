@@ -1560,6 +1560,7 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                                           );
                                           return;
                                         }
+
                                         await _generateAIDescription(
                                           descriptionEnController,
                                           descriptionTrController,
@@ -1885,8 +1886,10 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
             final themeColor = themeNotifier.isSpecialModeActive 
                 ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
                 : Colors.red;
+            // Move searchResults and isSearching into the StatefulBuilder scope
             List<LocalizedProduct> searchResults = [];
             bool isSearching = false;
+
             return Dialog(
               backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
               shape: RoundedRectangleBorder(
@@ -1902,25 +1905,17 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                     Text(
                       l10n.updateProduct,
                       style: TextStyle(
-                        fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black87,
+                        fontSize: 20,
+                        color: isDark ? Colors.white : Colors.black,
                       ),
                     ),
                     SizedBox(height: 20),
                     TextField(
                       controller: searchController,
                       decoration: InputDecoration(
-                        labelText: l10n.productName,
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        filled: true,
-                        fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-                      ),
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black87,
+                        hintText: l10n.searchProducts,
+                        border: OutlineInputBorder(),
                       ),
                       onChanged: (value) async {
                         setState(() {
@@ -1944,12 +1939,11 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                           itemBuilder: (context, index) {
                             final product = searchResults[index];
                             return ListTile(
-                              leading: product.imageUrl.isNotEmpty
-                                  ? Image.network(product.imageUrl, width: 50, height: 50, fit: BoxFit.cover)
-                                  : Icon(Icons.image_not_supported),
-                              title: Text(product.name, style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
-                              subtitle: Text(product.category, style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
-                              trailing: Icon(Icons.edit, color: themeColor),
+                              leading: product.imageUrl != null && product.imageUrl.isNotEmpty
+                                  ? Image.network(product.imageUrl, width: 40, height: 40, fit: BoxFit.cover)
+                                  : null,
+                              title: Text(product.name),
+                              subtitle: Text('₺${product.price.toStringAsFixed(2)}'),
                               onTap: () {
                                 Navigator.pop(context);
                                 _showEditProductDialog(product);
@@ -2700,9 +2694,9 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                       Text(
                         l10n.updateProduct,
                         style: TextStyle(
-                          fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black87,
+                          fontSize: 20,
+                          color: isDark ? Colors.white : Colors.black,
                         ),
                       ),
                       SizedBox(height: 20),
@@ -3412,8 +3406,8 @@ class Order {
     return Order(
       id: doc.id,
       date: (data['createdAt'] as Timestamp).toDate(),
-      status: _parseOrderStatus(data['status'] as String? ?? 'pending'),
-      total: (data['total'] as num).toDouble(),
+      status: Order._parseOrderStatus(data['status'] as String? ?? 'pending'),
+      total: (data['total'] as num?)?.toDouble() ?? 0.0,
       trackingNumber: data['trackingNumber'] as String?,
       items: (data['items'] as List<dynamic>)
           .map((item) => OrderItem.fromMap(item as Map<String, dynamic>))
