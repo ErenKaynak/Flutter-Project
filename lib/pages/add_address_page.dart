@@ -47,7 +47,6 @@ class _AddAddressPageState extends State<AddAddressPage> {
   double? latitude;
   double? longitude;
   String? addressId;
-  bool isAddressVerified = false;
   bool isLoadingCountries = false;
   bool isLoadingCities = false;
   List<String> cities = [];
@@ -132,7 +131,6 @@ class _AddAddressPageState extends State<AddAddressPage> {
       latitude = data['latitude'];
       longitude = data['longitude'];
       _addressLabelController.text = data['label'] ?? '';
-      isAddressVerified = data['isAddressVerified'] ?? false;
     }
   }
 
@@ -477,13 +475,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
                           bgColor: textFieldBgColor,
                         ),
                         SizedBox(height: 24),
-                        _buildAddressVerificationButton(),
+                        _buildSaveButton(primaryColor: primaryColor),
                       ],
                     ),
                   ),
 
                   SizedBox(height: 30),
-                  _buildSaveButton(primaryColor: primaryColor),
                 ],
               ),
             ),
@@ -843,11 +840,6 @@ class _AddAddressPageState extends State<AddAddressPage> {
   Future<void> _saveAddress() async {
     final l10n = AppLocalizations.of(context)!;
     if (_formKey.currentState!.validate()) {
-      if (!isAddressVerified) {
-        _showErrorSnackBar('Please verify the address before saving');
-        return;
-      }
-
       try {
         final uid = FirebaseAuth.instance.currentUser?.uid;
         if (uid == null) {
@@ -873,10 +865,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
           'state': state,
           'city': city,
           'postalCode': postalCode,
-          'latitude': latitude,
-          'longitude': longitude,
           'label': _addressLabelController.text,
-          'isAddressVerified': isAddressVerified,
           'updatedAt': Timestamp.now(),
         };
 
@@ -992,220 +981,5 @@ class _AddAddressPageState extends State<AddAddressPage> {
         duration: Duration(seconds: 3),
       ),
     );
-  }
-
-  Widget _buildAddressVerificationButton() {
-    final l10n = AppLocalizations.of(context)!;
-    final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final primaryColor = themeNotifier.isSpecialModeActive
-        ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
-        : Colors.red.shade700;
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: _verifyAddress,
-              icon: Icon(
-                isAddressVerified ? Icons.verified : Icons.verified_user,
-                color: Colors.white,
-              ),
-              label: Text(
-                isAddressVerified ? 'Address Verified' : 'Verify Address',
-                style: TextStyle(color: Colors.white),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isAddressVerified 
-                    ? Colors.green 
-                    : (themeNotifier.isSpecialModeActive
-                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
-                        : Colors.orange),
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                elevation: 2,
-                shadowColor: isAddressVerified 
-                    ? Colors.green.withOpacity(0.5)
-                    : (themeNotifier.isSpecialModeActive
-                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700.withOpacity(0.5)
-                        : Colors.orange.withOpacity(0.5)),
-              ),
-            ),
-          ),
-          SizedBox(width: 8),
-          IconButton(
-            onPressed: _getCurrentLocation,
-            icon: Icon(
-              Icons.my_location,
-              color: themeNotifier.isSpecialModeActive
-                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
-                  : Colors.red.shade700,
-            ),
-            tooltip: 'Use Current Location',
-            style: IconButton.styleFrom(
-              backgroundColor: isDarkMode ? Color(0xFF2C2C2C) : Colors.grey.shade100,
-              padding: EdgeInsets.all(12),
-              elevation: 2,
-              shadowColor: themeNotifier.isSpecialModeActive
-                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700.withOpacity(0.5)
-                  : Colors.red.shade700.withOpacity(0.5),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _verifyAddress() async {
-    try {
-      // Show loading dialog
-      _showLoadingDialog();
-
-      // Construct the address string
-      final address = '${_streetController.text}, ${_neighborhoodController.text}, ${city}, ${state}, ${country}, ${postalCode}';
-      
-      // Use the geocoding package to get location from address
-      List<Location> locations = await locationFromAddress(address);
-      
-      if (locations.isNotEmpty) {
-        Location location = locations.first;
-        
-        // Update state with verified location
-        setState(() {
-          latitude = location.latitude;
-          longitude = location.longitude;
-          isAddressVerified = true;
-        });
-
-        // Get address details from coordinates
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          location.latitude,
-          location.longitude,
-        );
-
-        if (placemarks.isNotEmpty) {
-          Placemark place = placemarks.first;
-          
-          // Update address components with verified data
-          setState(() {
-            _streetController.text = place.street ?? _streetController.text;
-            _neighborhoodController.text = place.subLocality ?? _neighborhoodController.text;
-            _buildingNoController.text = place.subThoroughfare ?? _buildingNoController.text;
-            country = place.country ?? country;
-            state = place.administrativeArea ?? state;
-            city = place.locality ?? city;
-            postalCode = place.postalCode ?? postalCode;
-          });
-        }
-
-        // Dismiss loading dialog
-        if (Navigator.canPop(context)) {
-          Navigator.pop(context);
-        }
-        _showSuccessSnackBar('Address verified successfully!');
-      } else {
-        setState(() {
-          isAddressVerified = false;
-        });
-        if (Navigator.canPop(context)) {
-          Navigator.pop(context);
-        }
-        _showErrorSnackBar('Could not verify address. Please check the details.');
-      }
-    } catch (e) {
-      setState(() {
-        isAddressVerified = false;
-      });
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-      _showErrorSnackBar('Error verifying address: $e');
-    }
-  }
-
-  Future<void> _getCurrentLocation() async {
-    try {
-      // Check if location services are enabled
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        _showErrorSnackBar('Location services are disabled. Please enable location services.');
-        return;
-      }
-
-      // Check location permission
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          _showErrorSnackBar('Location permission denied');
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        _showErrorSnackBar('Location permissions are permanently denied. Please enable them in settings.');
-        return;
-      }
-
-      // Show loading indicator
-      _showLoadingDialog();
-
-      // Get current position
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      // Get address from coordinates using geocoding package
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks.first;
-        
-        setState(() {
-          latitude = position.latitude;
-          longitude = position.longitude;
-          isAddressVerified = true;
-          
-          // Update address fields with current location data
-          _streetController.text = place.street ?? '';
-          _neighborhoodController.text = place.subLocality ?? '';
-          _buildingNoController.text = place.subThoroughfare ?? '';
-          country = place.country ?? '';
-          state = place.administrativeArea ?? '';
-          city = place.locality ?? '';
-          postalCode = place.postalCode ?? '';
-        });
-
-        // Dismiss loading dialog
-        if (Navigator.canPop(context)) {
-          Navigator.pop(context);
-        }
-        _showSuccessSnackBar('Location updated successfully!');
-      } else {
-        setState(() {
-          isAddressVerified = false;
-        });
-        if (Navigator.canPop(context)) {
-          Navigator.pop(context);
-        }
-        _showErrorSnackBar('Could not get address from current location.');
-      }
-    } catch (e) {
-      setState(() {
-        isAddressVerified = false;
-      });
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-      _showErrorSnackBar('Error getting current location: $e');
-    }
   }
 }
