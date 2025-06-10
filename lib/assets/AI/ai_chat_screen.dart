@@ -574,35 +574,36 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                             final recommendations = await _getProductRecommendations(localizedText, preferences);
                             
                             if (!mounted) return;
-                            setState(() {
-                              _isTyping = false;
-                              if (recommendations.isNotEmpty) {
-                                // Get AI explanations for each product
-                                _getProductExplanations(recommendations, localizedText).then((explanations) {
-                                  if (!mounted) return;
-                                  setState(() {
-                                    String recommendationText = 'Recommended components:\n\n';
-                                    for (var i = 0; i < recommendations.length; i++) {
-                                      final product = recommendations[i];
-                                      final explanation = explanations[i];
-                                      recommendationText += '• ${product.name}\n';
-                                      recommendationText += '  ${explanation}\n\n';
-                                    }
+                            if (recommendations.isNotEmpty) {
+                              // Get AI explanations for each product
+                              _getProductExplanations(recommendations, localizedText).then((explanations) {
+                                if (!mounted) return;
+                                setState(() {
+                                  String recommendationText = 'Recommended components:\n\n';
+                                  for (var i = 0; i < recommendations.length; i++) {
+                                    final product = recommendations[i];
+                                    final explanation = explanations[i];
+                                    recommendationText += '• ${product.name}\n';
+                                    recommendationText += '  ${explanation}\n\n';
+                                  }
 
-                                    _messages.add(ChatMessage(
-                                      text: recommendationText,
-                                      isUser: false,
-                                      recommendedProducts: recommendations,
-                                    ));
-                                  });
+                                  _messages.add(ChatMessage(
+                                    text: recommendationText,
+                                    isUser: false,
+                                    recommendedProducts: recommendations,
+                                  ));
+                                  _isTyping = false;
                                 });
-                              } else {
+                              });
+                            } else {
+                              setState(() {
                                 _messages.add(ChatMessage(
                                   text: 'No suitable components found. Please try a different request.',
                                   isUser: false,
                                 ));
-                              }
-                            });
+                                _isTyping = false;
+                              });
+                            }
                           } catch (e) {
                             print('Error getting recommendations: $e');
                             if (!mounted) return;
@@ -2092,6 +2093,7 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     final TextEditingController descriptionEnController = TextEditingController(text: product.getDescription('en'));
     final TextEditingController descriptionTrController = TextEditingController(text: product.getDescription('tr'));
     final TextEditingController descriptionArController = TextEditingController(text: product.getDescription('ar'));
+    final TextEditingController descriptionUrController = TextEditingController(text: product.getDescription('ur'));
     String? selectedCategory = product.category;
     String? mainImagePath = product.imageUrl;
     List<String> additionalImagePaths = List.from(product.images);
@@ -2269,6 +2271,7 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                                           descriptionEnController,
                                           descriptionTrController,
                                           descriptionArController,
+                                          descriptionUrController,
                                           nameController.text,
                                         );
                                       },
@@ -2303,6 +2306,22 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                                   _buildTextField(
                                     controller: descriptionArController,
                                     label: 'Arabic Description',
+                                    isDark: isDark,
+                                    maxLines: 3,
+                                    prefixIcon: Icons.description,
+                                  ),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'Description (Urdu)',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  _buildTextField(
+                                    controller: descriptionUrController,
+                                    label: 'Urdu Description',
                                     isDark: isDark,
                                     maxLines: 3,
                                     prefixIcon: Icons.description,
@@ -2524,6 +2543,7 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
                                       'en': descriptionEnController.text,
                                       'tr': descriptionTrController.text,
                                       'ar': descriptionArController.text,
+                                      'ur': descriptionUrController.text,
                                     },
                                     'imagePath': mainImagePath,
                                     'images': [mainImagePath, ...additionalImagePaths],
@@ -2625,6 +2645,7 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
     TextEditingController enController,
     TextEditingController trController,
     TextEditingController arController,
+    TextEditingController urController,
     String productName,
   ) async {
     try {
@@ -2637,6 +2658,9 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
 
       final arDescription = await aiService.translateText(enDescription, 'ar');
       arController.text = arDescription;
+
+      final urDescription = await aiService.translateText(enDescription, 'ur');
+      urController.text = urDescription;
     } catch (e) {
       print('Error generating AI description: $e');
       ScaffoldMessenger.of(context).showSnackBar(
