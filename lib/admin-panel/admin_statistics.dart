@@ -42,18 +42,12 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
     final isDark = themeNotifier.isDarkMode;
     final themeColor = themeNotifier.isSpecialModeActive 
         ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
-        : (isDark ? Colors.red.shade900 : Colors.red);
+        : (isDark ? Colors.red.shade900 : Colors.red.shade700);
 
     return Scaffold(
       backgroundColor: isDark ? Colors.grey[900] : Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: isDark 
-            ? (themeNotifier.isSpecialModeActive 
-                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
-                : Colors.red.shade900)
-            : (themeNotifier.isSpecialModeActive 
-                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
-                : Colors.red.shade700),
+        backgroundColor: themeColor,
         title: const Text(
           'Admin Statistics',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -503,14 +497,20 @@ class _AdminStatisticsPageState extends State<AdminStatisticsPage> {
 
   // Update the View Reports navigation to use the new report functionality
   void _navigateToReports() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : (isDark ? Colors.red.shade900 : Colors.red.shade700);
+    final appBarColor = themeNotifier.isSpecialModeActive
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : (isDark ? Colors.red.shade900 : Colors.red.shade700);
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => Scaffold(
           appBar: AppBar(
-            backgroundColor: Provider.of<ThemeNotifier>(context).isDarkMode
-                ? Colors.red.shade900
-                : Colors.red.shade700,
+            backgroundColor: appBarColor,
             title: const Text(
               'Detailed Reports',
               style: TextStyle(

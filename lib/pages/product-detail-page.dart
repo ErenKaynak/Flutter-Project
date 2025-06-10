@@ -1074,6 +1074,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                       Icon(
                                                         Icons.shopping_cart,
                                                         size: 20,
+                                                        color: Colors.white,
                                                       ),
                                                       SizedBox(width: 8),
                                                       Text(

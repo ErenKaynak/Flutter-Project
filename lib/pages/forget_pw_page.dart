@@ -81,7 +81,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+            : (isDark
+                ? Colors.red.shade900
+                : Colors.red.shade700),
         elevation: isDark ? 0 : 2,
         title: Text(
           'Reset Password',
@@ -100,14 +104,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 gradient: LinearGradient(
                   colors:
                       isDark
-                          ? [
-                            themeNotifier.isSpecialModeActive
-                                ? themeNotifier
-                                    .getThemeColor(themeNotifier.specialTheme)
-                                    .shade900
-                                : Colors.red.shade900,
-                            Colors.grey.shade900,
-                          ]
+                          ? []
                           : [
                             themeNotifier.isSpecialModeActive
                                 ? themeNotifier
