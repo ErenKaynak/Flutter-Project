@@ -28,6 +28,7 @@ class _AdminProductsState extends State<AdminProducts> {
     'en': TextEditingController(),
     'tr': TextEditingController(),
     'ar': TextEditingController(),
+    'ur': TextEditingController(),  // Added Urdu controller
   };
   
   // Search functionality
@@ -115,6 +116,9 @@ class _AdminProductsState extends State<AdminProducts> {
         case 'ar':
           translationPrompt = 'Translate this product description to Arabic: "$englishDescription". Only provide the Arabic translation, no explanations.';
           break;
+        case 'ur':
+          translationPrompt = 'Translate this product description to Urdu: "$englishDescription". Only provide the Urdu translation, no explanations.';
+          break;
         default:
           return englishDescription;
       }
@@ -182,6 +186,8 @@ class _AdminProductsState extends State<AdminProducts> {
         return 'Yüksek performanslı $category: $productName. Güvenilir performans ve modern sistem uyumluluğu sunan profesyonel bileşen.';
       case 'ar':
         return '$productName :$category عالي الأداء. مكون احترافي يوفر أداءً موثوقًا وتوافقًا مع الأنظمة الحديثة.';
+      case 'ur':
+        return 'اعلیٰ کارکردگی $category: $productName۔ پیشہ ورانہ درجے کا کمپوننٹ جو قابل اعتماد کارکردگی اور جدید سسٹم مطابقت پیش کرتا ہے۔';
       default:
         return baseDesc;
     }
@@ -214,9 +220,10 @@ class _AdminProductsState extends State<AdminProducts> {
       // First generate English description
       final englishDescription = await _generateDescription(nameController.text, selectedCategory, 'en');
       
-      // Then translate to Turkish and Arabic
+      // Then translate to Turkish, Arabic, and Urdu
       final turkishDescription = await _generateDescription(nameController.text, selectedCategory, 'tr');
       final arabicDescription = await _generateDescription(nameController.text, selectedCategory, 'ar');
+      final urduDescription = await _generateDescription(nameController.text, selectedCategory, 'ur');
 
       if (mounted) {
         Navigator.pop(context); // Hide loading dialog
@@ -225,6 +232,7 @@ class _AdminProductsState extends State<AdminProducts> {
         descriptionControllers['en']!.text = englishDescription;
         descriptionControllers['tr']!.text = turkishDescription;
         descriptionControllers['ar']!.text = arabicDescription;
+        descriptionControllers['ur']!.text = urduDescription;
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Descriptions generated successfully')),
@@ -438,6 +446,23 @@ class _AdminProductsState extends State<AdminProducts> {
                       style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
                       decoration: InputDecoration(
                         labelText: 'Arabic Description',
+                        labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                        ),
+                      ),
+                      maxLines: 3,
+                    ),
+                  ],
+                ),
+                ExpansionTile(
+                  title: const Text("Urdu Description"),
+                  children: [
+                    TextField(
+                      controller: descriptionControllers['ur'],
+                      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                      decoration: InputDecoration(
+                        labelText: 'Urdu Description',
                         labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
                         enabledBorder: UnderlineInputBorder(
                           borderSide: BorderSide(color: Theme.of(context).dividerColor),
