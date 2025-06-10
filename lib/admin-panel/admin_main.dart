@@ -12,9 +12,11 @@ import 'package:engineering_project/admin-panel/admin_notification_management.da
 import 'package:engineering_project/admin-panel/admin_homepage_layout.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../pages/theme_notifier.dart';
 import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:rxdart/rxdart.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -25,17 +27,21 @@ class AdminPage extends StatefulWidget {
 
 class _AdminPageState extends State<AdminPage> {
   bool isNotificationsExpanded = false;
-  late Stream<QuerySnapshot> lowStockProducts;
+  late final Stream<List<QueryDocumentSnapshot>> lowStockStream = FirebaseFirestore.instance
+      .collection('products')
+      .where('stock', isLessThanOrEqualTo: 3)
+      .orderBy('stock', descending: false)
+      .snapshots()
+      .map((snapshot) => snapshot.docs);
+  late final Stream<List<QueryDocumentSnapshot>> refundRequestStream = FirebaseFirestore.instance
+      .collection('orders')
+      .where('status', isEqualTo: 'Refund Requested')
+      .snapshots()
+      .map((snapshot) => snapshot.docs);
 
   @override
   void initState() {
     super.initState();
-    // Optimized query with ordering and field selection
-    lowStockProducts = FirebaseFirestore.instance
-        .collection('products')
-        .where('stock', isLessThanOrEqualTo: 3)
-        .orderBy('stock', descending: false)
-        .snapshots();
   }
 
   Widget _buildLowStockList(List<QueryDocumentSnapshot> products) {
@@ -274,8 +280,12 @@ class _AdminPageState extends State<AdminPage> {
                     isNotificationsExpanded = !isNotificationsExpanded;
                   });
                 },
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: lowStockProducts,
+                child: StreamBuilder<List<List<QueryDocumentSnapshot>>>(
+                  stream: Rx.combineLatest2(
+                    lowStockStream,
+                    refundRequestStream,
+                    (List<QueryDocumentSnapshot> lowStock, List<QueryDocumentSnapshot> refunds) => [lowStock, refunds],
+                  ),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                       return ListTile(
@@ -285,13 +295,15 @@ class _AdminPageState extends State<AdminPage> {
 
                     if (snapshot.hasError) {
                       return ListTile(
-                        subtitle: Text("Error: ${snapshot.error}"),
+                        subtitle: Text("Error: \\${snapshot.error}"),
                       );
                     }
 
-                    final products = snapshot.data?.docs ?? [];
+                    final lowStockProducts = snapshot.data?[0] ?? [];
+                    final refundRequests = snapshot.data?[1] ?? [];
 
                     return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -311,11 +323,11 @@ class _AdminPageState extends State<AdminPage> {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
-                            products.isEmpty
+                            (lowStockProducts.isEmpty && refundRequests.isEmpty)
                                 ? l10n.noLowStockProducts
-                                : l10n.lowStockProductsCount(products.length),
+                                : '${l10n.lowStockProductsCount(lowStockProducts.length)} / Refund Requests: ${refundRequests.length}',
                             style: TextStyle(
-                              color: products.isNotEmpty ? Colors.orange : null,
+                              color: (lowStockProducts.isNotEmpty || refundRequests.isNotEmpty) ? Colors.orange : null,
                             ),
                           ),
                           trailing: Icon(
@@ -323,8 +335,58 @@ class _AdminPageState extends State<AdminPage> {
                             color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
                           ),
                         ),
-                        if (isNotificationsExpanded && products.isNotEmpty)
-                          _buildLowStockList(products),
+                        if (isNotificationsExpanded && (lowStockProducts.isNotEmpty || refundRequests.isNotEmpty)) ...[
+                          if (lowStockProducts.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              child: Text('Düşük Stoklu Ürünler', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                            _buildLowStockList(lowStockProducts),
+                          ],
+                          if (refundRequests.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              child: Text('Refund Requests', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: refundRequests.length,
+                              itemBuilder: (context, index) {
+                                final order = refundRequests[index].data() as Map<String, dynamic>;
+                                final orderId = refundRequests[index].id;
+                                return ListTile(
+                                  dense: true,
+                                  leading: Icon(Icons.money_off, color: Colors.orange),
+                                  title: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          'Sipariş: $orderId',
+                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.copy, size: 16.0),
+                                        onPressed: () {
+                                          Clipboard.setData(ClipboardData(text: orderId));
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Sipariş ID kopyalandı!')),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  subtitle: Text('Müşteri: ' + (order['customerName'] ?? '-') + '\nTutar: ₺' + ((order['totalAmount'] ?? order['total'] ?? 0.0).toString())),
+                                  onTap: () {
+                                    // İade talebi detayına gitmek için buraya ekleme yapılabilir
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ],
                       ],
                     );
                   },

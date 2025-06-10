@@ -174,8 +174,13 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
 
         // Update user order status if exists
         print('Updating user order status');
-        final userOrderRef = FirebaseFirestore.instance.collection('orders').doc(userId).collection('userOrders').doc(orderId);
-        batch.update(userOrderRef, {'status': newStatus.displayName});
+        final userOrderRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('userOrders').doc(orderId);
+        final userOrderDoc = await userOrderRef.get();
+        if (userOrderDoc.exists) {
+          batch.update(userOrderRef, {'status': newStatus.displayName});
+        } else {
+          print('User order document not found at path: ${userOrderRef.path}');
+        }
 
         print('Committing batch operations');
         await batch.commit();
@@ -203,14 +208,19 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
           final userOrdersCollection = FirebaseFirestore.instance
               .collection('users')
               .doc(userId)
-              .collection('orders');
+              .collection('userOrders');
           
-          // Then update the specific order
-          await userOrdersCollection.doc(orderId).update({
-            'status': newStatus.displayName,
-          });
+          final userOrderDoc = await userOrdersCollection.doc(orderId).get();
+          if (userOrderDoc.exists) {
+            // Then update the specific order
+            await userOrdersCollection.doc(orderId).update({
+              'status': newStatus.displayName,
+            });
+            print('Successfully updated user order status');
+          } else {
+            print('User order document not found for status update.');
+          }
           
-          print('Successfully updated user order status');
         } catch (e) {
           print('Error updating user order status: $e');
           // Don't throw here, as the main order update was successful
@@ -288,14 +298,20 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                     final userId = orderData['userId'];
                     
                     try {
-                      await FirebaseFirestore.instance
-                          .collection('orders')
+                      final userOrderRef = FirebaseFirestore.instance
+                          .collection('users')
                           .doc(userId)
                           .collection('userOrders')
-                          .doc(orderId)
-                          .update({'trackingNumber': trackingController.text});
-                      
-                      print('Updated tracking in user orders: $userId, orderId: $orderId');
+                          .doc(orderId);
+                          
+                      final userOrderDoc = await userOrderRef.get();
+                      if (userOrderDoc.exists) {
+                        await userOrderRef.update({'trackingNumber': trackingController.text});
+                        print('Updated tracking in user orders: $userId, orderId: $orderId');
+                      } else {
+                        print('User order document not found for tracking number update.');
+                      }
+
                     } catch (e) {
                       print('Error updating user order tracking: $e');
                     }
@@ -472,12 +488,18 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
         if (orderData.containsKey('userId') && orderData['userId'] != null) {
           final userId = orderData['userId'];
           try {
-            await FirebaseFirestore.instance
-                .collection('orders')
+            final userOrderRef = FirebaseFirestore.instance
+                .collection('users')
                 .doc(userId)
                 .collection('userOrders')
-                .doc(orderId)
-                .update({'status': 'Refunded'});
+                .doc(orderId);
+            
+            final userOrderDoc = await userOrderRef.get();
+            if (userOrderDoc.exists) {
+              await userOrderRef.update({'status': 'Refunded'});
+            } else {
+              print('User order document not found for refund status update.');
+            }
           } catch (e) {
             print('Error updating user order status: $e');
           }
