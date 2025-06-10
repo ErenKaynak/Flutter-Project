@@ -38,7 +38,7 @@ class ProductCard extends StatelessWidget {
           : (themeNotifier.isBlackMode
               ? Theme.of(context).colorScheme.secondary
               : Colors.red.shade400),
-      end: Colors.green.shade500,
+      end: Colors.grey.shade800,
     ).animate(animationController);
 
     final opacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(CurvedAnimation(parent: animationController, curve: Interval(0.3, 0.9, curve: Curves.linear)));
@@ -249,12 +249,11 @@ class ProductCard extends StatelessWidget {
                                       child: Icon(
                                         Icons.check,
                                         color: Colors.white,
-                                        size: 24,
+                                        size: 20,
                                       ),
                                     );
-                                  } else {
-                                    return SizedBox.shrink();
                                   }
+                                  return SizedBox.shrink();
                                 },
                               ),
                             ],

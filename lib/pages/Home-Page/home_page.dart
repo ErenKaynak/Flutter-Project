@@ -442,15 +442,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     // Start the animation if the controller exists
     if (controller != null) {
-       print('Starting animation for $productId'); // Log for debugging
+      print('Starting animation for $productId'); // Log for debugging
       controller.forward();
-       // We no longer await here, allowing the UI update to happen immediately
     } else {
       print('No animation controller found for $productId'); // Log for debugging
-       // If no controller, we still proceed with cart logic but without animation
-       if (mounted) {
-         setState(() {}); // Trigger rebuild to show isAddingToCart state if needed
-       }
+      if (mounted) {
+        setState(() {}); // Trigger rebuild to show isAddingToCart state if needed
+      }
     }
 
     try {
@@ -465,10 +463,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           );
         }
         // Reset state immediately as no cart action will happen
-         _isAddingToCartMap[productId] = false;
-         if (mounted) setState(() {}); // Update UI
-        // Dispose the temporary controller if it was created (no longer creating temporary controllers here)
-        // if (!_animationControllers.containsKey(productId)) controller?.dispose();
+        _isAddingToCartMap[productId] = false;
+        if (mounted) setState(() {}); // Update UI
         return;
       }
 
@@ -518,15 +514,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         );
       }
 
-      // We no longer await the animation duration here before resetting.
-      // The animation reset will be handled by the controller's status listener.
-      // await Future.delayed(Duration(milliseconds: 800));\n\n      // The animation reset is now handled by the controller status listener
-      // if (mounted) {\n      //   _resetAnimations(productId);\n      // }\n\n    } catch (e) {\n      print(\'Error adding item to cart: $e\');\n      // Only reset state, animation reset is via listener\n       _isAddingToCartMap[productId] = false;\n       if (mounted) setState(() {}); // Update UI on error\n      if (mounted) {\n        ScaffoldMessenger.of(context).showSnackBar(\n          SnackBar(\n            content: Text(AppLocalizations.of(context)!.failedToAddToCart),\n            duration: Duration(seconds: 2),\n          ),\n        );\n      }\n    } finally {\n      // The isAddingToCartMap state is now reset in _resetAnimations which is called by the controller listener.\n      // Dispose temporary controllers if created (no longer creating temporary controllers here)\n      // if (!_animationControllers.containsKey(productId)) controller?.dispose();\n    }\n  }
+      // Wait for animation to complete before resetting
+      await Future.delayed(Duration(milliseconds: 1000));
+      if (mounted) {
+        _resetAnimations(productId);
+      }
+
     } catch (e) {
       print('Error adding item to cart: $e');
-      // Only reset state, animation reset is via listener
-       _isAddingToCartMap[productId] = false;
-       if (mounted) setState(() {}); // Update UI on error
+      // Reset state on error
+      _isAddingToCartMap[productId] = false;
+      if (mounted) setState(() {}); // Update UI on error
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -540,12 +538,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   void _resetAnimations(String productId) {
     final controller = _animationControllers[productId];
-
-    if (controller?.isAnimating ?? false) {
-      controller?.stop();
+    if (controller != null) {
+      if (controller.isAnimating) {
+        controller.stop();
+      }
+      controller.reset();
     }
-    controller?.reset();
-
     if (mounted) {
       setState(() {
         _isAddingToCartMap[productId] = false;
