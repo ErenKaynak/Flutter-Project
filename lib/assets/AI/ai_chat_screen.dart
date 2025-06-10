@@ -1379,23 +1379,595 @@ You are a knowledgeable assistant who can help with PC hardware and other topics
 
   void _showAddProductDialog() {
     final l10n = AppLocalizations.of(context)!;
-
     if (!_isAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.adminOnly)),
       );
       return;
     }
-
-    // ... rest of the method implementation ...
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController priceController = TextEditingController();
+    final TextEditingController stockController = TextEditingController();
+    final TextEditingController descriptionEnController = TextEditingController();
+    final TextEditingController descriptionTrController = TextEditingController();
+    final TextEditingController descriptionArController = TextEditingController();
+    final TextEditingController descriptionUrController = TextEditingController();
+    String? selectedCategory;
+    String? mainImagePath;
+    List<String> additionalImagePaths = [];
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+            final isDark = themeNotifier.isDarkMode;
+            final themeColor = themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                : Colors.red;
+            return Dialog(
+              backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.8,
+                padding: EdgeInsets.all(20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        l10n.addNewProduct,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      _buildTextField(
+                        controller: nameController,
+                        label: l10n.productName,
+                        isDark: isDark,
+                        prefixIcon: Icons.inventory_2,
+                      ),
+                      SizedBox(height: 12),
+                      _buildTextField(
+                        controller: priceController,
+                        label: l10n.price,
+                        isDark: isDark,
+                        keyboardType: TextInputType.number,
+                        prefixIcon: Icons.attach_money,
+                      ),
+                      SizedBox(height: 12),
+                      _buildTextField(
+                        controller: stockController,
+                        label: l10n.stock,
+                        isDark: isDark,
+                        keyboardType: TextInputType.number,
+                        prefixIcon: Icons.warehouse,
+                      ),
+                      SizedBox(height: 12),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.category,
+                              color: isDark ? themeColor.shade200 : themeColor,
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: FutureBuilder<List<String>>(
+                                future: _fetchCategories(),
+                                builder: (context, snapshot) {
+                                  if (!snapshot.hasData) {
+                                    return CircularProgressIndicator();
+                                  }
+                                  return DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: selectedCategory,
+                                      hint: Text(
+                                        l10n.selectCategory,
+                                        style: TextStyle(
+                                          color: isDark ? Colors.white70 : Colors.black87,
+                                        ),
+                                      ),
+                                      isExpanded: true,
+                                      dropdownColor: isDark ? Colors.grey.shade800 : Colors.white,
+                                      items: snapshot.data!.map((String category) {
+                                        return DropdownMenuItem<String>(
+                                          value: category,
+                                          child: Text(
+                                            category,
+                                            style: TextStyle(
+                                              color: isDark ? Colors.white : Colors.black87,
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (String? newValue) {
+                                        setState(() {
+                                          selectedCategory = newValue;
+                                        });
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: ExpansionTile(
+                          title: Text(
+                            'Product Descriptions',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          iconColor: themeColor,
+                          collapsedIconColor: themeColor,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Description (English)',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  _buildTextField(
+                                    controller: descriptionEnController,
+                                    label: 'English Description',
+                                    isDark: isDark,
+                                    maxLines: 3,
+                                    prefixIcon: Icons.description,
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        Icons.auto_fix_high,
+                                        color: isDark ? themeColor.shade200 : themeColor,
+                                      ),
+                                      onPressed: () async {
+                                        if (nameController.text.isEmpty) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Please enter a product name first')),
+                                          );
+                                          return;
+                                        }
+                                        await _generateAIDescription(
+                                          descriptionEnController,
+                                          descriptionTrController,
+                                          descriptionArController,
+                                          descriptionUrController,
+                                          nameController.text,
+                                        );
+                                      },
+                                      tooltip: l10n.generateAIDescription,
+                                    ),
+                                  ),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'Description (Turkish)',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  _buildTextField(
+                                    controller: descriptionTrController,
+                                    label: 'Turkish Description',
+                                    isDark: isDark,
+                                    maxLines: 3,
+                                    prefixIcon: Icons.description,
+                                  ),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'Description (Arabic)',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  _buildTextField(
+                                    controller: descriptionArController,
+                                    label: 'Arabic Description',
+                                    isDark: isDark,
+                                    maxLines: 3,
+                                    prefixIcon: Icons.description,
+                                  ),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'Description (Urdu)',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  _buildTextField(
+                                    controller: descriptionUrController,
+                                    label: 'Urdu Description',
+                                    isDark: isDark,
+                                    maxLines: 3,
+                                    prefixIcon: Icons.description,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            l10n.mainImage,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Center(
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: themeColor.withOpacity(0.5),
+                                ),
+                              ),
+                              child: mainImagePath != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(9),
+                                      child: Image.network(
+                                        mainImagePath!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => Center(
+                                          child: Icon(
+                                            Icons.error,
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : IconButton(
+                                      icon: Icon(
+                                        Icons.add_photo_alternate,
+                                        color: themeColor,
+                                        size: 32,
+                                      ),
+                                      onPressed: () async {
+                                        final imageUrl = await _pickAndUploadImage();
+                                        if (imageUrl != null) {
+                                          setState(() {
+                                            mainImagePath = imageUrl;
+                                          });
+                                        }
+                                      },
+                                    ),
+                            ),
+                            if (mainImagePath != null)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: IconButton(
+                                  icon: Icon(
+                                    Icons.close,
+                                    color: Colors.red,
+                                    size: 20,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      mainImagePath = null;
+                                    });
+                                  },
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            l10n.additionalImages,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Row(
+                            children: List.generate(3, (index) {
+                              final hasImage = index < additionalImagePaths.length;
+                              return Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                child: Stack(
+                                  children: [
+                                    Container(
+                                      width: 100,
+                                      height: 100,
+                                      decoration: BoxDecoration(
+                                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: themeColor.withOpacity(0.5),
+                                        ),
+                                      ),
+                                      child: hasImage
+                                          ? ClipRRect(
+                                              borderRadius: BorderRadius.circular(9),
+                                              child: Image.network(
+                                                additionalImagePaths[index],
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error, stackTrace) => Center(
+                                                  child: Icon(
+                                                    Icons.error,
+                                                    color: Colors.red,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                          : IconButton(
+                                              icon: Icon(
+                                                Icons.add_photo_alternate,
+                                                color: themeColor,
+                                                size: 32,
+                                              ),
+                                              onPressed: () async {
+                                                final imageUrl = await _pickAndUploadImage();
+                                                if (imageUrl != null) {
+                                                  setState(() {
+                                                    if (index >= additionalImagePaths.length) {
+                                                      additionalImagePaths.add(imageUrl);
+                                                    } else {
+                                                      additionalImagePaths[index] = imageUrl;
+                                                    }
+                                                  });
+                                                }
+                                              },
+                                            ),
+                                    ),
+                                    if (hasImage)
+                                      Positioned(
+                                        right: 0,
+                                        top: 0,
+                                        child: IconButton(
+                                          icon: Icon(
+                                            Icons.close,
+                                            color: Colors.red,
+                                            size: 20,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              additionalImagePaths.removeAt(index);
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(
+                              l10n.cancel,
+                              style: TextStyle(
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: themeColor,
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () async {
+                              if (_validateProductInput(
+                                nameController.text,
+                                priceController.text,
+                                stockController.text,
+                                selectedCategory,
+                                mainImagePath,
+                              )) {
+                                try {
+                                  if (mainImagePath == null) {
+                                    throw Exception('Please upload a main image');
+                                  }
+                                  final newProduct = {
+                                    'name': nameController.text,
+                                    'price': double.parse(priceController.text),
+                                    'stock': int.parse(stockController.text),
+                                    'category': selectedCategory,
+                                    'descriptions': {
+                                      'en': descriptionEnController.text,
+                                      'tr': descriptionTrController.text,
+                                      'ar': descriptionArController.text,
+                                      'ur': descriptionUrController.text,
+                                    },
+                                    'imagePath': mainImagePath,
+                                    'images': [mainImagePath, ...additionalImagePaths],
+                                    'createdAt': FieldValue.serverTimestamp(),
+                                    'updatedAt': FieldValue.serverTimestamp(),
+                                  };
+                                  await FirebaseFirestore.instance
+                                      .collection('products')
+                                      .add(newProduct);
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Product added successfully')),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error adding product: $e')),
+                                  );
+                                }
+                              }
+                            },
+                            child: Text(l10n.addNewProduct),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showProductSearchDialog() {
     final TextEditingController searchController = TextEditingController();
     final l10n = AppLocalizations.of(context)!;
-
-    // TODO: Replace dialog with inline UI or chat message if needed.
-    // showDialog(...)
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+            final isDark = themeNotifier.isDarkMode;
+            final themeColor = themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                : Colors.red;
+            List<LocalizedProduct> searchResults = [];
+            bool isSearching = false;
+            return Dialog(
+              backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.8,
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.updateProduct,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    TextField(
+                      controller: searchController,
+                      decoration: InputDecoration(
+                        labelText: l10n.productName,
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        filled: true,
+                        fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                      ),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                      onChanged: (value) async {
+                        setState(() {
+                          isSearching = true;
+                        });
+                        final results = await _searchProducts(value);
+                        setState(() {
+                          searchResults = results;
+                          isSearching = false;
+                        });
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    if (isSearching)
+                      Center(child: CircularProgressIndicator()),
+                    if (!isSearching && searchResults.isNotEmpty)
+                      SizedBox(
+                        height: 300,
+                        child: ListView.builder(
+                          itemCount: searchResults.length,
+                          itemBuilder: (context, index) {
+                            final product = searchResults[index];
+                            return ListTile(
+                              leading: product.imageUrl.isNotEmpty
+                                  ? Image.network(product.imageUrl, width: 50, height: 50, fit: BoxFit.cover)
+                                  : Icon(Icons.image_not_supported),
+                              title: Text(product.name, style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+                              subtitle: Text(product.category, style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
+                              trailing: Icon(Icons.edit, color: themeColor),
+                              onTap: () {
+                                Navigator.pop(context);
+                                _showEditProductDialog(product);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    if (!isSearching && searchResults.isEmpty && searchController.text.isNotEmpty)
+                      Center(child: Text('No products found', style: TextStyle(color: isDark ? Colors.white70 : Colors.black54))),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _addAllToCart(List<LocalizedProduct> products) async {
