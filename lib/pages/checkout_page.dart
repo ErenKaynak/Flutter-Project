@@ -499,7 +499,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           'totalAmount': total,
           'shippingAddress': _selectedAddress?['fullAddress'] ?? 'No address provided',
           'paymentMethod': _selectedPaymentMethod,
-          'status': 'pending',
+          'status': 'Pending',
           'timestamp': FieldValue.serverTimestamp(),
           'trackingNumber': '',
         };
