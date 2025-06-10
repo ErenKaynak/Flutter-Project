@@ -80,7 +80,7 @@ class ProductCard extends StatelessWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(10),
                         child: Image.network(
-                          product["image"],
+                          (product["image"] ?? 'lib/assets/Images/placeholder.png') as String,
                           fit: BoxFit.cover,
                           height: double.infinity,
                           width: double.infinity,
@@ -132,9 +132,9 @@ class ProductCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              product["name"].length > 17
-                                  ? product["name"].substring(0, 17) + '...'
-                                  : product["name"],
+                              ((product["name"] ?? "İsimsiz Ürün") as String).length > 17
+                                  ? ((product["name"] ?? "İsimsiz Ürün") as String).substring(0, 17) + '...'
+                                  : (product["name"] ?? "İsimsiz Ürün") as String,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
@@ -151,9 +151,7 @@ class ProductCard extends StatelessWidget {
                                   children: [
                                     ...List.generate(5, (index) {
                                       return Icon(
-                                        index <
-                                                (product['averageRating'] ?? 0)
-                                                    .round()
+                                        index < ((product['averageRating'] ?? 0) as num).round()
                                             ? Icons.star
                                             : Icons.star_border,
                                         color: Colors.amber,
@@ -178,7 +176,7 @@ class ProductCard extends StatelessWidget {
                             ),
                             SizedBox(height: 2),
                             Text(
-                              _formatPrice(product["price"]),
+                              _formatPrice(product["price"] ?? '0'),
                               style: TextStyle(
                                 color: Colors.green.shade700,
                                 fontWeight: FontWeight.bold,

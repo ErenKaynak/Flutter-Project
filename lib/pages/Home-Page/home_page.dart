@@ -391,10 +391,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       return products
           .where(
             (product) =>
-                product["name"].toString().toLowerCase().contains(
+                (product["name"] ?? "").toString().toLowerCase().contains(
                       _searchQuery.toLowerCase(),
                     ) ||
-                product["description"].toString().toLowerCase().contains(
+                (product["description"] ?? "").toString().toLowerCase().contains(
                       _searchQuery.toLowerCase(),
                     ),
           )
@@ -623,125 +623,138 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  Widget _buildComponent(String componentId, {
+  List<Widget> _buildComponentSlivers(String componentId, {
     required bool isDark,
     required ThemeNotifier themeNotifier,
     required Color? specialColor,
   }) {
     switch (componentId) {
       case 'welcome':
-        return Container(
-          padding: EdgeInsets.all(16.0),
-          margin: EdgeInsets.all(10.0),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: themeNotifier.isSpecialModeActive
-                  ? [
-                      specialColor ?? Colors.red,
-                      isDark
-                          ? Colors.grey.shade900
-                          : Colors.grey.shade100,
-                    ]
-                  : (themeNotifier.isBlackMode
+        return [
+          SliverToBoxAdapter(
+            child: Container(
+              padding: EdgeInsets.all(16.0),
+              margin: EdgeInsets.all(10.0),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: themeNotifier.isSpecialModeActive
                       ? [
-                          Theme.of(context).colorScheme.secondary,
-                          Colors.grey.shade900,
+                          specialColor ?? Colors.red,
+                          isDark ? Colors.grey.shade900 : Colors.grey.shade100,
                         ]
-                      : (isDark
+                      : (themeNotifier.isBlackMode
                           ? [
-                              Colors.red.shade900,
+                              Theme.of(context).colorScheme.secondary,
                               Colors.grey.shade900,
                             ]
-                          : [
-                              Colors.red.shade500,
-                              Colors.red.shade100,
-                            ])),
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: isDark ? Colors.black26 : Colors.black12,
-                blurRadius: 5,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: themeNotifier.isSpecialModeActive
-                    ? specialColor
-                    : (isDark ? Colors.red.shade700 : Colors.red.shade300),
-                backgroundImage: _userProfilePicture != null && _userProfilePicture!.isNotEmpty
-                    ? NetworkImage(_userProfilePicture!)
-                    : null,
-                child: _userProfilePicture == null || _userProfilePicture!.isEmpty
-                    ? Icon(Icons.person, size: 36, color: Colors.white)
-                    : null,
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppLocalizations.of(context)!.welcome,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: isDark ? Colors.grey[400] : Colors.black54,
-                      ),
-                    ),
-                    Text(
-                      _userName,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                  ],
+                          : (isDark
+                              ? [
+                                  Colors.red.shade900,
+                                  Colors.grey.shade900,
+                                ]
+                              : [
+                                  Colors.red.shade500,
+                                  Colors.red.shade100,
+                                ])),
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark ? Colors.black26 : Colors.black12,
+                    blurRadius: 5,
+                    offset: Offset(0, 2),
+                  ),
+                ],
               ),
-            ],
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: themeNotifier.isSpecialModeActive
+                        ? specialColor
+                        : (isDark ? Colors.red.shade700 : Colors.red.shade300),
+                    backgroundImage: _userProfilePicture != null && _userProfilePicture!.isNotEmpty
+                        ? NetworkImage(_userProfilePicture!)
+                        : null,
+                    child: _userProfilePicture == null || _userProfilePicture!.isEmpty
+                        ? Icon(Icons.person, size: 36, color: Colors.white)
+                        : null,
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context)!.welcome,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: isDark ? Colors.grey[400] : Colors.black54,
+                          ),
+                        ),
+                        Text(
+                          _userName,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        );
+        ];
       case 'banner':
-        return BannerSection(
-          banners: _banners,
-          isLoading: _isBannersLoading,
-          onPageChanged: (index, reason) {
-            if (mounted) {
-              setState(() {
-                _currentBannerIndex = index;
-              });
-            }
-          },
-        );
+        return [
+          SliverToBoxAdapter(
+            child: BannerSection(
+              banners: _banners,
+              isLoading: _isBannersLoading,
+              onPageChanged: (index, reason) {
+                if (mounted) {
+                  setState(() {
+                    _currentBannerIndex = index;
+                  });
+                }
+              },
+            ),
+          ),
+        ];
       case 'categories':
-        return CategoriesSection(
-          categories: categories,
-          selectedCategory: _selectedCategory,
-          onCategorySelected: _selectCategory,
-        );
+        return [
+          SliverToBoxAdapter(
+            child: CategoriesSection(
+              categories: categories,
+              selectedCategory: _selectedCategory,
+              onCategorySelected: _selectCategory,
+            ),
+          ),
+        ];
       case 'mostViewed':
-        return MostViewedSection(
-          onProductTap: _navigateToProductDetail,
-          onAddToCart: _addToCart,
-          onToggleFavorite: toggleFavorite,
-          favoriteProductIds: favoriteProductIds,
-          animationControllers: _animationControllers,
-          isAddingToCartMap: _isAddingToCartMap,
-          vsync: this,
-          selectedCategory: _selectedCategory,
-        );
+        return [
+          SliverToBoxAdapter(
+            child: MostViewedSection(
+              onProductTap: _navigateToProductDetail,
+              onAddToCart: _addToCart,
+              onToggleFavorite: toggleFavorite,
+              favoriteProductIds: favoriteProductIds,
+              animationControllers: _animationControllers,
+              isAddingToCartMap: _isAddingToCartMap,
+              vsync: this,
+              selectedCategory: _selectedCategory,
+            ),
+          ),
+        ];
       case 'bestDeals':
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
+        return [
+          SliverToBoxAdapter(
+            child: Padding(
               padding: EdgeInsets.all(10),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -759,20 +772,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ],
               ),
             ),
-            ProductGrid(
-              products: filteredProducts,
-              favoriteProductIds: favoriteProductIds,
-              animationControllers: _animationControllers,
-              isAddingToCartMap: _isAddingToCartMap,
-              onAddToCart: _addToCart,
-              onToggleFavorite: toggleFavorite,
-              onProductTap: _navigateToProductDetail,
-              vsync: this,
-            ),
-          ],
-        );
+          ),
+          ProductGrid(
+            products: filteredProducts,
+            favoriteProductIds: favoriteProductIds,
+            animationControllers: _animationControllers,
+            isAddingToCartMap: _isAddingToCartMap,
+            onAddToCart: _addToCart,
+            onToggleFavorite: toggleFavorite,
+            onProductTap: _navigateToProductDetail,
+            vsync: this,
+          ),
+        ];
       default:
-        return SizedBox.shrink();
+        return [];
     }
   }
 
@@ -995,20 +1008,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       )
                     : CustomScrollView(
                         slivers: [
-                          SliverToBoxAdapter(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: _layoutComponents
-                                  .where((component) => component['enabled'] == true)
-                                  .map((component) => _buildComponent(
-                                    component['id'],
-                                    isDark: isDark,
-                                    themeNotifier: themeNotifier,
-                                    specialColor: specialColor,
-                                  ))
-                                  .toList(),
+                          for (final component in _layoutComponents.where((component) => component['enabled'] == true))
+                            ..._buildComponentSlivers(
+                              component['id'],
+                              isDark: isDark,
+                              themeNotifier: themeNotifier,
+                              specialColor: specialColor,
                             ),
-                          ),
                         ],
                       ),
               ),
