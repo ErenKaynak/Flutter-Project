@@ -40,6 +40,7 @@ class _FavoritesPageState extends State<FavoritesPage>
 
   @override
   void dispose() {
+    _animationControllers.forEach((_, controller) => controller.dispose());
     _colorAnimationControllers.forEach((_, controller) => controller.dispose());
     _tickAnimationControllers.forEach((_, controller) => controller.dispose());
     super.dispose();
@@ -47,8 +48,10 @@ class _FavoritesPageState extends State<FavoritesPage>
 
   void _initializeAnimationControllers() {
     final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    _animationControllers.forEach((_, controller) => controller.dispose());
     _colorAnimationControllers.forEach((_, controller) => controller.dispose());
     _tickAnimationControllers.forEach((_, controller) => controller.dispose());
+    _animationControllers.clear();
     _colorAnimationControllers.clear();
     _colorAnimations.clear();
     _tickAnimationControllers.clear();
@@ -57,19 +60,23 @@ class _FavoritesPageState extends State<FavoritesPage>
 
     for (var product in favoriteProducts) {
       final productId = product['id'];
+      
+      final animationController = AnimationController(
+        vsync: this,
+        duration: Duration(milliseconds: 300),
+      );
+      _animationControllers[productId] = animationController;
+
       final colorController = AnimationController(
         vsync: this,
         duration: Duration(milliseconds: 300),
       );
       _colorAnimationControllers[productId] = colorController;
       _colorAnimations[productId] = ColorTween(
-        begin:
-            themeNotifier.isSpecialModeActive
-                ? themeNotifier
-                    .getThemeColor(themeNotifier.specialTheme)
-                    .shade400
-                : Colors.red.shade400,
-        end: Colors.green.shade500,
+        begin: themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+            : Colors.red.shade400,
+        end: Colors.grey.shade400,
       ).animate(colorController);
 
       final tickController = AnimationController(
@@ -216,8 +223,23 @@ class _FavoritesPageState extends State<FavoritesPage>
 
   Future<void> addToCart(Map<String, dynamic> product) async {
     final l10n = AppLocalizations.of(context)!;
+    final productId = product['id'];
+    
+    if (_isAddingToCartMap[productId] == true) return;
     
     try {
+      setState(() {
+        _isAddingToCartMap[productId] = true;
+      });
+
+      final colorController = _colorAnimationControllers[productId];
+      final tickController = _tickAnimationControllers[productId];
+
+      if (colorController != null && tickController != null) {
+        await colorController.forward();
+        await tickController.forward();
+      }
+
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -232,7 +254,7 @@ class _FavoritesPageState extends State<FavoritesPage>
       // Fetch the latest product data to check current stock
       final productDoc = await FirebaseFirestore.instance
           .collection('products')
-          .doc(product['id'])
+          .doc(productId)
           .get();
       
       if (!productDoc.exists) {
@@ -248,7 +270,6 @@ class _FavoritesPageState extends State<FavoritesPage>
       final productData = productDoc.data()!;
       final int currentStock = productData['stock'] is int ? productData['stock'] : 0;
       
-      // Check if product is out of stock based on current data
       if (currentStock <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -258,19 +279,12 @@ class _FavoritesPageState extends State<FavoritesPage>
         );
         return;
       }
-      
-      final controller = _animationControllers[product['id']];
-      if (controller != null && mounted) {
-        controller.reset();
-        await controller.forward();
-        controller.reset();
-      }
 
       final cartRef = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('cart')
-          .doc(product['id']);
+          .doc(productId);
 
       final docSnapshot = await cartRef.get();
 
@@ -302,6 +316,18 @@ class _FavoritesPageState extends State<FavoritesPage>
           ),
         ),
       );
+
+      // Reset animations after a delay
+      await Future.delayed(Duration(milliseconds: 1000));
+      if (mounted) {
+        if (colorController != null && tickController != null) {
+          await colorController.reverse();
+          await tickController.reverse();
+        }
+        setState(() {
+          _isAddingToCartMap[productId] = false;
+        });
+      }
     } catch (e) {
       print('Error adding item to cart: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -310,6 +336,11 @@ class _FavoritesPageState extends State<FavoritesPage>
           duration: Duration(seconds: 2),
         ),
       );
+      if (mounted) {
+        setState(() {
+          _isAddingToCartMap[productId] = false;
+        });
+      }
     }
   }
 
@@ -462,7 +493,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                     .getThemeColor(themeNotifier.specialTheme)
                     .shade400
                 : Colors.red.shade400,
-        end: Colors.green.shade500,
+        end: Colors.grey.shade400,
       ).animate(_colorAnimationControllers[product['id']]!);
     }
     if (!_tickAnimationControllers.containsKey(product['id'])) {
@@ -595,7 +626,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                       product["name"],
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 12,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -606,15 +637,40 @@ class _FavoritesPageState extends State<FavoritesPage>
                       style: TextStyle(
                         color: Colors.green.shade700,
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 13,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    SizedBox(height: 2),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ...List.generate(5, (index) {
+                          return Icon(
+                            index < ((product['averageRating'] ?? 0) as num).round()
+                                ? Icons.star
+                                : Icons.star_border,
+                            color: Colors.amber,
+                            size: 12,
+                          );
+                        }),
+                        SizedBox(width: 2),
+                        Text(
+                          '(${product['ratingCount'] ?? 0})',
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey[400]
+                                : Colors.grey[600],
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
                     Spacer(flex: 1),
                     SizedBox(
                       width: double.infinity,
-                      height: 32,
+                      height: 28,
                       child: AnimatedBuilder(
                         animation: Listenable.merge([
                           _colorAnimationControllers[product['id']]!,
@@ -656,11 +712,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                                       Icon(
                                         Icons.shopping_cart_outlined,
                                         size: 16,
-                                        color:
-                                            themeNotifier.isSpecialModeActive
-                                                ? Colors
-                                                    .white // White when special mode is active
-                                                : null, // Default color otherwise
+                                        color: Colors.white,
                                       ),
                                       SizedBox(width: 4),
                                       Text(
