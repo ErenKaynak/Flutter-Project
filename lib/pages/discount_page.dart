@@ -73,74 +73,47 @@ class _DiscountPageState extends State<DiscountPage> {
         return;
       }
 
-      final List<DiscountCode> savedDiscounts = [];
-
-      // First check saved_discounts collection
-      final savedDiscountsSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('saved_discounts')
-          .get();
-
-      for (var doc in savedDiscountsSnapshot.docs) {
-        try {
-          savedDiscounts.add(DiscountCode.fromFirestore(doc));
-        } catch (e) {
-          print('Error parsing saved discount: $e');
-        }
-      }
-
-      // Then check notifications collection
+      // Fetch saved discounts from user's notifications
       final notificationsSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('notifications')
-          .where('type', isEqualTo: 'promotion')
+          .where('type', isEqualTo: 'discount')
           .get();
 
+      final List<DiscountCode> savedDiscounts = [];
+      
       for (var doc in notificationsSnapshot.docs) {
         final data = doc.data();
         if (data['discountCode'] != null) {
-          try {
-            final discountData = data['discountCode'] as Map<String, dynamic>;
-            savedDiscounts.add(DiscountCode(
-              id: doc.id,
-              code: discountData['code'] ?? '',
-              name: discountData['name'] ?? data['title'] ?? '',
-              description: discountData['description'] ?? data['message'] ?? 'Discount from notification',
-              discountPercentage: (discountData['discountPercentage'] ?? 0).toDouble(),
-              minOrderAmount: (discountData['minOrderAmount'] ?? 0).toDouble(),
-              expiryDate: discountData['expiryDate'] != null 
-                  ? (discountData['expiryDate'] as Timestamp).toDate()
-                  : null,
-              applicableCategories: discountData['applicableCategories'] != null 
-                  ? List<String>.from(discountData['applicableCategories']) 
-                  : null,
-              usageLimit: discountData['usageLimit'] ?? 0,
-              usageCount: discountData['usageCount'] ?? 0,
-              isActive: discountData['isActive'] ?? true,
-              perUserLimit: discountData['perUserLimit'] ?? 0,
-              isUsed: discountData['isUsed'] ?? false,
-              receivedAt: (data['timestamp'] as Timestamp).toDate(),
-            ));
-          } catch (e) {
-            print('Error parsing notification discount: $e');
-          }
+          final discountData = data['discountCode'] as Map<String, dynamic>;
+          savedDiscounts.add(DiscountCode(
+            id: doc.id,
+            code: discountData['code'] ?? '',
+            name: discountData['name'] ?? '',
+            description: discountData['description'] ?? '',
+            discountPercentage: (discountData['discountPercentage'] ?? 0).toDouble(),
+            minOrderAmount: (discountData['minOrderAmount'] ?? 0).toDouble(),
+            expiryDate: discountData['expiryDate'] != null 
+                ? (discountData['expiryDate'] as Timestamp).toDate()
+                : null,
+            applicableCategories: discountData['applicableCategories'] != null 
+                ? List<String>.from(discountData['applicableCategories']) 
+                : null,
+            usageLimit: discountData['usageLimit'] ?? 0,
+            usageCount: discountData['usageCount'] ?? 0,
+            isActive: discountData['isActive'] ?? true,
+            perUserLimit: discountData['perUserLimit'] ?? 0,
+            isUsed: discountData['isUsed'] ?? false,
+            receivedAt: (data['timestamp'] as Timestamp).toDate(),
+          ));
         }
       }
-
-      // Filter out expired and invalid discounts
-      final now = DateTime.now();
-      final validDiscounts = savedDiscounts.where((discount) {
-        final bool expiredByExpiryDate = discount.expiryDate != null && now.isAfter(discount.expiryDate!);
-        final bool expiredBy24HoursAndUnused = !discount.isUsed && now.difference(discount.receivedAt).inHours >= 24;
-        return !expiredByExpiryDate && !expiredBy24HoursAndUnused;
-      }).toList();
 
       if (!mounted) return;
 
       setState(() {
-        _savedDiscounts = validDiscounts;
+        _savedDiscounts = savedDiscounts;
         _isLoadingSaved = false;
       });
     } catch (e) {
