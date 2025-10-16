@@ -6,8 +6,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
+import 'package:engineering_project/models/order_models.dart';
 import 'package:provider/provider.dart';
-import 'package:engineering_project/pages/theme_notifier.dart';
+import '../pages/theme_notifier.dart';
 
 class OrderManagementPage extends StatefulWidget {
   const OrderManagementPage({Key? key}) : super(key: key);
@@ -18,13 +19,13 @@ class OrderManagementPage extends StatefulWidget {
 
 class _OrderManagementPageState extends State<OrderManagementPage> {
   String _selectedFilter = 'All';
-  final List<String> _statusFilters = [
-    'All',
-    'Pending',
-    'Preparing',
-    'On Delivery',
-    'Delivered',
-    'Cancelled',
+  final List<String> _statusFilters = ['All', 'Pending', 'Preparing', 'On Delivery', 'Delivered', 'Refunds', 'Cancelled'];
+  final List<String> _refundStatuses = [
+    'Refund Requested',
+    'Refund In Review',
+    'Refund Approved',
+    'Refund Declined',
+    'Refunded',
   ];
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -46,110 +47,226 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
     super.dispose();
   }
 
-  Future<void> _updateOrderStatus(String orderId, String newStatus) async {
+  Future<void> _updateOrderStatus(String orderId, OrderStatus newStatus) async {
     try {
-      final orderDoc =
-          await FirebaseFirestore.instance
-              .collection('orders')
-              .doc(orderId)
-              .get();
-
+      print('Starting order status update for order: $orderId, new status: ${newStatus.displayName}');
+      
+      final orderDoc = await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(orderId)
+          .get();
+      
       if (!orderDoc.exists) {
         throw Exception('Order not found');
       }
 
       final orderData = orderDoc.data() as Map<String, dynamic>;
+      print('Order data: $orderData');
+      
+      // --- REFUND LOGIC ---
+      if ((newStatus == OrderStatus.refundApproved || newStatus == OrderStatus.refunded) && 
+          orderData.containsKey('userId') && 
+          orderData['userId'] != null) {
+        print('Processing refund for order: $orderId');
+        final userId = orderData['userId'];
+        double totalAmount = (orderData['totalAmount'] ?? orderData['total'] ?? 0.0).toDouble();
+        double shippingCost = (orderData['shippingCost'] ?? 0.0).toDouble();
+        final double refundAmount = totalAmount - shippingCost;
+        final List<dynamic> items = orderData['items'] ?? [];
+        
+        print('Refund details:');
+        print('User ID: $userId');
+        print('Refund Amount: $refundAmount');
+        print('Items: $items');
+        
+        final batch = FirebaseFirestore.instance.batch();
 
-      await FirebaseFirestore.instance.collection('orders').doc(orderId).update(
-        {'status': newStatus},
-      );
+        // --- Cashback reversal logic ---
+        double cashbackToReverse = 0.0;
+        try {
+          final txQuery = await FirebaseFirestore.instance
+              .collection('wallet_transactions')
+              .where('user_id', isEqualTo: userId)
+              .where('order_id', isEqualTo: orderId)
+              .where('type', isEqualTo: 'purchase')
+              .limit(1)
+              .get();
+          if (txQuery.docs.isNotEmpty) {
+            final txData = txQuery.docs.first.data();
+            cashbackToReverse = (txData['cashback'] ?? 0.0).toDouble();
+            print('Found cashback to reverse: $cashbackToReverse');
+          }
+        } catch (e) {
+          print('Error finding cashback for reversal: $e');
+        }
+        // --- End cashback reversal logic ---
 
+        // Refund to wallet
+        final walletRef = FirebaseFirestore.instance.collection('wallets').doc(userId);
+        print('Updating wallet for user: $userId');
+        
+        // First check if wallet exists
+        final walletDoc = await walletRef.get();
+        if (!walletDoc.exists) {
+          print('Creating new wallet for user: $userId');
+          batch.set(walletRef, {
+            'balance': refundAmount - cashbackToReverse,
+            'last_transaction': FieldValue.serverTimestamp(),
+            'user_id': userId,
+          });
+        } else {
+          print('Updating existing wallet for user: $userId');
+          batch.update(walletRef, {
+            'balance': FieldValue.increment(refundAmount - cashbackToReverse),
+            'last_transaction': FieldValue.serverTimestamp(),
+          });
+        }
+
+        // Log wallet transaction (refund)
+        final transactionRef = FirebaseFirestore.instance.collection('wallet_transactions').doc();
+        print('Creating wallet transaction record');
+        batch.set(transactionRef, {
+          'user_id': userId,
+          'amount': refundAmount,
+          'type': 'refund',
+          'timestamp': FieldValue.serverTimestamp(),
+          'method': 'order_refund',
+          'status': 'completed',
+          'reference': 'Order #$orderId',
+          'order_id': orderId,
+          'description': 'Refund for Order #$orderId',
+        });
+
+        // Log cashback reversal transaction if needed
+        if (cashbackToReverse > 0) {
+          final cashbackTxRef = FirebaseFirestore.instance.collection('wallet_transactions').doc();
+          batch.set(cashbackTxRef, {
+            'user_id': userId,
+            'amount': -cashbackToReverse,
+            'type': 'cashback_reversal',
+            'timestamp': FieldValue.serverTimestamp(),
+            'method': 'cashback_reversal',
+            'status': 'completed',
+            'reference': 'Order #$orderId',
+            'order_id': orderId,
+            'description': 'Cashback reversal for Order #$orderId',
+          });
+        }
+
+        // Update product stock
+        print('Updating product stock');
+        for (final item in items) {
+          final productId = item['id'];
+          final quantity = item['quantity'] ?? 1;
+          if (productId != null && quantity != null) {
+            print('Updating stock for product: $productId, quantity: $quantity');
+            final productRef = FirebaseFirestore.instance.collection('products').doc(productId);
+            batch.update(productRef, {
+              'stock': FieldValue.increment(quantity),
+            });
+          }
+        }
+
+        // Update order status
+        print('Updating order status');
+        final orderRef = FirebaseFirestore.instance.collection('orders').doc(orderId);
+        batch.update(orderRef, {'status': newStatus.displayName});
+
+        // Update user order status if exists
+        print('Updating user order status');
+        final userOrderRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('userOrders').doc(orderId);
+        final userOrderDoc = await userOrderRef.get();
+        if (userOrderDoc.exists) {
+          batch.update(userOrderRef, {'status': newStatus.displayName});
+        } else {
+          print('User order document not found at path: ${userOrderRef.path}');
+        }
+
+        print('Committing batch operations');
+        await batch.commit();
+        print('Batch operations completed successfully');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Order status updated to ${newStatus.displayName}, refund processed.')),
+        );
+        return;
+      }
+      // --- END REFUND LOGIC ---
+      
+      // Update main order first
+      await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(orderId)
+          .update({'status': newStatus.displayName});
+      
+      // Update user's order if userId exists
       if (orderData.containsKey('userId') && orderData['userId'] != null) {
         final userId = orderData['userId'];
 
         try {
-          await FirebaseFirestore.instance
-              .collection('orders')
+          // First, try to get the user's orders collection
+          final userOrdersCollection = FirebaseFirestore.instance
+              .collection('users')
               .doc(userId)
-              .collection('userOrders')
-              .doc(orderId)
-              .update({'status': newStatus});
-
-          print('Updated status in user orders: $userId, orderId: $orderId');
+              .collection('userOrders');
+          
+          final userOrderDoc = await userOrdersCollection.doc(orderId).get();
+          if (userOrderDoc.exists) {
+            // Then update the specific order
+            await userOrdersCollection.doc(orderId).update({
+              'status': newStatus.displayName,
+            });
+            print('Successfully updated user order status');
+          } else {
+            print('User order document not found for status update.');
+          }
+          
         } catch (e) {
           print('Error updating user order status: $e');
+          // Don't throw here, as the main order update was successful
         }
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Order status updated to $newStatus')),
+        SnackBar(content: Text('Order status updated to ${newStatus.displayName}')),
       );
     } catch (e) {
+      print('Error in _updateOrderStatus: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update order status: $e')),
+        SnackBar(content: Text('Error updating order status: $e')),
       );
     }
   }
 
   void _updateTrackingNumber(String orderId, String currentTracking) {
-    TextEditingController trackingController = TextEditingController(
-      text: currentTracking,
-    );
-    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
-    final isBlackMode = themeNotifier.isBlackMode;
-    final isDark =
-        Theme.of(context).brightness == Brightness.dark && !isBlackMode;
-
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : const Color(0xFFEF5350);
+    
+    TextEditingController trackingController = TextEditingController(text: currentTracking);
+    
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor:
-              isBlackMode
-                  ? Colors.black
-                  : Theme.of(context).dialogBackgroundColor,
+          backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           title: Text(
             'Update Tracking Number',
-            style: TextStyle(
-              color:
-                  isBlackMode
-                      ? Colors.white
-                      : Theme.of(context).textTheme.titleLarge?.color,
-            ),
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
           ),
           content: TextField(
             controller: trackingController,
-            style: TextStyle(
-              color:
-                  isBlackMode
-                      ? Colors.white
-                      : Theme.of(context).textTheme.bodyLarge?.color,
-            ),
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
             decoration: InputDecoration(
               hintText: 'Enter tracking number',
-              hintStyle: TextStyle(
-                color:
-                    isBlackMode
-                        ? Colors.grey.shade400
-                        : Theme.of(context).textTheme.bodyMedium?.color,
-              ),
+              hintStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
               enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color:
-                      isBlackMode
-                          ? Colors.grey.shade700
-                          : (isDark
-                              ? Colors.grey.shade700
-                              : Colors.grey.shade300),
-                ),
+                borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
               ),
               focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color:
-                      isBlackMode
-                          ? Colors.grey.shade500
-                          : Theme.of(context).primaryColor,
-                ),
+                borderSide: BorderSide(color: themeColor),
               ),
             ),
           ),
@@ -188,16 +305,20 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                     final userId = orderData['userId'];
 
                     try {
-                      await FirebaseFirestore.instance
-                          .collection('orders')
+                      final userOrderRef = FirebaseFirestore.instance
+                          .collection('users')
                           .doc(userId)
                           .collection('userOrders')
-                          .doc(orderId)
-                          .update({'trackingNumber': trackingController.text});
+                          .doc(orderId);
+                          
+                      final userOrderDoc = await userOrderRef.get();
+                      if (userOrderDoc.exists) {
+                        await userOrderRef.update({'trackingNumber': trackingController.text});
+                        print('Updated tracking in user orders: $userId, orderId: $orderId');
+                      } else {
+                        print('User order document not found for tracking number update.');
+                      }
 
-                      print(
-                        'Updated tracking in user orders: $userId, orderId: $orderId',
-                      );
                     } catch (e) {
                       print('Error updating user order tracking: $e');
                     }
@@ -205,25 +326,24 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
 
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Tracking number updated')),
+                    SnackBar(
+                      content: const Text('Tracking number updated'),
+                      backgroundColor: themeColor,
+                    ),
                   );
                 } catch (e) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Failed to update tracking number: $e'),
+                      backgroundColor: Colors.red,
                     ),
                   );
                 }
               },
               child: Text(
                 'UPDATE',
-                style: TextStyle(
-                  color:
-                      isBlackMode
-                          ? Colors.grey.shade500
-                          : Theme.of(context).primaryColor,
-                ),
+                style: TextStyle(color: themeColor),
               ),
             ),
           ],
@@ -330,12 +450,97 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
     }
   }
 
+  Future<void> _processRefund(String orderId, Map<String, dynamic> orderData) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Process Refund'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to process the refund for this order?'),
+            const SizedBox(height: 16),
+            Text(
+              'Order Total: ₺${(orderData['totalAmount'] ?? orderData['total'] ?? 0.0).toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Customer: ${orderData['customerName'] ?? 'N/A'}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'Email: ${orderData['customerEmail'] ?? 'N/A'}',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('PROCESS REFUND'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        // Update order status to Refunded
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .doc(orderId)
+            .update({'status': 'Refunded'});
+
+        // If the order has a userId, update the user's order as well
+        if (orderData.containsKey('userId') && orderData['userId'] != null) {
+          final userId = orderData['userId'];
+          try {
+            final userOrderRef = FirebaseFirestore.instance
+                .collection('users')
+                .doc(userId)
+                .collection('userOrders')
+                .doc(orderId);
+            
+            final userOrderDoc = await userOrderRef.get();
+            if (userOrderDoc.exists) {
+              await userOrderRef.update({'status': 'Refunded'});
+            } else {
+              print('User order document not found for refund status update.');
+            }
+          } catch (e) {
+            print('Error updating user order status: $e');
+          }
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Refund processed successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to process refund: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final isBlackMode = themeNotifier.isBlackMode;
-    final isDark =
-        Theme.of(context).brightness == Brightness.dark && !isBlackMode;
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : (isDark ? Colors.red.shade900 : const Color(0xFFEF5350));
 
     return Scaffold(
       backgroundColor:
@@ -343,21 +548,22 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
               ? Colors.black
               : Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor:
-            isBlackMode
-                ? Colors.black
-                : isDark
-                ? Colors.black
-                : Theme.of(context).primaryColor,
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
         title: Text(
           'Order Management',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+        foregroundColor: Colors.white,
         elevation: isDark ? 0 : 2,
-        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: Icon(Icons.file_download, color: Colors.white),
+            icon: const Icon(Icons.file_download),
             onPressed: _exportOrdersToCSV,
             tooltip: 'Export to CSV',
           ),
@@ -371,12 +577,9 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
             margin: EdgeInsets.all(16.0),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors:
-                    isBlackMode
-                        ? [Colors.grey.shade500, Colors.black]
-                        : isDark
-                        ? [Colors.red.shade900, Colors.grey.shade900]
-                        : [Colors.red.shade300, Colors.white],
+                colors: isDark
+                    ? [themeColor, Colors.grey.shade900]
+                    : [themeColor.withOpacity(0.3), Colors.white],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -392,74 +595,137 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                         ),
                       ],
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color:
-                        isBlackMode
-                            ? Colors.grey.shade500
-                            : isDark
-                            ? Colors.red.shade900
-                            : Colors.red.shade300,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.local_shipping_outlined,
-                    size: 30,
-                    color: Colors.white,
-                  ),
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                dividerColor: Colors.transparent,
+              ),
+              child: ExpansionTile(
+                initiallyExpanded: true,
+                title: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark ? themeColor : themeColor.withOpacity(0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.local_shipping_outlined,
+                        size: 30,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance.collection('orders').snapshots(),
+                        builder: (context, snapshot) {
+                          final orderCount = snapshot.data?.docs.length ?? 0;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Orders Overview",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: isDark ? Colors.grey[400] : Colors.black54,
+                                ),
+                              ),
+                              Text(
+                                "$orderCount Orders",
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: StreamBuilder<QuerySnapshot>(
-                    stream:
-                        FirebaseFirestore.instance
-                            .collection('orders')
-                            .snapshots(),
-                    builder: (context, snapshot) {
-                      final orderCount = snapshot.data?.docs.length ?? 0;
-                      final pendingOrders =
-                          snapshot.data?.docs
-                              .where((doc) => doc['status'] == 'Pending')
-                              .length ??
-                          0;
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance.collection('orders').snapshots(),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) return _buildStatItem(
+                              icon: Icons.pending_actions,
+                              count: 0,
+                              label: 'Pending Orders',
+                              color: Colors.orange,
+                            );
 
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Orders Overview",
-                            style: TextStyle(
-                              fontSize: 16,
-                              color:
-                                  isBlackMode
-                                      ? Colors.grey.shade400
-                                      : isDark
-                                      ? Colors.grey[400]
-                                      : Colors.black54,
-                            ),
-                          ),
-                          Text(
-                            "$orderCount Orders ($pendingOrders Pending)",
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color:
-                                  isBlackMode
-                                      ? Colors.white
-                                      : isDark
-                                      ? Colors.white
-                                      : Colors.black87,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                            final pendingCount = snapshot.data!.docs.where((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              return data['status'] == 'Pending';
+                            }).length;
+
+                            return _buildStatItem(
+                              icon: Icons.pending_actions,
+                              count: pendingCount,
+                              label: 'Pending Orders',
+                              color: Colors.orange,
+                            );
+                          },
+                        ),
+                        StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance.collection('orders').snapshots(),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) return _buildStatItem(
+                              icon: Icons.cancel_outlined,
+                              count: 0,
+                              label: 'Cancelled Orders',
+                              color: Colors.red,
+                            );
+
+                            final cancelledCount = snapshot.data!.docs.where((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              return data['status'] == 'Cancelled';
+                            }).length;
+
+                            return _buildStatItem(
+                              icon: Icons.cancel_outlined,
+                              count: cancelledCount,
+                              label: 'Cancelled Orders',
+                              color: Colors.red,
+                            );
+                          },
+                        ),
+                        StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance.collection('orders').snapshots(),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) return _buildStatItem(
+                              icon: Icons.money_off,
+                              count: 0,
+                              label: 'Refund Requests',
+                              color: Colors.orange,
+                            );
+
+                            final refundRequestCount = snapshot.data!.docs.where((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              return data['status'] == 'Refund Requested';
+                            }).length;
+
+                            return _buildStatItem(
+                              icon: Icons.money_off,
+                              count: refundRequestCount,
+                              label: 'Refund Requests',
+                              color: Colors.orange,
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
@@ -567,45 +833,29 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                         () => _selectedFilter = selected ? status : "All",
                       );
                     },
-                    backgroundColor:
-                        isBlackMode
-                            ? Colors.grey.shade800
-                            : (isDark
-                                ? Colors.grey.shade800
-                                : Colors.grey.shade100),
-                    selectedColor:
-                        isBlackMode
-                            ? Colors.grey.shade500.withOpacity(0.2)
-                            : Theme.of(context).primaryColor.withOpacity(0.2),
-                    checkmarkColor:
-                        isBlackMode
-                            ? Colors.grey.shade500
-                            : Theme.of(context).primaryColor,
+                    backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                    selectedColor: themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme).withOpacity(0.2)
+                        : Colors.red.withOpacity(0.2),
+                    checkmarkColor: themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                        : Colors.red,
                     labelStyle: TextStyle(
-                      color:
-                          isSelected
-                              ? (isBlackMode
-                                  ? Colors.white
-                                  : Theme.of(context).primaryColor)
-                              : (isBlackMode
-                                  ? Colors.grey.shade400
-                                  : Theme.of(
-                                    context,
-                                  ).textTheme.bodyMedium?.color),
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected
+                          ? (themeNotifier.isSpecialModeActive
+                              ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                              : Colors.red)
+                          : Theme.of(context).textTheme.bodyMedium?.color,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
-                        color:
-                            isSelected
-                                ? (isBlackMode
-                                    ? Colors.grey.shade500
-                                    : Theme.of(context).primaryColor)
-                                : (isBlackMode
-                                    ? Colors.grey.shade700
-                                    : Colors.transparent),
+                        color: isSelected
+                            ? (themeNotifier.isSpecialModeActive
+                                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                : Colors.red)
+                            : Colors.transparent,
                       ),
                     ),
                   ),
@@ -617,10 +867,12 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
           // Orders List (existing StreamBuilder)
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream:
-                  _selectedFilter == 'All'
+              stream: _selectedFilter == 'All'
+                  ? FirebaseFirestore.instance.collection('orders').orderBy('timestamp', descending: true).snapshots()
+                  : _selectedFilter == 'Refunds'
                       ? FirebaseFirestore.instance
                           .collection('orders')
+                          .where('status', whereIn: _refundStatuses)
                           .orderBy('timestamp', descending: true)
                           .snapshots()
                       : FirebaseFirestore.instance
@@ -964,6 +1216,81 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                                   ),
                                   const SizedBox(height: 8),
                                   _buildCustomerInfo(data),
+                                  // Show refund info if status is in _refundStatuses
+                                  if (_refundStatuses.contains(status)) ...[
+                                    const SizedBox(height: 16),
+                                    Text('Refund Request Details:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                                    const SizedBox(height: 8),
+                                    if (data['refundReason'] != null && data['refundReason'].toString().isNotEmpty)
+                                      Text('Reason: ${data['refundReason']}', style: TextStyle(fontSize: 15)),
+                                    if (data['refundImages'] != null && (data['refundImages'] as List).isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      SizedBox(
+                                        height: 80,
+                                        child: ListView.builder(
+                                          scrollDirection: Axis.horizontal,
+                                          itemCount: (data['refundImages'] as List).length,
+                                          itemBuilder: (context, imgIdx) {
+                                            final imgUrl = (data['refundImages'] as List)[imgIdx];
+                                            return Padding(
+                                              padding: const EdgeInsets.only(right: 8.0),
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(8.0),
+                                                child: Image.network(
+                                                  imgUrl,
+                                                  height: 80,
+                                                  width: 80,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return Container(
+                                                      height: 80,
+                                                      width: 80,
+                                                      color: Colors.grey.shade200,
+                                                      child: const Icon(Icons.broken_image),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 16),
+                                    Text('Refund Handling:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Row(
+                                        children: [
+                                          _buildRefundStatusChip('Refund Requested', status),
+                                          const SizedBox(width: 8),
+                                          _buildRefundStatusChip('Refund In Review', status),
+                                          const SizedBox(width: 8),
+                                          _buildRefundStatusChip('Refund Approved', status),
+                                          const SizedBox(width: 8),
+                                          _buildRefundStatusChip('Refund Declined', status),
+                                          const SizedBox(width: 8),
+                                          _buildRefundStatusChip('Refunded', status),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    // Show clickable refund handling buttons for admin
+                                    SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Row(
+                                        children: [
+                                          _buildStatusButton(orderId, 'Refund In Review', status),
+                                          const SizedBox(width: 8),
+                                          _buildStatusButton(orderId, 'Refund Approved', status),
+                                          const SizedBox(width: 8),
+                                          _buildStatusButton(orderId, 'Refund Declined', status),
+                                          const SizedBox(width: 8),
+                                          _buildStatusButton(orderId, 'Refunded', status),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 16),
                                   Text(
                                     'Change Order Status:',
@@ -1043,29 +1370,24 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
   }
 
   Widget _buildCustomerInfo(Map<String, dynamic> data) {
-    final isBlackMode = Provider.of<ThemeNotifier>(context).isBlackMode;
-    final isDark =
-        Theme.of(context).brightness == Brightness.dark && !isBlackMode;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : const Color(0xFFEF5350);
+    
     final customerName = data['customerName'] ?? 'N/A';
     final customerEmail = data['customerEmail'] ?? 'N/A';
     final customerPhone = data['customerPhone'] ?? 'N/A';
     final shippingAddress = data['shippingAddress'] ?? 'No address provided';
 
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color:
-            isBlackMode
-                ? Colors.grey.shade800
-                : (isDark
-                    ? Colors.grey.shade900.withOpacity(0.3)
-                    : Colors.grey.shade50),
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color:
-              isBlackMode
-                  ? Colors.grey.shade700
-                  : (isDark ? Colors.grey.shade800 : Colors.grey.shade300),
+          color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
         ),
       ),
       child: Column(
@@ -1076,127 +1398,97 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color:
-                  isBlackMode
-                      ? Colors.white
-                      : Theme.of(context).textTheme.titleMedium?.color,
+              color: isDark ? Colors.white : Colors.black87,
             ),
           ),
-          SizedBox(height: 12),
-
+          const SizedBox(height: 12),
+          
           // Customer Details
           Row(
             children: [
               Icon(
                 Icons.person_outline,
                 size: 20,
-                color:
-                    isBlackMode
-                        ? Colors.grey.shade400
-                        : Theme.of(context).iconTheme.color,
+                color: themeColor,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   customerName,
                   style: TextStyle(
-                    color:
-                        isBlackMode
-                            ? Colors.white
-                            : Theme.of(context).textTheme.bodyLarge?.color,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 8),
-
+          const SizedBox(height: 8),
+          
           // Email
           Row(
             children: [
               Icon(
                 Icons.email_outlined,
                 size: 20,
-                color:
-                    isBlackMode
-                        ? Colors.grey.shade400
-                        : Theme.of(context).iconTheme.color,
+                color: themeColor,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   customerEmail,
                   style: TextStyle(
-                    color:
-                        isBlackMode
-                            ? Colors.white
-                            : Theme.of(context).textTheme.bodyLarge?.color,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 8),
-
+          const SizedBox(height: 8),
+          
           // Phone
           Row(
             children: [
               Icon(
                 Icons.phone_outlined,
                 size: 20,
-                color:
-                    isBlackMode
-                        ? Colors.grey.shade400
-                        : Theme.of(context).iconTheme.color,
+                color: themeColor,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 customerPhone,
                 style: TextStyle(
-                  color:
-                      isBlackMode
-                          ? Colors.white
-                          : Theme.of(context).textTheme.bodyLarge?.color,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
             ],
           ),
-
-          Divider(height: 24),
-
+          
+          const Divider(height: 24),
+          
           // Shipping Address
           Text(
             'Shipping Address',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color:
-                  isBlackMode
-                      ? Colors.white
-                      : Theme.of(context).textTheme.titleMedium?.color,
+              color: isDark ? Colors.white : Colors.black87,
             ),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(
                 Icons.location_on_outlined,
                 size: 20,
-                color:
-                    isBlackMode
-                        ? Colors.grey.shade400
-                        : Theme.of(context).iconTheme.color,
+                color: themeColor,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   shippingAddress,
                   style: TextStyle(
-                    color:
-                        isBlackMode
-                            ? Colors.white
-                            : Theme.of(context).textTheme.bodyLarge?.color,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
               ),
@@ -1213,10 +1505,13 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
     String currentStatus,
   ) {
     final isActive = currentStatus == buttonStatus;
-    final isBlackMode = Provider.of<ThemeNotifier>(context).isBlackMode;
-    final isDark =
-        Theme.of(context).brightness == Brightness.dark && !isBlackMode;
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    // Don't show refund button if order is not in Refund Requested status
+    if (buttonStatus == 'Refunded' && currentStatus != 'Refund Requested') {
+      return const SizedBox.shrink();
+    }
+    
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor:
@@ -1238,21 +1533,12 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      onPressed:
-          isActive ? null : () => _updateOrderStatus(orderId, buttonStatus),
-      child: Text(
-        buttonStatus,
-        style: TextStyle(
-          color:
-              isActive
-                  ? Colors.white
-                  : isBlackMode
-                  ? Colors.white
-                  : isDark
-                  ? Colors.grey.shade300
-                  : Colors.grey.shade800,
-        ),
-      ),
+      onPressed: isActive
+          ? null
+          : () {
+              _updateOrderStatus(orderId, OrderStatus.values[OrderStatus.values.indexOf(OrderStatus.values.firstWhere((e) => e.displayName == buttonStatus))]);
+            },
+      child: Text(buttonStatus),
     );
   }
 
@@ -1266,6 +1552,16 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
         return Colors.purple;
       case 'Delivered':
         return Colors.green;
+      case 'Refund Requested':
+        return Colors.orange;
+      case 'Refund In Review':
+        return Colors.blue;
+      case 'Refund Approved':
+        return Colors.green;
+      case 'Refund Declined':
+        return Colors.red;
+      case 'Refunded':
+        return Colors.green.shade700;
       case 'Cancelled':
         return Colors.red;
       default:
@@ -1275,5 +1571,88 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
 
   int min(int a, int b) {
     return a < b ? a : b;
+  }
+
+  Widget _buildStatItem({
+    required IconData icon,
+    required int count,
+    required String label,
+    required Color color,
+  }) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDark = themeNotifier.isDarkMode;
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : const Color(0xFFEF5350);
+    
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedFilter = label.replaceAll(' Orders', '');
+          if (label == 'Refund Requests') {
+            _selectedFilter = 'Refund Requested';
+          }
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: _selectedFilter == label.replaceAll(' Orders', '') || 
+                 (label == 'Refund Requests' && _selectedFilter == 'Refund Requested')
+              ? themeColor.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              count.toString(),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRefundStatusChip(String chipStatus, String currentStatus) {
+    final isActive = chipStatus == currentStatus;
+    Color color = _getStatusColor(chipStatus);
+    return Chip(
+      label: Text(
+        chipStatus,
+        style: TextStyle(
+          color: isActive ? Colors.white : color,
+          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      backgroundColor: isActive ? color : color.withOpacity(0.15),
+      side: isActive ? BorderSide(color: color, width: 2) : null,
+    );
   }
 }

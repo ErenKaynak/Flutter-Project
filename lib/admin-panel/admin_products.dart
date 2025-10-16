@@ -1,8 +1,14 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math' as Math;
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:engineering_project/assets/AI/local_ai_config.dart';
+import 'package:engineering_project/assets/AI/local_ai_service.dart';
 import 'package:provider/provider.dart';
-import 'package:engineering_project/pages/theme_notifier.dart';
+import '../pages/theme_notifier.dart';
+import 'dart:io';
+import 'dart:async';  // Add this import for TimeoutException
 
 class AdminProducts extends StatefulWidget {
   const AdminProducts({super.key});
@@ -15,22 +21,29 @@ class _AdminProductsState extends State<AdminProducts> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
   final TextEditingController imagePathController = TextEditingController();
-  final TextEditingController descriptionController = TextEditingController();
   final TextEditingController stockController = TextEditingController();
-
+  
+  // Localized description controllers
+  final Map<String, TextEditingController> descriptionControllers = {
+    'en': TextEditingController(),
+    'tr': TextEditingController(),
+    'ar': TextEditingController(),
+    'ur': TextEditingController(),  // Added Urdu controller
+  };
+  
   // Search functionality
   final TextEditingController searchController = TextEditingController();
   String searchQuery = '';
 
-  // For additional images - added more controllers for flexibility
+  // For additional images
   final List<TextEditingController> additionalImagesControllers = [
     TextEditingController(),
     TextEditingController(),
-    TextEditingController(), // Added one more image slot
+    TextEditingController(),
   ];
 
   // Category selection
-  String selectedCategory = "CPU's"; // Default category
+  String selectedCategory = "CPU's";
   final List<String> categories = [
     "CPU's",
     "GPU's",
@@ -38,11 +51,10 @@ class _AdminProductsState extends State<AdminProducts> {
     "Storage",
     "Motherboards",
     "Cases",
-    "PSUs",
+    "PSU"
   ];
 
-  String selectedFilterCategory =
-      "All"; // Add this line with your other state variables
+  String selectedFilterCategory = "All";
 
   final CollectionReference products = FirebaseFirestore.instance.collection(
     'products',
@@ -51,7 +63,6 @@ class _AdminProductsState extends State<AdminProducts> {
   @override
   void initState() {
     super.initState();
-    // Set up search listener
     searchController.addListener(_onSearchChanged);
   }
 
@@ -62,8 +73,8 @@ class _AdminProductsState extends State<AdminProducts> {
     nameController.dispose();
     priceController.dispose();
     imagePathController.dispose();
-    descriptionController.dispose();
     stockController.dispose();
+    descriptionControllers.values.forEach((controller) => controller.dispose());
     for (var controller in additionalImagesControllers) {
       controller.dispose();
     }
@@ -76,6 +87,168 @@ class _AdminProductsState extends State<AdminProducts> {
     });
   }
 
+  Future<String> _generateDescription(String productName, String category, String language) async {
+    try {
+      // Simplified prompt structure for English
+      String basePrompt = '''Briefly explain ${productName} in 2 short sentences. First: key features. Second: why it fits "$category".''';
+
+      // Add timeout handling
+      final response = await Future.any([
+        LocalAIService.getChatCompletion(
+          basePrompt,
+          'You are a PC expert. Give very short, clear explanations. Use simple language. Keep it under 100 characters total.'
+        ),
+        Future.delayed(const Duration(seconds: 15)).then((_) => throw TimeoutException('Description generation timed out')),
+      ]);
+
+      final englishDescription = response.trim();
+
+      // If English is requested, return it directly
+      if (language == 'en') {
+        return englishDescription;
+      }
+
+      // For other languages, translate the English description
+      String translationPrompt = '';
+      switch (language) {
+        case 'tr':
+          translationPrompt = 'Translate this product description to Turkish: "$englishDescription". Only provide the Turkish translation, no explanations.';
+          break;
+        case 'ar':
+          translationPrompt = 'Translate this product description to Arabic: "$englishDescription". Only provide the Arabic translation, no explanations.';
+          break;
+        case 'ur':
+          translationPrompt = 'Translate this product description to Urdu: "$englishDescription". Only provide the Urdu translation, no explanations.';
+          break;
+        default:
+          return englishDescription;
+      }
+
+      final translatedResponse = await Future.any([
+        LocalAIService.getChatCompletion(
+          translationPrompt,
+          'You are a professional translator. Translate the given product description. Keep the same tone and style. Keep it under 100 characters. Only provide the translation, no additional text.'
+        ),
+        Future.delayed(const Duration(seconds: 15)).then((_) => throw TimeoutException('Translation timed out')),
+      ]);
+
+      return translatedResponse.trim();
+    } catch (e) {
+      print('Error generating description: $e');
+      return _generateQuickFallback(productName, category, language);
+    }
+  }
+
+  String _getBasicSpecs(String productName, String category) {
+    final name = productName.toUpperCase();
+    final specs = StringBuffer();
+
+    // Quick spec detection without complex regex
+    if (category == "CPU's") {
+      if (name.contains('RYZEN')) {
+        specs.write('Type: AMD CPU\n');
+        if (name.contains('5')) specs.write('Series: Ryzen 5\n');
+        if (name.contains('7')) specs.write('Series: Ryzen 7\n');
+        if (name.contains('9')) specs.write('Series: Ryzen 9\n');
+      } else if (name.contains('INTEL') || name.contains('CORE')) {
+        specs.write('Type: Intel CPU\n');
+        if (name.contains('I3')) specs.write('Series: Core i3\n');
+        if (name.contains('I5')) specs.write('Series: Core i5\n');
+        if (name.contains('I7')) specs.write('Series: Core i7\n');
+        if (name.contains('I9')) specs.write('Series: Core i9\n');
+      }
+    } else if (category == "GPU's") {
+      if (name.contains('RTX') || name.contains('GTX')) {
+        specs.write('Type: NVIDIA GPU\n');
+        if (name.contains('RTX')) specs.write('Series: RTX\n');
+        if (name.contains('GTX')) specs.write('Series: GTX\n');
+      } else if (name.contains('RX') || name.contains('RADEON')) {
+        specs.write('Type: AMD GPU\n');
+        specs.write('Series: Radeon\n');
+      }
+    } else if (category == "RAM's") {
+      if (name.contains('DDR4')) specs.write('Type: DDR4\n');
+      if (name.contains('DDR5')) specs.write('Type: DDR5\n');
+      // Extract capacity (e.g., 16GB)
+      final capacityMatch = RegExp(r'(\d+)\s*GB').firstMatch(name);
+      if (capacityMatch != null) {
+        specs.write('Capacity: ${capacityMatch.group(1)}GB\n');
+      }
+    }
+
+    return specs.toString();
+  }
+
+  String _generateQuickFallback(String productName, String category, String language) {
+    final baseDesc = 'High-performance $category: $productName. Professional-grade component offering reliable performance and modern system compatibility.';
+    
+    switch (language) {
+      case 'tr':
+        return 'Yüksek performanslı $category: $productName. Güvenilir performans ve modern sistem uyumluluğu sunan profesyonel bileşen.';
+      case 'ar':
+        return '$productName :$category عالي الأداء. مكون احترافي يوفر أداءً موثوقًا وتوافقًا مع الأنظمة الحديثة.';
+      case 'ur':
+        return 'اعلیٰ کارکردگی $category: $productName۔ پیشہ ورانہ درجے کا کمپوننٹ جو قابل اعتماد کارکردگی اور جدید سسٹم مطابقت پیش کرتا ہے۔';
+      default:
+        return baseDesc;
+    }
+  }
+
+  Future<void> _generateAllDescriptions() async {
+    if (nameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a product name first')),
+      );
+      return;
+    }
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Generating descriptions...', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
+      );
+
+      // First generate English description
+      final englishDescription = await _generateDescription(nameController.text, selectedCategory, 'en');
+      
+      // Then translate to Turkish, Arabic, and Urdu
+      final turkishDescription = await _generateDescription(nameController.text, selectedCategory, 'tr');
+      final arabicDescription = await _generateDescription(nameController.text, selectedCategory, 'ar');
+      final urduDescription = await _generateDescription(nameController.text, selectedCategory, 'ur');
+
+      if (mounted) {
+        Navigator.pop(context); // Hide loading dialog
+        
+        // Update text controllers
+        descriptionControllers['en']!.text = englishDescription;
+        descriptionControllers['tr']!.text = turkishDescription;
+        descriptionControllers['ar']!.text = arabicDescription;
+        descriptionControllers['ur']!.text = urduDescription;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Descriptions generated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Hide loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating descriptions: $e')),
+        );
+      }
+    }
+  }
+
   void showProductDialog({DocumentSnapshot? doc}) {
     final isEditing = doc != null;
 
@@ -83,32 +256,41 @@ class _AdminProductsState extends State<AdminProducts> {
     nameController.clear();
     priceController.clear();
     imagePathController.clear();
-    descriptionController.clear();
+    descriptionControllers.values.forEach((controller) => controller.clear());
     stockController.text = '0';
     selectedCategory = "CPU's";
     additionalImagesControllers.forEach((controller) => controller.clear());
 
     if (isEditing) {
       // Populate fields with existing product data
-      nameController.text = doc['name'] ?? '';
-      priceController.text = doc['price']?.toString() ?? '';
-      imagePathController.text = doc['imagePath'] ?? '';
-      descriptionController.text = doc['description'] ?? '';
-      stockController.text = (doc['stock'] ?? 0).toString();
-
+      final data = doc.data() as Map<String, dynamic>;
+      nameController.text = data['name'] ?? '';
+      priceController.text = data['price']?.toString() ?? '';
+      imagePathController.text = data['imagePath'] ?? '';
+      stockController.text = (data['stock'] ?? 0).toString();
+      
       // Handle category selection
-      String docCategory = doc['category'] ?? 'CPU\'s';
+      String docCategory = data['category'] ?? 'CPU\'s';
       if (categories.contains(docCategory)) {
         selectedCategory = docCategory;
       }
-
+      
+      // Handle descriptions
+      if (data['descriptions'] != null) {
+        final descriptions = data['descriptions'] as Map<String, dynamic>;
+        descriptions.forEach((lang, desc) {
+          if (descriptionControllers.containsKey(lang)) {
+            descriptionControllers[lang]!.text = desc.toString();
+          }
+        });
+      } else if (data['description'] != null) {
+        // Handle legacy single description
+        descriptionControllers['en']!.text = data['description'].toString();
+      }
+      
       // Handle additional images array
-      List<dynamic> images = doc['images'] ?? [];
-      for (
-        int i = 0;
-        i < Math.min(images.length, additionalImagesControllers.length);
-        i++
-      ) {
+      List<dynamic> images = data['images'] ?? [];
+      for (int i = 0; i < Math.min(images.length, additionalImagesControllers.length); i++) {
         additionalImagesControllers[i].text = images[i].toString();
       }
     }
@@ -411,107 +593,186 @@ class _AdminProductsState extends State<AdminProducts> {
                         color: isBlackMode ? Colors.grey.shade500 : Colors.red,
                       ),
                     ),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          isBlackMode
-                              ? Colors.grey.shade500
-                              : Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
+                  );
+                }).toList(),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    const Text("Product Descriptions", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.auto_fix_high),
+                      onPressed: _generateAllDescriptions,
+                      tooltip: 'Generate All Descriptions',
                     ),
-                    onPressed: () async {
-                      final name = nameController.text.trim();
-                      final priceText = priceController.text.trim();
-                      final imagePath = imagePathController.text.trim();
-                      final description = descriptionController.text.trim();
-                      final stockText = stockController.text.trim();
-
-                      // Validation
-                      if (name.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please enter a product name'),
-                          ),
-                        );
-                        return;
-                      }
-
-                      // Parse price (allow both integer and decimal values)
-                      double? price = double.tryParse(priceText);
-                      if (priceText.isEmpty || price == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please enter a valid price'),
-                          ),
-                        );
-                        return;
-                      }
-
-                      // Prepare additional images array
-                      List<String> additionalImages = [];
-                      for (var controller in additionalImagesControllers) {
-                        String url = controller.text.trim();
-                        if (url.isNotEmpty) {
-                          additionalImages.add(url);
-                        }
-                      }
-
-                      // Prepare the product data object
-                      final Map<String, dynamic> productData = {
-                        'name': name,
-                        'price': price, // Store as numeric value
-                        'category': selectedCategory,
-                        'stock': int.tryParse(stockText) ?? 0,
-                        'description': description,
-                        'imagePath': imagePath,
-                        'images': additionalImages,
-                        'updatedAt':
-                            FieldValue.serverTimestamp(), // Track when the product was last updated
-                      };
-
-                      try {
-                        if (isEditing) {
-                          // Update existing product
-                          await products.doc(doc!.id).update(productData);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Product updated successfully'),
-                              ),
-                            );
-                          }
-                        } else {
-                          // Add new product
-                          productData['createdAt'] =
-                              FieldValue.serverTimestamp(); // Add creation timestamp
-                          await products.add(productData);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Product added successfully'),
-                              ),
-                            );
-                          }
-                        }
-                        if (mounted) Navigator.pop(context);
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: ${e.toString()}')),
-                          );
-                        }
-                      }
-                    },
-                    child: Text(
-                      isEditing ? 'Update' : 'Add',
-                      style: const TextStyle(color: Colors.white),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ExpansionTile(
+                  title: const Text("English Description"),
+                  children: [
+                    TextField(
+                      controller: descriptionControllers['en'],
+                      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                      decoration: InputDecoration(
+                        labelText: 'English Description',
+                        labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                        ),
+                      ),
+                      maxLines: 3,
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                ),
+                ExpansionTile(
+                  title: const Text("Turkish Description"),
+                  children: [
+                    TextField(
+                      controller: descriptionControllers['tr'],
+                      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                      decoration: InputDecoration(
+                        labelText: 'Turkish Description',
+                        labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                        ),
+                      ),
+                      maxLines: 3,
+                    ),
+                  ],
+                ),
+                ExpansionTile(
+                  title: const Text("Arabic Description"),
+                  children: [
+                    TextField(
+                      controller: descriptionControllers['ar'],
+                      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                      decoration: InputDecoration(
+                        labelText: 'Arabic Description',
+                        labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                        ),
+                      ),
+                      maxLines: 3,
+                    ),
+                  ],
+                ),
+                ExpansionTile(
+                  title: const Text("Urdu Description"),
+                  children: [
+                    TextField(
+                      controller: descriptionControllers['ur'],
+                      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                      decoration: InputDecoration(
+                        labelText: 'Urdu Description',
+                        labelStyle: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                        ),
+                      ),
+                      maxLines: 3,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                final name = nameController.text.trim();
+                final priceText = priceController.text.trim();
+                final imagePath = imagePathController.text.trim();
+                final stockText = stockController.text.trim();
+                
+                // Validation
+                if (name.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a product name')),
+                  );
+                  return;
+                }
+                
+                // Parse price (allow both integer and decimal values)
+                double? price = double.tryParse(priceText);
+                if (priceText.isEmpty || price == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a valid price')),
+                  );
+                  return;
+                }
+                
+                // Prepare additional images array
+                List<String> additionalImages = [];
+                for (var controller in additionalImagesControllers) {
+                  String url = controller.text.trim();
+                  if (url.isNotEmpty) {
+                    additionalImages.add(url);
+                  }
+                }
+
+                // Prepare descriptions map
+                Map<String, String> descriptions = {};
+                descriptionControllers.forEach((lang, controller) {
+                  final text = controller.text.trim();
+                  if (text.isNotEmpty) {
+                    descriptions[lang] = text;
+                  }
+                });
+
+                // Prepare the product data object
+                final Map<String, dynamic> productData = {
+                  'name': name,
+                  'price': price,
+                  'category': selectedCategory,
+                  'stock': int.tryParse(stockText) ?? 0,
+                  'descriptions': descriptions,
+                  'imagePath': imagePath,
+                  'images': additionalImages,
+                  'updatedAt': FieldValue.serverTimestamp(),
+                };
+
+                try {
+                  if (isEditing) {
+                    await products.doc(doc!.id).update(productData);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Product updated successfully')),
+                      );
+                    }
+                  } else {
+                    productData['createdAt'] = FieldValue.serverTimestamp();
+                    await products.add(productData);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Product added successfully')),
+                      );
+                    }
+                  }
+                  if (mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: ${e.toString()}')),
+                    );
+                  }
+                }
+              },
+              child: Text(isEditing ? 'Update' : 'Add', style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -602,27 +863,32 @@ class _AdminProductsState extends State<AdminProducts> {
     final isDark =
         Theme.of(context).brightness == Brightness.dark && !isBlackMode;
 
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final themeColor = themeNotifier.isSpecialModeActive 
+        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+        : (isDark ? Colors.red.shade900 : Colors.red.shade700);
+
     return Scaffold(
       backgroundColor:
           isBlackMode
               ? Colors.black
               : Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor:
-            isBlackMode
-                ? Colors.black
-                : isDark
-                ? Colors.black
-                : Theme.of(context).primaryColor,
-        title: Text('Manage Products', style: TextStyle(color: Colors.white)),
-        iconTheme: IconThemeData(color: Colors.white),
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
+        title: const Text('Manage Products', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        foregroundColor: Colors.white,
         elevation: isDark ? 0 : 2,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showProductDialog(),
-        backgroundColor:
-            isBlackMode ? Colors.grey.shade500 : Theme.of(context).primaryColor,
-        child: Icon(Icons.add, color: Colors.white),
+        backgroundColor: themeColor,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
       body: Column(
         children: [
@@ -632,12 +898,9 @@ class _AdminProductsState extends State<AdminProducts> {
             margin: EdgeInsets.all(16.0),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors:
-                    isBlackMode
-                        ? [Colors.grey.shade500, Colors.black]
-                        : isDark
-                        ? [Colors.red.shade900, Colors.grey.shade900]
-                        : [Colors.red.shade300, Colors.white],
+                colors: isDark
+                    ? [themeColor, Colors.grey.shade900]
+                    : [themeColor.withOpacity(0.3), Colors.white],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -658,12 +921,7 @@ class _AdminProductsState extends State<AdminProducts> {
                 Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color:
-                        isBlackMode
-                            ? Colors.grey.shade500
-                            : isDark
-                            ? Colors.red.shade900
-                            : Colors.red.shade300,
+                    color: isDark ? themeColor : themeColor.withOpacity(0.3),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(Icons.inventory_2, size: 30, color: Colors.white),
@@ -776,10 +1034,7 @@ class _AdminProductsState extends State<AdminProducts> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color:
-                        isBlackMode
-                            ? Colors.grey.shade500
-                            : Theme.of(context).primaryColor,
+                    color: themeColor,
                     width: 2,
                   ),
                 ),
@@ -808,43 +1063,21 @@ class _AdminProductsState extends State<AdminProducts> {
                         selectedFilterCategory = selected ? category : "All";
                       });
                     },
-                    backgroundColor:
-                        isBlackMode
-                            ? Colors.grey.shade800
-                            : (isDark
-                                ? Colors.grey.shade800
-                                : Colors.grey.shade100),
-                    selectedColor:
-                        isBlackMode
-                            ? Colors.grey.shade500.withOpacity(0.2)
-                            : Theme.of(context).primaryColor.withOpacity(0.2),
-                    checkmarkColor:
-                        isBlackMode
-                            ? Colors.grey.shade500
-                            : Theme.of(context).primaryColor,
+                    backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                    selectedColor: themeColor.withOpacity(0.2),
+                    checkmarkColor: themeColor,
                     labelStyle: TextStyle(
-                      color:
-                          isSelected
-                              ? (isBlackMode
-                                  ? Colors.white
-                                  : Theme.of(context).primaryColor)
-                              : (isBlackMode
-                                  ? Colors.grey.shade400
-                                  : Theme.of(
-                                    context,
-                                  ).textTheme.bodyMedium?.color),
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected
+                          ? themeColor
+                          : Theme.of(context).textTheme.bodyMedium?.color,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
-                        color:
-                            isSelected
-                                ? (isBlackMode
-                                    ? Colors.grey.shade500
-                                    : Theme.of(context).primaryColor)
-                                : Colors.transparent,
+                        color: isSelected
+                            ? themeColor
+                            : Colors.transparent,
                       ),
                     ),
                   ),
@@ -1000,45 +1233,30 @@ class _AdminProductsState extends State<AdminProducts> {
                         vertical: 8,
                       ),
                       child: ExpansionTile(
-                        collapsedIconColor:
-                            isBlackMode
-                                ? Colors.grey.shade400
-                                : Theme.of(context).iconTheme.color,
-                        iconColor:
-                            isBlackMode
-                                ? Colors.grey.shade500
-                                : Theme.of(context).primaryColor,
-                        leading:
-                            imagePath.isNotEmpty
-                                ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    imagePath,
-                                    width: 60,
-                                    height: 60,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Icon(
-                                        Icons.image_not_supported,
-                                        color:
-                                            isBlackMode
-                                                ? Colors.grey.shade400
-                                                : (isDark
-                                                    ? Colors.red.shade400
-                                                    : Colors.red.shade300),
-                                        size: 50,
-                                      );
-                                    },
-                                  ),
-                                )
-                                : Icon(
-                                  Icons.inventory_2,
-                                  color:
-                                      isBlackMode
-                                          ? Colors.grey.shade500
-                                          : Theme.of(context).primaryColor,
-                                  size: 40,
+                        collapsedIconColor: Theme.of(context).iconTheme.color,
+                        iconColor: themeColor,
+                        leading: imagePath.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  imagePath,
+                                  width: 60,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.image_not_supported,
+                                      color: isDark ? Colors.red.shade400 : Colors.red.shade300,
+                                      size: 50,
+                                    );
+                                  },
                                 ),
+                              )
+                            : Icon(
+                                Icons.inventory_2,
+                                color: themeColor,
+                                size: 40,
+                              ),
                         title: Text(
                           name,
                           style: TextStyle(
@@ -1076,10 +1294,9 @@ class _AdminProductsState extends State<AdminProducts> {
                             IconButton(
                               icon: Icon(
                                 Icons.delete,
-                                color:
-                                    isBlackMode
-                                        ? Colors.grey.shade500
-                                        : Colors.red,
+                                color: themeNotifier.isSpecialModeActive
+                                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                    : Colors.red,
                               ),
                               onPressed: () => deleteProduct(doc.id),
                               tooltip: 'Delete',

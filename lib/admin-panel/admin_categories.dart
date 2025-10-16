@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:math';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:engineering_project/pages/theme_notifier.dart';
-import 'package:engineering_project/assets/components/theme_data.dart';
 
 class CategoryManagementPage extends StatefulWidget {
   @override
@@ -16,7 +16,10 @@ class CategoryManagementPage extends StatefulWidget {
 class _CategoryManagementPageState extends State<CategoryManagementPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _imageUrlController = TextEditingController();
+  bool _useImageUrl = false;
   File? _imageFile;
+  XFile? _webImageFile;
   bool _isLoading = false;
   List<Map<String, dynamic>> categories = [];
 
@@ -79,16 +82,33 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
-      setState(() {
-        _imageFile = File(image.path);
-      });
+      if (kIsWeb) {
+        // For web, store the XFile directly
+        setState(() {
+          _imageFile = null;
+          _webImageFile = image;
+        });
+      } else {
+        // For mobile platforms
+        setState(() {
+          _imageFile = File(image.path);
+          _webImageFile = null;
+        });
+      }
     }
   }
 
   Future<void> _addCategory() async {
-    if (!_formKey.currentState!.validate() || _imageFile == null) {
+    if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill all fields and select an icon')),
+        SnackBar(content: Text('Please fill all required fields')),
+      );
+      return;
+    }
+
+    if (!_useImageUrl && _imageFile == null && _webImageFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please select an image or provide an image URL')),
       );
       return;
     }
@@ -96,12 +116,26 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     setState(() => _isLoading = true);
 
     try {
-      final storageRef = FirebaseStorage.instance.ref().child(
-        'category_icons/${DateTime.now().millisecondsSinceEpoch}.png',
-      );
-
-      await storageRef.putFile(_imageFile!);
-      final iconUrl = await storageRef.getDownloadURL();
+      String iconUrl;
+      
+      if (_useImageUrl) {
+        // Use the provided URL directly
+        iconUrl = _imageUrlController.text;
+      } else {
+        // Handle file upload as before
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('category_icons/${DateTime.now().millisecondsSinceEpoch}.png');
+        
+        if (kIsWeb && _webImageFile != null) {
+          final bytes = await _webImageFile!.readAsBytes();
+          await storageRef.putData(bytes);
+        } else if (_imageFile != null) {
+          await storageRef.putFile(_imageFile!);
+        }
+        
+        iconUrl = await storageRef.getDownloadURL();
+      }
 
       final nextOrder =
           categories.isEmpty
@@ -116,8 +150,11 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       });
 
       _nameController.clear();
+      _imageUrlController.clear();
       setState(() {
         _imageFile = null;
+        _webImageFile = null;
+        _useImageUrl = false;
       });
 
       await _loadCategories();
@@ -127,33 +164,76 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
       ).showSnackBar(SnackBar(content: Text('Category added successfully')));
     } catch (e) {
       print('Error adding category: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error adding category: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding category: $e')),
+        );
+      }
     }
 
     setState(() => _isLoading = false);
   }
 
   Future<void> _deleteCategory(String categoryId) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('categories')
-          .doc(categoryId)
-          .delete();
+  try {
+    // Get the category name first
+    final categoryDoc = await FirebaseFirestore.instance
+        .collection('categories')
+        .doc(categoryId)
+        .get();
+    
+    final categoryName = categoryDoc.data()?['name'];
 
-      await _loadCategories();
+    // Start a batch write
+    final batch = FirebaseFirestore.instance.batch();
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Category deleted successfully')));
-    } catch (e) {
-      print('Error deleting category: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error deleting category')));
+    // First, find all products with this category
+    final productsSnapshot = await FirebaseFirestore.instance
+        .collection('products')
+        .where('category', isEqualTo: categoryName)
+        .get();
+
+    // Update each product's category to null
+    for (var doc in productsSnapshot.docs) {
+      batch.update(doc.reference, {
+        'category': null,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    // Delete the category
+    batch.delete(FirebaseFirestore.instance
+        .collection('categories')
+        .doc(categoryId));
+
+    // Commit all changes
+    await batch.commit();
+
+    // Reload categories
+    await _loadCategories();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Category deleted and ${productsSnapshot.docs.length} products updated'
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  } catch (e) {
+    print('Error deleting category: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting category: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
+}
 
   Future<void> _updateCategoryOrder() async {
     try {
@@ -183,22 +263,186 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
     }
   }
 
+  Future<void> _editCategory(Map<String, dynamic> category) async {
+  if (!mounted) return;
+
+  final TextEditingController nameController = TextEditingController(text: category['name']);
+  final TextEditingController iconUrlController = TextEditingController();
+  XFile? pickedFile;
+  bool useImageUrl = false;
+
+  await showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: Text('Edit Category'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(labelText: 'Category Name'),
+              ),
+              SizedBox(height: 16),
+              SwitchListTile(
+                title: Text('Use Image URL'),
+                value: useImageUrl,
+                onChanged: (value) {
+                  setState(() {
+                    useImageUrl = value;
+                    if (value) {
+                      pickedFile = null;
+                    } else {
+                      iconUrlController.clear();
+                    }
+                  });
+                },
+              ),
+              if (useImageUrl)
+                TextField(
+                  controller: iconUrlController,
+                  decoration: InputDecoration(
+                    labelText: 'Image URL',
+                    border: OutlineInputBorder(),
+                  ),
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          try {
+                            final ImagePicker picker = ImagePicker();
+                            final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+                            if (image != null) {
+                              setState(() {
+                                pickedFile = image;
+                              });
+                            }
+                          } catch (e) {
+                            print('Error picking image: $e');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error selecting image')),
+                            );
+                          }
+                        },
+                        icon: Icon(Icons.image),
+                        label: Text('Change Icon'),
+                      ),
+                    ),
+                  ],
+                ),
+              if (pickedFile != null)
+                Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text(
+                    'New icon selected',
+                    style: TextStyle(color: Colors.green),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _updateCategory(
+                category['id'],
+                nameController.text,
+                pickedFile,
+                useImageUrl ? iconUrlController.text : null,
+              );
+            },
+            child: Text('Save'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Future<void> _updateCategory(String categoryId, String newName, XFile? pickedFile, String? imageUrl) async {
+  if (!mounted) return;
+
+  try {
+    final updates = <String, dynamic>{
+      'name': newName,
+    };
+
+    if (imageUrl != null) {
+      // Use provided URL directly
+      updates['iconPath'] = imageUrl;
+    } else if (pickedFile != null) {
+      try {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('category_icons/${DateTime.now().millisecondsSinceEpoch}.png');
+        
+        // Upload bytes for both web and mobile
+        final bytes = await pickedFile.readAsBytes();
+        await storageRef.putData(bytes);
+        final iconUrl = await storageRef.getDownloadURL();
+        
+        updates['iconPath'] = iconUrl;
+      } catch (fileError) {
+        print('Error handling file: $fileError');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error uploading image')),
+          );
+        }
+        return;
+      }
+    }
+
+    await FirebaseFirestore.instance
+        .collection('categories')
+        .doc(categoryId)
+        .update(updates);
+
+    if (mounted) {
+      await _loadCategories();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Category updated successfully')),
+      );
+    }
+  } catch (e) {
+    print('Error updating category: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating category')),
+      );
+    }
+  }
+}
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final isBlackMode = themeNotifier.isBlackMode;
-    final isDark =
-        Theme.of(context).brightness == Brightness.dark && !isBlackMode;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Category Management'),
-        backgroundColor:
-            isBlackMode
-                ? Colors.black
-                : isDark
-                ? Colors.black
-                : Colors.red.shade700,
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
+        title: const Text(
+          'Category Management',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        foregroundColor: Colors.white,
+        elevation: isDark ? 0 : 2,
       ),
       body:
           _isLoading
@@ -228,42 +472,80 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                                   color: isBlackMode ? Colors.white : null,
                                 ),
                               ),
-                              SizedBox(height: 16),
-                              TextFormField(
-                                controller: _nameController,
-                                decoration: InputDecoration(
-                                  labelText: 'Category Name',
-                                  border: OutlineInputBorder(),
-                                  labelStyle: TextStyle(
-                                    color: isBlackMode ? Colors.white : null,
+                            ),
+                            SizedBox(height: 16),
+                            TextFormField(
+                              controller: _nameController,
+                              decoration: InputDecoration(
+                                labelText: 'Category Name',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter a category name';
+                                }
+                                return null;
+                              },
+                            ),
+                            SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: SwitchListTile(
+                                    title: Text('Use Image URL'),
+                                    value: _useImageUrl,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _useImageUrl = value;
+                                        if (value) {
+                                          _imageFile = null;
+                                          _webImageFile = null;
+                                        } else {
+                                          _imageUrlController.clear();
+                                        }
+                                      });
+                                    },
                                   ),
                                 ),
-                                style: TextStyle(
-                                  color: isBlackMode ? Colors.white : null,
+                              ],
+                            ),
+                            if (_useImageUrl)
+                              Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: TextFormField(
+                                  controller: _imageUrlController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Image URL',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  validator: (value) {
+                                    if (_useImageUrl) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter an image URL';
+                                      }
+                                      if (!Uri.tryParse(value)!.isAbsolute) {
+                                        return 'Please enter a valid URL';
+                                      }
+                                    }
+                                    return null;
+                                  },
                                 ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter a category name';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              SizedBox(height: 16),
+                              )
+                            else
                               Row(
                                 children: [
                                   ElevatedButton.icon(
                                     onPressed: _pickImage,
-                                    icon: Icon(Icons.image),
-                                    label: Text('Select Icon'),
+                                    icon: const Icon(Icons.image, color: Colors.white),
+                                    label: const Text('Select Icon', style: TextStyle(color: Colors.white)),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          isBlackMode
-                                              ? Colors.grey.shade500
-                                              : Colors.red.shade700,
+                                      backgroundColor: themeNotifier.isSpecialModeActive
+                                          ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                          : Colors.red.shade700,
                                     ),
                                   ),
                                   SizedBox(width: 16),
-                                  if (_imageFile != null)
+                                  if (_imageFile != null || _webImageFile != null)
                                     Expanded(
                                       child: Text(
                                         'Icon selected',
@@ -271,6 +553,16 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                                       ),
                                     ),
                                 ],
+                              ),
+                            SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _addCategory,
+                              child: const Text('Add Category', style: TextStyle(color: Colors.white)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: themeNotifier.isSpecialModeActive
+                                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                    : Colors.red.shade700,
+                                minimumSize: Size(double.infinity, 48),
                               ),
                               SizedBox(height: 16),
                               ElevatedButton(
@@ -372,45 +664,69 @@ class _CategoryManagementPageState extends State<CategoryManagementPage> {
                                       ),
                                   ],
                                 ),
-                                title: Text(
-                                  category['name'] ?? 'Unnamed Category',
-                                ),
-                                trailing: IconButton(
-                                  icon: Icon(Icons.delete, color: Colors.red),
-                                  onPressed:
-                                      () => showDialog(
-                                        context: context,
-                                        builder:
-                                            (context) => AlertDialog(
-                                              title: Text('Delete Category'),
-                                              content: Text(
-                                                'Are you sure you want to delete this category?',
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed:
-                                                      () => Navigator.pop(
-                                                        context,
-                                                      ),
-                                                  child: Text('Cancel'),
-                                                ),
-                                                TextButton(
-                                                  onPressed: () {
-                                                    Navigator.pop(context);
-                                                    _deleteCategory(
-                                                      category['id'],
-                                                    );
-                                                  },
-                                                  child: Text(
-                                                    'Delete',
-                                                    style: TextStyle(
-                                                      color: Colors.red,
+                                title: Text(category['name'] ?? 'Unnamed Category'),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(Icons.edit, color: Colors.blue),
+                                      onPressed: () => _editCategory(category),
+                                    ),
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.delete,
+                                        color: themeNotifier.isSpecialModeActive
+                                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                            : Colors.red,
+                                      ),
+                                      onPressed: () async {
+                                        // Check for affected products first
+                                        final productsSnapshot = await FirebaseFirestore.instance
+                                            .collection('products')
+                                            .where('category', isEqualTo: category['name'])
+                                            .get();
+
+                                        final productCount = productsSnapshot.docs.length;
+
+                                        if (!mounted) return;
+
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: Text('Delete Category'),
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text('Are you sure you want to delete this category?'),
+                                                if (productCount > 0)
+                                                  Padding(
+                                                    padding: EdgeInsets.only(top: 8),
+                                                    child: Text(
+                                                      'Warning: $productCount product(s) using this category will be affected.',
+                                                      style: TextStyle(color: Colors.orange),
                                                     ),
                                                   ),
-                                                ),
                                               ],
                                             ),
-                                      ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context),
+                                                child: Text('Cancel'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () {
+                                                  Navigator.pop(context);
+                                                  _deleteCategory(category['id']);
+                                                },
+                                                child: Text('Delete', style: TextStyle(color: Colors.red)),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ),
                             );

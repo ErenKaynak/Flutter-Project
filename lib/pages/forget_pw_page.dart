@@ -12,6 +12,7 @@ class ForgotPasswordPage extends StatefulWidget {
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _emailController = TextEditingController();
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -20,6 +21,19 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   }
 
   Future passwordReset() async {
+    // Clear previous error message
+    setState(() {
+      _errorMessage = null;
+    });
+
+    // Validate email field
+    if (_emailController.text.trim().isEmpty) {
+      setState(() {
+        _errorMessage = 'Please enter your email address';
+      });
+      return;
+    }
+
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(
         email: _emailController.text.trim(),
@@ -35,12 +49,27 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       );
     } on FirebaseAuthException catch (e) {
       print(e);
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(content: Text(e.message.toString()));
-        },
-      );
+      String errorMessage;
+      switch (e.code) {
+        case 'invalid-email':
+          errorMessage = 'Please enter a valid email address';
+          break;
+        case 'user-not-found':
+          errorMessage = 'No account found with this email address';
+          break;
+        case 'too-many-requests':
+          errorMessage = 'Too many attempts. Please try again later';
+          break;
+        default:
+          errorMessage = 'An error occurred. Please try again';
+      }
+      setState(() {
+        _errorMessage = errorMessage;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'An unexpected error occurred. Please try again';
+      });
     }
   }
 
@@ -48,20 +77,16 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   Widget build(BuildContext context) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isBlackMode = themeNotifier.isBlackMode;
-    final bgColor = Theme.of(context).scaffoldBackgroundColor;
-    final cardColor = Theme.of(context).cardColor;
-    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
-    final borderColor = isDark ? Colors.grey.shade700 : Colors.grey.shade200;
-    final accentColor =
-        isBlackMode
-            ? Theme.of(context).colorScheme.secondary
-            : Colors.red.shade700;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+            : (isDark
+                ? Colors.red.shade900
+                : Colors.red.shade700),
         elevation: isDark ? 0 : 2,
         title: Text(
           'Reset Password',
@@ -80,15 +105,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 gradient: LinearGradient(
                   colors:
                       isDark
-                          ? [
-                            isBlackMode
-                                ? Theme.of(context).colorScheme.secondary
-                                : Colors.red.shade900,
-                            Colors.grey.shade900,
-                          ]
+                          ? []
                           : [
-                            isBlackMode
-                                ? Colors.grey.shade50
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier
+                                    .getThemeColor(themeNotifier.specialTheme)
+                                    .shade300
                                 : Colors.red.shade300,
                             Colors.white,
                           ],
@@ -114,11 +136,15 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     decoration: BoxDecoration(
                       color:
                           isDark
-                              ? (isBlackMode
-                                  ? Theme.of(context).colorScheme.secondary
+                              ? (themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade900
                                   : Colors.red.shade900)
-                              : (isBlackMode
-                                  ? Theme.of(context).colorScheme.secondary
+                              : (themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade300
                                   : Colors.red.shade300),
                       shape: BoxShape.circle,
                     ),
@@ -189,18 +215,37 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         color: Theme.of(context).iconTheme.color,
                       ),
                       filled: true,
-                      fillColor: isDark ? Colors.grey.shade800 : cardColor,
+                      fillColor:
+                          isDark ? Colors.grey.shade800 : Colors.grey.shade50,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: borderColor),
+                        borderSide: BorderSide(
+                          color:
+                              isDark
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade300,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: accentColor, width: 2),
+                        borderSide: BorderSide(
+                          color:
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade700
+                                  : Colors.red.shade700,
+                          width: 2,
+                        ),
+                      ),
+                      errorText: _errorMessage,
+                      errorStyle: TextStyle(
+                        color: Colors.red,
+                        fontSize: 14,
                       ),
                     ),
                   ),
@@ -210,13 +255,18 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     height: 55,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors:
-                            isBlackMode
-                                ? [
-                                  Theme.of(context).colorScheme.secondary,
-                                  Theme.of(context).colorScheme.secondary,
-                                ]
-                                : [Colors.red.shade700, Colors.red.shade900],
+                        colors: [
+                          themeNotifier.isSpecialModeActive
+                              ? themeNotifier
+                                  .getThemeColor(themeNotifier.specialTheme)
+                                  .shade700
+                              : Colors.red.shade700,
+                          themeNotifier.isSpecialModeActive
+                              ? themeNotifier
+                                  .getThemeColor(themeNotifier.specialTheme)
+                                  .shade900
+                              : Colors.red.shade900,
+                        ],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
@@ -224,10 +274,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       boxShadow: [
                         BoxShadow(
                           color:
-                              isBlackMode
-                                  ? Theme.of(
-                                    context,
-                                  ).colorScheme.secondary.withOpacity(0.3)
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade200
+                                      .withOpacity(0.5)
                                   : Colors.red.shade200.withOpacity(0.5),
                           blurRadius: 8,
                           offset: Offset(0, 4),

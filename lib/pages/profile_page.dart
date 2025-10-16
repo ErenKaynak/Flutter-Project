@@ -1,18 +1,105 @@
 import 'dart:io';
+import 'package:engineering_project/assets/AI/ai_chat_screen.dart';
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/register_page.dart';
+import 'package:engineering_project/pages/wallet.dart';
+import 'package:engineering_project/pages/wheel_of_discount.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:engineering_project/providers/language_provider.dart';
+import 'package:confetti/confetti.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:math';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/cupertino.dart';
 
 import 'theme_notifier.dart';
 import 'address_screen.dart';
 import 'past_orders_page.dart';
 import 'welcome_screen.dart';
 import '../admin-panel/admin_main.dart';
+
+const String _kSpecialModeActiveKey = 'special_mode_active';
+const String _kSpecialThemeKey = 'special_theme';
+
+Color getToggleBorderColor(BuildContext context, ThemeNotifier themeNotifier) {
+  final isDark = Theme.of(context).brightness == Brightness.dark || themeNotifier.isBlackMode;
+  if (isDark) {
+    return Colors.white.withOpacity(0.2);
+  } else if (themeNotifier.isSpecialModeActive) {
+    return themeNotifier.getThemeColor(themeNotifier.specialTheme).withOpacity(0.3);
+  } else {
+    return Colors.red.withOpacity(0.3);
+  }
+}
+
+class LanguageSelector extends StatelessWidget {
+  const LanguageSelector({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final languageProvider = Provider.of<LanguageProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
+    return PopupMenuButton<String>(
+      icon: Icon(
+        Icons.language,
+        color: themeNotifier.isSpecialModeActive 
+            ? Colors.white 
+            : isDark ? Colors.white : Colors.black87,
+      ),
+      onSelected: (String languageCode) {
+        languageProvider.changeLanguage(languageCode);
+      },
+      itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(
+          value: 'en',
+          child: Row(
+            children: [
+              Text('🇬🇧 '),
+              Text(l10n.english),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'tr',
+          child: Row(
+            children: [
+              Text('🇹🇷 '),
+              Text(l10n.turkish),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'ar',
+          child: Row(
+            children: [
+              Text('🇸🇦 '),
+              Text(l10n.arabic),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'ur',
+          child: Row(
+            children: [
+              Text('🇵🇰 '),
+              Text(l10n.urdu),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -28,30 +115,91 @@ class _ProfilePageState extends State<ProfilePage> {
   String? role;
   bool isLoading = true;
   bool isUploading = false;
+  String? referralCode;
+  bool _showFloatingButton = true;
+  bool passwordlessEnabled = false;
+  bool isPasswordlessLoading = false;
 
   final ImagePicker _picker = ImagePicker();
 
+  // Special Mode toggle variables
   int _tapCount = 0;
-  bool _showBlackModeToggle = false;
+  bool _showSpecialModeToggle = false;
+  bool isColorPickerVisible = false;
+
+  late ConfettiController _confettiController;
 
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _checkAISettings();
     fetchProfileData();
+    _loadSpecialModePreferences();
+    _loadPasswordlessSetting();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    FirebaseFirestore.instance
+        .collection('settings')
+        .doc('ai_settings')
+        .snapshots()
+        .listen((doc) {
+          if (mounted) {
+            setState(() {
+              _showFloatingButton =
+                  doc.exists && (doc.data()?['showFloatingButton'] ?? true);
+            });
+          }
+        });
+  }
+
+  Future<void> _checkAISettings() async {
+    try {
+      final doc =
+          await FirebaseFirestore.instance.collection('settings').doc('ai_settings').get();
+
+      if (mounted) {
+        setState(() {
+          _showFloatingButton =
+              doc.exists && (doc.data()?['showFloatingButton'] ?? true);
+        });
+      }
+    } catch (e) {
+      print('Error checking AI settings: $e');
+    }
   }
 
   void _handleProfileTitleTap() {
+    if (!mounted) return;
+    
     setState(() {
       _tapCount++;
       if (_tapCount >= 3) {
-        _showBlackModeToggle = true;
-        _tapCount = 0; // Reset the counter
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Black Mode toggle enabled!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false); 
+        _showSpecialModeToggle = true;
+        
+        if (themeNotifier.isSpecialModeActive) {
+          isColorPickerVisible = true;
+          print("Profile title tapped 3 times. Special mode was already active. Showing color picker.");
+        } else {
+          print("Profile title tapped 3 times. Special mode not active. Toggle is now visible.");
+        }
+
+        _tapCount = 0;
+        print("Profile title tapped 3 times. Playing confetti.");
+        _confettiController.play();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.specialMode),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       }
     });
   }
@@ -61,26 +209,23 @@ class _ProfilePageState extends State<ProfilePage> {
     if (uid == null) return;
 
     try {
-      final userDoc = FirebaseFirestore.instance.collection('users').doc(uid);
-      final docSnapshot = await userDoc.get();
+      final userDoc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
-      if (!docSnapshot.exists) {
-        await userDoc.set({
-          'name': '',
-          'surname': '',
-          'profileImageUrl': '',
-          'role': 'user',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      }
+      final referralDoc =
+          await FirebaseFirestore.instance
+              .collection('referral_codes')
+              .where('userId', isEqualTo: uid)
+              .get();
 
-      final data = (await userDoc.get()).data();
-      if (data != null) {
+      if (userDoc.exists) {
+        final data = userDoc.data();
         setState(() {
-          name = data['name'] ?? '';
-          surname = data['surname'] ?? '';
-          imageUrl = data['profileImageUrl'] ?? '';
-          role = data['role'] ?? '';
+          name = data?['name'] ?? '';
+          surname = data?['surname'] ?? '';
+          imageUrl = data?['profileImageUrl'] ?? '';
+          role = data?['role'] ?? '';
+          referralCode = data?['referralCode'] ?? '';
           isLoading = false;
         });
       }
@@ -157,12 +302,10 @@ class _ProfilePageState extends State<ProfilePage> {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return;
 
-      // Update Firestore
       await FirebaseFirestore.instance.collection('users').doc(uid).update({
         'profileImageUrl': '',
       });
 
-      // Try to delete the image from Storage if it exists
       try {
         final ref = FirebaseStorage.instance.ref().child(
           'profile_images/$uid.jpg',
@@ -178,8 +321,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile picture removed'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.removePhoto),
             duration: Duration(seconds: 2),
           ),
         );
@@ -188,8 +331,8 @@ class _ProfilePageState extends State<ProfilePage> {
       print('Error removing profile picture: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to remove profile picture'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorAddingToCart),
             duration: Duration(seconds: 2),
           ),
         );
@@ -198,6 +341,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showEditProfileDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final TextEditingController nameController = TextEditingController(
       text: name,
     );
@@ -209,25 +353,25 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Edit Profile'),
+            title: Text(l10n.editProfile),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Name'),
+                  decoration: InputDecoration(labelText: l10n.name),
                 ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: surnameController,
-                  decoration: const InputDecoration(labelText: 'Surname'),
+                  decoration: InputDecoration(labelText: l10n.surname),
                 ),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               TextButton(
                 onPressed: () {
@@ -237,7 +381,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   );
                   Navigator.pop(context);
                 },
-                child: const Text('Save'),
+                child: Text(l10n.save),
               ),
             ],
           ),
@@ -245,6 +389,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _changeProfilePicture() {
+    final l10n = AppLocalizations.of(context)!;
     final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
     showModalBottomSheet(
       context: context,
@@ -258,7 +403,7 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.photo_camera),
-                  title: const Text('Take a photo'),
+                  title: Text(l10n.takePhoto),
                   onTap: () {
                     Navigator.pop(context);
                     _uploadImage(ImageSource.camera);
@@ -266,7 +411,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.photo_library),
-                  title: const Text('Choose from gallery'),
+                  title: Text(l10n.chooseFromGallery),
                   onTap: () {
                     Navigator.pop(context);
                     _uploadImage(ImageSource.gallery);
@@ -274,7 +419,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.link),
-                  title: const Text('Add from URL'),
+                  title: Text(l10n.addFromUrl),
                   onTap: () {
                     Navigator.pop(context);
                     _showUrlInputDialog();
@@ -285,16 +430,20 @@ class _ProfilePageState extends State<ProfilePage> {
                     leading: Icon(
                       Icons.delete_outline,
                       color:
-                          themeNotifier.isBlackMode
-                              ? Theme.of(context).colorScheme.secondary
+                          themeNotifier.isSpecialModeActive
+                              ? themeNotifier.getThemeColor(
+                                themeNotifier.specialTheme,
+                              )
                               : Colors.red,
                     ),
                     title: Text(
-                      'Remove Photo',
+                      l10n.removePhoto,
                       style: TextStyle(
                         color:
-                            themeNotifier.isBlackMode
-                                ? Theme.of(context).colorScheme.secondary
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier.getThemeColor(
+                                  themeNotifier.specialTheme,
+                                )
                                 : Colors.red,
                       ),
                     ),
@@ -310,24 +459,25 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showUrlInputDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final TextEditingController urlController = TextEditingController();
 
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Enter Image URL'),
+            title: Text(l10n.enterImageUrl),
             content: TextField(
               controller: urlController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'https://example.com/image.jpg',
-                labelText: 'Image URL',
+                labelText: l10n.imageUrl,
               ),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               TextButton(
                 onPressed: () {
@@ -336,7 +486,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   }
                   Navigator.pop(context);
                 },
-                child: const Text('Add'),
+                child: Text(l10n.add),
               ),
             ],
           ),
@@ -355,13 +505,17 @@ class _ProfilePageState extends State<ProfilePage> {
     final color = isBlack ? Colors.black : Theme.of(context).cardColor;
     final textColor = isBlack ? Colors.white : null;
     final iconColor =
-        isBlack ? Theme.of(context).colorScheme.secondary : Colors.red.shade700;
+        themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+            : Colors.red.shade700;
     final borderColor =
         isDark
             ? Colors.white.withOpacity(0.2)
-            : (isBlack
-                ? Theme.of(context).colorScheme.secondary
-                : Colors.red.withOpacity(0.3));
+            : themeNotifier.isSpecialModeActive
+            ? themeNotifier
+                .getThemeColor(themeNotifier.specialTheme)
+                .withOpacity(0.3)
+            : Colors.red.withOpacity(0.3);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -403,398 +557,672 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+    final l10n = AppLocalizations.of(context)!;
+    final isDarkMode = themeNotifier.isDarkMode;
     final isBlackMode = themeNotifier.isBlackMode;
     final isDark =
         Theme.of(context).brightness == Brightness.dark || isBlackMode;
-
-    // Colors for category outlines
     final outlineColor =
         isDark
             ? Colors.white.withOpacity(0.2)
-            : Colors.red.shade300.withOpacity(0.5);
+            : themeNotifier.isSpecialModeActive
+            ? themeNotifier
+                .getThemeColor(themeNotifier.specialTheme)
+                .withOpacity(0.3)
+            : Colors.red.withOpacity(0.3);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: bgColor,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(15)),
+    final backgroundColor =
+        themeNotifier.isSpecialModeActive
+            ? themeNotifier
+                .getThemeColor(themeNotifier.specialTheme)
+                .withOpacity(0.1)
+            : isDark
+            ? Colors.black
+            : Colors.grey[100];
+    final appBarColor =
+        themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+            : isDark
+            ? Colors.black
+            : Colors.white;
+
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: backgroundColor,
+        appBar: AppBar(
+          backgroundColor: appBarColor,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(15)),
+          ),
+          elevation: 10,
+          leading: const LanguageSelector(),
+          title: Text(
+            l10n.profile,
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          centerTitle: true,
         ),
-        elevation: 10,
-        title: GestureDetector(
-          onTap: _handleProfileTitleTap,
-          child: Text(
-            'Profile',
-            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                // ... existing code for non-logged-in user ...
+              ],
+            ),
           ),
         ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.edit, color: textColor),
-            onPressed: _showEditProfileDialog,
+      );
+    }
+
+    // For logged-in user
+    return Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            backgroundColor: appBarColor,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(15)),
+            ),
+            elevation: 10,
+            leading: const LanguageSelector(),
+            title: GestureDetector(
+              onTap: _handleProfileTitleTap,
+              child: Text(
+                l10n.profile,
+                style: TextStyle(
+                  color: themeNotifier.isSpecialModeActive 
+                      ? Colors.white 
+                      : isDark ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            centerTitle: true,
+            actions: [
+              IconButton(
+                icon: Icon(
+                  Icons.edit,
+                  color: themeNotifier.isSpecialModeActive 
+                      ? Colors.white 
+                      : isDark ? Colors.white : Colors.black87,
+                ),
+                onPressed: _showEditProfileDialog,
+              ),
+            ],
           ),
-        ],
-      ),
-      backgroundColor: bgColor,
-      body:
-          isLoading
-              ? Center(
-                child: CircularProgressIndicator(
-                  color:
-                      isBlackMode
-                          ? Theme.of(context).colorScheme.secondary
-                          : Colors.red.shade700,
-                ),
-              )
-              : isUploading
-              ? Center(
-                child: CircularProgressIndicator(
-                  color:
-                      isBlackMode
-                          ? Theme.of(context).colorScheme.secondary
-                          : Colors.red.shade700,
-                ),
-              )
-              : SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    // Profile Header Card - Centered avatar and text
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 24,
-                        horizontal: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors:
-                              isDark
-                                  ? [
-                                    isBlackMode
-                                        ? Theme.of(
-                                          context,
-                                        ).colorScheme.secondary
-                                        : Colors.red.shade900,
-                                    Colors.grey.shade900,
-                                  ]
-                                  : [
-                                    isBlackMode
-                                        ? Colors.grey.shade50
-                                        : Colors.red.shade500,
-                                    isBlackMode
-                                        ? Colors.grey.shade50
-                                        : Colors.red.shade100,
-                                  ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: outlineColor, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDark ? Colors.black26 : Colors.black12,
-                            blurRadius: 5,
-                            offset: const Offset(0, 2),
+          backgroundColor: backgroundColor,
+          body:
+              isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : isUploading
+                  ? const Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 24,
+                            horizontal: 16,
                           ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          GestureDetector(
-                            onTap: _changeProfilePicture,
-                            child: Stack(
-                              alignment: Alignment.bottomRight,
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 3,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.2),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                  child: CircleAvatar(
-                                    radius: 60,
-                                    backgroundImage:
-                                        imageUrl != null && imageUrl!.isNotEmpty
-                                            ? NetworkImage(imageUrl!)
-                                            : const AssetImage(
-                                                  'lib/assets/Images/default_avatar.png',
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors:
+                                  isDark
+                                      ? [
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
                                                 )
-                                                as ImageProvider,
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        isDark
-                                            ? Colors.white
-                                            : (isBlackMode
-                                                ? Theme.of(
-                                                  context,
-                                                ).colorScheme.secondary
-                                                : Colors.red.shade700),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color:
-                                          isDark ? Colors.black : Colors.white,
-                                      width: 2,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.3),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Icon(
-                                    Icons.camera_alt,
-                                    size: 20,
-                                    color: isDark ? Colors.black : Colors.white,
-                                  ),
-                                ),
-                              ],
+                                                .shade900
+                                            : Colors.red.shade900,
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade900
+                                            : Colors.grey.shade900,
+                                      ]
+                                      : [
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade500
+                                            : Colors.red.shade500,
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier
+                                                .getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                .shade100
+                                            : Colors.red.shade100,
+                                      ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            (name?.isNotEmpty == true ||
-                                    surname?.isNotEmpty == true)
-                                ? '$name $surname'.trim()
-                                : 'Add Your Name',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(0, 1),
-                                  blurRadius: 3,
-                                  color: Color.fromARGB(130, 0, 0, 0),
-                                ),
-                              ],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          if (role == 'admin') ...[
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.4),
-                                  width: 1,
-                                ),
-                              ),
-                              child: const Text(
-                                'ADMIN',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Profile Options Section
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: borderColor, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDark ? Colors.black26 : Colors.black12,
-                            blurRadius: 5,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.settings,
-                                color:
-                                    isBlackMode
-                                        ? Theme.of(
-                                          context,
-                                        ).colorScheme.secondary
-                                        : Colors.red.shade700,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Account Settings',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: textColor,
-                                ),
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: outlineColor, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isDark ? Colors.black26 : Colors.black12,
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                          Divider(color: borderColor, thickness: 1, height: 32),
-
-                          if (role == 'admin')
-                            buildButton(
-                              'Admin Panel',
-                              Icons.admin_panel_settings,
-                              () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => const AdminPage()),
-                                );
-                              }, themeNotifier),
-                            buildButton('My Addresses', Icons.location_on, () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => AddressScreen()),
-                              );
-                            }, themeNotifier),
-                            buildButton('My Orders', Icons.history, () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const OrderHistoryPage()),
-                              );
-                            }, themeNotifier),
-                            
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Theme Settings Section
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.grey.shade900 : Colors.white,
-                          borderRadius: BorderRadius.circular(15),
-                          border: Border.all(
-                            color: outlineColor,
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: isDark ? Colors.black26 : Colors.black12,
-                              blurRadius: 5,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.palette,
-                                  color: isDark ? Colors.white : Colors.red.shade700,
-                                  size: 22,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: _changeProfilePicture,
+                                child: Stack(
+                                  alignment: Alignment.bottomRight,
+                                  children: [
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 3,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.2),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 3),
+                                          ),
+                                        ],
+                                      ),
+                                      child: CircleAvatar(
+                                        radius: 60,
+                                        backgroundImage:
+                                            imageUrl != null && imageUrl!.isNotEmpty
+                                                ? NetworkImage(imageUrl!)
+                                                : const AssetImage(
+                                                      'lib/assets/Images/default_avatar.png',
+                                                    )
+                                                    as ImageProvider,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            isDark
+                                                ? Colors.white
+                                                : themeNotifier.isSpecialModeActive
+                                                ? themeNotifier.getThemeColor(
+                                                  themeNotifier.specialTheme,
+                                                )
+                                                : Colors.red.shade700,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color:
+                                              isDark ? Colors.black : Colors.white,
+                                          width: 2,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.3),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Icon(
+                                        Icons.camera_alt,
+                                        size: 20,
+                                        color: isDark ? Colors.black : Colors.white,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Appearance',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark ? Colors.white : Colors.black87,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                (name?.isNotEmpty == true ||
+                                        surname?.isNotEmpty == true)
+                                    ? '$name $surname'.trim()
+                                    : l10n.addYourName,
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  shadows: [
+                                    Shadow(
+                                      offset: Offset(0, 1),
+                                      blurRadius: 3,
+                                      color: Color.fromARGB(130, 0, 0, 0),
+                                    ),
+                                  ],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              if (role == 'admin') ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.4),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    l10n.admin,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ],
-                            ),
-                            Divider(
-                              color: outlineColor,
-                              thickness: 1,
-                              height: 32,
-                            ),
-                            _buildThemeToggle(
-                              'Dark Mode',
-                              Icons.brightness_6,
-                              isDarkMode,
-                              (_) => themeNotifier.toggleTheme(),
-                              isDark,
-                            ),
-                            if (_showBlackModeToggle)
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey.shade900 : Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: outlineColor, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isDark ? Colors.black26 : Colors.black12,
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.settings,
+                                    color:
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier.getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            : Colors.red.shade700,
+                                    size: 22,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    l10n.accountSettings,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Divider(
+                                color: outlineColor,
+                                thickness: 1,
+                                height: 32,
+                              ),
+                              if (role == 'admin')
+                                buildButton(
+                                  l10n.adminPanel,
+                                  Icons.admin_panel_settings,
+                                  () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const AdminPage(),
+                                      ),
+                                    );
+                                  },
+                                  themeNotifier,
+                                ),
+                              buildButton(l10n.myAddresses, Icons.location_on, () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => AddressScreen(),
+                                  ),
+                                );
+                              }, themeNotifier),
+                              buildButton(l10n.myOrders, Icons.history, () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const OrderHistoryPage(),
+                                  ),
+                                );
+                              }, themeNotifier),
+                              buildButton(
+                                l10n.myWallet,
+                                Icons.account_balance_wallet,
+                                () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const WalletPage(),
+                                  ),
+                                ),
+                                themeNotifier,
+                              ),
+                              buildButton(
+                                l10n.wheelOfDiscount,
+                                Icons.casino,
+                                () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const WheelOfDiscount(),
+                                    ),
+                                  );
+                                },
+                                themeNotifier,
+                              ),
+                              buildButton(
+                                l10n.reportBug,
+                                Icons.bug_report,
+                                () => _showBugReportDialog(),
+                                themeNotifier,
+                              ),
+                              buildButton(
+                                l10n.passwordlessSignIn,
+                                passwordlessEnabled ? Icons.fingerprint : Icons.lock_outline,
+                                () {
+                                  if (!isPasswordlessLoading) _togglePasswordless(!passwordlessEnabled);
+                                },
+                                themeNotifier,
+                              ),
+                              if (isPasswordlessLoading)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: SizedBox(width: 32, height: 32, child: CircularProgressIndicator(strokeWidth: 2)),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey.shade900 : Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: outlineColor, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isDark ? Colors.black26 : Colors.black12,
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.palette,
+                                    color:
+                                        themeNotifier.isSpecialModeActive
+                                            ? themeNotifier.getThemeColor(
+                                              themeNotifier.specialTheme,
+                                            )
+                                            : Colors.red.shade700,
+                                    size: 22,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    l10n.appearance,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Divider(
+                                color: outlineColor,
+                                thickness: 1,
+                                height: 32,
+                              ),
                               _buildThemeToggle(
-                                'Black Mode',
-                                Icons.dark_mode,
-                                isBlackMode,
-                                (val) => themeNotifier.toggleBlackMode(val),
+                                l10n.darkMode,
+                                Icons.brightness_6,
+                                isDarkMode,
+                                (_) => themeNotifier.toggleTheme(),
                                 isDark,
                               ),
-                          ],
+                              const SizedBox(height: 16),
+                              if (_showSpecialModeToggle)
+                                _buildThemeToggle(
+                                  l10n.specialMode,
+                                  Icons.color_lens,
+                                  themeNotifier.isSpecialModeActive,
+                                  (val) {
+                                    setState(() {
+                                      isColorPickerVisible = val;
+                                      final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+                                      if (!val) {
+                                        themeNotifier.setSpecialTheme(SpecialTheme.none);
+                                        _saveSpecialTheme(SpecialTheme.none);
+                                        _saveSpecialModeActiveState(false);
+                                        print("Special Mode Toggled OFF. Saved state: active=false, theme=none.");
+                                        _showSpecialModeToggle = false;
+                                        isColorPickerVisible = false;
+                                      } else {
+                                        _saveSpecialModeActiveState(true);
+                                        print("Special Mode Toggled ON. Saved state: active=true. Waiting for theme selection.");
+                                        _showSpecialModeToggle = true;
+                                        isColorPickerVisible = true;
+                                      }
+                                    });
+                                  },
+                                  isDark,
+                                ),
+                              if (_showSpecialModeToggle) const SizedBox(height: 16),
+                              if (isColorPickerVisible)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 16.0),
+                                  child: Wrap(
+                                    spacing: 16,
+                                    children:
+                                        SpecialTheme.values
+                                            .where(
+                                              (theme) => theme != SpecialTheme.none,
+                                            )
+                                            .map((theme) {
+                                              final color = themeNotifier
+                                                  .getThemeColor(theme);
+                                              return GestureDetector(
+                                                onTap: () {
+                                                  print("Color circle tapped. Theme: $theme");
+                                                  final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+                                                  themeNotifier.setSpecialTheme(theme);
+                                                  _saveSpecialTheme(theme);
+                                                  _saveSpecialModeActiveState(true);
+                                                  print("Color selected: $theme. Saved state: active=true, theme=$theme.");
+
+                                                  setState(() {});
+                                                },
+                                                child: CircleAvatar(
+                                                  backgroundColor: color,
+                                                  radius: 24,
+                                                  child:
+                                                      themeNotifier.specialTheme ==
+                                                              theme
+                                                          ? const Icon(
+                                                            Icons.check,
+                                                            color: Colors.white,
+                                                          )
+                                                          : null,
+                                                ),
+                                              );
+                                            })
+                                            .toList(),
+                                  ),
+                                ),
+                              if (isColorPickerVisible) const SizedBox(height: 16),
+                            ],
+                          ),
                         ),
+                        const SizedBox(height: 24),
+                        _buildReferralCode(),
+                        const SizedBox(height: 24),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              await FirebaseAuth.instance.signOut();
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (_) => WelcomeScreen()),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  isDark
+                                      ? (themeNotifier.isSpecialModeActive
+                                          ? themeNotifier
+                                              .getThemeColor(
+                                                themeNotifier.specialTheme,
+                                              )
+                                              .shade900
+                                          : Colors.red.shade900)
+                                      : (themeNotifier.isSpecialModeActive
+                                          ? themeNotifier
+                                              .getThemeColor(
+                                                themeNotifier.specialTheme,
+                                              )
+                                              .shade700
+                                          : Colors.red.shade700),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.all(16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              elevation: 4,
+                            ),
+                            child: Text(
+                              l10n.signOut,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          floatingActionButton:
+              _showFloatingButton
+                  ? Container(
+                    height: 70,
+                    width: 70,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors:
+                            isDark
+                                ? [
+                                  themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(themeNotifier.specialTheme)
+                                          .shade900
+                                      : Colors.red.shade900,
+                                  themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(themeNotifier.specialTheme)
+                                          .shade800
+                                      : Colors.red.shade800,
+                                ]
+                                : [
+                                  themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(themeNotifier.specialTheme)
+                                          .shade500
+                                      : Colors.red.shade500,
+                                  themeNotifier.isSpecialModeActive
+                                      ? themeNotifier
+                                          .getThemeColor(themeNotifier.specialTheme)
+                                          .shade400
+                                      : Colors.red.shade400,
+                                ],
                       ),
-
-                    const SizedBox(height: 24),
-
-                    // Logout Button
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          await FirebaseAuth.instance.signOut();
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (_) => WelcomeScreen()),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              isBlackMode
-                                  ? Theme.of(context).colorScheme.secondary
-                                  : (isDark
-                                      ? Colors.red.shade900
-                                      : Colors.red.shade700),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.all(16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          elevation: 4,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
                         ),
-                        child: const Text(
-                          'Log Out',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                      ],
+                    ),
+                    child: FloatingActionButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AIChatScreen(),
                           ),
+                        );
+                      },
+                      elevation: 0,
+                      backgroundColor: Colors.transparent,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Image.asset(
+                          'lib/assets/Images/Mascot/mascot-head.png',
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
+                  )
+                  : null,
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        ),
+        Align(
+          alignment: Alignment.topCenter,
+          child: ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirection: pi / 2,
+            emissionFrequency: 0.05,
+            numberOfParticles: 50,
+            gravity: 0.15,
+            shouldLoop: false,
+            colors: const [
+              Colors.green, Colors.blue, Colors.pink, Colors.orange, Colors.purple, Colors.yellow
+            ],
+            particleDrag: 0.05,
+            maxBlastForce: 30,
+            minBlastForce: 10,
+          ),
+        ),
+      ],
     );
   }
 
@@ -807,17 +1235,12 @@ class _ProfilePageState extends State<ProfilePage> {
   ) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color:
-              isDark
-                  ? Colors.white.withOpacity(0.1)
-                  : (themeNotifier.isBlackMode
-                      ? Theme.of(context).colorScheme.secondary.withOpacity(0.1)
-                      : Colors.red.withOpacity(0.1)),
-          width: 1,
+          color: getToggleBorderColor(context, themeNotifier),
+          width: 1.5,
         ),
       ),
       margin: const EdgeInsets.only(bottom: 8),
@@ -826,12 +1249,13 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           Row(
             children: [
-              const SizedBox(width: 12),
               Icon(
                 icon,
                 color:
-                    themeNotifier.isBlackMode
-                        ? Theme.of(context).colorScheme.secondary
+                    themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(
+                          themeNotifier.specialTheme,
+                        )
                         : Colors.red.shade700,
               ),
               const SizedBox(width: 12),
@@ -844,16 +1268,265 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ],
           ),
-          Switch(
+          _adaptiveSwitch(
             value: value,
             onChanged: onChanged,
-            activeColor:
-                themeNotifier.isBlackMode
-                    ? Theme.of(context).colorScheme.secondary
-                    : Colors.red.shade700,
+            activeColor: themeNotifier.isSpecialModeActive
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700
+                : Colors.red.shade700,
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildReferralCode() {
+    final l10n = AppLocalizations.of(context)!;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color:
+              Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withOpacity(0.2)
+                  : (themeNotifier.isSpecialModeActive
+                      ? themeNotifier
+                          .getThemeColor(themeNotifier.specialTheme)
+                          .withOpacity(0.3)
+                      : Colors.red.withOpacity(0.3)),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.referralCode,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                referralCode ?? l10n.loading,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.copy),
+                onPressed: () {
+                  if (referralCode != null) {
+                    Clipboard.setData(ClipboardData(text: referralCode!));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l10n.copiedToClipboard),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBugReportDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    final TextEditingController titleController = TextEditingController();
+    final TextEditingController descriptionController = TextEditingController();
+    final user = FirebaseAuth.instance.currentUser;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.reportBug),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(
+                  labelText: l10n.bugTitle,
+                  hintText: l10n.enterBugTitle,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  labelText: l10n.bugDescription,
+                  hintText: l10n.describeBugInDetail,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (titleController.text.trim().isEmpty || 
+                  descriptionController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.pleaseEnterBugDetails)),
+                );
+                return;
+              }
+
+              try {
+                await FirebaseFirestore.instance.collection('bug_reports').add({
+                  'userId': user?.uid,
+                  'userEmail': user?.email,
+                  'title': titleController.text.trim(),
+                  'description': descriptionController.text.trim(),
+                  'status': 'pending',
+                  'createdAt': FieldValue.serverTimestamp(),
+                  'updatedAt': FieldValue.serverTimestamp(),
+                });
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.bugReportSubmitted)),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.errorSubmittingBugReport)),
+                );
+              }
+            },
+            child: Text(l10n.save)),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _loadSpecialModePreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+
+    // Load special mode active state
+    bool isSpecialModeActive = prefs.getBool(_kSpecialModeActiveKey) ?? false;
+    if (isSpecialModeActive) {
+      // Load the actual theme if mode was active
+      String? themeName = prefs.getString(_kSpecialThemeKey);
+      SpecialTheme loadedTheme = SpecialTheme.none;
+      if (themeName != null) {
+        try {
+          loadedTheme = SpecialTheme.values.firstWhere((e) => e.toString() == themeName);
+        } catch (e) {
+          print("Error parsing saved theme: $e");
+          loadedTheme = SpecialTheme.none; // Default to none on error
+        }
+      }
+      if (mounted) {
+        themeNotifier.setSpecialTheme(loadedTheme); // This also updates isSpecialModeActive in notifier
+        if (loadedTheme != SpecialTheme.none) {
+          setState(() {
+            _showSpecialModeToggle = true; // Show the toggle if a theme was active
+            isColorPickerVisible = true; // Show colors if a theme was active
+          });
+        }
+      }
+    } else {
+      // Ensure special mode is off in notifier if not persisted as active
+      if (mounted) {
+        themeNotifier.setSpecialTheme(SpecialTheme.none);
+      }
+    }
+  }
+
+  Future<void> _saveSpecialModeActiveState(bool isActive) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kSpecialModeActiveKey, isActive);
+  }
+
+  Future<void> _saveSpecialTheme(SpecialTheme theme) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kSpecialThemeKey, theme.toString());
+  }
+
+  Future<void> _loadPasswordlessSetting() async {
+    if (!mounted) return;
+    
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+      
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (mounted && doc.exists && doc.data()!.containsKey('passwordless_enabled')) {
+        setState(() {
+          passwordlessEnabled = doc['passwordless_enabled'] == true;
+        });
+      }
+    } catch (e) {
+      print('Error loading passwordless setting: $e');
+    }
+  }
+
+  Future<void> _togglePasswordless(bool value) async {
+    if (!mounted) return;
+    setState(() { isPasswordlessLoading = true; });
+    
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+      
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'passwordless_enabled': value,
+      }, SetOptions(merge: true));
+      
+      if (mounted) {
+        setState(() {
+          passwordlessEnabled = value;
+          isPasswordlessLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isPasswordlessLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
+
+  Widget _adaptiveSwitch({required bool value, required ValueChanged<bool> onChanged, Color? activeColor}) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      return CupertinoSwitch(
+        value: value,
+        onChanged: onChanged,
+        activeColor: activeColor,
+      );
+    } else {
+      return Switch(
+        value: value,
+        onChanged: onChanged,
+        activeColor: activeColor,
+      );
+    }
   }
 }

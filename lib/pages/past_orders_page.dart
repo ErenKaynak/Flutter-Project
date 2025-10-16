@@ -6,8 +6,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:engineering_project/assets/components/cart_manager.dart'
     hide CartItem;
+import 'package:engineering_project/pages/product-detail-page.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 
 class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({Key? key}) : super(key: key);
@@ -22,15 +27,50 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   String _filterStatus = "All";
   String? _errorMessage;
 
+  // Status constants
+  static const String STATUS_ALL = 'All';
+  static const String STATUS_PENDING = 'Pending';
+  static const String STATUS_PREPARING = 'Preparing';
+  static const String STATUS_ON_DELIVERY = 'On Delivery';
+  static const String STATUS_DELIVERED = 'Delivered';
+  static const String STATUS_CANCELLED = 'Cancelled';
+  static const String STATUS_REFUND_REQUESTED = 'Refund Requested';
+  static const String STATUS_REFUNDED = 'Refunded';
+
   // Define standard status values to match admin page
-  final List<String> _standardStatuses = [
-    "All",
-    "Pending",
-    "Preparing",
-    "On Delivery",
-    "Delivered",
-    "Cancelled",
+  List<String> _standardStatuses(AppLocalizations l10n) => [
+    STATUS_ALL,
+    STATUS_PENDING,
+    STATUS_PREPARING,
+    STATUS_ON_DELIVERY,
+    STATUS_DELIVERED,
+    STATUS_REFUND_REQUESTED,
+    STATUS_REFUNDED,
+    STATUS_CANCELLED,
   ];
+
+  String _getLocalizedStatus(String status, AppLocalizations l10n) {
+    switch (status) {
+      case STATUS_ALL:
+        return l10n.allOrders;
+      case STATUS_PENDING:
+        return l10n.pending;
+      case STATUS_PREPARING:
+        return l10n.preparing;
+      case STATUS_ON_DELIVERY:
+        return l10n.onDelivery;
+      case STATUS_DELIVERED:
+        return l10n.delivered;
+      case STATUS_REFUND_REQUESTED:
+        return l10n.refundRequested;
+      case STATUS_REFUNDED:
+        return l10n.refunded;
+      case STATUS_CANCELLED:
+        return l10n.cancelled;
+      default:
+        return status;
+    }
+  }
 
   @override
   void initState() {
@@ -48,7 +88,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         setState(() {
-          _errorMessage = "Please login to view your orders";
+          _errorMessage = AppLocalizations.of(context)!.pleaseSignIn;
           _isLoading = false;
         });
         return;
@@ -63,7 +103,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 .collection('orders')
                 .doc(user.uid)
                 .collection('userOrders')
-                .orderBy('orderDate', descending: true)
+                .orderBy('timestamp', descending: true)
                 .get();
 
         print(
@@ -83,7 +123,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           loadedOrders.add({
             'id': doc.id,
             'orderNumber': doc.id.substring(0, 8),
-            'timestamp': data['orderDate'] ?? Timestamp.now(),
+            'timestamp': data['timestamp'] ?? Timestamp.now(),
             'total': data['totalAmount'] ?? 0,
             'status': standardizedStatus,
             'items': itemsData,
@@ -129,19 +169,17 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                       .collection('items')
                       .get();
 
-              items =
-                  itemsSnapshot.docs.map((itemDoc) {
-                    final itemData = itemDoc.data();
-                    return {
-                      'id': itemDoc.id,
-                      'name': itemData['name'] ?? 'Unknown Product',
-                      'price': itemData['price']?.toString() ?? '0',
-                      'imagePath':
-                          itemData['imagePath'] ??
-                          'lib/assets/Images/placeholder.png',
-                      'quantity': itemData['quantity'] ?? 1,
-                    };
-                  }).toList();
+              items = itemsSnapshot.docs.map((itemDoc) {
+                final itemData = itemDoc.data();
+                final l10n = AppLocalizations.of(context)!;
+                return {
+                  'id': itemDoc.id,
+                  'name': itemData['name'] ?? l10n.productNotFound,
+                  'price': itemData['price']?.toString() ?? '0',
+                  'imagePath': itemData['imagePath'] ?? 'lib/assets/Images/placeholder.png',
+                  'quantity': itemData['quantity'] ?? 1,
+                };
+              }).toList();
             } catch (e) {
               print('Error fetching items subcollection: $e');
             }
@@ -167,11 +205,18 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         print('Error fetching from orders collection: $e');
       }
 
+      // Sort all orders by timestamp in descending order
+      loadedOrders.sort((a, b) {
+        final Timestamp aTime = a['timestamp'] as Timestamp;
+        final Timestamp bTime = b['timestamp'] as Timestamp;
+        return bTime.compareTo(aTime);
+      });
+
       setState(() {
         _orders = loadedOrders;
         _isLoading = false;
         if (loadedOrders.isEmpty) {
-          _errorMessage = "No orders found";
+          _errorMessage = AppLocalizations.of(context)!.noOrdersYet;
         }
       });
 
@@ -179,7 +224,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     } catch (error) {
       print('Error fetching orders: $error');
       setState(() {
-        _errorMessage = "Error loading orders: $error";
+        _errorMessage = "${AppLocalizations.of(context)!.somethingWentWrong}: $error";
         _isLoading = false;
       });
     }
@@ -226,69 +271,301 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     });
   }
 
+  Future<bool> _hasUserReviewedProduct(String productId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+
+    final comments =
+        await FirebaseFirestore.instance
+            .collection('comments')
+            .doc(productId)
+            .collection('userComments')
+            .where('userId', isEqualTo: user.uid)
+            .get();
+
+    return comments.docs.isNotEmpty;
+  }
+
+  Future<void> _showRatingDialog(String productId, String productName) async {
+    final l10n = AppLocalizations.of(context)!;
+    
+    // Check if user has already reviewed
+    final hasReviewed = await _hasUserReviewedProduct(productId);
+    if (hasReviewed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.alreadyReviewed),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    int selectedRating = 0;
+    String comment = '';
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+          title: Text(l10n.rateProduct),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  return IconButton(
+                    icon: Icon(
+                      index < selectedRating ? Icons.star : Icons.star_border,
+                      color: themeNotifier.isSpecialModeActive
+                          ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                          : Colors.amber,
+                      size: 32,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        selectedRating = index + 1;
+                      });
+                    },
+                    splashRadius: 24,
+                    tooltip: '${index + 1} stars',
+                  );
+                }),
+              ),
+              Text(
+                _getRatingText(selectedRating),
+                style: TextStyle(
+                  color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                  fontSize: 14,
+                ),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: l10n.writeReview,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  filled: true,
+                  fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                ),
+                onChanged: (value) => comment = value,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: selectedRating == 0
+                  ? null
+                  : () async {
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user != null) {
+                        try {
+                          await FirebaseFirestore.instance
+                              .collection('comments')
+                              .doc(productId)
+                              .collection('userComments')
+                              .add({
+                                'userId': user.uid,
+                                'userName': user.displayName ?? 'User',
+                                'rating': selectedRating,
+                                'comment': comment,
+                                'timestamp': FieldValue.serverTimestamp(),
+                              });
+
+                          final commentsRef = FirebaseFirestore.instance
+                              .collection('comments')
+                              .doc(productId)
+                              .collection('userComments');
+
+                          final commentsSnapshot = await commentsRef.get();
+                          final ratings = commentsSnapshot.docs
+                              .map((doc) => doc.data()['rating'] as int)
+                              .where((r) => r > 0)
+                              .toList();
+
+                          if (ratings.isNotEmpty) {
+                            final avgRating = ratings.reduce((a, b) => a + b) / ratings.length;
+                            await FirebaseFirestore.instance
+                                .collection('products')
+                                .doc(productId)
+                                .update({
+                                  'averageRating': double.parse(avgRating.toStringAsFixed(1)),
+                                  'ratingCount': ratings.length,
+                                });
+                          }
+
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.thankYouForReview),
+                            ),
+                          );
+                        } catch (e) {
+                          print('Error submitting review: $e');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.failedToSubmitReview),
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: themeNotifier.isSpecialModeActive
+                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                    : Colors.amber,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.grey,
+              ),
+              child: Text(l10n.submitReview),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getRatingText(int rating) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (rating) {
+      case 0:
+        return l10n.selectRating;
+      case 1:
+        return l10n.poor;
+      case 2:
+        return l10n.fair;
+      case 3:
+        return l10n.good;
+      case 4:
+        return l10n.veryGood;
+      case 5:
+        return l10n.excellent;
+      default:
+        return '';
+    }
+  }
+
+  String formatPrice(String price) {
+    try {
+      final double numericPrice = double.parse(price);
+      return '₺${numericPrice.toStringAsFixed(2).replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]},',
+      )}';
+    } catch (e) {
+      return '₺0.00';
+    }
+  }
+
+  String formatDoublePrice(dynamic price) {
+    final double numericPrice = price is int ? price.toDouble() : (price is double ? price : 0.0);
+    return '₺${numericPrice.toStringAsFixed(2).replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    )}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final bgColor = Theme.of(context).scaffoldBackgroundColor;
-    final cardColor = Theme.of(context).cardColor;
-    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
-    final borderColor = isDark ? Colors.grey.shade700 : Colors.grey.shade200;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: bgColor,
+        backgroundColor: isDark 
+            ? (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900 
+                : Colors.red.shade900)
+            : (themeNotifier.isSpecialModeActive 
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade700 
+                : Colors.red.shade700),
         title: Text(
-          'Order History',
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+          l10n.orderHistory,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         elevation: isDark ? 0 : 2,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh, color: textColor),
+            icon: Icon(Icons.refresh, color: Colors.white),
             onPressed: _fetchOrders,
           ),
         ],
       ),
-      body:
-          _isLoading
-              ? Center(
-                child: CircularProgressIndicator(
-                  color:
-                      themeNotifier.isBlackMode
-                          ? Theme.of(context).colorScheme.secondary
-                          : Colors.red.shade400,
-                ),
-              )
-              : _errorMessage != null && _orders.isEmpty
+      body: _isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                color: themeNotifier.isSpecialModeActive
+                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                    : Theme.of(context).primaryColor,
+              ),
+            )
+          : _errorMessage != null && _orders.isEmpty
               ? _buildErrorView()
               : _orders.isEmpty
-              ? _buildEmptyOrdersView()
-              : CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Column(
-                      children: [
-                        // Header Section matching HomePage style
-                        Container(
-                          padding: EdgeInsets.all(16.0),
-                          margin: EdgeInsets.all(10.0),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors:
-                                  isDark
-                                      ? [
-                                        themeNotifier.isBlackMode
-                                            ? Theme.of(
-                                              context,
-                                            ).colorScheme.secondary
-                                            : Colors.red.shade900,
-                                        Colors.grey.shade900,
-                                      ]
+                  ? _buildEmptyOrdersView()
+                  : CustomScrollView(
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(16.0),
+                                margin: EdgeInsets.all(10.0),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: isDark
+                                        ? [
+                                            themeNotifier.isSpecialModeActive
+                                                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade900
+                                                : Colors.red.shade900,
+                                            Colors.grey.shade900,
+                                          ]
+                                        : [
+                                            themeNotifier.isSpecialModeActive
+                                                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade300
+                                                : Colors.red.shade300,
+                                            Colors.white,
+                                          ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: isDark
+                                      ? []
                                       : [
-                                        themeNotifier.isBlackMode
-                                            ? Colors.grey.shade50
+                                          BoxShadow(
+                                            color: themeNotifier.isSpecialModeActive
+                                                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade200.withOpacity(0.5)
+                                                : Colors.black12,
+                                            blurRadius: 5,
+                                            offset: Offset(0, 2),
+                                          ),
+                                        ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: themeNotifier.isSpecialModeActive
+                                            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade300
                                             : Colors.red.shade300,
                                         Colors.white,
                                       ],
@@ -305,55 +582,51 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                                         blurRadius: 5,
                                         offset: Offset(0, 2),
                                       ),
-                                    ],
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color:
-                                      isDark
-                                          ? (themeNotifier.isBlackMode
-                                              ? Theme.of(
-                                                context,
-                                              ).colorScheme.secondary
-                                              : Colors.red.shade900)
-                                          : (themeNotifier.isBlackMode
-                                              ? Colors.grey.shade50
-                                              : Colors.red.shade300),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.shopping_bag_outlined,
-                                  size: 30,
-                                  color: Colors.white,
+                                      child: Icon(
+                                        Icons.shopping_bag_outlined,
+                                        size: 30,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            l10n.yourOrders,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: isDark ? Colors.grey[400] : Colors.black54,
+                                            ),
+                                          ),
+                                          Text(
+                                            l10n.ordersCount(
+                                              _orders.length,
+                                            ),
+                                            style: TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold,
+                                              color: isDark ? Colors.white : Colors.black87,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              SizedBox(width: 16),
-                              Expanded(
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 10),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      "Your Orders",
+                                      l10n.filterByStatus,
                                       style: TextStyle(
-                                        fontSize: 16,
-                                        color:
-                                            isDark
-                                                ? Colors.grey[400]
-                                                : Colors.black54,
-                                      ),
-                                    ),
-                                    Text(
-                                      "${_orders.length} orders",
-                                      style: TextStyle(
-                                        fontSize: 24,
+                                        fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        color:
-                                            isDark
-                                                ? Colors.white
-                                                : Colors.black87,
+                                        color: Theme.of(context).textTheme.titleLarge?.color,
                                       ),
                                     ),
                                   ],
@@ -362,24 +635,9 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                             ],
                           ),
                         ),
-                        // Filter Section
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 10),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Filter by Status",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: textColor,
-                                ),
-                              ),
-                              SizedBox(height: 10),
-                              _buildFilterButtons(),
-                            ],
-                          ),
+                        SliverPadding(
+                          padding: EdgeInsets.all(10),
+                          sliver: _buildOrdersList(),
                         ),
                       ],
                     ),
@@ -397,6 +655,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   Widget _buildErrorView() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Center(
       child: Column(
@@ -405,33 +664,33 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           Icon(
             Icons.error_outline,
             size: 80,
-            color:
-                themeNotifier.isBlackMode
-                    ? Theme.of(context).colorScheme.secondary
-                    : (isDark ? Colors.red.shade400 : Colors.red),
+            color: themeNotifier.isSpecialModeActive
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                : (isDark ? Colors.red.shade900 : Colors.red),
           ),
           const SizedBox(height: 16),
           Text(
-            _errorMessage ?? "Something went wrong",
+            _errorMessage ?? l10n.somethingWentWrong,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Theme.of(context).textTheme.titleLarge?.color,
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: _fetchOrders,
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  themeNotifier.isBlackMode
-                      ? Theme.of(context).colorScheme.secondary
-                      : Colors.red.shade400,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+              backgroundColor: themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                  : Theme.of(context).primaryColor,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Try Again'),
+            child: Text(l10n.tryAgain),
           ),
         ],
       ),
@@ -439,7 +698,9 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   }
 
   Widget _buildEmptyOrdersView() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Center(
       child: Column(
@@ -448,11 +709,13 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           Icon(
             Icons.shopping_bag_outlined,
             size: 80,
-            color: Theme.of(context).textTheme.bodyMedium?.color,
+            color: themeNotifier.isSpecialModeActive
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+                : (isDark ? Colors.red.shade900 : Colors.red),
           ),
           const SizedBox(height: 16),
           Text(
-            "No orders yet",
+            l10n.noOrdersYet,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -461,7 +724,8 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            "Your order history will appear here",
+            l10n.yourOrderHistoryWillAppearHere,
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: Theme.of(context).textTheme.bodyMedium?.color,
             ),
@@ -469,17 +733,18 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pushReplacementNamed(context, '/');
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  themeNotifier.isBlackMode
-                      ? Theme.of(context).colorScheme.secondary
-                      : Colors.red,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+              backgroundColor: themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                  : Theme.of(context).primaryColor,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Start Shopping'),
+            child: Text(l10n.startShopping),
           ),
         ],
       ),
@@ -487,92 +752,50 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   }
 
   Widget _buildFilterButtons() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
+    final statuses = _standardStatuses(l10n);
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children:
-            _standardStatuses.map((status) {
-              final isSelected = _filterStatus == status;
-              return Padding(
-                padding: EdgeInsets.only(right: 12),
-                child: GestureDetector(
-                  onTap: () => _filterByStatus(status),
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              isSelected
-                                  ? (themeNotifier.isBlackMode
-                                      ? Theme.of(context).colorScheme.secondary
-                                      : Colors.red.shade400)
-                                  : (isDark
-                                      ? Colors.grey.shade800
-                                      : Colors.grey.shade200),
-                          borderRadius: BorderRadius.circular(20),
-                          border:
-                              isSelected
-                                  ? Border.all(
-                                    color:
-                                        themeNotifier.isBlackMode
-                                            ? Theme.of(
-                                              context,
-                                            ).colorScheme.secondary
-                                            : (isDark
-                                                ? Colors.red.shade700
-                                                : Colors.red.shade400),
-                                    width: 2,
-                                  )
-                                  : null,
-                          boxShadow:
-                              isSelected && !isDark
-                                  ? [
-                                    BoxShadow(
-                                      color: (themeNotifier.isBlackMode
-                                              ? Theme.of(
-                                                context,
-                                              ).colorScheme.secondary
-                                              : Colors.red.shade400)
-                                          .withOpacity(0.5),
-                                      blurRadius: 8,
-                                      spreadRadius: 1,
-                                    ),
-                                  ]
-                                  : null,
-                        ),
-                        child: Text(
-                          status,
-                          style: TextStyle(
-                            color:
-                                isSelected
-                                    ? Colors.white
-                                    : Theme.of(
-                                      context,
-                                    ).textTheme.bodyLarge?.color,
-                            fontWeight:
-                                isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
+        children: statuses.map((status) {
+          final isSelected = _filterStatus == status;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FilterChip(
+              label: Text(status),
+              selected: isSelected,
+              onSelected: (bool selected) {
+                setState(() {
+                  _filterStatus = selected ? status : l10n.allOrders;
+                });
+              },
+              backgroundColor: Theme.of(context).cardColor,
+              selectedColor: themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade100
+                  : Colors.red.withOpacity(0.2),
+              checkmarkColor: themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                  : Colors.red,
+              labelStyle: TextStyle(
+                color: isSelected
+                    ? (themeNotifier.isSpecialModeActive
+                        ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                        : Colors.red)
+                    : Theme.of(context).textTheme.bodyMedium?.color,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
 
   Widget _buildOrdersList() {
+    final l10n = AppLocalizations.of(context)!;
+    
     if (filteredOrders.isEmpty) {
       return SliverToBoxAdapter(
         child: Center(
@@ -583,7 +806,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 Icon(Icons.filter_list_off, size: 70, color: Colors.grey),
                 const SizedBox(height: 16),
                 Text(
-                  "No orders with '$_filterStatus' status",
+                  l10n.noOrdersWithStatus(_getLocalizedStatus(_filterStatus, l10n)),
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -591,7 +814,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Try selecting a different filter",
+                  l10n.tryDifferentFilter,
                   style: TextStyle(color: Colors.grey[600]),
                 ),
               ],
@@ -616,7 +839,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
   Widget _buildOrderCard(Map<String, dynamic> order) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return RepaintBoundary(
       child: Card(
@@ -625,40 +848,78 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         color: CardColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: borderColor),
+          side: isDark
+              ? BorderSide(color: Colors.grey.shade800)
+              : BorderSide.none,
         ),
         child: ExpansionTile(
           maintainState: false,
           initiallyExpanded: false,
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           childrenPadding: EdgeInsets.zero,
-          title: Text(
-            'Order #${order['orderNumber']}',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).textTheme.titleMedium?.color,
-            ),
-          ),
-          subtitle: Column(
+          title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 4),
-              Text(
-                DateFormat(
-                  'MMM dd, yyyy - HH:mm',
-                ).format((order['timestamp'] as Timestamp).toDate()),
-                style: const TextStyle(fontSize: 12),
-              ),
-              const SizedBox(height: 8),
               Row(
                 children: [
-                  _buildStatusBadge(order['status']),
-                  const Spacer(),
-                  Text(
-                    'Total: ₺${order['total'].toString()}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green.shade700,
+                  Expanded(
+                    child: Text(
+                      '${l10n.orderPrefix}${order['orderNumber']}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: Theme.of(context).textTheme.titleMedium?.color,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Transform.scale(
+                    scale: 0.85,
+                    child: _buildStatusBadge(order['status']),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      DateFormat(
+                        l10n.dateFormat,
+                        Localizations.localeOf(context).languageCode,
+                      ).format((order['timestamp'] as Timestamp).toDate()),
+                      style: const TextStyle(fontSize: 11.5),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.attach_money, color: Colors.green, size: 14),
+                        const SizedBox(width: 1),
+                        Text(
+                          '${l10n.total}: ',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          formatDoublePrice(order['total']),
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -672,59 +933,66 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Items:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.items,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   ...order['items']
-                      .map<Widget>((item) => _buildOrderItem(item))
+                      .map<Widget>(
+                        (item) =>
+                            _buildOrderItem(item, status: order['status']),
+                      )
                       .toList(),
                   const Divider(height: 32),
                   if (order['trackingNumber'] != null &&
                       order['trackingNumber'].isNotEmpty) ...[
-                    const Text(
-                      'Tracking Number:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    Text(
+                      l10n.trackingNumber,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       order['trackingNumber'],
                       style: const TextStyle(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
                   ],
-                  const Text(
-                    'Shipping Address:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.shippingAddressLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    order['shippingAddress'] ?? 'No address provided',
+                    order['shippingAddress'] ?? l10n.defaultShippingAddress,
                     style: const TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Payment Method:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.paymentMethodLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _capitalizeFirstLetter(
-                      order['paymentMethod'] ?? 'Not specified',
+                      order['paymentMethod'] ?? l10n.cardPayment,
                     ),
                     style: const TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       OutlinedButton.icon(
                         onPressed: () {
                           _handleReorder(order);
                         },
                         icon: const Icon(Icons.replay),
-                        label: const Text('Reorder'),
+                        label: Text(l10n.reorderButton),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.blue,
                           side: const BorderSide(color: Colors.blue),
@@ -734,38 +1002,32 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                           ),
                         ),
                       ),
-                      if (order['status'] == 'Pending')
+                      if (order['status'] == STATUS_PENDING)
                         OutlinedButton.icon(
                           onPressed: () {
                             _handleCancelOrder(order);
                           },
-                          icon: Icon(
-                            Icons.cancel_outlined,
-                            color:
-                                themeNotifier.isBlackMode
-                                    ? Theme.of(context).colorScheme.secondary
-                                    : Colors.red,
-                          ),
-                          label: Text(
-                            'Cancel',
-                            style: TextStyle(
-                              color:
-                                  themeNotifier.isBlackMode
-                                      ? Theme.of(context).colorScheme.secondary
-                                      : Colors.red,
-                            ),
-                          ),
+                          icon: const Icon(Icons.cancel_outlined),
+                          label: Text(l10n.cancelOrder),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor:
-                                themeNotifier.isBlackMode
-                                    ? Theme.of(context).colorScheme.secondary
-                                    : Colors.red,
-                            side: BorderSide(
-                              color:
-                                  themeNotifier.isBlackMode
-                                      ? Theme.of(context).colorScheme.secondary
-                                      : Colors.red,
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
                             ),
+                          ),
+                        ),
+                      if (order['status'] == STATUS_DELIVERED)
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            _handleRefundRequest(order);
+                          },
+                          icon: const Icon(Icons.money_off),
+                          label: Text(l10n.requestRefund),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.orange,
+                            side: const BorderSide(color: Colors.orange),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 8,
@@ -783,6 +1045,128 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     );
   }
 
+  Widget _buildOrderItem(Map<String, dynamic> item, {required String status}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    return GestureDetector(
+      onTap: () {
+        // Navigate to product detail page when clicked
+        if (item['id'] != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProductDetailPage(productId: item['id']),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.productNotFound)),
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: item['imagePath'] != null && item['imagePath'].toString().startsWith('http')
+                  ? Image.network(
+                      item['imagePath'],
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 60,
+                          height: 60,
+                          color: Colors.grey.shade200,
+                          child: Icon(Icons.image_not_supported, color: Colors.grey),
+                        );
+                      },
+                    )
+                  : Container(
+                      width: 60,
+                      height: 60,
+                      color: Colors.grey.shade200,
+                      child: Icon(Icons.image_not_supported, color: Colors.grey),
+                    ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item['name'] ?? l10n.productNotFound,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 4),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: '${l10n.quantityPrefix} '),
+                        TextSpan(text: '${item['quantity']} × ${formatPrice(item['price'].toString())}'),
+                      ],
+                    ),
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: '${l10n.itemTotalPrefix} '),
+                        TextSpan(
+                          text: formatDoublePrice(double.parse(item['price'].toString()) * (item['quantity'] as int)),
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    style: const TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            if (status == STATUS_DELIVERED)
+              FutureBuilder<bool>(
+                future: _hasUserReviewedProduct(item['id']),
+                builder: (context, snapshot) {
+                  final bool hasReviewed = snapshot.data ?? false;
+                  return TextButton(
+                    onPressed: hasReviewed ? null : () => _showRatingDialog(item['id'], item['name']),
+                    child: Text(
+                      hasReviewed ? l10n.alreadyReviewed : l10n.rateProduct,
+                      style: TextStyle(
+                        color: hasReviewed
+                            ? Colors.grey
+                            : (themeNotifier.isSpecialModeActive
+                                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                                : Theme.of(context).primaryColor),
+                        fontSize: 12,
+                      ),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   String _capitalizeFirstLetter(String text) {
     if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1);
@@ -791,25 +1175,49 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   Widget _buildStatusBadge(String status) {
     Color badgeColor;
     IconData iconData;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     switch (status) {
-      case 'Pending':
-        badgeColor = Colors.orange;
+      case STATUS_PENDING:
+        badgeColor = themeNotifier.isSpecialModeActive
+            ? themeNotifier.getThemeColor(themeNotifier.specialTheme).shade400
+            : Colors.orange;
         iconData = Icons.hourglass_bottom;
         break;
-      case 'Preparing':
+      case STATUS_PREPARING:
         badgeColor = Colors.blue;
         iconData = Icons.restaurant;
         break;
-      case 'On Delivery':
+      case STATUS_ON_DELIVERY:
         badgeColor = Colors.purple;
         iconData = Icons.local_shipping;
         break;
-      case 'Delivered':
+      case STATUS_DELIVERED:
         badgeColor = Colors.green;
         iconData = Icons.check_circle;
         break;
-      case 'Cancelled':
+      case STATUS_REFUND_REQUESTED:
+        badgeColor = Colors.orange;
+        iconData = Icons.money_off;
+        break;
+      case 'Refund In Review':
+        badgeColor = Colors.blue;
+        iconData = Icons.money_off;
+        break;
+      case 'Refund Approved':
+        badgeColor = Colors.green;
+        iconData = Icons.money;
+        break;
+      case 'Refund Declined':
+        badgeColor = Colors.red;
+        iconData = Icons.money_off;
+        break;
+      case STATUS_REFUNDED:
+        badgeColor = Colors.green;
+        iconData = Icons.check_circle;
+        break;
+      case STATUS_CANCELLED:
         badgeColor = Colors.red;
         iconData = Icons.cancel;
         break;
@@ -823,18 +1231,18 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       decoration: BoxDecoration(
         color: badgeColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: badgeColor.withOpacity(0.5)),
+        border: Border.all(color: badgeColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(iconData, size: 12, color: badgeColor),
+          Icon(iconData, size: 16, color: badgeColor),
           const SizedBox(width: 4),
           Text(
-            status,
+            _getLocalizedStatus(status, l10n),
             style: TextStyle(
-              fontSize: 12,
               color: badgeColor,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -843,122 +1251,19 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     );
   }
 
-  Widget _buildOrderItem(dynamic item) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final Map<String, dynamic> itemData =
-        item is Map ? item as Map<String, dynamic> : {};
-    final String imagePath =
-        itemData["imagePath"] ??
-        itemData["image"] ??
-        'lib/assets/Images/placeholder.png';
-    final String itemPrice = itemData["price"]?.toString() ?? '0';
-    final int itemQuantity =
-        itemData["quantity"] is int ? itemData["quantity"] : 1;
-    final String itemName = itemData["name"] ?? 'Unknown Product';
-
-    return Container(
-      padding: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: _buildProductImage(imagePath),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  itemName,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Qty: $itemQuantity × ₺$itemPrice',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Item Total: ₺${(double.tryParse(itemPrice) ?? 0) * itemQuantity}',
-                  style: TextStyle(
-                    color: Colors.green[700],
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProductImage(String imagePath) {
-    if (imagePath.startsWith('http') || imagePath.startsWith('https')) {
-      return Image.network(
-        imagePath,
-        fit: BoxFit.cover,
-        cacheWidth: 120,
-        cacheHeight: 120,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildFallbackImage();
-        },
-      );
-    } else {
-      return Image.asset(
-        imagePath,
-        fit: BoxFit.cover,
-        cacheWidth: 120,
-        cacheHeight: 120,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildFallbackImage();
-        },
-      );
-    }
-  }
-
-  Widget _buildFallbackImage() {
-    return Center(
-      child: Icon(Icons.image_not_supported, size: 24, color: Colors.grey[400]),
-    );
-  }
-
   void _handleReorder(Map<String, dynamic> order) async {
-<<<<<<< Updated upstream
+    final l10n = AppLocalizations.of(context)!;
+    
     try {
-      // First check stock levels for all items
       final List<String> outOfStockItems = [];
       final List<String> insufficientStockItems = [];
-      
-      // Check each item's current stock
+
       for (var item in order['items']) {
         final productDoc = await FirebaseFirestore.instance
             .collection('products')
             .doc(item['id'])
             .get();
-        
+
         if (!productDoc.exists) {
           outOfStockItems.add(item['name']);
           continue;
@@ -970,20 +1275,21 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         if (currentStock <= 0) {
           outOfStockItems.add(item['name']);
         } else if (currentStock < requestedQuantity) {
-          insufficientStockItems.add('${item['name']} (Available: $currentStock, Requested: $requestedQuantity)');
+          insufficientStockItems.add(
+            '${item['name']} (Available: $currentStock, Requested: $requestedQuantity)',
+          );
         }
       }
 
-      // Show error if any items are out of stock or have insufficient stock
       if (outOfStockItems.isNotEmpty || insufficientStockItems.isNotEmpty) {
         String errorMessage = '';
-        
+
         if (outOfStockItems.isNotEmpty) {
-          errorMessage += 'The following items are out of stock:\n• ${outOfStockItems.join('\n• ')}\n\n';
+          errorMessage += l10n.outOfStockItems(outOfStockItems.join('\n• ')) + '\n\n';
         }
-        
+
         if (insufficientStockItems.isNotEmpty) {
-          errorMessage += 'Insufficient stock for:\n• ${insufficientStockItems.join('\n• ')}';
+          errorMessage += l10n.insufficientStockItems(insufficientStockItems.join('\n• '));
         }
 
         if (!mounted) return;
@@ -991,14 +1297,12 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text('Cannot Reorder'),
-            content: SingleChildScrollView(
-              child: Text(errorMessage),
-            ),
+            title: Text(l10n.cannotReorder),
+            content: SingleChildScrollView(child: Text(errorMessage)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text('OK'),
+                child: Text(l10n.ok),
               ),
             ],
           ),
@@ -1006,18 +1310,20 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         return;
       }
 
-      // If all stock checks pass, convert order items to CartItem objects
-      final List<CartItem> items = (order['items'] as List).map((item) => CartItem(
-        id: item['id'] ?? '',
-        name: item['name'] ?? '',
-        price: (double.tryParse(item['price']?.toString() ?? '0') ?? 0.0).toString(),
-        image: item['imagePath'] ?? item['image'] ?? '',
-        quantity: item['quantity'] ?? 1,
-      )).toList();
+      final List<CartItem> items = (order['items'] as List)
+          .map(
+            (item) => CartItem(
+              id: item['id'] ?? '',
+              name: item['name'] ?? '',
+              price: (double.tryParse(item['price']?.toString() ?? '0') ?? 0.0).toString(),
+              image: item['imagePath'] ?? item['image'] ?? '',
+              quantity: item['quantity'] ?? 1,
+            ),
+          )
+          .toList();
 
-      // Navigate to checkout page with the items
       if (!mounted) return;
-      
+
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -1034,7 +1340,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error checking product availability. Please try again.'),
+          content: Text(l10n.errorCheckingAvailability),
           backgroundColor: Colors.red,
         ),
       );
@@ -1071,103 +1377,197 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 >>>>>>> Stashed changes
   }
 
-  void _handleCancelOrder(Map<String, dynamic> order) async {
-    // Store the context and theme information before showing dialog
-    final currentContext = context;
-    final isDark = Theme.of(currentContext).brightness == Brightness.dark;
-    final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final dialogBackgroundColor =
-        Theme.of(currentContext).dialogBackgroundColor;
-    final titleTextColor = Theme.of(currentContext).textTheme.titleLarge?.color;
-    final bodyTextColor = Theme.of(currentContext).textTheme.bodyLarge?.color;
-    final primaryColor = Theme.of(currentContext).primaryColor;
-
-    if (!mounted) return;
-
-    final bool? shouldCancel = await showDialog<bool>(
-      context: currentContext,
-      builder:
-          (BuildContext context) => AlertDialog(
-            backgroundColor: dialogBackgroundColor,
-            title: Text(
-              'Cancel Order',
-              style: TextStyle(color: titleTextColor),
-            ),
-            content: Text(
-              'Are you sure you want to cancel this order?',
-              style: TextStyle(color: bodyTextColor),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text('NO', style: TextStyle(color: primaryColor)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(
-                  'YES',
-                  style: TextStyle(
-                    color:
-                        themeNotifier.isBlackMode
-                            ? Theme.of(context).colorScheme.secondary
-                            : Colors.red,
-                  ),
-                ),
-              ),
-            ],
+  Future<void> _handleCancelOrder(Map<String, dynamic> order) async {
+    final l10n = AppLocalizations.of(context)!;
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.cancelOrder),
+        content: Text(l10n.confirmCancelOrder),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
     );
 
-    if (shouldCancel != true || !mounted) return;
+    if (confirm == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .doc(order['id'])
+            .update({'status': STATUS_CANCELLED});
+        await _fetchOrders();
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.failedToCancelOrder(error.toString())),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
 
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception('User not logged in');
+  Future<void> _handleRefundRequest(Map<String, dynamic> order) async {
+    final l10n = AppLocalizations.of(context)!;
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    TextEditingController reasonController = TextEditingController();
+    List<XFile> selectedImages = [];
+    List<String> uploadedImageUrls = [];
+    bool isUploading = false;
 
-      // Update order status in main orders collection
-      await FirebaseFirestore.instance
-          .collection('orders')
-          .doc(order['id'])
-          .update({
-            'status': 'Cancelled',
-            'cancelledAt': FieldValue.serverTimestamp(),
-          });
+    Future<void> pickImages() async {
+      final ImagePicker picker = ImagePicker();
+      final List<XFile>? images = await picker.pickMultiImage();
+      if (images != null && images.isNotEmpty) {
+        selectedImages = images;
+      }
+    }
 
-      // Update order status in user's orders subcollection
-      await FirebaseFirestore.instance
-          .collection('orders')
-          .doc(user.uid)
-          .collection('userOrders')
-          .doc(order['id'])
-          .update({
-            'status': 'Cancelled',
-            'cancelledAt': FieldValue.serverTimestamp(),
-          });
+    Future<List<String>> uploadImages(List<XFile> images) async {
+      List<String> urls = [];
+      for (var image in images) {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('refund_images/${order['id']}_${DateTime.now().millisecondsSinceEpoch}_${image.name}');
+        await storageRef.putData(await image.readAsBytes());
+        final url = await storageRef.getDownloadURL();
+        urls.add(url);
+      }
+      return urls;
+    }
 
-      if (!mounted) return;
-
-      // Refresh orders list
-      _fetchOrders();
-
-      ScaffoldMessenger.of(currentContext).showSnackBar(
-        const SnackBar(
-          content: Text('Order cancelled successfully'),
-          backgroundColor: Colors.green,
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
+          title: Text(l10n.requestRefund),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.confirmRefundRequest),
+                const SizedBox(height: 16),
+                Text(
+                  '${l10n.orderTotal}: ${formatDoublePrice(order['total'])}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: reasonController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: l10n is AppLocalizations ? 'Reason for refund' : 'Reason for refund',
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Add images (optional'),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ...selectedImages.map((img) => Image.network(
+                      kIsWeb ? img.path : img.path,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                    )),
+                    IconButton(
+                      icon: Icon(Icons.add_a_photo, color: Theme.of(context).primaryColor),
+                      onPressed: () async {
+                        await pickImages();
+                        setState(() {});
+                      },
+                    ),
+                  ],
+                ),
+                if (isUploading) ...[
+                  const SizedBox(height: 16),
+                  Center(child: CircularProgressIndicator()),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: isUploading
+                  ? null
+                  : () async {
+                      if (reasonController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Please provide a reason for your refund request.')),
+                        );
+                        return;
+                      }
+                      setState(() => isUploading = true);
+                      if (selectedImages.isNotEmpty) {
+                        uploadedImageUrls = await uploadImages(selectedImages);
+                      }
+                      setState(() => isUploading = false);
+                      Navigator.pop(context, true);
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: themeNotifier.isSpecialModeActive
+                    ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                    : Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(l10n.requestRefund),
+            ),
+          ],
         ),
-      );
-    } catch (e) {
-      print('Error cancelling order: $e');
-      if (!mounted) return;
+      ),
+    );
 
-      ScaffoldMessenger.of(currentContext).showSnackBar(
-        SnackBar(
-          content: Text('Failed to cancel order: $e'),
-          backgroundColor:
-              themeNotifier.isBlackMode
-                  ? Theme.of(context).colorScheme.secondary
-                  : Colors.red,
-        ),
-      );
+    if (confirm == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .doc(order['id'])
+            .update({
+          'status': STATUS_REFUND_REQUESTED,
+          'refundReason': reasonController.text.trim(),
+          'refundImages': uploadedImageUrls,
+        });
+        await _fetchOrders();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.refundRequestSubmitted),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.failedToRequestRefund(error.toString())),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 }

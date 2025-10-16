@@ -4,12 +4,73 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Add OneSignal and FCM permissions -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
     <application
         android:label="engineering_project"
-        android:name="${applicationName}"
+        android:name=".MainApplication"
         android:icon="@mipmap/ic_launcher"
+        android:hardwareAccelerated="true"
         android:requestLegacyExternalStorage="true"
-        android:preserveLegacyExternalStorage="true">
+        android:preserveLegacyExternalStorage="true"
+        android:enableOnBackInvokedCallback="true">
+
+        <!-- Add OneSignal service and receiver -->
+        <service
+            android:name="com.onesignal.FCMIntentService"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name="com.onesignal.FCMIntentJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" >
+        </service>
+
+        <receiver
+            android:name="com.onesignal.NotificationDismissReceiver"
+            android:exported="true" >
+        </receiver>
+
+        <receiver 
+            android:name="com.onesignal.BootUpReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Add OneSignal App ID -->
+        <meta-data
+            android:name="onesignal_app_id"
+            android:value="bb5b6419-07c9-4b72-9d85-e2c121f05591"/>
+
+        <meta-data
+            android:name="onesignal_rest_api_key"
+            android:value="os_v2_app_xnnwigihzffxfhmf4lasd4cvsh5xegtwcgbuqwu6vvz3gqhd7zztqj65gwdfiy5gh2arh2z5jzkdlaqzat7kuxlvgdhzaos65roxnna"/>
+
+        <!-- Add OneSignal notification service default icon and accent color -->
+        <meta-data
+            android:name="com.onesignal.NotificationAccentColor.DEFAULT"
+            android:value="FFFF0000"/> <!-- Replace with your desired accent color -->
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyDFYH2YvsVidC2ssabxM7ixKAMj6umhhK8"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

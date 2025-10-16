@@ -10,32 +10,137 @@
 
     For more details:
     * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
   -->
   <base href="$FLUTTER_BASE_HREF">
-  <base href="/">
+  
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Paradise PC Parts - Your one-stop shop for computer components">
 
   <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="engineering_project">
+  <meta name="apple-mobile-web-app-title" content="Paradise PC Parts">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
 
-  <title>engineering_project</title>
+  <title>Paradise PC Parts</title>
   <link rel="manifest" href="manifest.json">
+  
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js"></script>
+  <!-- Add other Firebase products you use here, e.g., firebase-storage.js, firebase-functions.js -->
+  
+  <script>
+    // The value below is injected by flutter build, do not touch.
+    var serviceWorkerVersion = "{{flutter_service_worker_version}}";
+  </script>
+  
+  <!-- OneSignal web SDK -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(function() {
+      OneSignal.init({
+        appId: "bb5b6419-07c9-4b72-9d85-e2c121f05591",
+        safari_web_id: "web.onesignal.auto.017d3dee-6a27-4dd6-834e-9872354c98a4", // Add your Safari Web ID here
+        notifyButton: {
+          enable: true,
+        },
+        allowLocalhostAsSecureOrigin: true, // Remove this in production
+        serviceWorkerPath: "OneSignalSDKWorker.js",
+        serviceWorkerUpdaterPath: "OneSignalSDKUpdaterWorker.js"
+      });
+
+      // Request notification permission on page load
+      OneSignal.Notifications.addEventListener('permissionPromptDisplay', function() {
+        console.log('OneSignal: Notification permission prompt displayed');
+      });
+
+      OneSignal.Notifications.addEventListener('permissionChange', function(permission) {
+        console.log('OneSignal: Notification permission changed:', permission);
+      });
+
+      // Handle subscription changes
+      OneSignal.User.PushSubscription.addEventListener('change', function(event) {
+        console.log('OneSignal: Push subscription state changed:', event.current.optedIn);
+      });
+    });
+  </script>
+  
+  <!-- This script adds the flutter initialization JS code -->
+  <script src="flutter.js" defer></script>
+  
+  <meta name="google-signin-client_id" content="52042306180-he6nr5jffbu128eb25g3taioq08jckkq.apps.googleusercontent.com" />
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+  <div id="loading">
+    <style>
+      body {
+        inset: 0;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+        position: fixed;
+      }
+      #loading {
+        align-items: center;
+        display: flex;
+        height: 100%;
+        justify-content: center;
+        width: 100%;
+      }
+      #loading img {
+        animation: 1s ease-in-out 0s infinite alternate breathe;
+        opacity: .66;
+        transition: opacity .4s;
+      }
+      #loading.main_done img {
+        opacity: 1;
+      }
+      @keyframes breathe {
+        from {
+          transform: scale(1)
+        }
+        to {
+          transform: scale(0.95)
+        }
+      }
+    </style>
+    <img src="icons/Icon-192.png" alt="Loading indicator..." />
+  </div>
+  <script>
+    window.addEventListener('load', function(ev) {
+      // Download main.dart.js
+      var scriptTag = document.createElement('script');
+      scriptTag.src = 'main.dart.js';
+      scriptTag.type = 'application/javascript';
+      document.body.append(scriptTag);
+
+      // Initialize Flutter
+      var loading = document.querySelector('#loading');
+      _flutter.loader.load({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        },
+        onEntrypointLoaded: function(engineInitializer) {
+          loading.classList.add('main_done');
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            appRunner.runApp();
+          }).catch(function(err) {
+            console.error('Error initializing Flutter engine:', err);
+          });
+        }
+      }).catch(function(err) {
+        console.error('Failed to load Flutter engine:', err);
+      });
+    });
+  </script>
 </body>
 </html>

@@ -5,8 +5,11 @@ import 'package:engineering_project/assets/components/auth_service.dart';
 import 'package:engineering_project/assets/components/square_tile.dart';
 import 'package:engineering_project/pages/login_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
+import 'dart:math';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:engineering_project/assets/components/email_service.dart';
 
 class RegisterPage extends StatefulWidget {
   RegisterPage({super.key});
@@ -24,11 +27,53 @@ class _RegisterPageState extends State<RegisterPage> {
   final nameController = TextEditingController();
   final surnameController = TextEditingController();
   final profileImageController = TextEditingController();
+  final referralCodeController = TextEditingController();
 
   bool passToggle = true;
 
   String? emailError;
   String? passwordError;
+
+  bool hasUpperCase = false;
+  bool hasLowerCase = false;
+  bool hasSpecialChar = false;
+  bool hasMinLength = false;
+  bool hasMaxLength = true;
+
+  String getLogoAssetForTheme(ThemeNotifier themeNotifier, bool isDarkMode) {
+    if (themeNotifier.isSpecialModeActive) {
+      switch (themeNotifier.specialTheme) {
+        case SpecialTheme.blue:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-blue.png'
+              : 'lib/assets/Images/app-icon-light-blue.png';
+        case SpecialTheme.yellow:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-yellow.png'
+              : 'lib/assets/Images/app-icon-light-yellow.png';
+        case SpecialTheme.green:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-green.png'
+              : 'lib/assets/Images/app-icon-light-green.png';
+        case SpecialTheme.orange:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-orange.png'
+              : 'lib/assets/Images/app-icon-light-orange.png';
+        case SpecialTheme.purple:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark-purple.png'
+              : 'lib/assets/Images/app-icon-light-purple.png';
+        default:
+          return isDarkMode
+              ? 'lib/assets/Images/app-icon-dark.png'
+              : 'lib/assets/Images/app-icon-light.png';
+      }
+    } else {
+      return isDarkMode
+          ? 'lib/assets/Images/app-icon-dark.png'
+          : 'lib/assets/Images/app-icon-light.png';
+    }
+  }
 
   void signInWithGoogleAndNavigate() async {
     showDialog(
@@ -46,7 +91,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     try {
-      await AuthService().signInWithGoogle();
+      await AuthService().signInWithGoogle(context);
 
       if (context.mounted) Navigator.pop(context);
       if (context.mounted) {
@@ -79,35 +124,13 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    if (passwordController.text.length < 8) {
+    if (!hasMinLength ||
+        !hasMaxLength ||
+        !hasUpperCase ||
+        !hasLowerCase ||
+        !hasSpecialChar) {
       setState(() {
-        passwordError = "Passwords must be 8 characters long";
-      });
-      return;
-    } else if (passwordController.text.length > 20) {
-      setState(() {
-        passwordError = "Passwords must be less than 20 characters long";
-      });
-      return;
-    }
-
-    if (!passwordController.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'))) {
-      setState(() {
-        passwordError = "Password must contain at least one special character";
-      });
-      return;
-    }
-
-    if (!passwordController.text.contains(RegExp(r'[A-Z]'))) {
-      setState(() {
-        passwordError = "Password must contain at least one uppercase letter";
-      });
-      return;
-    }
-
-    if (!passwordController.text.contains(RegExp(r'[a-z]'))) {
-      setState(() {
-        passwordError = "Password must contain at least one lowercase letter";
+        passwordError = "Please meet all password requirements";
       });
       return;
     }
@@ -127,30 +150,92 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     try {
+      // Check if referral code exists only if one was provided
+      String? referrerUid;
+      if (referralCodeController.text.isNotEmpty) {
+        final referralDoc =
+            await FirebaseFirestore.instance
+                .collection('referral_codes')
+                .doc(referralCodeController.text.trim())
+                .get();
+
+        if (referralDoc.exists) {
+          referrerUid = referralDoc.data()?['userId'];
+        }
+      }
+
       UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
             email: emailController.text.trim(),
             password: passwordController.text.trim(),
           );
 
-      final uid = userCredential.user?.uid;
-      if (uid != null) {
-        await FirebaseFirestore.instance.collection('users').doc(uid).set({
-          'email': emailController.text.trim(),
+      final user = userCredential.user;
+      if (user != null) {
+        // Send email verification
+        await user.sendEmailVerification();
+
+        // Generate unique referral code for new user
+        String referralCode = _generateReferralCode();
+
+        // Create user document
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'email': emailController.text.trim().toLowerCase(),
           'name': nameController.text.trim(),
           'surname': surnameController.text.trim(),
-          'profileImage': profileImageController.text.trim(),
+          'profileImageUrl': profileImageController.text.trim(),
           'role': 'user',
+          'referral_code': referralCode,
+          'createdAt': FieldValue.serverTimestamp(),
+          'emailVerified': false,
+        });
+
+        // Create wallet for new user
+        await FirebaseFirestore.instance
+            .collection('wallets')
+            .doc(user.uid)
+            .set({
+          'balance': 0.0,
           'created_at': FieldValue.serverTimestamp(),
         });
-      }
 
-      if (context.mounted) Navigator.pop(context);
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const RootScreen()),
-          (Route<dynamic> route) => false,
-        );
+        // If referral code was used, update referrer's document
+        if (referrerUid != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(referrerUid)
+              .update({
+            'referrals': FieldValue.arrayUnion([user.uid])
+          });
+        }
+
+        if (context.mounted) {
+          Navigator.pop(context);
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text("Email Verification"),
+              content: Text("A verification email has been sent to your email address. Please verify your email before logging in."),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LoginPage(
+                          preFilledEmail: emailController.text.trim(),
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text("OK"),
+                ),
+              ],
+            ),
+          );
+        }
       }
     } on FirebaseAuthException catch (e) {
       if (context.mounted) Navigator.pop(context);
@@ -180,6 +265,25 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  String _generateReferralCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
+    return List.generate(
+      8,
+      (index) => chars[random.nextInt(chars.length)],
+    ).join();
+  }
+
+  void _checkPasswordRequirements(String password) {
+    setState(() {
+      hasUpperCase = password.contains(RegExp(r'[A-Z]'));
+      hasLowerCase = password.contains(RegExp(r'[a-z]'));
+      hasSpecialChar = password.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
+      hasMinLength = password.length >= 8;
+      hasMaxLength = password.length <= 20;
+    });
+  }
+
   @override
   void dispose() {
     emailController.dispose();
@@ -196,22 +300,14 @@ class _RegisterPageState extends State<RegisterPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isBlackMode = themeNotifier.isBlackMode;
-    final bgColor = Theme.of(context).scaffoldBackgroundColor;
-    final cardColor = Theme.of(context).cardColor;
-    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
-    final borderColor = isDark ? Colors.grey.shade700 : Colors.grey.shade200;
-    final accentColor =
-        isBlackMode
-            ? Theme.of(context).colorScheme.secondary
-            : Colors.red.shade500;
-    final iconColor =
-        isBlackMode
-            ? Theme.of(context).colorScheme.secondary
-            : Colors.red.shade700;
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    // Consistent background color logic
+    final backgroundColor = isDark ? const Color(0xFF121212) : Colors.grey[200];
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: backgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Form(
@@ -231,10 +327,10 @@ class _RegisterPageState extends State<RegisterPage> {
                       boxShadow: [
                         BoxShadow(
                           color:
-                              isBlackMode
-                                  ? Theme.of(
-                                    context,
-                                  ).colorScheme.secondary.withOpacity(0.3)
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier
+                                      .getThemeColor(themeNotifier.specialTheme)
+                                      .shade100
                                   : Colors.red.shade100,
                           blurRadius: 10,
                           spreadRadius: 3,
@@ -243,9 +339,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     child: ClipOval(
                       child: Image.asset(
-                        isDark
-                            ? 'lib/assets/Images/app-icon-dark.png'
-                            : 'lib/assets/Images/app-icon-light.png',
+                        getLogoAssetForTheme(themeNotifier, isDark),
                         width: 150,
                         height: 150,
                       ),
@@ -253,7 +347,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'Welcome Sign in Here...',
+                    l10n.welcome,
                     style: TextStyle(
                       color: textColor,
                       fontSize: 16,
@@ -266,9 +360,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       Expanded(
                         child: _buildTextField(
                           controller: nameController,
-                          hintText: 'First Name',
+                          hintText: l10n.firstName,
                           icon: Icons.person,
-                          validatorMsg: 'Enter first name',
+                          validatorMsg: l10n.pleaseEnterFirstName,
                           colorScheme: colorScheme,
                           isDark: isDark,
                           iconColor: iconColor,
@@ -279,9 +373,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       Expanded(
                         child: _buildTextField(
                           controller: surnameController,
-                          hintText: 'Last Name',
+                          hintText: l10n.lastName,
                           icon: Icons.person,
-                          validatorMsg: 'Enter last name',
+                          validatorMsg: l10n.pleaseEnterLastName,
                           colorScheme: colorScheme,
                           isDark: isDark,
                           iconColor: iconColor,
@@ -293,9 +387,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(height: 10),
                   _buildTextField(
                     controller: emailController,
-                    hintText: 'Email',
+                    hintText: l10n.email,
                     icon: Icons.email,
-                    validatorMsg: 'Enter a email',
+                    validatorMsg: 'Please enter your email',
                     colorScheme: colorScheme,
                     isDark: isDark,
                     iconColor: iconColor,
@@ -304,27 +398,86 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(height: 10),
                   _buildPasswordField(
                     controller: passwordController,
-                    hintText: 'Password',
+                    hintText: l10n.password,
                     toggle: passToggle,
                     onToggle: () => setState(() => passToggle = !passToggle),
-                    validatorMsg: 'Enter a Password',
+                    validatorMsg: l10n.password,
                     colorScheme: colorScheme,
                     isDark: isDark,
-                    iconColor: iconColor,
-                    borderColor: borderColor,
+                    onChanged: (value) => _checkPasswordRequirements(value),
                   ),
                   const SizedBox(height: 10),
                   _buildPasswordField(
                     controller: confirmPasswordController,
-                    hintText: 'Confirm Password',
+                    hintText: l10n.confirmPassword,
                     toggle: passToggle,
                     onToggle: () => setState(() => passToggle = !passToggle),
-                    validatorMsg: 'Enter a password',
+                    validatorMsg: l10n.confirmPassword,
                     colorScheme: colorScheme,
                     isDark: isDark,
                     matchPassword: passwordController.text,
                     iconColor: iconColor,
                     borderColor: borderColor,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildTextField(
+                    controller: referralCodeController,
+                    hintText: l10n.referralCode + ' (Optional)',
+                    icon: Icons.card_giftcard,
+                    validatorMsg: '',
+                    colorScheme: colorScheme,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey[800] : Colors.grey[200],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color:
+                            themeNotifier.isSpecialModeActive
+                                ? themeNotifier
+                                    .getThemeColor(themeNotifier.specialTheme)
+                                    .shade700
+                                    .withOpacity(0.3)
+                                : Colors.red.shade700.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.passwordRequirements,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onBackground,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        _buildPasswordRequirement(
+                          l10n.maximum20Characters,
+                          hasMaxLength,
+                        ),
+                        _buildPasswordRequirement(
+                          l10n.atLeast8Characters,
+                          hasMinLength,
+                        ),
+                        _buildPasswordRequirement(
+                          l10n.oneUppercaseLetter,
+                          hasUpperCase,
+                        ),
+                        _buildPasswordRequirement(
+                          l10n.oneLowercaseLetter,
+                          hasLowerCase,
+                        ),
+                        _buildPasswordRequirement(
+                          l10n.oneSpecialCharacter,
+                          hasSpecialChar,
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 5),
                   if (emailError != null || passwordError != null)
@@ -335,8 +488,10 @@ class _RegisterPageState extends State<RegisterPage> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color:
-                              isBlackMode
-                                  ? Theme.of(context).colorScheme.secondary
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier.getThemeColor(
+                                    themeNotifier.specialTheme,
+                                  )
                                   : Colors.red,
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -348,8 +503,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'You Have An Account?',
-                        style: TextStyle(color: textColor),
+                        l10n.alreadyHaveAccount,
+                        style: TextStyle(color: colorScheme.onBackground),
                       ),
                       const SizedBox(width: 4),
                       GestureDetector(
@@ -362,9 +517,16 @@ class _RegisterPageState extends State<RegisterPage> {
                           );
                         },
                         child: Text(
-                          'Login!',
+                          l10n.login + '!',
                           style: TextStyle(
-                            color: accentColor,
+                            color:
+                                themeNotifier.isSpecialModeActive
+                                    ? themeNotifier
+                                        .getThemeColor(
+                                          themeNotifier.specialTheme,
+                                        )
+                                        .shade500
+                                    : Colors.red.shade500,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -373,7 +535,12 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
                   FloatingActionButton(
-                    backgroundColor: iconColor,
+                    backgroundColor:
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier
+                                .getThemeColor(themeNotifier.specialTheme)
+                                .shade700
+                            : Colors.red.shade700,
                     foregroundColor: colorScheme.onPrimary,
                     onPressed: signUserUp,
                     child: const Icon(Icons.arrow_forward, size: 25),
@@ -385,10 +552,9 @@ class _RegisterPageState extends State<RegisterPage> {
                         child: Divider(thickness: 1, color: borderColor),
                       ),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        padding: EdgeInsets.symmetric(horizontal: 8),
                         child: Text(
-                          'Or Log in With',
-                          style: TextStyle(color: textColor),
+                          l10n.orLogInWith ?? 'Or Log in With',
                         ),
                       ),
                       Expanded(
@@ -438,22 +604,40 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: iconColor),
+          borderSide: BorderSide(
+            color:
+                Provider.of<ThemeNotifier>(context).isSpecialModeActive
+                    ? Provider.of<ThemeNotifier>(context)
+                        .getThemeColor(
+                          Provider.of<ThemeNotifier>(context).specialTheme,
+                        )
+                        .shade700
+                    : Colors.red.shade700,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: iconColor, width: 2),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: borderColor),
+          borderSide: BorderSide(
+            color:
+                Provider.of<ThemeNotifier>(context).isSpecialModeActive
+                    ? Provider.of<ThemeNotifier>(context)
+                        .getThemeColor(
+                          Provider.of<ThemeNotifier>(context).specialTheme,
+                        )
+                        .shade700
+                    : Colors.red.shade700,
+            width: 2,
+          ),
         ),
       ),
       style: TextStyle(color: colorScheme.onBackground),
-      validator: (value) {
-        if (value == null || value.isEmpty) return validatorMsg;
-        return null;
-      },
+      validator:
+          validatorMsg.isEmpty
+              ? null
+              : (value) {
+                if (value == null || value.isEmpty) return validatorMsg;
+                return null;
+              },
     );
   }
 
@@ -466,12 +650,12 @@ class _RegisterPageState extends State<RegisterPage> {
     required ColorScheme colorScheme,
     required bool isDark,
     String? matchPassword,
-    required Color iconColor,
-    required Color borderColor,
+    ValueChanged<String>? onChanged,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: toggle,
+      onChanged: onChanged,
       decoration: InputDecoration(
         fillColor: isDark ? Colors.grey[800] : Colors.grey[300],
         filled: true,
@@ -490,15 +674,30 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: iconColor),
+          borderSide: BorderSide(
+            color:
+                Provider.of<ThemeNotifier>(context).isSpecialModeActive
+                    ? Provider.of<ThemeNotifier>(context)
+                        .getThemeColor(
+                          Provider.of<ThemeNotifier>(context).specialTheme,
+                        )
+                        .shade700
+                    : Colors.red.shade700,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: iconColor, width: 2),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: borderColor),
+          borderSide: BorderSide(
+            color:
+                Provider.of<ThemeNotifier>(context).isSpecialModeActive
+                    ? Provider.of<ThemeNotifier>(context)
+                        .getThemeColor(
+                          Provider.of<ThemeNotifier>(context).specialTheme,
+                        )
+                        .shade700
+                    : Colors.red.shade700,
+            width: 2,
+          ),
         ),
       ),
       style: TextStyle(color: colorScheme.onBackground),
@@ -509,6 +708,26 @@ class _RegisterPageState extends State<RegisterPage> {
         }
         return null;
       },
+    );
+  }
+
+  Widget _buildPasswordRequirement(String requirement, bool met) {
+    return Row(
+      children: [
+        Icon(
+          met ? Icons.check_circle : Icons.cancel,
+          color: met ? Colors.green : Colors.red, // Always use green/red
+          size: 16,
+        ),
+        const SizedBox(width: 5),
+        Text(
+          requirement,
+          style: TextStyle(
+            fontSize: 12,
+            color: met ? Colors.green : Colors.red, // Always use green/red
+          ),
+        ),
+      ],
     );
   }
 }

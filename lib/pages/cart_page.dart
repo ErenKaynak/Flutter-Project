@@ -1,6 +1,8 @@
 import 'package:engineering_project/assets/components/discount_code.dart';
 import 'package:engineering_project/assets/components/discount_service.dart';
 import 'package:engineering_project/pages/checkout_page.dart';
+import 'package:engineering_project/pages/discount_page.dart';
+import 'package:engineering_project/pages/Home-Page/home_page.dart';
 import 'package:engineering_project/pages/past_orders_page.dart';
 import 'package:engineering_project/pages/root_page.dart';
 import 'package:flutter/material.dart';
@@ -9,11 +11,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
 import 'dart:async';
+import 'package:engineering_project/pages/theme_notifier.dart';
+import 'package:provider/provider.dart';
+import 'package:engineering_project/l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
+import 'package:engineering_project/assets/components/email_service.dart';
 
 class CartItem {
   final String id;
   final String name;
-  final String price; // Price in TRY
+  final String price;
   final String image;
   int quantity;
 
@@ -31,7 +38,7 @@ class CartItem {
       id: doc.id,
       name: data['name'] ?? 'Unknown Product',
       price: data['price']?.toString() ?? '0',
-      image: data['imagePath'] ?? '',
+      image: data['imagePath'] ?? 'lib/assets/Images/placeholder.png',
       quantity: data['quantity'] ?? 1,
     );
   }
@@ -90,19 +97,30 @@ class CartManager {
     await _cartSubscription?.cancel();
 
     _cartSubscription = _firestore
-        .collection('cart')
+        .collection('users')
         .doc(user.uid)
-        .collection('userCart')
+        .collection('cart')
         .snapshots()
         .listen(
           (snapshot) {
-            _cartItems =
-                snapshot.docs
-                    .map((doc) => CartItem.fromFirestore(doc))
-                    .toList();
+            _cartItems = snapshot.docs.map((doc) {
+              final item = CartItem.fromFirestore(doc);
+              // Miktarı 1-10 arasında sınırla
+              if (item.quantity > 10) {
+                // Firestore'u da güncelle
+                doc.reference.update({'quantity': 10});
+                item.quantity = 10;
+              } else if (item.quantity < 1) {
+                // Firestore'u da güncelle
+                doc.reference.update({'quantity': 1});
+                item.quantity = 1;
+              }
+              return item;
+            }).toList();
             _notifyListeners();
           },
           onError: (error) {
+            print('Error loading cart: $error');
             _cartItems = [];
             _notifyListeners();
           },
@@ -114,20 +132,58 @@ class CartManager {
     if (user == null) return;
 
     try {
+      // Only perform stock check if we're increasing quantity
+      if (change > 0) {
+        // Get the current product stock from Firestore
+        final productDoc = await _firestore.collection('products').doc(id).get();
+        final currentStock = productDoc.data()?['stock'] ?? 0;
+        
+        // Get current cart quantity
+        final cartDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('cart')
+            .doc(id)
+            .get();
+        
+        if (cartDoc.exists) {
+          final currentQuantity = cartDoc.data()?['quantity'] ?? 1;
+          
+          // If trying to add more than available stock, don't proceed
+          if (currentQuantity >= currentStock) {
+            return; // Silently return without increasing quantity
+          }
+        }
+      }
+
       final docRef = _firestore
-          .collection('cart')
+          .collection('users')
           .doc(user.uid)
-          .collection('userCart')
+          .collection('cart')
           .doc(id);
 
       final doc = await docRef.get();
       if (doc.exists) {
         final currentQuantity = doc.data()?['quantity'] ?? 1;
-        final newQuantity = (currentQuantity + change).clamp(1, 10);
-
+        // Yeni miktar hesaplanırken mevcut miktara change eklenir
+        int newQuantity = currentQuantity + change;
+        
+        // Miktarı 1-10 arasında sınırla
+        newQuantity = newQuantity.clamp(1, 10);
+        
+        // Firestore'u güncelle
         await docRef.update({'quantity': newQuantity});
+        
+        // Yerel listeyi güncelle
+        final index = _cartItems.indexWhere((item) => item.id == id);
+        if (index != -1) {
+          _cartItems[index].quantity = newQuantity;
+          _notifyListeners();
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      print('Error updating quantity: $e');
+    }
   }
 
   Future<void> removeItem(String id) async {
@@ -136,9 +192,9 @@ class CartManager {
 
     try {
       await _firestore
-          .collection('cart')
+          .collection('users')
           .doc(user.uid)
-          .collection('userCart')
+          .collection('cart')
           .doc(id)
           .delete();
     } catch (_) {}
@@ -150,9 +206,9 @@ class CartManager {
 
     try {
       final cartRef = _firestore
-          .collection('cart')
+          .collection('users')
           .doc(user.uid)
-          .collection('userCart');
+          .collection('cart');
 
       final batch = _firestore.batch();
       final docs = await cartRef.get();
@@ -195,12 +251,16 @@ class OrderSuccessPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Order Confirmation'),
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+        title: Text(l10n.yourCart),
+        backgroundColor:
+            themeNotifier.isSpecialModeActive
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                : Colors.red.shade700,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: Center(
@@ -221,24 +281,24 @@ class OrderSuccessPage extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             Text(
-              'Payment Successful!',
+              l10n.paymentSuccessful,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
             Text(
-              'Amount Paid: ₺${totalAmount.toStringAsFixed(2)}',
+              l10n.amountPaid(totalAmount.toStringAsFixed(2)),
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Text(
-              'Your order has been placed successfully.',
+              l10n.orderPlaced,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).hintColor,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Order ID: ${orderId.substring(0, 8)}',
+              l10n.orderId(orderId.substring(0, 8)),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).hintColor,
               ),
@@ -265,8 +325,8 @@ class OrderSuccessPage extends StatelessWidget {
                       MaterialPageRoute(builder: (_) => OrderHistoryPage()),
                     );
                   },
-                  child: const Text(
-                    'VIEW ORDERS',
+                  child: Text(
+                    l10n.viewOrders,
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -274,8 +334,10 @@ class OrderSuccessPage extends StatelessWidget {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
-                        themeNotifier.isBlackMode
-                            ? Theme.of(context).colorScheme.secondary
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier.getThemeColor(
+                              themeNotifier.specialTheme,
+                            )
                             : Colors.red,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
@@ -292,8 +354,8 @@ class OrderSuccessPage extends StatelessWidget {
                       (route) => false,
                     );
                   },
-                  child: const Text(
-                    'CONTINUE SHOPPING',
+                  child: Text(
+                    l10n.continueShopping,
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -301,6 +363,190 @@ class OrderSuccessPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class SavedDiscountCodesDialog extends StatelessWidget {
+  final Function(DiscountCode) onDiscountSelected;
+  final List<DiscountCode> savedDiscounts;
+
+  const SavedDiscountCodesDialog({
+    Key? key,
+    required this.onDiscountSelected,
+    required this.savedDiscounts,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l10n.savedDiscountCodes,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                IconButton(
+                  icon: Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const Divider(),
+            if (savedDiscounts.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: Text(l10n.noSavedDiscountCodes),
+                ),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                itemCount: savedDiscounts.length,
+                itemBuilder: (context, index) {
+                  final discount = savedDiscounts[index];
+                  final isExpired = discount.expiryDate != null && 
+                                  discount.expiryDate!.isBefore(DateTime.now());
+                  
+                  return ListTile(
+                    leading: Icon(
+                      Icons.discount_outlined,
+                      color: isExpired ? Colors.grey : Colors.amber,
+                    ),
+                    title: Text(
+                      discount.code,
+                      style: TextStyle(
+                        decoration: isExpired ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${discount.discountPercentage}% ${l10n.off}'),
+                        if (discount.expiryDate != null)
+                          Text(
+                            'Expires: ${DateFormat('MMM dd, yyyy').format(discount.expiryDate!)}',
+                            style: TextStyle(
+                              color: isExpired ? Colors.red : null,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                    trailing: TextButton(
+                      onPressed: isExpired ? null : () {
+                        onDiscountSelected(discount);
+                        Navigator.pop(context);
+                      },
+                      child: Text(l10n.use),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DiscountOffersDialog extends StatelessWidget {
+  final Function(DiscountCode) onDiscountSelected;
+  final List<DiscountCode> availableDiscounts;
+
+  const DiscountOffersDialog({
+    super.key,
+    required this.onDiscountSelected,
+    required this.availableDiscounts,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                Text(
+                  l10n.discountOffers,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ],
+            ),
+          ),
+          const Divider(),
+          Expanded(
+            child: ListView.builder(
+              shrinkWrap: true,
+              physics: const ClampingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: availableDiscounts.length,
+              itemBuilder: (context, index) {
+                final discount = availableDiscounts[index];
+                return Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.star,
+                      color: Colors.amber,
+                    ),
+                    title: Text(discount.name),
+                    subtitle: Text(
+                      '${discount.description}\n${AppLocalizations.of(context)!.minOrderAmount}: ₺${discount.minOrderAmount.toStringAsFixed(2)}',
+                    ),
+                    trailing: TextButton(
+                      onPressed: () {
+                        onDiscountSelected(discount);
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        AppLocalizations.of(context)!.apply,
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    isThreeLine: true,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -318,11 +564,29 @@ class _CartPageState extends State<CartPage> {
   bool _isProcessingPayment = false;
   bool _isLoading = true;
   String? _loginError;
-  final TextEditingController _discountCodeController = TextEditingController();
   final DiscountService _discountService = DiscountService();
   DiscountCode? _appliedDiscount;
-  bool _isApplyingDiscount = false;
-  String? _discountError;
+
+  // Add helper function for price formatting
+  String formatPrice(String price) {
+    try {
+      final double numericPrice = double.parse(price);
+      return '₺${numericPrice.toStringAsFixed(2).replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]},',
+      )}';
+    } catch (e) {
+      return '₺0.00';
+    }
+  }
+
+  // Add helper function for formatting double prices
+  String formatDoublePrice(double price) {
+    return '₺${price.toStringAsFixed(2).replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    )}';
+  }
 
   @override
   void initState() {
@@ -362,91 +626,12 @@ class _CartPageState extends State<CartPage> {
   @override
   void dispose() {
     _cartManager.removeListener(_updateCartState);
-    _discountCodeController.dispose();
     super.dispose();
-  }
-
-  Future<void> _applyDiscountCode() async {
-    final code = _discountCodeController.text.trim();
-    if (code.isEmpty) {
-      setState(() {
-        _discountError = 'Please enter a discount code';
-      });
-      return;
-    }
-
-    setState(() {
-      _isApplyingDiscount = true;
-      _discountError = null;
-    });
-
-    try {
-      final discount = await _discountService.validateCode(code);
-
-      if (discount == null) {
-        setState(() {
-          _discountError = 'Invalid or expired discount code';
-        });
-        return;
-      }
-
-      if (discount.applicableCategories != null &&
-          discount.applicableCategories!.isNotEmpty) {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) return;
-
-        final cartItemsWithCategories = await Future.wait(
-          _cartManager.items.map((item) async {
-            final productDoc =
-                await FirebaseFirestore.instance
-                    .collection('products')
-                    .doc(item.id)
-                    .get();
-            final category = productDoc.data()?['category'] ?? '';
-            return {'item': item, 'category': category};
-          }),
-        );
-
-        final hasMatchingCategory = cartItemsWithCategories.any(
-          (item) => discount.isApplicableToCategory(item['category'] as String),
-        );
-
-        if (!hasMatchingCategory) {
-          setState(() {
-            _discountError =
-                'This code is not applicable to items in your cart';
-          });
-          return;
-        }
-      }
-
-      setState(() {
-        _appliedDiscount = discount;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Discount code applied: ${discount.discountPercentage}% off',
-          ),
-        ),
-      );
-    } catch (e) {
-      setState(() {
-        _discountError = 'Error applying discount: $e';
-      });
-    } finally {
-      setState(() {
-        _isApplyingDiscount = false;
-      });
-    }
   }
 
   void _removeDiscount() {
     setState(() {
       _appliedDiscount = null;
-      _discountCodeController.clear();
-      _discountError = null;
     });
   }
 
@@ -518,6 +703,15 @@ class _CartPageState extends State<CartPage> {
 
       if (_appliedDiscount != null) {
         await _discountService.applyDiscount(_appliedDiscount!.id);
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('savedDiscounts')
+              .doc(_appliedDiscount!.id)
+              .update({'isUsed': true});
+        }
       }
 
       final orderData = {
@@ -557,6 +751,23 @@ class _CartPageState extends State<CartPage> {
       await batch.commit();
       await _cartManager.clearCart();
 
+      // Send order confirmation email
+      try {
+        await EmailService.sendReceipt(
+          context: context,
+          customerEmail: user.email ?? '',
+          customerName: userData?['name'] ?? user.displayName ?? 'Anonymous User',
+          orderNumber: userOrderRef.id,
+          items: _cartManager.items.map((item) => item.toMap()).toList(),
+          totalAmount: totalAmount,
+          orderDate: DateTime.now(),
+          shippingAddress: shippingAddress,
+        );
+      } catch (e) {
+        print('Error sending order confirmation email: $e');
+        // Don't throw the error as the order was already created successfully
+      }
+
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -589,14 +800,20 @@ class _CartPageState extends State<CartPage> {
     final theme = Theme.of(context);
     final cartItems = _cartManager.items;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (_isLoading) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: theme.appBarTheme.backgroundColor,
-          title: Text('Your Cart', style: theme.appBarTheme.titleTextStyle),
-          leading: BackButton(color: theme.iconTheme.color),
+          backgroundColor:
+              themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                  : (theme.brightness == Brightness.light
+                      ? Colors.red.shade700
+                      : Theme.of(context).appBarTheme.backgroundColor),
+          title: Text(l10n.yourCart, style: TextStyle(color: Colors.white)),
+          leading: BackButton(color: Colors.white),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -606,9 +823,14 @@ class _CartPageState extends State<CartPage> {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: theme.appBarTheme.backgroundColor,
-          title: Text('Your Cart', style: theme.appBarTheme.titleTextStyle),
-          leading: BackButton(color: theme.iconTheme.color),
+          backgroundColor:
+              themeNotifier.isSpecialModeActive
+                  ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                  : (theme.brightness == Brightness.light
+                      ? Colors.red.shade700
+                      : Theme.of(context).appBarTheme.backgroundColor),
+          title: Text(l10n.yourCart, style: TextStyle(color: Colors.white)),
+          leading: BackButton(color: Colors.white),
         ),
         body: Center(
           child: Column(
@@ -629,13 +851,15 @@ class _CartPageState extends State<CartPage> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      themeNotifier.isBlackMode
-                          ? Theme.of(context).colorScheme.secondary
+                      themeNotifier.isSpecialModeActive
+                          ? themeNotifier.getThemeColor(
+                            themeNotifier.specialTheme,
+                          )
                           : Colors.red,
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('GO TO LOGIN'),
+                child: Text(l10n.login),
               ),
             ],
           ),
@@ -646,42 +870,38 @@ class _CartPageState extends State<CartPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: theme.appBarTheme.backgroundColor,
-        title: Text('Your Cart', style: theme.appBarTheme.titleTextStyle),
-        leading: BackButton(color: theme.iconTheme.color),
+        backgroundColor:
+            themeNotifier.isSpecialModeActive
+                ? themeNotifier.getThemeColor(themeNotifier.specialTheme)
+                : (theme.brightness == Brightness.light
+                    ? Colors.red.shade700
+                    : Theme.of(context).appBarTheme.backgroundColor),
+        title: Text(l10n.yourCart, style: TextStyle(color: Colors.white)),
+        leading: BackButton(color: Colors.white),
         actions: [
           if (cartItems.isNotEmpty)
             IconButton(
-              icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+              icon: Icon(Icons.delete_outline, color: Colors.white),
               onPressed: () {
                 showDialog(
                   context: context,
                   builder:
                       (_) => AlertDialog(
-                        title: const Text('Clear Cart'),
-                        content: const Text(
-                          'Are you sure you want to remove all items?',
-                        ),
+                        title: Text(l10n.clearCart),
+                        content: Text(l10n.clearCartConfirmation),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('CANCEL'),
+                            child: Text(l10n.cancel),
                           ),
                           TextButton(
                             onPressed: () {
-                              _cartManager.clearCart();
                               Navigator.pop(context);
+                              _cartManager.clearCart();
                             },
                             child: Text(
-                              'CLEAR',
-                              style: TextStyle(
-                                color:
-                                    themeNotifier.isBlackMode
-                                        ? Theme.of(
-                                          context,
-                                        ).colorScheme.secondary
-                                        : Colors.red,
-                              ),
+                              l10n.clearCart,
+                              style: TextStyle(color: Colors.red),
                             ),
                           ),
                         ],
@@ -691,430 +911,415 @@ class _CartPageState extends State<CartPage> {
             ),
         ],
       ),
-      body:
-          cartItems.isEmpty
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.shopping_cart_outlined,
-                      size: 80,
-                      color:
-                          themeNotifier.isBlackMode
-                              ? Theme.of(context).colorScheme.secondary
-                              : Colors.red,
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Your cart is empty',
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Add items to your cart to checkout',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              )
-              : Column(
+      body: cartItems.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: cartItems.length,
-                      itemBuilder: (context, index) {
-                        final item = cartItems[index];
-                        return Dismissible(
-                          key: Key(item.id),
-                          direction: DismissDirection.endToStart,
-                          background: Container(
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 20),
-                            color:
-                                themeNotifier.isBlackMode
-                                    ? Theme.of(context).colorScheme.secondary
-                                    : Colors.red,
-                            child: const Icon(
-                              Icons.delete,
-                              color: Colors.white,
-                            ),
-                          ),
-                          onDismissed: (_) => _cartManager.removeItem(item.id),
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.cardColor,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: theme.shadowColor.withOpacity(0.1),
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 80,
-                                    height: 80,
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.surfaceVariant,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child:
-                                          item.image.startsWith('http')
-                                              ? Image.network(
-                                                item.image,
-                                                fit: BoxFit.cover,
-                                              )
-                                              : Image.asset(
-                                                item.image,
-                                                fit: BoxFit.cover,
-                                              ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.name,
-                                          style: theme.textTheme.titleMedium,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '₺${item.price}',
-                                          style: theme.textTheme.bodyLarge
-                                              ?.copyWith(
-                                                color:
-                                                    themeNotifier.isBlackMode
-                                                        ? Theme.of(
-                                                          context,
-                                                        ).colorScheme.secondary
-                                                        : Colors.red,
-                                              ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        icon: CircleAvatar(
-                                          radius: 14,
-                                          backgroundColor:
-                                              themeNotifier.isBlackMode
-                                                  ? Colors.grey.shade100
-                                                  : Colors.red.shade100,
-                                          child: Icon(
-                                            Icons.remove,
-                                            size: 16,
-                                            color:
-                                                themeNotifier.isBlackMode
-                                                    ? Theme.of(
-                                                      context,
-                                                    ).colorScheme.secondary
-                                                    : Colors.red,
-                                          ),
-                                        ),
-                                        onPressed:
-                                            () => _cartManager.updateQuantity(
-                                              item.id,
-                                              -1,
-                                            ),
-                                      ),
-                                      Text(
-                                        '${item.quantity}',
-                                        style: theme.textTheme.titleMedium,
-                                      ),
-                                      IconButton(
-                                        icon: CircleAvatar(
-                                          radius: 14,
-                                          backgroundColor:
-                                              themeNotifier.isBlackMode
-                                                  ? Colors.grey.shade100
-                                                  : Colors.red.shade100,
-                                          child: Icon(
-                                            Icons.add,
-                                            size: 16,
-                                            color:
-                                                themeNotifier.isBlackMode
-                                                    ? Theme.of(
-                                                      context,
-                                                    ).colorScheme.secondary
-                                                    : Colors.red,
-                                          ),
-                                        ),
-                                        onPressed:
-                                            () => _cartManager.updateQuantity(
-                                              item.id,
-                                              1,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                  Icon(
+                    Icons.shopping_cart_outlined,
+                    size: 80,
+                    color:
+                        themeNotifier.isSpecialModeActive
+                            ? themeNotifier.getThemeColor(
+                              themeNotifier.specialTheme,
+                            )
+                            : Colors.red,
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (_appliedDiscount == null) ...[
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _discountCodeController,
-                                  decoration: InputDecoration(
-                                    labelText: 'Discount Code',
-                                    hintText: 'Enter code',
-                                    errorText: _discountError,
-                                    filled: true,
-                                    fillColor:
-                                        Theme.of(
-                                          context,
-                                        ).inputDecorationTheme.fillColor,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(
-                                        color: Theme.of(context).dividerColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      themeNotifier.isBlackMode
-                                          ? Theme.of(
-                                            context,
-                                          ).colorScheme.secondary
-                                          : Colors.red,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                    horizontal: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                onPressed:
-                                    _isApplyingDiscount
-                                        ? null
-                                        : _applyDiscountCode,
-                                child:
-                                    _isApplyingDiscount
-                                        ? const SizedBox(
-                                          height: 20,
-                                          width: 20,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                        : const Text('APPLY'),
+                  const SizedBox(height: 20),
+                  Text(
+                    l10n.emptyCart,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    l10n.addItemsToCheckout,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: cartItems.length,
+                    itemBuilder: (context, index) {
+                      final item = cartItems[index];
+                      return Dismissible(
+                        key: Key(item.id),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          color:
+                              themeNotifier.isSpecialModeActive
+                                  ? themeNotifier.getThemeColor(
+                                    themeNotifier.specialTheme,
+                                  )
+                                  : Colors.red,
+                          child: const Icon(
+                            Icons.delete_outline_outlined,
+                            color: Colors.white,
+                          ),
+                        ),
+                        onDismissed: (_) => _cartManager.removeItem(item.id),
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.cardColor,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: theme.shadowColor.withOpacity(0.1),
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                        ] else ...[
-                          Container(
+                          child: Padding(
                             padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.green.shade200),
-                            ),
                             child: Row(
                               children: [
-                                const Icon(
-                                  Icons.discount_outlined,
-                                  color: Colors.green,
+                                Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.surfaceVariant,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child:
+                                        item.image.startsWith('http')
+                                            ? Image.network(
+                                              item.image,
+                                              fit: BoxFit.cover,
+                                            )
+                                            : Image.asset(
+                                              item.image,
+                                              fit: BoxFit.cover,
+                                            ),
+                                  ),
                                 ),
-                                const SizedBox(width: 10),
+                                const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Discount applied: ${_appliedDiscount!.code}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.green.shade800,
-                                        ),
+                                        item.name,
+                                        style: theme.textTheme.titleMedium,
                                       ),
+                                      const SizedBox(height: 4),
                                       Text(
-                                        '${_appliedDiscount!.discountPercentage}% off',
-                                        style: TextStyle(
-                                          color: Colors.green.shade800,
-                                        ),
+                                        formatPrice(item.price),
+                                        style: theme.textTheme.bodyLarge
+                                            ?.copyWith(
+                                              color:
+                                                  themeNotifier
+                                                          .isSpecialModeActive
+                                                      ? themeNotifier
+                                                          .getThemeColor(
+                                                            themeNotifier
+                                                                .specialTheme,
+                                                          )
+                                                      : Colors.red,
+                                            ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                IconButton(
-                                  onPressed: _removeDiscount,
-                                  icon: const Icon(
-                                    Icons.close,
-                                    color: Colors.grey,
-                                    size: 20,
-                                  ),
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: CircleAvatar(
+                                        radius: 14,
+                                        backgroundColor: Colors.red.shade100,
+                                        child: Icon(
+                                          item.quantity == 1
+                                              ? Icons.delete_outline_outlined
+                                              : Icons.remove,
+                                          size: 16,
+                                          color:
+                                              themeNotifier
+                                                      .isSpecialModeActive
+                                                  ? themeNotifier
+                                                      .getThemeColor(
+                                                        themeNotifier
+                                                            .specialTheme,
+                                                      )
+                                                  : Colors.red,
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        if (item.quantity == 1) {
+                                          _cartManager.removeItem(item.id);
+                                        } else {
+                                          _cartManager.updateQuantity(
+                                            item.id,
+                                            -1,
+                                          );
+                                        }
+                                      },
+                                    ),
+                                    Text(
+                                      '${item.quantity}',
+                                      style: theme.textTheme.titleMedium,
+                                    ),
+                                    IconButton(
+                                      icon: CircleAvatar(
+                                        radius: 14,
+                                        backgroundColor: Colors.red.shade100,
+                                        child: Icon(
+                                          Icons.add,
+                                          size: 16,
+                                          color:
+                                              themeNotifier
+                                                      .isSpecialModeActive
+                                                  ? themeNotifier
+                                                      .getThemeColor(
+                                                        themeNotifier
+                                                            .specialTheme,
+                                                      )
+                                                  : Colors.red,
+                                        ),
+                                      ),
+                                      onPressed:
+                                          () => _cartManager.updateQuantity(
+                                            item.id,
+                                            1,
+                                          ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(context).shadowColor.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, -2),
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        if (_appliedDiscount != null) ...[
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Subtotal',
-                                style: TextStyle(fontSize: 14),
+                      );
+                    },
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DiscountPage(
+                                onDiscountSelected: (discount) {
+                                  setState(() {
+                                    _appliedDiscount = discount;
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Discount code applied: ${discount?.discountPercentage ?? 'N/A'}% off',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                currentDiscount: _appliedDiscount,
+                                cartTotal: _cartManager.totalPrice,
                               ),
-                              Text(
-                                '₺${_cartManager.totalPrice.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Theme.of(context).hintColor,
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _appliedDiscount != null
+                                      ? '${_appliedDiscount!.code} (${_appliedDiscount!.discountPercentage}% ${l10n.off})'
+                                      : l10n.discountAndPromotionCodes,
+                                  style: Theme.of(context).textTheme.titleMedium,
                                 ),
                               ),
+                              if (_appliedDiscount != null)
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.close,
+                                    size: 20,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: _removeDiscount,
+                                  padding: EdgeInsets.zero,
+                                  splashRadius: 20,
+                                ),
+                              Icon(Icons.arrow_forward_ios, size: 16),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Discount (${_appliedDiscount!.discountPercentage}%)',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.green.shade700,
-                                ),
-                              ),
-                              Text(
-                                '-₺${_appliedDiscount!.calculateDiscount(_cartManager.totalPrice).toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.green.shade700,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Divider(height: 20),
-                        ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).shadowColor.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      if (_appliedDiscount != null) ...[
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Total',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Text(
+                              l10n.subtotal,
+                              style: TextStyle(fontSize: 14),
                             ),
                             Text(
-                              '₺${_discountedTotal.toStringAsFixed(2)}',
+                              formatDoublePrice(_cartManager.totalPrice),
                               style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    themeNotifier.isBlackMode
-                                        ? Theme.of(
-                                          context,
-                                        ).colorScheme.secondary
-                                        : Colors.red,
+                                fontSize: 14,
+                                color: Theme.of(context).hintColor,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  themeNotifier.isBlackMode
-                                      ? Theme.of(context).colorScheme.secondary
-                                      : Colors.red,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              l10n.discount(_appliedDiscount!.discountPercentage.round()),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.green.shade700,
                               ),
                             ),
-                            onPressed:
-                                cartItems.isEmpty || _isProcessingPayment
-                                    ? null
-                                    : _proceedToCheckout,
-                            child:
-                                _isProcessingPayment
-                                    ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                    : const Text(
-                                      'CHECKOUT',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                          ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '-${formatDoublePrice(_appliedDiscount!.calculateDiscount(_cartManager.totalPrice))}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.green.shade700,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: _removeDiscount,
+                                  visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  splashRadius: 20,
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
+                        const Divider(height: 20),
                       ],
-                    ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            l10n.total,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            formatDoublePrice(_discountedTotal),
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  themeNotifier.isSpecialModeActive
+                                      ? themeNotifier.getThemeColor(
+                                        themeNotifier.specialTheme,
+                                      )
+                                      : Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                themeNotifier.isSpecialModeActive
+                                    ? themeNotifier.getThemeColor(
+                                      themeNotifier.specialTheme,
+                                    )
+                                    : Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed:
+                              cartItems.isEmpty || _isProcessingPayment
+                                  ? null
+                                  : _proceedToCheckout,
+                          child:
+                              _isProcessingPayment
+                                  ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                  : Text(
+                                    l10n.checkout,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
     );
   }
 }

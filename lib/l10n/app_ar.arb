@@ -1,0 +1,246 @@
+{
+    "appTitle": "قطع غيار كمبيوتر الفردوس",
+    "welcome": "مرحباً",
+    "login": "تسجيل الدخول",
+    "signIn": "تسجيل",
+    "register": "تسجيل",
+    "guest": "ضيف",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "notAMember": "لست عضواً؟",
+    "alreadyHaveAccount": "هل لديك حساب بالفعل؟",
+    "profile": "الملف الشخصي",
+    "home": "المنزل",
+    "favorites": "المفضلة",
+    "cart": "السلة",
+    "settings": "الإعدادات",
+    "language": "اللغة",
+    "english": "الإنجليزية",
+    "turkish": "التركية",
+    "arabic": "العربية",
+    "darkMode": "الوضع الداكن",
+    "specialMode": "الوضع الخاص",
+    "passwordlessSignIn": "تسجيل الدخول بدون كلمة مرور",
+    "wheelOfDiscount": "عجلة الخصم",
+    "cardHolder": "اسم حامل البطاقة",
+    "expires": "تاريخ الانتهاء: {date}",
+    "@expires": {
+        "placeholders": {
+            "date": {
+                "type": "String"
+            }
+        }
+    },
+    "addToCart": "أضف إلى السلة",
+    "outOfStock": "نفذ من المخزون",
+    "removeFromFavorites": "إزالة من المفضلة",
+    "addedToFavorites": "تمت الإضافة إلى المفضلة",
+    "removedFromFavorites": "تمت الإزالة من المفضلة",
+    "searchProducts": "البحث عن المنتجات",
+    "categories": "الفئات",
+    "allCategories": "جميع الفئات",
+    "bestDeals": "أفضل العروض",
+    "products": "{count} منتج",
+    "productQuantity": "الكمية",
+    "noProductsFound": "لم يتم العثور على منتجات",
+    "tryDifferentSearch": "جرب البحث بكلمة مختلفة",
+    "tryDifferentCategory": "جرب اختيار فئة مختلفة",
+    "viewCart": "عرض السلة",
+    "off": "خصم",
+    "addedToCart": "تمت إضافة {productName} إلى السلة",
+    "@addedToCart": {
+        "placeholders": {
+            "productName": {
+                "type": "String"
+            }
+        }
+    },
+    "errorAddingToCart": "فشل في إضافة المنتج إلى السلة",
+    "pleaseSignIn": "يرجى تسجيل الدخول للمتابعة",
+    "signOut": "تسجيل الخروج",
+    "editProfile": "تعديل الملف الشخصي",
+    "name": "الاسم",
+    "surname": "اللقب",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "accountSettings": "إعدادات الحساب",
+    "myAddresses": "عناويني",
+    "addNewAddress": "إضافة عنوان جديد",
+    "hello": "مرحباً",
+    "yourAddresses": "عناوينك",
+    "noAddressesFound": "لم يتم العثور على عناوين.",
+    "recipientInfo": "معلومات المستلم",
+    "firstName": "الاسم الأول",
+    "lastName": "اسم العائلة",
+    "phoneNumber": "رقم الهاتف",
+    "addressType": "نوع العنوان",
+    "addressDetails": "تفاصيل العنوان",
+    "streetAvenue": "الشارع / الجادة",
+    "neighborhood": "الحي",
+    "buildingNo": "رقم المبنى",
+    "apartmentName": "اسم العمارة",
+    "floorNo": "رقم الطابق",
+    "doorNo": "رقم الشقة",
+    "city": "المدينة",
+    "addressLabel": "تسمية العنوان",
+    "addressLabelHint": "مثال: المنزل، العمل، إلخ.",
+    "saveAddress": "حفظ العنوان",
+    "savingAddress": "جاري حفظ العنوان...",
+    "addressSaved": "تم حفظ العنوان بنجاح",
+    "userNotLoggedIn": "المستخدم غير مسجل الدخول.",
+    "errorSavingAddress": "خطأ في حفظ العنوان: {error}",
+    "@errorSavingAddress": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "fillAllFields": "يرجى ملء جميع الحقول",
+    "pleaseEnterFirstName": "يرجى إدخال الاسم الأول",
+    "pleaseEnterLastName": "يرجى إدخال اسم العائلة",
+    "pleaseEnterPhoneNumber": "يرجى إدخال رقم الهاتف",
+    "invalidPhoneNumber": "يرجى إدخال رقم هاتف صحيح",
+    "pleaseEnterStreetName": "يرجى إدخال اسم الشارع",
+    "pleaseEnterNeighborhood": "يرجى إدخال اسم الحي",
+    "required": "مطلوب",
+    "pleaseEnterAddressLabel": "يرجى إدخال تسمية العنوان",
+    "selectCity": "اختر المدينة",
+    "pleaseSelectCity": "يرجى اختيار مدينة",
+    "work": "العمل",
+    "delete": "حذف",
+    "setAsDefault": "تعيين كافتراضي",
+    "loading": "جاري التحميل...",
+    "productNotFound": "المنتج غير موجود",
+    "inStock": "متوفر في المخزون: {count} قطعة",
+    "@inStock": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "cannotAddMoreThanStock": "لا يمكن إضافة أكثر من المخزون المتوفر ({count})",
+    "@cannotAddMoreThanStock": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "productDescription": "وصف المنتج",
+    "specifications": "المواصفات",
+    "customerReviews": "تقييمات العملاء",
+    "noReviewsYet": "لا توجد تقييمات حتى الآن",
+    "couldNotLoadReviews": "تعذر تحميل التقييمات",
+    "anonymous": "مجهول",
+    "quantity": "الكمية",
+    "failedToUpdateFavorites": "فشل في تحديث المفضلة",
+    "pleaseLoginToAdd": "يرجى تسجيل الدخول للإضافة إلى المفضلة",
+    "minutesAgo": "منذ {count} دقيقة",
+    "@minutesAgo": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "hoursAgo": "منذ {count} ساعة",
+    "@hoursAgo": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "myOrders": "طلباتي",
+    "myWallet": "محفظتي",
+    "appearance": "المظهر",
+    "adminPanel": "لوحة الإدارة",
+    "referralCode": "رمز الإحالة الخاص بك",
+    "copiedToClipboard": "تم النسخ إلى الحافظة",
+    "changeProfilePicture": "تغيير صورة الملف الشخصي",
+    "takePhoto": "التقاط صورة",
+    "chooseFromGallery": "اختيار من المعرض",
+    "addFromUrl": "إضافة من رابط",
+    "removePhoto": "إزالة الصورة",
+    "enterImageUrl": "أدخل رابط الصورة",
+    "add": "إضافة",
+    "sort": "ترتيب",
+    "priceLowToHigh": "السعر: من الأقل إلى الأعلى",
+    "priceHighToLow": "السعر: من الأعلى إلى الأقل",
+    "nameAToZ": "الاسم: من أ إلى ي",
+    "nameZToA": "الاسم: من ي إلى أ",
+    "specialOffers": "عروض خاصة",
+    "specialOffersDescription": "خصم يصل إلى 20% على المنتجات المختارة",
+    "shopNow": "تسوق الآن",
+    "authentication": "المصادقة",
+    "createAccount": "إنشاء حساب",
+    "addYourName": "أضف اسمك",
+    "admin": "المدير",
+    "guestUser": "مستخدم زائر",
+    "signInToAccess": "سجل الدخول للوصول إلى جميع الميزات",
+    "yourReferralCode": "رمز الإحالة الخاص بك",
+    "noFavoritesYet": "لا توجد مفضلات حتى الآن",
+    "itemsYouFavorite": "العناصر التي تفضلها ستظهر هنا",
+    "yourCart": "سلة التسوق الخاصة بك",
+    "emptyCart": "سلة التسوق فارغة",
+    "addItemsToCheckout": "أضف عناصر إلى سلة التسوق للدفع",
+    "clearCart": "تفريغ السلة",
+    "clearCartConfirmation": "هل أنت متأكد من إزالة جميع العناصر؟",
+    "discountCode": "رمز الخصم",
+    "invalidDiscountCode": "رمز الخصم غير صالح أو منتهي الصلاحية",
+    "noSavedDiscountCodes": "لا توجد رموز خصم محفوظة",
+    "savedDiscountCodes": "رموز الخصم المحفوظة",
+    "enterDiscountCode": "أدخل رمز الخصم",
+    "enterValidDiscountCode": "الرجاء إدخال رمز خصم صالح",
+    "newDiscount": "خصم جديد!",
+    "discountCodeAvailable": "يتوفر رمز خصم جديد",
+    "discountSaved": "تم حفظ رمز الخصم بنجاح",
+    "saveDiscount": "حفظ الخصم",
+    "myDiscounts": "خصوماتي",
+    "noDiscounts": "لا توجد رموز خصم متاحة",
+    "validUntil": "صالح حتى {date}",
+    "@validUntil": {
+        "placeholders": {
+            "date": {
+                "type": "String",
+                "example": "30 يونيو 2025"
+            }
+        }
+    },
+    "loading": "جارٍ التحميل...",
+    "noDiscountsAvailable": "لا توجد خصومات متاحة",
+    "currency": "{amount} ₺",
+    "@currency": {
+        "placeholders": {
+            "amount": {
+                "type": "String",
+                "example": "100.00"
+            }
+        }
+    },
+    "wheelManagement": "إدارة العجلة",
+    "wheelItemsDescription": "إدارة عناصر عجلة الخصم واحتمالاتها",
+    "probability": "احتمال",
+    "addNewDiscount": "إضافة خصم جديد",
+    "discountValue": "قيمة الخصم",
+    "pleaseEnterValue": "الرجاء إدخال قيمة",
+    "enterValidNumber": "الرجاء إدخال رقم صحيح بين 1 و 100",
+    "congratulations": "تهانينا!",
+    "betterLuckNextTime": "حظاً أوفر في المرة القادمة!",
+    "youWonDiscount": "لقد ربحت",
+    "settingsSaved": "تم حفظ الإعدادات بنجاح",
+    "comeBackNextWeek": "عد في الأسبوع القادم!",
+    "spinning": "يدور...",
+    "spinTheWheel": "أدر العجلة!",
+    "mostViewed": "المنتجات الأكثر مشاهدة",
+    "noSavedCards": "لا توجد رموز خصم محفوظة",
+    "myCards": "بطاقاتي",
+    "invalidExpiryDate": "تاريخ انتهاء غير صالح",
+    "invalidCvv": "رمز CVV غير صالح",
+    "deliveryFee": "رسوم التوصيل",
+    "edit": "تعديل"
+}

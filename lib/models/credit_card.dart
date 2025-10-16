@@ -12,23 +12,22 @@ class CreditCard {
     required this.cardHolder,    
     required this.expiryDate,    
     required this.cvv,  // Add this    
-    this.isDefault = false,  
+    required this.isDefault,  
   });  
     
   factory CreditCard.fromMap(Map<String, dynamic> map) {    
     return CreditCard(      
-      id: map['id'] ?? '',      
-      cardNumber: map['cardNumber'] ?? '',      
-      cardHolder: map['cardHolder'] ?? '',      
-      expiryDate: map['expiryDate'] ?? '',      
-      cvv: map['cvv'] ?? '',  // Add this      
-      isDefault: map['isDefault'] ?? false,    
+      id: map['id']?.toString() ?? '',      
+      cardNumber: map['cardNumber']?.toString() ?? '',      
+      cardHolder: map['cardHolder']?.toString() ?? '',      
+      expiryDate: map['expiryDate']?.toString() ?? '',      
+      cvv: map['cvv']?.toString() ?? '',      
+      isDefault: map['isDefault'] as bool? ?? false,    
     );  
   }  
   
   Map<String, dynamic> toMap() {    
     return {      
-      'id': id,      
       'cardNumber': cardNumber,      
       'cardHolder': cardHolder,      
       'expiryDate': expiryDate,      

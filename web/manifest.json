@@ -1,13 +1,17 @@
 {
-    "name": "Paradise PC",
-    "short_name": "Paradise",
+    "name": "Paradise PC Parts",
+    "short_name": "Paradise PC",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#FFFFFF",
-    "theme_color": "#FFFFFF",
-    "description": "Your app description",
+    "gcm_sender_id": "52042306180",
+    "background_color": "#0175C2",
+    "theme_color": "#0175C2",
+    "description": "Paradise PC Parts - Your one-stop shop for computer components",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "permissions": [
+        "notifications"
+    ],
     "icons": [
         {
             "src": "icons/Icon-192.png",

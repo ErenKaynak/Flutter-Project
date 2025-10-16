@@ -1,0 +1,738 @@
+{
+    "appTitle": "Paradise PC Bileşenleri",
+    "welcome": "Hoş Geldiniz",
+    "login": "Giriş Yap",
+    "signIn": "Giriş",
+    "register": "Kayıt Ol",
+    "guest": "Misafir",
+    "email": "E-posta",
+    "password": "Şifre",
+    "confirmPassword": "Şifreyi Onayla",
+    "forgotPassword": "Şifremi Unuttum?",
+    "notAMember": "Üye değil misiniz?",
+    "alreadyHaveAccount": "Zaten hesabınız var mı?",
+    "profile": "Profil",
+    "home": "Ev",
+    "favorites": "Favoriler",
+    "cart": "Sepet",
+    "settings": "Ayarlar",
+    "language": "Dil",
+    "english": "İngilizce",
+    "turkish": "Türkçe",
+    "arabic": "Arapça",
+    "darkMode": "Karanlık Mod",
+    "specialMode": "Özel Mod",
+    "passwordlessSignIn": "Şifresiz Giriş",
+    "wheelOfDiscount": "İndirim Çarkı",
+    "addToCart": "SEPETE EKLE",
+    "outOfStock": "STOKTA YOK",
+    "removeFromFavorites": "Favorilerden Kaldır",
+    "addedToFavorites": "Favorilere Eklendi",
+    "removedFromFavorites": "Favorilerden Kaldırıldı",
+    "searchProducts": "Ürün Ara",
+    "categories": "Kategoriler",
+    "allCategories": "Tüm Kategoriler",
+    "bestDeals": "En İyi Fırsatlar",
+    "products": "{count} ürün",
+    "@products": {
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "description": "Number of products"
+            }
+        }
+    },
+    "noProductsFound": "Ürün bulunamadı",
+    "tryDifferentSearch": "Farklı bir arama deneyin",
+    "tryDifferentCategory": "Farklı bir kategori seçin",
+    "viewCart": "Sepeti Görüntüle",
+    "off": "indirim",
+    "addedToCart": "{productName} sepete eklendi",
+    "@addedToCart": {
+        "placeholders": {
+            "productName": {
+                "type": "String"
+            }
+        }
+    },
+    "errorAddingToCart": "Sepete eklenirken hata oluştu",
+    "pleaseSignIn": "Lütfen devam etmek için giriş yapın",
+    "signOut": "Çıkış Yap",
+    "editProfile": "Profili Düzenle",
+    "name": "Ad",
+    "surname": "Soyad",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "accountSettings": "Hesap Ayarları",
+    "myAddresses": "Adreslerim",
+    "addNewAddress": "Yeni Adres Ekle",
+    "hello": "Merhaba",
+    "yourAddresses": "Adresleriniz",
+    "noAddressesFound": "Adres bulunamadı.",
+    "recipientInfo": "Alıcı Bilgileri",
+    "firstName": "Ad",
+    "lastName": "Soyad",
+    "phoneNumber": "Telefon Numarası",
+    "addressType": "Adres Tipi",
+    "addressDetails": "Adres Detayları",
+    "streetAvenue": "Sokak / Cadde",
+    "neighborhood": "Mahalle",
+    "buildingNo": "Bina No",
+    "apartmentName": "Apartman Adı",
+    "floorNo": "Kat No",
+    "doorNo": "Daire No",
+    "city": "Şehir",
+    "addressLabel": "Adres Etiketi",
+    "addressLabelHint": "Örnek: Ev, İş vb.",
+    "saveAddress": "Adresi Kaydet",
+    "savingAddress": "Adres kaydediliyor...",
+    "addressSaved": "Adres başarıyla kaydedildi",
+    "userNotLoggedIn": "Kullanıcı giriş yapmamış.",
+    "errorSavingAddress": "Adres kaydedilirken hata oluştu: {error}",
+    "@errorSavingAddress": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "fillAllFields": "Lütfen tüm alanları doldurun",
+    "pleaseEnterFirstName": "Lütfen adınızı girin",
+    "pleaseEnterLastName": "Lütfen soyadınızı girin",
+    "pleaseEnterPhoneNumber": "Lütfen telefon numaranızı girin",
+    "invalidPhoneNumber": "Lütfen geçerli bir telefon numarası girin",
+    "pleaseEnterStreetName": "Lütfen sokak adını girin",
+    "pleaseEnterNeighborhood": "Lütfen mahalle adını girin",
+    "required": "Zorunlu",
+    "pleaseEnterAddressLabel": "Lütfen adres etiketi girin",
+    "selectCity": "Şehir Seçin",
+    "pleaseSelectCity": "Lütfen bir şehir seçin",
+    "work": "İş",
+    "delete": "Sil",
+    "setAsDefault": "Varsayılan Yap",
+    "loading": "Yükleniyor...",
+    "productNotFound": "Ürün bulunamadı",
+    "inStock": "Stokta: {count} adet",
+    "@inStock": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "cannotAddMoreThanStock": "Stoktan fazla ürün eklenemez (Stok: {count})",
+    "@cannotAddMoreThanStock": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "productDescription": "Ürün Açıklaması",
+    "specifications": "Özellikler",
+    "customerReviews": "Müşteri Değerlendirmeleri",
+    "noReviewsYet": "Henüz değerlendirme yok",
+    "couldNotLoadReviews": "Değerlendirmeler yüklenemedi",
+    "anonymous": "Anonim",
+    "quantity": "Adet",
+    "failedToUpdateFavorites": "Favoriler güncellenemedi",
+    "pleaseLoginToAdd": "Favorilere eklemek için lütfen giriş yapın",
+    "minutesAgo": "{count} dakika önce",
+    "@minutesAgo": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "hoursAgo": "{count} saat önce",
+    "@hoursAgo": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "myOrders": "Siparişlerim",
+    "myWallet": "Cüzdanım",
+    "appearance": "Görünüm",
+    "adminPanel": "Yönetici Paneli",
+    "referralCode": "Referans Kodunuz",
+    "copiedToClipboard": "Panoya kopyalandı",
+    "changeProfilePicture": "Profil Resmini Değiştir",
+    "takePhoto": "Fotoğraf çek",
+    "chooseFromGallery": "Galeriden seç",
+    "addFromUrl": "URL'den ekle",
+    "removePhoto": "Fotoğrafı Kaldır",
+    "enterImageUrl": "Resim URL'sini girin",
+    "add": "Ekle",
+    "sort": "Sırala",
+    "priceLowToHigh": "Fiyat: Düşükten Yükseğe",
+    "priceHighToLow": "Fiyat: Yüksekten Düşüğe",
+    "nameAToZ": "İsim: A'dan Z'ye",
+    "nameZToA": "İsim: Z'den A'ya",
+    "specialOffers": "Özel Teklifler",
+    "specialOffersDescription": "Seçili ürünlerde %20'ye varan indirimler",
+    "shopNow": "Hemen Alışveriş Yap",
+    "authentication": "Kimlik Doğrulama",
+    "createAccount": "Hesap Oluştur",
+    "addYourName": "Adınızı Ekleyin",
+    "admin": "YÖNETİCİ",
+    "guestUser": "Misafir Kullanıcı",
+    "signInToAccess": "Tüm özelliklere erişmek için giriş yapın",
+    "yourReferralCode": "Referans Kodunuz",
+    "noFavoritesYet": "Henüz favori yok",
+    "itemsYouFavorite": "Favoriye eklediğiniz ürünler burada görünecek",
+    "yourCart": "Sepetiniz",
+    "emptyCart": "Sepetiniz boş",
+    "addItemsToCheckout": "Ödeme yapmak için sepetinize ürün ekleyin",
+    "clearCart": "Sepeti Temizle",
+    "clearCartConfirmation": "Tüm ürünleri kaldırmak istediğinizden emin misiniz?",
+    "discountCode": "İndirim Kodu",
+    "enterCode": "Kodu girin",
+    "apply": "UYGULA",
+    "discountApplied": "İndirim Uygulandı: {code}",
+    "percentOff": "%{percent} indirim",
+    "@percentOff": {
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
+    "invalidDiscountCode": "Geçersiz veya süresi dolmuş indirim kodu",
+    "noSavedDiscountCodes": "Kayıtlı İndirim Kodu Bulunamadı",
+    "savedDiscountCodes": "Kayıtlı İndirim Kodları",
+    "enterDiscountCode": "İndirim kodunu girin",
+    "enterValidDiscountCode": "Lütfen geçerli bir indirim kodu girin",
+    "newDiscount": "Yeni İndirim!",
+    "discountCodeAvailable": "Yeni bir indirim kodu mevcut",
+    "discountSaved": "İndirim kodu başarıyla kaydedildi",
+    "saveDiscount": "İndirimi Kaydet",
+    "myDiscounts": "İndirimlerim",
+    "noDiscounts": "İndirim kodu bulunmuyor",
+    "validUntil": "{date} tarihine kadar geçerli",
+    "@validUntil": {
+        "placeholders": {
+            "date": {
+                "type": "String",
+                "example": "30 Haziran 2025"
+            }
+        }
+    },
+    "subtotal": "Ara Toplam",
+    "discount": "İndirim (%{percent})",
+    "total": "Toplam",
+    "totalAmount": "Toplam: ₺{amount}",
+    "checkout": "ÖDEME YAP",
+    "paymentSuccessful": "Ödeme Başarılı!",
+    "amountPaid": "Ödenen Tutar: ₺{amount}",
+    "orderHistory": "Sipariş Geçmişi",
+    "orderDetails": "Sipariş Detayları",
+    "orderNumber": "Sipariş Numarası",
+    "orderDate": "Sipariş Tarihi",
+    "orderStatus": "Sipariş Durumu",
+    "orderTotal": "Sipariş Toplamı",
+    "shippingAddress": "Teslimat Adresi",
+    "paymentMethod": "Ödeme Yöntemi",
+    "trackOrder": "Siparişi Takip Et",
+    "cancelOrder": "Siparişi İptal Et",
+    "returnOrder": "Siparişi İade Et",
+    "orderCancelled": "Sipariş İptal Edildi",
+    "orderReturned": "Sipariş İade Edildi",
+    "orderDelivered": "Sipariş Teslim Edildi",
+    "orderProcessing": "Sipariş İşleniyor",
+    "orderShipped": "Sipariş Kargoya Verildi",
+    "rateProduct": "Ürünü Değerlendir",
+    "writeReview": "Yorum Yaz",
+    "rating": "Değerlendirme",
+    "review": "Yorum",
+    "submitReview": "Değerlendirmeyi Gönder",
+    "reviewSubmitted": "Değerlendirmeniz gönderildi",
+    "selectRating": "Değerlendirme seçin",
+    "poor": "Kötü",
+    "fair": "Orta",
+    "good": "İyi",
+    "veryGood": "Çok İyi",
+    "excellent": "Mükemmel",
+    "currentBalance": "Mevcut Bakiye",
+    "cashbackInfo": "Her alışverişte %2'ye varan nakit iade kazanın",
+    "addMoney": "Para Ekle",
+    "transactionHistory": "İşlem Geçmişi",
+    "transactionsCount": "{count} işlem",
+    "@transactionsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "description": "Number of transactions"
+            }
+        }
+    },
+    "noTransactions": "Henüz işlem yok",
+    "transactionsWillAppear": "İşlemleriniz burada görünecek",
+    "deposit": "Para Yükleme",
+    "purchase": "Alışveriş",
+    "transactionDetails": "İşlem Detayları",
+    "type": "Tür",
+    "amount": "Tutar",
+    "date": "Tarih",
+    "status": "Durum",
+    "method": "Yöntem",
+    "reference": "Referans",
+    "description": "Açıklama",
+    "addMoneyToWallet": "Cüzdana Para Ekle",
+    "enterValidAmount": "Lütfen geçerli bir tutar girin",
+    "addNewCard": "Yeni Kart Ekle",
+    "selectCard": "Kart Seçin",
+    "useCard": "Kayıtlı Kartı Kullan",
+    "cardNumber": "Kart Numarası",
+    "cardHolderName": "Kart Sahibinin Adı",
+    "cardNumberError": "Kart numarası 16 haneli olmalıdır",
+    "invalidCardNumber": "Geçersiz kart numarası",
+    "onlyLettersAllowed": "Sadece harf kullanılabilir",
+    "useMMYYFormat": "AA/YY formatını kullanın",
+    "cardExpired": "Kartın süresi dolmuş",
+    "invalidCVV": "Geçersiz CVV",
+    "amountMustBeGreater": "Tutar 0'dan büyük olmalıdır",
+    "maximumAmount": "Maksimum tutar 10.000₺'dir",
+    "invalidAmount": "Geçersiz tutar",
+    "fillCardDetails": "Lütfen kart bilgilerini doldurun",
+    "pleaseSelectCard": "Lütfen bir kart seçin",
+    "cardSaved": "Kart başarıyla kaydedildi",
+    "errorSavingCard": "Kart kaydedilirken hata oluştu: {error}",
+    "@errorSavingCard": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "checkout": "ÖDEME YAP",
+    "address": "Adres",
+    "payment": "Ödeme",
+    "confirm": "Onay",
+    "deliveryAddress": "Teslimat Adresi",
+    "addNew": "Yeni Ekle",
+    "noSavedAddresses": "Kayıtlı adres bulunamadı",
+    "payWithCreditCard": "Kredi kartı ile öde",
+    "payWithWallet": "Cüzdan ile öde",
+    "availableBalance": "Kullanılabilir Bakiye: ₺{amount}",
+    "@availableBalance": {
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "insufficientBalance": "Yetersiz bakiye",
+    "creditCards": "Kredi Kartları",
+    "noSavedCards": "Kayıtlı kart bulunamadı",
+    "myCards": "Kartlarım",
+    "orderSummary": "Sipariş Özeti",
+    "addMoreForFreeShipping": "₺{amount} daha ekleyin, ücretsiz kargo fırsatından yararlanın",
+    "@addMoreForFreeShipping": {
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "subtotal": "Ara Toplam",
+    "discount": "İndirim (%{percent})",
+    "@discount": {
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
+    "shipping": "Kargo",
+    "total": "Toplam",
+    "freeShippingOver": "₺10.000 üzeri ücretsiz kargo",
+    "free": "Ücretsiz",
+    "placeOrder": "SİPARİŞİ TAMAMLA",
+    "pleaseSelectAddress": "Lütfen bir teslimat adresi seçin",
+    "pleaseSelectCard": "Lütfen bir kart seçin",
+    "cardExpired": "Kartın süresi dolmuş",
+    "deleteCard": "Kartı Sil",
+    "deleteCardConfirmation": "Bu kartı silmek istediğinizden emin misiniz?",
+    "cancel": "İPTAL",
+    "delete": "SİL",
+    "defaultCard": "Varsayılan Kart",
+    "expires": "Son Kullanma Tarihi: {date}",
+    "@expires": {
+        "placeholders": {
+            "date": {
+                "type": "String"
+            }
+        }
+    },
+    "somethingWentWrong": "Bir şeyler yanlış gitti",
+    "tryAgain": "Tekrar Dene",
+    "noOrdersYet": "Henüz sipariş yok",
+    "yourOrderHistoryWillAppearHere": "Sipariş geçmişiniz burada görünecek",
+    "startShopping": "Alışverişe Başla",
+    "yourOrders": "Siparişleriniz",
+    "ordersCount": "{count} sipariş",
+    "@ordersCount": {
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "description": "Number of orders"
+            }
+        }
+    },
+    "filterByStatus": "Duruma Göre Filtrele",
+    "allOrders": "Tümü",
+    "pending": "Beklemede",
+    "preparing": "Hazırlanıyor",
+    "onDelivery": "Yolda",
+    "delivered": "Teslim Edildi",
+    "cancelled": "İptal Edildi",
+    "noOrdersWithStatus": "{status} durumunda sipariş bulunamadı",
+    "@noOrdersWithStatus": {
+        "placeholders": {
+            "status": {
+                "type": "String"
+            }
+        }
+    },
+    "tryDifferentFilter": "Farklı bir filtre deneyin",
+    "orderPrefix": "Sipariş #",
+    "dateFormat": "dd.MM.yyyy HH:mm",
+    "shippingAddressLabel": "Teslimat Adresi",
+    "defaultShippingAddress": "Varsayılan teslimat adresi",
+    "paymentMethodLabel": "Ödeme Yöntemi",
+    "cardPayment": "Kart ile Ödeme",
+    "reorderButton": "Tekrar Sipariş Ver",
+    "productNoLongerAvailable": "Bu ürün artık mevcut değil",
+    "quantityPrefix": "Adet:",
+    "itemTotalPrefix": "Toplam:",
+    "alreadyReviewed": "Bu ürünü zaten değerlendirdiniz",
+    "canReviewAfterDelivery": "Ürünü teslim aldıktan sonra değerlendirebilirsiniz",
+    "rateProduct": "Ürünü Değerlendir",
+    "outOfStockItems": "Aşağıdaki ürünler stokta yok:\n\n• {items}",
+    "@outOfStockItems": {
+        "placeholders": {
+            "items": {
+                "type": "String"
+            }
+        }
+    },
+    "insufficientStockItems": "Aşağıdaki ürünlerin stok miktarı yetersiz:\n\n• {items}",
+    "@insufficientStockItems": {
+        "placeholders": {
+            "items": {
+                "type": "String"
+            }
+        }
+    },
+    "cannotReorder": "Sipariş Tekrarlanamıyor",
+    "ok": "Tamam",
+    "errorCheckingAvailability": "Stok kontrolü sırasında bir hata oluştu",
+    "confirmCancelOrder": "Bu siparişi iptal etmek istediğinizden emin misiniz?",
+    "failedToCancelOrder": "Sipariş iptal edilemedi: {error}",
+    "@failedToCancelOrder": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "thankYouForReview": "Değerlendirmeniz için teşekkür ederiz",
+    "failedToSubmitReview": "Değerlendirme gönderilemedi",
+    "items": "Ürünler",
+    "trackingNumber": "Takip Numarası",
+    "categoryAll": "Tüm Kategoriler",
+    "categoryCPU": "İşlemciler",
+    "categoryGPU": "Ekran Kartları",
+    "categoryRAM": "RAM",
+    "categoryMotherboard": "Anakartlar",
+    "categoryStorage": "Depolama",
+    "categoryCase": "Kasalar",
+    "categoryPSU": "Güç Kaynakları",
+    "categoryPreBuilt": "Hazır Sistemler",
+    "aiChatTitle": "Asistan Tommy",
+    "askMeAnything": "Bana Her Şeyi Sorabilirsin...",
+    "howCanIHelp": "Bugün size nasıl yardımcı olabilirim?",
+    "iNeedAssistance": "Yardıma ihtiyacım var",
+    "recommendCheapestPC": "Bana en ucuz PC yapılandırmasını öner",
+    "lookingForGamingPC": "Oyun bilgisayarı yapılandırması arıyorum",
+    "addNewProduct": "Yeni Ürün Ekle",
+    "updateProduct": "Ürünü Güncelle",
+    "productDetails": "Ürün Detayları",
+    "productName": "Ürün Adı",
+    "productPrice": "Fiyat",
+    "productStock": "Stok",
+    "productCategory": "Kategori",
+    "productDescription": "Açıklama",
+    "mainImage": "Ana Görsel",
+    "additionalImages": "Ek Görseller",
+    "generateAIDescription": "Yapay Zeka ile Açıklama Oluştur",
+    "pleaseEnterProductName": "Lütfen önce ürün adını girin",
+    "errorGeneratingDescription": "Açıklama oluşturulurken hata: {error}",
+    "@errorGeneratingDescription": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "searchProduct": "Ürün Ara",
+    "selectProductToUpdate": "Güncellenecek Ürünü Seçin",
+    "imageRequired": "Ana görsel gereklidir",
+    "productUpdated": "Ürün başarıyla güncellendi",
+    "errorUpdatingProduct": "Ürün güncellenirken hata: {error}",
+    "@errorUpdatingProduct": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "onVacation": "Şu anda tatildeyim!! Daha sonra tekrar deneyin :P",
+    "adminOnly": "Sadece yöneticiler ürün ekleyebilir",
+    "selectCategory": "Kategori Seç",
+    "update": "Güncelle",
+    "price": "Fiyat",
+    "stock": "Stok",
+    "orderPlaced": "Siparişiniz başarıyla verildi",
+    "orderId": "Sipariş No: {id}",
+    "viewOrders": "Siparişleri Görüntüle",
+    "continueShopping": "Alışverişe Devam Et",
+    "cardNumberHint": "Kart Numarası",
+    "cardHolderHint": "Kart Sahibinin Adı",
+    "expiryDate": "Son Kullanma Tarihi",
+    "expiryDateHint": "AA/YY",
+    "cardIsExpired": "Kartınızın süresi dolmuş",
+    "cvv": "CVV",
+    "cvvHint": "3 haneli kod",
+    "myFavorites": "Favorilerim",
+    "refresh": "Yenile",
+    "exploreProducts": "Ürünleri Keşfet",
+    "failedToRemove": "Kaldırma başarısız",
+    "failedToAddToCart": "Sepete ekleme başarısız",
+    "adminDashboard": "Yönetici Paneli",
+    "adminControls": "Yönetici Kontrolleri",
+    "userManagement": "Kullanıcı Yönetimi",
+    "viewAndManageUsers": "Kullanıcıları Görüntüle ve Yönet",
+    "productManagement": "Ürün Yönetimi",
+    "manageProducts": "Ürünleri Yönet",
+    "orderManagement": "Sipariş Yönetimi",
+    "viewAndProcessOrders": "Siparişleri Görüntüle ve İşle",
+    "moneyAdded": "Para eklendi",
+    "errorAddingBalance": "Bakiye ekleme hatası",
+    "itemTotal": "Ürün Toplamı",
+    "noAddressProvided": "Adres belirtilmedi",
+    "notSpecified": "Belirtilmedi",
+    "reorder": "Tekrar Sipariş Ver",
+    "itemsLabel": "Ürünler",
+    "totalPrefix": "Toplam:",
+    "addedToCartMessage": "Sepete eklendi",
+    "mustBeLoggedIn": "Giriş yapmalısınız",
+    "pleaseLoginToAddFavorites": "Favorilere eklemek için lütfen giriş yapın",
+    "justNow": "Az önce",
+    "stockRemaining": "Kalan Stok: {stock}",
+    "@stockRemaining": {
+        "placeholders": {
+            "stock": {
+                "type": "int"
+            }
+        }
+    },
+    "updateStock": "{productName} için Stoğu Güncelle",
+    "@updateStock": {
+        "placeholders": {
+            "productName": {
+                "type": "Object"
+            }
+        }
+    },
+    "newStockAmount": "Yeni Stok Miktarı",
+    "enterNewStockAmount": "Yeni stok miktarını girin",
+    "pleaseEnterValidNumber": "Lütfen geçerli bir sayı girin",
+    "adminDashboard": "Yönetici Paneli",
+    "adminControls": "Yönetici Kontrolleri",
+    "checkingStockLevels": "Stok seviyeleri kontrol ediliyor...",
+    "lowStockAlerts": "Uyarılar",
+    "noLowStockProducts": "Düşük stoklu ürün yok",
+    "lowStockProductsCount": "{count} ürünün stoğu az",
+    "@lowStockProductsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "promoCodes": "Promosyon Kodları",
+    "createPromocodesAndDiscounts": "Promosyon Kodları ve İndirimler Oluştur",
+    "salesStatistics": "Satış İstatistikleri",
+    "viewSalesAnalytics": "Satış analizlerini ve grafiklerini görüntüle",
+    "assistantTommySettings": "Tommy Asistan Ayarları",
+    "configureTommyAvailability": "Tommy'nin kullanılabilirliğini yapılandır",
+    "enableAssistantTommy": "Tommy Asistanı Etkinleştir",
+    "tommyAvailable": "Tommy şu anda kullanılabilir",
+    "tommyDisabled": "Tommy şu anda devre dışı",
+    "hideTommy": "Tommy'yi Gizle",
+    "allEyesOnTommy": "Tüm Gözler Tommy'de !",
+    "tommyHiding": "Tommy dolabında saklanıyor !",
+    "close": "Kapat",
+    "photoUploader": "Fotoğraf Yükleyici",
+    "configureAppSettings": "Uygulama ayarlarını yapılandır",
+    "ratingCount": "{count} değerlendirme",
+    "@ratingCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "reportBug": "Hata Bildir",
+    "bugReports": "Hata Raporları",
+    "viewAndManageBugReports": "Hata raporlarını görüntüle ve yönet",
+    "bugTitle": "Hata Başlığı",
+    "enterBugTitle": "Hata için bir başlık girin",
+    "bugDescription": "Hata Açıklaması",
+    "describeBugInDetail": "Lütfen hatayı detaylı bir şekilde açıklayın",
+    "pleaseEnterBugDetails": "Lütfen başlık ve açıklama giriniz",
+    "bugReportSubmitted": "Hata raporu başarıyla gönderildi",
+    "errorSubmittingBugReport": "Hata raporu gönderilirken bir sorun oluştu",
+    "reportedBy": "Bildiren",
+    "reportedOn": "Bildirim Tarihi",
+    "anonymous": "Anonim",
+    "pending": "Beklemede",
+    "inProgress": "İşleniyor",
+    "resolved": "Çözüldü",
+    "dismissed": "Reddedildi",
+    "markAsInProgress": "İşleniyor Olarak İşaretle",
+    "markAsResolved": "Çözüldü Olarak İşaretle",
+    "dismiss": "Reddet",
+    "noBugReports": "Hata raporu bulunamadı",
+    "requestRefund": "İade Talep Et",
+    "confirmRefundRequest": "Bu sipariş için iade talep etmek istediğinizden emin misiniz?",
+    "refundRequestSubmitted": "İade talebi başarıyla gönderildi",
+    "failedToRequestRefund": "İade talebi gönderilemedi: {error}",
+    "@failedToRequestRefund": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "refundRequested": "İade Talep Edildi",
+    "refunded": "İade Edildi",
+    "processRefund": "İadeyi İşle",
+    "refundProcessed": "İade başarıyla işlendi",
+    "failedToProcessRefund": "İade işlenemedi: {error}",
+    "@failedToProcessRefund": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "orLogInWith": "Veya ile giriş yap",
+    "passwordRequirements": "Şifre Gereksinimleri:",
+    "atLeast8Characters": "En az 8 karakter",
+    "maximum20Characters": "En fazla 20 karakter",
+    "oneUppercaseLetter": "Bir büyük harf",
+    "oneLowercaseLetter": "Bir küçük harf",
+    "oneSpecialCharacter": "Bir özel karakter",
+    "notifications": "Bildirimler",
+    "noNotifications": "Henüz bildirim yok",
+    "noNotificationsDesc": "Yeni bildirimler burada görünecek",
+    "clearAllNotifications": "Tüm bildirimleri temizle",
+    "allNotificationsCleared": "Tüm bildirimler temizlendi",
+    "notificationDeleted": "Bildirim silindi",
+    "welcomeNotification": "Hoş Geldiniz!",
+    "welcomeNotificationDesc": "Mağazamıza hoş geldiniz. Sizin için harika tekliflerimiz var.",
+    "newProductNotification": "Yeni Ürün",
+    "newProductNotificationDesc": "RTX 4090 stokta! Hemen inceleyin.",
+    "discountNotification": "İndirim Fırsatı",
+    "discountNotificationDesc": "Tüm RAM'lerde %20 indirim başladı!",
+    "daysAgo": "{count} gün önce",
+    "@daysAgo": {
+        "placeholders": {
+            "days": {
+                "type": "int",
+                "description": "Number of days ago"
+            }
+        }
+    },
+    "notificationManagement": "Bildirim Yönetimi",
+    "newNotification": "Yeni Bildirim Oluştur",
+    "notificationTitle": "Bildirim Başlığı",
+    "notificationMessage": "Bildirim Mesajı",
+    "sendToAllUsers": "Tüm Kullanıcılara Gönder",
+    "sendNotification": "Bildirimi Gönder",
+    "notificationSent": "Bildirim başarıyla gönderildi",
+    "notificationError": "Hata oluştu: {error}",
+    "@notificationError": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "pleaseEnterTitleAndMessage": "Lütfen başlık ve mesaj alanlarını doldurun",
+    "setupWalletPin": "Cüzdan PIN Kodu Oluştur",
+    "createWalletPin": "Yeni PIN Kodu Oluştur",
+    "walletPinDescription": "Lütfen cüzdanınız için 4 haneli bir PIN kodu oluşturun",
+    "enterPin": "PIN Kodunu Girin",
+    "confirmPin": "PIN Kodunu Onaylayın",
+    "useBiometrics": "Parmak İzi Kullan",
+    "biometricsDescription": "Cüzdana erişmek için parmak izi veya yüz tanıma kullanın",
+    "setupPin": "PIN Kodu Oluştur",
+    "verify": "Doğrula",
+    "invalidPin": "Geçersiz PIN Kodu",
+    "savedDiscounts": "Kayıtlı İndirimler",
+    "use": "Kullan",
+    "noSavedDiscountCodes": "Kayıtlı İndirim Kodu Bulunamadı",
+    "savedDiscountCodes": "Kayıtlı İndirim Kodları",
+    "discountOffers": "Mevcut İndirimler",
+    "discountAndPromotionCodes": "İndirimler ve Promosyonlar",
+    "enterDiscountCode": "İndirim kodunu girin",
+    "enterValidDiscountCode": "Lütfen geçerli bir indirim kodu girin",
+    "apply": "Uygula",
+    "minOrderAmount": "Minimum sepet tutarı: {amount}",
+    "@minOrderAmount": {
+        "placeholders": {
+            "amount": {
+                "type": "String",
+                "example": "₺100"
+            }
+        }
+    },
+    "currency": "₺{amount}",
+    "@currency": {
+        "placeholders": {
+            "amount": {
+                "type": "String",
+                "example": "100.00"
+            }
+        }
+    },
+    "noDiscountsAvailable": "Mevcut indirim bulunmuyor",
+    "loading": "Yükleniyor...",
+    "invalidDiscountCode": "Geçersiz indirim kodu",
+    "wheelManagement": "Çark Yönetimi",
+    "wheelItemsDescription": "İndirim çarkı öğelerini ve olasılıklarını yönetin",
+    "probability": "Olasılık",
+    "addNewDiscount": "Yeni İndirim Ekle",
+    "discountValue": "İndirim Değeri",
+    "pleaseEnterValue": "Lütfen bir değer girin",
+    "enterValidNumber": "Lütfen 1 ile 100 arasında geçerli bir sayı girin",
+    "congratulations": "Tebrikler!",
+    "betterLuckNextTime": "Bir dahaki sefere!",
+    "youWonDiscount": "Kazandınız",
+    "settingsSaved": "Ayarlar başarıyla kaydedildi",
+    "comeBackNextWeek": "Gelecek hafta tekrar gel!",
+    "spinning": "Çevriliyor...",
+    "spinTheWheel": "Çarkı Çevir!",
+    "mostViewed": "En Çok Görüntülenen Ürünler",
+    "cardHolder": "Kart Sahibi",
+    "invalidExpiryDate": "Geçersiz son kullanma tarihi",
+    "invalidCvv": "Geçersiz CVV",
+    "deliveryFee": "Kargo Ücreti",
+    "edit": "Düzenle"
+}
