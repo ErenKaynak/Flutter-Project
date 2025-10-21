@@ -348,7 +348,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get specialOffers => 'Özel Teklifler';
 
   @override
-  String get specialOffersDescription => 'Seçili ürünlerde %20\'ye varan indirimler';
+  String get specialOffersDescription =>
+      'Seçili ürünlerde %20\'ye varan indirimler';
 
   @override
   String get shopNow => 'Hemen Alışveriş Yap';
@@ -381,7 +382,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get noFavoritesYet => 'Henüz favori yok';
 
   @override
-  String get itemsYouFavorite => 'Favoriye eklediğiniz ürünler burada görünecek';
+  String get itemsYouFavorite =>
+      'Favoriye eklediğiniz ürünler burada görünecek';
 
   @override
   String get yourCart => 'Sepetiniz';
@@ -396,7 +398,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get clearCart => 'Sepeti Temizle';
 
   @override
-  String get clearCartConfirmation => 'Tüm ürünleri kaldırmak istediğinizden emin misiniz?';
+  String get clearCartConfirmation =>
+      'Tüm ürünleri kaldırmak istediğinizden emin misiniz?';
 
   @override
   String get discountCode => 'İndirim Kodu';
@@ -418,7 +421,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get invalidDiscountCode => 'Geçersiz indirim kodu';
 
   @override
-  String get notApplicableDiscount => 'This code is not applicable to items in your cart';
+  String get notApplicableDiscount =>
+      'This code is not applicable to items in your cart';
 
   @override
   String get subtotal => 'Ara Toplam';
@@ -568,7 +572,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get deleteCard => 'Kartı Sil';
 
   @override
-  String get deleteCardConfirmation => 'Bu kartı silmek istediğinizden emin misiniz?';
+  String get deleteCardConfirmation =>
+      'Bu kartı silmek istediğinizden emin misiniz?';
 
   @override
   String get defaultCard => 'Varsayılan Kart';
@@ -821,7 +826,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get cancelOrder => 'Siparişi İptal Et';
 
   @override
-  String get confirmCancelOrder => 'Bu siparişi iptal etmek istediğinizden emin misiniz?';
+  String get confirmCancelOrder =>
+      'Bu siparişi iptal etmek istediğinizden emin misiniz?';
 
   @override
   String get orderCancelled => 'Sipariş İptal Edildi';
@@ -838,7 +844,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get alreadyReviewed => 'Bu ürünü zaten değerlendirdiniz';
 
   @override
-  String get canReviewAfterDelivery => 'Ürünü teslim aldıktan sonra değerlendirebilirsiniz';
+  String get canReviewAfterDelivery =>
+      'Ürünü teslim aldıktan sonra değerlendirebilirsiniz';
 
   @override
   String get selectRating => 'Değerlendirme seçin';
@@ -874,7 +881,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get productNoLongerAvailable => 'Bu ürün artık mevcut değil';
 
   @override
-  String get errorCheckingAvailability => 'Stok kontrolü sırasında bir hata oluştu';
+  String get errorCheckingAvailability =>
+      'Stok kontrolü sırasında bir hata oluştu';
 
   @override
   String get tryAgain => 'Tekrar Dene';
@@ -883,7 +891,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get noOrdersYet => 'Henüz sipariş yok';
 
   @override
-  String get yourOrderHistoryWillAppearHere => 'Sipariş geçmişiniz burada görünecek';
+  String get yourOrderHistoryWillAppearHere =>
+      'Sipariş geçmişiniz burada görünecek';
 
   @override
   String get startShopping => 'Alışverişe Başla';
@@ -969,7 +978,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get failedToUpdateFavorites => 'Favoriler güncellenemedi';
 
   @override
-  String get pleaseLoginToAddFavorites => 'Favorilere eklemek için lütfen giriş yapın';
+  String get pleaseLoginToAddFavorites =>
+      'Favorilere eklemek için lütfen giriş yapın';
 
   @override
   String get justNow => 'Az önce';
@@ -1139,19 +1149,22 @@ class AppLocalizationsTr extends AppLocalizations {
   String get promoCodes => 'Promosyon Kodları';
 
   @override
-  String get createPromocodesAndDiscounts => 'Promosyon Kodları ve İndirimler Oluştur';
+  String get createPromocodesAndDiscounts =>
+      'Promosyon Kodları ve İndirimler Oluştur';
 
   @override
   String get salesStatistics => 'Satış İstatistikleri';
 
   @override
-  String get viewSalesAnalytics => 'Satış analizlerini ve grafiklerini görüntüle';
+  String get viewSalesAnalytics =>
+      'Satış analizlerini ve grafiklerini görüntüle';
 
   @override
   String get assistantTommySettings => 'Tommy Asistan Ayarları';
 
   @override
-  String get configureTommyAvailability => 'Tommy\'nin kullanılabilirliğini yapılandır';
+  String get configureTommyAvailability =>
+      'Tommy\'nin kullanılabilirliğini yapılandır';
 
   @override
   String get enableAssistantTommy => 'Tommy Asistanı Etkinleştir';
@@ -1204,7 +1217,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get bugDescription => 'Hata Açıklaması';
 
   @override
-  String get describeBugInDetail => 'Lütfen hatayı detaylı bir şekilde açıklayın';
+  String get describeBugInDetail =>
+      'Lütfen hatayı detaylı bir şekilde açıklayın';
 
   @override
   String get pleaseEnterBugDetails => 'Lütfen başlık ve açıklama giriniz';
@@ -1213,7 +1227,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get bugReportSubmitted => 'Hata raporu başarıyla gönderildi';
 
   @override
-  String get errorSubmittingBugReport => 'Hata raporu gönderilirken bir sorun oluştu';
+  String get errorSubmittingBugReport =>
+      'Hata raporu gönderilirken bir sorun oluştu';
 
   @override
   String get reportedBy => 'Bildiren';
@@ -1246,7 +1261,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get requestRefund => 'İade Talep Et';
 
   @override
-  String get confirmRefundRequest => 'Bu sipariş için iade talep etmek istediğinizden emin misiniz?';
+  String get confirmRefundRequest =>
+      'Bu sipariş için iade talep etmek istediğinizden emin misiniz?';
 
   @override
   String get orderTotal => 'Sipariş Toplamı';
@@ -1283,7 +1299,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get createWalletPin => 'Yeni PIN Kodu Oluştur';
 
   @override
-  String get walletPinDescription => 'Lütfen cüzdanınız için 4 haneli bir PIN kodu oluşturun';
+  String get walletPinDescription =>
+      'Lütfen cüzdanınız için 4 haneli bir PIN kodu oluşturun';
 
   @override
   String get enterPin => 'PIN Kodunu Girin';
@@ -1295,7 +1312,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get useBiometrics => 'Parmak İzi Kullan';
 
   @override
-  String get biometricsDescription => 'Cüzdana erişmek için parmak izi veya yüz tanıma kullanın';
+  String get biometricsDescription =>
+      'Cüzdana erişmek için parmak izi veya yüz tanıma kullanın';
 
   @override
   String get setupPin => 'PIN Kodu Oluştur';
@@ -1349,7 +1367,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get welcomeNotification => 'Hoş Geldiniz!';
 
   @override
-  String get welcomeNotificationDesc => 'Mağazamıza hoş geldiniz. Sizin için harika tekliflerimiz var.';
+  String get welcomeNotificationDesc =>
+      'Mağazamıza hoş geldiniz. Sizin için harika tekliflerimiz var.';
 
   @override
   String get newProductNotification => 'Yeni Ürün';
@@ -1395,7 +1414,8 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get pleaseEnterTitleAndMessage => 'Lütfen başlık ve mesaj alanlarını doldurun';
+  String get pleaseEnterTitleAndMessage =>
+      'Lütfen başlık ve mesaj alanlarını doldurun';
 
   @override
   String get bannerManagement => 'Banner Management';
@@ -1419,7 +1439,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get confirmDelete => 'Confirm Delete';
 
   @override
-  String get deleteBannerConfirmation => 'Are you sure you want to delete this banner?';
+  String get deleteBannerConfirmation =>
+      'Are you sure you want to delete this banner?';
 
   @override
   String get selectUsersFirst => 'Please select at least one user';
@@ -1500,7 +1521,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get wheelManagement => 'Çark Yönetimi';
 
   @override
-  String get wheelItemsDescription => 'İndirim çarkı öğelerini ve olasılıklarını yönetin';
+  String get wheelItemsDescription =>
+      'İndirim çarkı öğelerini ve olasılıklarını yönetin';
 
   @override
   String get probability => 'Olasılık';
@@ -1515,7 +1537,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get pleaseEnterValue => 'Lütfen bir değer girin';
 
   @override
-  String get enterValidNumber => 'Lütfen 1 ile 100 arasında geçerli bir sayı girin';
+  String get enterValidNumber =>
+      'Lütfen 1 ile 100 arasında geçerli bir sayı girin';
 
   @override
   String get congratulations => 'Tebrikler!';

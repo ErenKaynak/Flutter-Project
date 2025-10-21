@@ -348,7 +348,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get specialOffers => 'Special Offers';
 
   @override
-  String get specialOffersDescription => 'Get up to 20% off on selected products';
+  String get specialOffersDescription =>
+      'Get up to 20% off on selected products';
 
   @override
   String get shopNow => 'Shop Now';
@@ -396,7 +397,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearCart => 'Clear Cart';
 
   @override
-  String get clearCartConfirmation => 'Are you sure you want to remove all items?';
+  String get clearCartConfirmation =>
+      'Are you sure you want to remove all items?';
 
   @override
   String get discountCode => 'Discount Code';
@@ -418,7 +420,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get invalidDiscountCode => 'Invalid discount code';
 
   @override
-  String get notApplicableDiscount => 'This code is not applicable to items in your cart';
+  String get notApplicableDiscount =>
+      'This code is not applicable to items in your cart';
 
   @override
   String get subtotal => 'Subtotal';
@@ -568,7 +571,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteCard => 'Delete Card';
 
   @override
-  String get deleteCardConfirmation => 'Are you sure you want to delete this card?';
+  String get deleteCardConfirmation =>
+      'Are you sure you want to delete this card?';
 
   @override
   String get defaultCard => 'Default Card';
@@ -657,7 +661,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noTransactions => 'No transactions yet';
 
   @override
-  String get transactionsWillAppear => 'Your transaction history will appear here';
+  String get transactionsWillAppear =>
+      'Your transaction history will appear here';
 
   @override
   String get moneyAdded => 'Money added successfully';
@@ -821,7 +826,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cancelOrder => 'Cancel Order';
 
   @override
-  String get confirmCancelOrder => 'Are you sure you want to cancel this order?';
+  String get confirmCancelOrder =>
+      'Are you sure you want to cancel this order?';
 
   @override
   String get orderCancelled => 'Order cancelled successfully';
@@ -874,7 +880,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get productNoLongerAvailable => 'Product is no longer available';
 
   @override
-  String get errorCheckingAvailability => 'Error checking product availability. Please try again.';
+  String get errorCheckingAvailability =>
+      'Error checking product availability. Please try again.';
 
   @override
   String get tryAgain => 'TRY AGAIN';
@@ -883,7 +890,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noOrdersYet => 'No orders yet';
 
   @override
-  String get yourOrderHistoryWillAppearHere => 'Your order history will appear here';
+  String get yourOrderHistoryWillAppearHere =>
+      'Your order history will appear here';
 
   @override
   String get startShopping => 'START SHOPPING';
@@ -1085,7 +1093,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get onVacation => 'I\'m currently on vacation!! Try to talk to me later :P';
+  String get onVacation =>
+      'I\'m currently on vacation!! Try to talk to me later :P';
 
   @override
   String get adminOnly => 'Only admin users can add products';
@@ -1139,7 +1148,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get promoCodes => 'Promo Codes & Discounts';
 
   @override
-  String get createPromocodesAndDiscounts => 'Create and manage promocodes and discounts.';
+  String get createPromocodesAndDiscounts =>
+      'Create and manage promocodes and discounts.';
 
   @override
   String get salesStatistics => 'Sales Statistics';
@@ -1151,7 +1161,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantTommySettings => 'Assistant Tommy Settings';
 
   @override
-  String get configureTommyAvailability => 'Configure Assistant Tommy availability.';
+  String get configureTommyAvailability =>
+      'Configure Assistant Tommy availability.';
 
   @override
   String get enableAssistantTommy => 'Enable Assistant Tommy';
@@ -1246,7 +1257,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get requestRefund => 'Request Refund';
 
   @override
-  String get confirmRefundRequest => 'Are you sure you want to request a refund for this order?';
+  String get confirmRefundRequest =>
+      'Are you sure you want to request a refund for this order?';
 
   @override
   String get orderTotal => 'Order Total';
@@ -1283,7 +1295,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createWalletPin => 'Create Wallet PIN';
 
   @override
-  String get walletPinDescription => 'Create a 6-digit PIN to secure your wallet';
+  String get walletPinDescription =>
+      'Create a 6-digit PIN to secure your wallet';
 
   @override
   String get enterPin => 'Enter PIN';
@@ -1295,7 +1308,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get useBiometrics => 'Use Biometrics';
 
   @override
-  String get biometricsDescription => 'Use fingerprint or face recognition to access your wallet';
+  String get biometricsDescription =>
+      'Use fingerprint or face recognition to access your wallet';
 
   @override
   String get setupPin => 'Setup PIN';
@@ -1349,13 +1363,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get welcomeNotification => 'Welcome!';
 
   @override
-  String get welcomeNotificationDesc => 'Welcome to our store. We have great offers for you.';
+  String get welcomeNotificationDesc =>
+      'Welcome to our store. We have great offers for you.';
 
   @override
   String get newProductNotification => 'New Product';
 
   @override
-  String get newProductNotificationDesc => 'RTX 4090 is in stock! Check it out now.';
+  String get newProductNotificationDesc =>
+      'RTX 4090 is in stock! Check it out now.';
 
   @override
   String get discountNotification => 'Special Discount';
@@ -1419,7 +1435,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmDelete => 'Confirm Delete';
 
   @override
-  String get deleteBannerConfirmation => 'Are you sure you want to delete this banner?';
+  String get deleteBannerConfirmation =>
+      'Are you sure you want to delete this banner?';
 
   @override
   String get selectUsersFirst => 'Please select at least one user';
@@ -1500,7 +1517,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wheelManagement => 'Wheel Management';
 
   @override
-  String get wheelItemsDescription => 'Manage discount wheel items and their probabilities';
+  String get wheelItemsDescription =>
+      'Manage discount wheel items and their probabilities';
 
   @override
   String get probability => 'Probability';
@@ -1515,7 +1533,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pleaseEnterValue => 'Please enter a value';
 
   @override
-  String get enterValidNumber => 'Please enter a valid number between 1 and 100';
+  String get enterValidNumber =>
+      'Please enter a valid number between 1 and 100';
 
   @override
   String get congratulations => 'Congratulations!';

@@ -396,7 +396,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get clearCart => 'کارٹ صاف کریں';
 
   @override
-  String get clearCartConfirmation => 'کیا آپ واقعی تمام آئٹمز ہٹانا چاہتے ہیں؟';
+  String get clearCartConfirmation =>
+      'کیا آپ واقعی تمام آئٹمز ہٹانا چاہتے ہیں؟';
 
   @override
   String get discountCode => 'ڈسکاؤنٹ کوڈ';
@@ -418,7 +419,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get invalidDiscountCode => 'غلط ڈسکاؤنٹ کوڈ';
 
   @override
-  String get notApplicableDiscount => 'یہ کوڈ آپ کے کارٹ میں موجود آئٹمز پر لاگو نہیں ہوتا';
+  String get notApplicableDiscount =>
+      'یہ کوڈ آپ کے کارٹ میں موجود آئٹمز پر لاگو نہیں ہوتا';
 
   @override
   String get subtotal => 'سب ٹوٹل';
@@ -462,7 +464,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get continueShopping => 'خریداری جاری رکھیں';
 
   @override
-  String get cardExpired => 'آپ کا کارڈ ختم ہو گیا ہے، براہ کرم دوبارہ کوشش کریں';
+  String get cardExpired =>
+      'آپ کا کارڈ ختم ہو گیا ہے، براہ کرم دوبارہ کوشش کریں';
 
   @override
   String get pleaseSelectAddress => 'براہ کرم پتہ منتخب کریں';
@@ -568,7 +571,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get deleteCard => 'کارڈ حذف کریں';
 
   @override
-  String get deleteCardConfirmation => 'کیا آپ واقعی اس کارڈ کو حذف کرنا چاہتے ہیں؟';
+  String get deleteCardConfirmation =>
+      'کیا آپ واقعی اس کارڈ کو حذف کرنا چاہتے ہیں؟';
 
   @override
   String get defaultCard => 'ڈیفالٹ کارڈ';
@@ -607,7 +611,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get failedToRemove => 'پسندیدہ سے ہٹانے میں ناکام';
 
   @override
-  String get pleaseLoginToAdd => 'براہ کرم کارٹ میں آئٹمز شامل کرنے کے لیے لاگ ان کریں';
+  String get pleaseLoginToAdd =>
+      'براہ کرم کارٹ میں آئٹمز شامل کرنے کے لیے لاگ ان کریں';
 
   @override
   String get failedToAddToCart => 'کارٹ میں آئٹم شامل کرنے میں ناکام';
@@ -683,7 +688,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get enterValidAmount => 'براہ کرم درست رقم درج کریں';
 
   @override
-  String get fillCardDetails => 'براہ کرم تمام کارڈ کی تفصیلات درست طریقے سے بھریں';
+  String get fillCardDetails =>
+      'براہ کرم تمام کارڈ کی تفصیلات درست طریقے سے بھریں';
 
   @override
   String get cardNumberError => 'کارڈ نمبر 16 ہندسوں کا ہونا چاہیے';
@@ -821,7 +827,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get cancelOrder => 'آرڈر منسوخ کریں';
 
   @override
-  String get confirmCancelOrder => 'کیا آپ واقعی اس آرڈر کو منسوخ کرنا چاہتے ہیں؟';
+  String get confirmCancelOrder =>
+      'کیا آپ واقعی اس آرڈر کو منسوخ کرنا چاہتے ہیں؟';
 
   @override
   String get orderCancelled => 'آرڈر کامیابی سے منسوخ کر دیا گیا';
@@ -874,7 +881,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get productNoLongerAvailable => 'پروڈکٹ اب دستیاب نہیں ہے';
 
   @override
-  String get errorCheckingAvailability => 'پروڈکٹ کی دستیابی چیک کرنے میں خرابی۔ براہ کرم دوبارہ کوشش کریں۔';
+  String get errorCheckingAvailability =>
+      'پروڈکٹ کی دستیابی چیک کرنے میں خرابی۔ براہ کرم دوبارہ کوشش کریں۔';
 
   @override
   String get tryAgain => 'دوبارہ کوشش کریں';
@@ -883,7 +891,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get noOrdersYet => 'ابھی تک کوئی آرڈر نہیں';
 
   @override
-  String get yourOrderHistoryWillAppearHere => 'آپ کی آرڈر کی تاریخ یہاں ظاہر ہوگی';
+  String get yourOrderHistoryWillAppearHere =>
+      'آپ کی آرڈر کی تاریخ یہاں ظاہر ہوگی';
 
   @override
   String get startShopping => 'خریداری شروع کریں';
@@ -940,7 +949,8 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get mustBeLoggedIn => 'کارٹ میں شامل کرنے کے لیے آپ کو لاگ ان ہونا ہوگا';
+  String get mustBeLoggedIn =>
+      'کارٹ میں شامل کرنے کے لیے آپ کو لاگ ان ہونا ہوگا';
 
   @override
   String cannotAddMoreThanStock(int count) {
@@ -969,7 +979,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get failedToUpdateFavorites => 'پسندیدہ اپڈیٹ کرنے میں ناکام';
 
   @override
-  String get pleaseLoginToAddFavorites => 'پسندیدہ شامل کرنے کے لیے براہ کرم لاگ ان کریں';
+  String get pleaseLoginToAddFavorites =>
+      'پسندیدہ شامل کرنے کے لیے براہ کرم لاگ ان کریں';
 
   @override
   String get justNow => 'ابھی';
@@ -1085,7 +1096,8 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get onVacation => 'میں ابھی چھٹی پر ہوں!! بعد میں بات کرنے کی کوشش کریں :P';
+  String get onVacation =>
+      'میں ابھی چھٹی پر ہوں!! بعد میں بات کرنے کی کوشش کریں :P';
 
   @override
   String get adminOnly => 'صرف ایڈمن صارفین پروڈکٹس شامل کر سکتے ہیں';
@@ -1139,7 +1151,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get promoCodes => 'پرومو کوڈز اور ڈسکاؤنٹس';
 
   @override
-  String get createPromocodesAndDiscounts => 'پرومو کوڈز اور ڈسکاؤنٹس بنائیں اور مینج کریں۔';
+  String get createPromocodesAndDiscounts =>
+      'پرومو کوڈز اور ڈسکاؤنٹس بنائیں اور مینج کریں۔';
 
   @override
   String get salesStatistics => 'سیلز کے اعدادوشمار';
@@ -1151,7 +1164,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get assistantTommySettings => 'اسسٹنٹ ٹامی کی ترتیبات';
 
   @override
-  String get configureTommyAvailability => 'اسسٹنٹ ٹامی کی دستیابی کی ترتیب کریں۔';
+  String get configureTommyAvailability =>
+      'اسسٹنٹ ٹامی کی دستیابی کی ترتیب کریں۔';
 
   @override
   String get enableAssistantTommy => 'اسسٹنٹ ٹامی کو فعال کریں';
@@ -1246,13 +1260,15 @@ class AppLocalizationsUr extends AppLocalizations {
   String get requestRefund => 'ریفنڈ کی درخواست کریں';
 
   @override
-  String get confirmRefundRequest => 'کیا آپ واقعی اس آرڈر کے لیے رفیند کی درخواست کرنا چاہتے ہیں؟';
+  String get confirmRefundRequest =>
+      'کیا آپ واقعی اس آرڈر کے لیے رفیند کی درخواست کرنا چاہتے ہیں؟';
 
   @override
   String get orderTotal => 'آرڈر کا کل';
 
   @override
-  String get refundRequestSubmitted => 'ریفنڈ کی درخواست کامیابی سے جمع کر دی گئی';
+  String get refundRequestSubmitted =>
+      'ریفنڈ کی درخواست کامیابی سے جمع کر دی گئی';
 
   @override
   String failedToRequestRefund(String error) {
@@ -1283,7 +1299,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get createWalletPin => 'والیٹ پن بنائیں';
 
   @override
-  String get walletPinDescription => 'اپنی والیٹ کو محفوظ کرنے کے لیے 6 ہندسوں کا پن بنائیں';
+  String get walletPinDescription =>
+      'اپنی والیٹ کو محفوظ کرنے کے لیے 6 ہندسوں کا پن بنائیں';
 
   @override
   String get enterPin => 'پن درج کریں';
@@ -1295,7 +1312,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get useBiometrics => 'بائیومیٹرکس استعمال کریں';
 
   @override
-  String get biometricsDescription => 'اپنی والیٹ تک رسائی کے لیے فنگر پرنٹ یا چہرے کی پہچان استعمال کریں';
+  String get biometricsDescription =>
+      'اپنی والیٹ تک رسائی کے لیے فنگر پرنٹ یا چہرے کی پہچان استعمال کریں';
 
   @override
   String get setupPin => 'پن سیٹ کریں';
@@ -1349,13 +1367,15 @@ class AppLocalizationsUr extends AppLocalizations {
   String get welcomeNotification => 'خوش آمدید!';
 
   @override
-  String get welcomeNotificationDesc => 'ہماری دکان میں خوش آمدید۔ ہمارے پاس آپ کے لیے بہترین پیشکشیں ہیں۔';
+  String get welcomeNotificationDesc =>
+      'ہماری دکان میں خوش آمدید۔ ہمارے پاس آپ کے لیے بہترین پیشکشیں ہیں۔';
 
   @override
   String get newProductNotification => 'نیا پروڈکٹ';
 
   @override
-  String get newProductNotificationDesc => 'RTX 4090 اسٹاک میں ہے! ابھی چیک کریں۔';
+  String get newProductNotificationDesc =>
+      'RTX 4090 اسٹاک میں ہے! ابھی چیک کریں۔';
 
   @override
   String get discountNotification => 'خصوصی ڈسکاؤنٹ';
@@ -1419,7 +1439,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get confirmDelete => 'حذف کرنے کی تصدیق کریں';
 
   @override
-  String get deleteBannerConfirmation => 'کیا آپ واقعی اس بینر کو حذف کرنا چاہتے ہیں؟';
+  String get deleteBannerConfirmation =>
+      'کیا آپ واقعی اس بینر کو حذف کرنا چاہتے ہیں؟';
 
   @override
   String get selectUsersFirst => 'براہ کرم کم از کم ایک صارف منتخب کریں';
@@ -1500,7 +1521,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get wheelManagement => 'وہیل مینجمنٹ';
 
   @override
-  String get wheelItemsDescription => 'ڈسکاؤنٹ وہیل آئٹمز اور ان کی احتمالات کو مینج کریں';
+  String get wheelItemsDescription =>
+      'ڈسکاؤنٹ وہیل آئٹمز اور ان کی احتمالات کو مینج کریں';
 
   @override
   String get probability => 'احتمال';
@@ -1515,7 +1537,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get pleaseEnterValue => 'براہ کرم قیمت درج کریں';
 
   @override
-  String get enterValidNumber => 'براہ کرم 1 سے 100 کے درمیان درست نمبر درج کریں';
+  String get enterValidNumber =>
+      'براہ کرم 1 سے 100 کے درمیان درست نمبر درج کریں';
 
   @override
   String get congratulations => 'مبارک ہو!';
